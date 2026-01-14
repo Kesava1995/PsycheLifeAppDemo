@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Guest Life Chart</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+
+  <style>
+    body {
+      margin: 0;
+      background: #f4f8fb;
+      font-family: Segoe UI, sans-serif;
+    }
+    .chart-box {
+      height: 45vh;
+      margin: 20px;
+      background: white;
+      border-radius: 8px;
+      padding: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.05);
+    }
+  </style>
+</head>
+<body>
+
+<div class="chart-box">
+  <canvas id="chartSymptoms"></canvas>
+</div>
+
+<div class="chart-box">
+  <canvas id="chartMSE"></canvas>
+</div>
+
+<script>
+const commonOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  scales: {
+    x: { type: 'time', time: { unit: 'day' }},
+    y: { beginAtZero: true, max: 10 }
+  },
+  plugins: {
+    zoom: {
+      zoom: { wheel: { enabled: true }, mode: 'x' },
+      pan: { enabled: true, mode: 'x' }
+    }
+  }
+};
+
+new Chart(document.getElementById('chartSymptoms'), {
+  type: 'line',
+  data: {
+    datasets: [
+      {% if symptom_unified %} {{ symptom_unified | tojson }}, {% endif %}
+      {% for ds in symptom_datasets %} {{ ds | tojson }}, {% endfor %}
+    ]
+  },
+  options: commonOptions
+});
+
+new Chart(document.getElementById('chartMSE'), {
+  type: 'line',
+  data: {
+    datasets: [
+      {% if mse_unified %} {{ mse_unified | tojson }}, {% endif %}
+      {% for ds in mse_datasets %} {{ ds | tojson }}, {% endfor %}
+    ]
+  },
+  options: commonOptions
+});
+</script>
+
+</body>
+</html>

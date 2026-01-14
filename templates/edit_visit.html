@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Visit - {{ patient.name }}</title>
+    <style>
+        :root { --primary-blue: #A5DCFE; --primary-dark: #7ab8e0; --bg-color: #f4f8fb; --sidebar-width: 280px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-color); height: 100vh; overflow: hidden; display: flex; }
+        
+        /* --- NEW SIDEBAR STYLES --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: #fff;
+            border-right: 1px solid #eaecf0;
+            padding: 32px 24px;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 32px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid #f2f4f7;
+        }
+        .user-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background-color: #f2f4f7;
+            background-image: url('https://ui-avatars.com/api/?name={{ session.get("username", "Dr") }}&background=random&color=fff');
+            background-size: cover;
+        }
+        .user-info { display: flex; flex-direction: column; }
+        .user-name { font-weight: 600; font-size: 16px; color: #101828; line-height: 24px; }
+        .user-role { font-size: 14px; color: #667085; line-height: 20px; }
+
+        .nav-links { display: flex; flex-direction: column; gap: 4px; }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #344054;
+            font-weight: 500;
+            font-size: 15px;
+            transition: all 0.2s;
+        }
+        .nav-item:hover { background-color: #f9fafb; color: #101828; }
+        .nav-icon { font-size: 18px; width: 24px; text-align: center; }
+
+        .nav-item.logout { margin-top: auto; color: #b42318; }
+        .nav-item.logout:hover { background-color: #fef3f2; }
+        /* -------------------------- */
+
+        .app-container { display: flex; width: 100%; height: 100%; }
+        .main-content { flex: 1; overflow-y: auto; padding: 30px; background: var(--primary-blue); }
+        .visit-card { background: white; border-radius: 12px; padding: 25px; width: 95%; max-width: 1400px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .section-header { display: flex; align-items: center; gap: 15px; margin-top: 25px; margin-bottom: 15px; border-bottom: 2px solid var(--bg-color); padding-bottom: 8px; }
+        .section-title { font-size: 1.1rem; font-weight: 600; color: #555; }
+        input[type="text"], input[type="number"], input[type="date"], textarea, select { width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px; }
+        .add-btn { background: var(--primary-dark); color: white; border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; }
+        .remove-btn { background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        
+        .entry-wrapper { margin-bottom: 15px; }
+        .symptom-entry { background: #fafafa; padding: 15px; border-radius: 8px; }
+        .symptom-top-row { display: flex; gap: 15px; margin-bottom: 15px; align-items: center; }
+        .symptom-slider-row { display: grid; gap: 20px; }
+        .cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .med-row { display: grid; grid-template-columns: 100px 2fr 1fr 1fr auto auto; gap: 15px; align-items: center; margin-bottom: 5px; }
+        .side-effect-row { display: flex; gap: 15px; align-items: center; }
+        .mse-row { display: flex; align-items: center; gap: 15px; padding: 10px; }
+        .mse-wrapper { border-bottom: 1px solid #f0f0f0; margin-bottom: 5px; }
+        .mse-label { width: 100px; font-weight: 600; }
+        .btn { padding: 15px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; color: white; font-size: 16px; }
+        .symptom-main-row { display: flex; gap: 15px; align-items: center; }
+        .note-btn { background: none; border: none; cursor: pointer; font-size: 1.2rem; margin-left: 5px; color: #888; padding: 0; vertical-align: middle; }
+        .note-btn:hover { color: var(--primary-dark); }
+        .note-input { display: none; width: 100%; margin-top: 8px; padding: 8px; border: 1px dashed #ccc; border-radius: 4px; background-color: #fffdf0; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="user-avatar"></div>
+                <div class="user-info">
+                    <span class="user-name">Dr. {{ session.get('username', 'User')|title }}</span>
+                    <span class="user-role">ElevenEleven Health</span>
+                </div>
+            </div>
+
+            <div class="nav-links">
+                <a href="{{ url_for('dashboard') }}" class="nav-item">
+                    <span class="nav-icon">🏠</span> Dashboard
+                </a>
+                
+                <div style="height: 1px; background: #f2f4f7; margin: 10px 0;"></div>
+                
+                <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="nav-item" style="color: #667085;">
+                    <span class="nav-icon">⬅️</span> Back to Patient
+                </a>
+            </div>
+
+            <a href="{{ url_for('logout') }}" class="nav-item logout">
+                <span class="nav-icon">🚪</span> Log Out
+            </a>
+        </aside>
+        <main class="main-content">
+            <div class="visit-card">
+                <form method="POST">
+                    <input type="hidden" name="visit_type" value="{{ visit.visit_type }}">
+                    <h3 style="margin-bottom: 15px;">Edit Visit Details</h3>
+                    <div style="margin-bottom: 20px;">
+                        <input type="text" value="{{ patient.name }}" readonly style="background: #eee;">
+                        <input type="date" name="date" required value="{{ visit.date.strftime('%Y-%m-%d') }}" style="margin-top: 10px;">
+                        <div style="padding: 10px; background: #eee; border-radius: 6px; margin-top: 10px;">
+                            Type: <strong>{{ visit.visit_type }} Visit</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="section-header">
+                        <span class="section-title">Symptoms</span>
+                        <button type="button" class="add-btn" onclick="addSymptom()">+</button>
+                    </div>
+                    <div id="symptoms-container">
+                        {% for symptom in visit.symptom_entries %}
+                        <div class="entry-wrapper symptom-wrapper">
+                            <div class="symptom-entry">
+                                <div class="symptom-main-row" style="display: flex; gap: 15px; align-items: center;">
+                                    <input type="text" name="symptom_name[]" value="{{ symptom.symptom_name }}" style="flex: 2;">
+                                    {% if visit.visit_type == 'First' %}
+                                    <input type="text" name="duration_text[]" value="{{ symptom.duration_text or '' }}" placeholder="Duration" style="flex: 1;">
+                                    {% endif %}
+                                    <div style="display: flex; align-items: center; flex: 1; gap: 5px;">
+                                        <input type="range" name="symptom_current[]" min="0" max="10" value="{{ symptom.score_current }}" style="width: 100%;" oninput="this.nextElementSibling.innerText = this.value">
+                                        <span style="min-width: 20px; text-align: right; font-weight: bold;">{{ symptom.score_current }}</span>
+                                    </div>
+                                    <button type="button" class="note-btn" onclick="toggleNote(this)" title="Add Note">📝</button>
+                                </div>
+                                {% if visit.visit_type == 'First' %}
+                                <div class="symptom-slider-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #eee;">
+                                    <div style="display: flex; align-items: center; gap: 5px;">
+                                        <span style="font-size: 0.9rem; color: #666; width: 50px;">Onset</span>
+                                        <input type="range" name="symptom_onset[]" min="0" max="10" value="{{ symptom.score_onset if symptom.score_onset is not none else 5 }}" style="flex: 1;" oninput="this.nextElementSibling.innerText = this.value">
+                                        <span style="font-weight: bold; width: 20px; text-align: right;">{{ symptom.score_onset if symptom.score_onset is not none else 5 }}</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 5px;">
+                                        <span style="font-size: 0.9rem; color: #666; width: 80px;">Progression</span>
+                                        <input type="range" name="symptom_progression[]" min="0" max="10" value="{{ symptom.score_progression if symptom.score_progression is not none else 5 }}" style="flex: 1;" oninput="this.nextElementSibling.innerText = this.value">
+                                        <span style="font-weight: bold; width: 20px; text-align: right;">{{ symptom.score_progression if symptom.score_progression is not none else 5 }}</span>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <div style="display: none;">
+                                    <input type="hidden" name="symptom_onset[]" value="">
+                                    <input type="hidden" name="symptom_progression[]" value="">
+                                    <input type="hidden" name="duration_text[]" value="">
+                                </div>
+                                {% endif %}
+                                <input type="text" class="note-input" name="symptom_note[]" value="{{ symptom.note or '' }}" style="display: {{ 'block' if symptom.note else 'none' }};" placeholder="Add symptom note...">
+                                <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()" style="margin-top: 10px;">Remove</button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="section-header">
+                        <span class="section-title">Medications</span>
+                        <button type="button" class="add-btn" onclick="addMedication()">+</button>
+                    </div>
+                    <div id="meds-container">
+                        {% for med in visit.medication_entries %}
+                        <div class="entry-wrapper med-wrapper">
+                            <div class="med-row">
+                                <select name="drug_type[]">
+									<option value="Generic" {% if med.drug_type == 'Generic' %}selected{% endif %}>Generic</option>
+                                    <option value="Brand" {% if med.drug_type == 'Brand' %}selected{% endif %}>Brand</option>
+                                </select>
+                                <input type="text" name="drug_name[]" value="{{ med.drug_name }}">
+                                <input type="text" name="dose_mg[]" value="{{ med.dose_mg or '' }}">
+                                <input type="text" name="med_duration_text[]" value="{{ med.duration_text or '' }}">
+                                <button type="button" class="note-btn" onclick="toggleNote(this)" title="Add Note">📝</button>
+                                <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">X</button>
+                            </div>
+                            <input type="text" class="note-input" name="med_note[]" value="{{ med.note or '' }}" style="display: {{ 'block' if med.note else 'none' }};" placeholder="Add medication note...">
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="section-header">
+                        <span class="section-title">Side Effects</span>
+                        <button type="button" class="add-btn" onclick="addSideEffect()">+</button>
+                    </div>
+                    <div id="side-effects-container">
+                        {% for effect in visit.side_effect_entries %}
+                        <div class="entry-wrapper side-effect-wrapper">
+                            <div class="side-effect-row" style="display: flex; gap: 15px; align-items: center;">
+                                <input type="text" name="side_effect_name[]" value="{{ effect.side_effect_name }}" style="flex: 2;">
+                                <div style="display: flex; align-items: center; flex: 1; gap: 5px;">
+                                    <span style="font-size: 0.8rem; color: #666;">Severity:</span>
+                                    <input type="range" name="side_effect_score[]" min="0" max="10" value="{{ effect.score }}" style="width: 100%;" oninput="this.nextElementSibling.innerText = this.value">
+                                    <span style="font-weight: bold; width: 20px; text-align: right;">{{ effect.score }}</span>
+                                </div>
+                                <button type="button" class="note-btn" onclick="toggleNote(this)" title="Add Note">📝</button>
+                                <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">X</button>
+                            </div>
+                            <input type="text" class="note-input" name="side_effect_note[]" value="{{ effect.note or '' }}" style="display: {{ 'block' if effect.note else 'none' }};" placeholder="Add side effect note...">
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="section-header">
+                        <span class="section-title">MSE Findings</span>
+                    </div>
+                    {% for cat in ['Thought', 'Perception', 'Affect'] %}
+                    {% set mse_entry = visit.mse_entries|selectattr('category', 'equalto', cat)|first %}
+                    <div class="entry-wrapper mse-wrapper">
+                        <div class="mse-row">
+                            <div class="mse-label">{{ cat }}</div>
+                            <input type="hidden" name="mse_category[]" value="{{ cat }}">
+                            <input type="text" name="mse_finding_name[]" value="{{ mse_entry.finding_name if mse_entry else '' }}" style="flex: 2;">
+                            {% if visit.visit_type == 'First' %}
+                            <input type="text" name="mse_duration[]" value="{{ mse_entry.duration if mse_entry else '' }}" placeholder="Duration" style="width: 150px;">
+                            {% else %}
+                            <input type="hidden" name="mse_duration[]" value="">
+                            {% endif %}
+                            <input type="range" name="mse_score[]" min="0" max="10" value="{{ mse_entry.score if mse_entry else (8 if cat=='Affect' else (0 if cat=='Perception' else 5)) }}" style="flex: 1;" oninput="this.nextElementSibling.innerText = this.value">
+                            <span style="min-width: 30px; text-align: right;">{{ mse_entry.score if mse_entry else (8 if cat=='Affect' else (0 if cat=='Perception' else 5)) }}</span>
+                            <button type="button" class="note-btn" onclick="toggleNote(this)" title="Add Note">📝</button>
+                        </div>
+                        <input type="text" class="note-input" name="mse_note[]" value="{{ mse_entry.note if mse_entry else '' }}" style="display: {{ 'block' if mse_entry and mse_entry.note else 'none' }};" placeholder="Add note for {{ cat }}...">
+                    </div>
+                    {% endfor %}
+
+                    <div style="margin-top: 30px;" class="entry-wrapper diagnosis-section">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                            <h3 style="font-size: 1rem; margin: 0;">Diagnosis</h3>
+                            <button type="button" class="note-btn" onclick="toggleNote(this)" title="Add General Visit Note">📝</button>
+                        </div>
+                        <textarea class="note-input" name="notes" placeholder="General visit notes..." style="margin-bottom: 15px; display: {{ 'block' if visit.notes else 'none' }};">{{ visit.notes or '' }}</textarea>
+                        
+                        <textarea name="provisional_diagnosis" rows="3">{{ visit.provisional_diagnosis or '' }}</textarea>
+                        <textarea name="differential_diagnosis" rows="3" style="margin-top: 10px;">{{ visit.differential_diagnosis or '' }}</textarea>
+                    </div>
+
+                    <div style="display: flex; gap: 15px; margin-top: 30px; padding-top: 30px; border-top: 2px solid #e0e0e0;">
+                        <button type="submit" name="submit_action" value="prescription" class="btn" style="flex: 1; background: linear-gradient(135deg, #A5DCFE 0%, #7BC4F0 100%); color: #000;">💊 Generate Prescription</button>
+                        <button type="submit" name="submit_action" value="lifechart" class="btn" style="flex: 1; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">📈 Generate LifeChart</button>
+                        <button type="submit" name="submit_action" value="both" class="btn" style="flex: 1; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">💊📈 Generate Both</button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+    <script>
+        function toggleNote(btn) {
+            const wrapper = btn.closest('.entry-wrapper');
+            const input = wrapper.querySelector('.note-input');
+            if (input.style.display === 'none' || input.style.display === '') {
+                input.style.display = 'block';
+                input.focus();
+            } else {
+                input.style.display = 'none';
+            }
+        }
+        function updateLabel(slider) {
+            const label = slider.previousElementSibling.querySelector('span:last-child');
+            if(label) label.innerText = slider.value + '/10';
+        }
+        function addSymptom() {
+            const container = document.getElementById('symptoms-container');
+            const template = container.querySelector('.symptom-wrapper');
+            if(template) {
+                const newRow = template.cloneNode(true);
+                newRow.querySelectorAll('input[type="text"]').forEach(i => i.value = '');
+                newRow.querySelectorAll('input[type="range"]').forEach(i => i.value = 5);
+                newRow.querySelectorAll('.slider-label span:last-child').forEach(s => s.innerText = '5/10');
+                newRow.querySelector('.note-input').style.display = 'none';
+                container.appendChild(newRow);
+            }
+        }
+        function addMedication() {
+            const container = document.getElementById('meds-container');
+            const template = container.querySelector('.med-wrapper');
+            if(template) {
+                const newRow = template.cloneNode(true);
+                newRow.querySelectorAll('input[type="text"]').forEach(i => i.value = '');
+                newRow.querySelector('.note-input').style.display = 'none';
+                container.appendChild(newRow);
+            }
+        }
+        function addSideEffect() {
+            const container = document.getElementById('side-effects-container');
+            const template = container.querySelector('.side-effect-wrapper');
+            if(template) {
+                const newRow = template.cloneNode(true);
+                newRow.querySelectorAll('input[type="text"]').forEach(i => i.value = '');
+                newRow.querySelector('input[type="range"]').value = 3;
+                const scoreSpan = newRow.querySelector('.side-effect-row span:last-of-type');
+                if(scoreSpan) scoreSpan.innerText = '3';
+                newRow.querySelector('.note-input').style.display = 'none';
+                container.appendChild(newRow);
+            }
+        }
+    </script>
+</body>
+</html>

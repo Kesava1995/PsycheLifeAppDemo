@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+  <style>
+    html, body {
+	  margin: 0;
+	  padding: 0;
+	  width: 100%;
+	  height: 100%;
+	}
+	#chart-container {
+	  width: 100%;
+	  height: 100%;
+	}
+	canvas {
+	  background: transparent;
+	}
+  </style>
+</head>
+<body>
+<div id="chart-container">
+<canvas id="mseChart"></canvas>
+</div>
+<script>
+const mseDatasets = {{ mse_datasets | tojson }};
+const unified = {{ mse_unified | tojson }};
+
+let datasets = [];
+
+// Unified MSE (bold)
+if (unified) {
+  unified.borderColor = "#000";
+  unified.borderWidth = 4;
+  unified.pointRadius = 0;
+  unified.tension = 0.4;
+  datasets.push(unified);
+}
+
+// Individual MSE categories (thin)
+mseDatasets.slice(0, 3).forEach((ds, i) => {
+  const colors = ['#805AD5', '#319795', '#DD6B20', '#C53030'];
+  ds.borderColor = colors[i % colors.length];
+  ds.borderWidth = 2;
+  ds.pointRadius = 3;
+  ds.hidden = false;
+  ds.tension = 0.3;
+  datasets.push(ds);
+});
+
+new Chart(document.getElementById('mseChart'), {
+  type: 'line',
+  data: { datasets },
+  options: {
+  responsive: true,
+  maintainAspectRatio: false,
+
+  layout: {
+    padding: 8   // 🔑 THIS IS CRITICAL
+  },
+
+  interaction: {
+    mode: 'nearest',
+    intersect: false
+  },
+
+  scales: {
+    x: {
+      type: 'time',
+      time: {
+        unit: 'day',
+        tooltipFormat: 'dd MMM yyyy'
+      },
+      ticks: {
+        autoSkip: true,
+        maxTicksLimit: 6,
+        color: '#6B7280'
+      },
+      grid: {
+        color: '#E5E7EB'
+      }
+    },
+    y: {
+      min: 0,
+      max: 10,
+      ticks: {
+        stepSize: 2,
+        color: '#6B7280'
+      },
+      grid: {
+        color: '#E5E7EB'
+      }
+    }
+  },
+
+  plugins: {
+    legend: { display: false },
+    tooltip: { enabled: true },
+    zoom: {
+      pan: { enabled: true, mode: 'x' },
+      zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
+    }
+  }
+}
+
+});
+</script>
+</body>
+</html>

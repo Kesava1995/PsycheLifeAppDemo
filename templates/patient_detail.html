@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ patient.name }} - Patient Details</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f8fb; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; margin-bottom: 20px; }
+        .patient-info { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; display: inline-block; margin: 5px; }
+        .btn-primary { background: #7ab8e0; color: white; }
+        .btn-secondary { background: #e0e0e0; color: #333; }
+        .visits-list { margin-top: 30px; }
+        .visit-item { background: #fafafa; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #A5DCFE; }
+        .visit-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>{{ patient.name }}</h1>
+        <div class="patient-info">
+            <p><strong>Age:</strong> {{ patient.age }} | <strong>Sex:</strong> {{ patient.sex }}</p>
+            <p><strong>Address:</strong> {{ patient.address or 'Not provided' }}</p>
+        </div>
+        <div>
+            <a href="{{ url_for('add_visit', patient_id=patient.id) }}" class="btn btn-primary">+ Add Follow-up Visit</a>
+            <a href="{{ url_for('life_chart', patient_id=patient.id) }}" class="btn btn-primary">View Life Chart</a>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Dashboard</a>
+        </div>
+        <div class="visits-list">
+            <h2>Visit History</h2>
+            {% for visit in visits %}
+            <div class="visit-item">
+                <div class="visit-header">
+                    <h3>{{ visit.date.strftime('%d-%b-%Y') }} - {{ visit.visit_type }} Visit</h3>
+                    <a href="{{ url_for('edit_visit', visit_id=visit.id) }}" class="btn btn-secondary">Edit</a>
+                </div>
+                {% if visit.provisional_diagnosis %}
+                <p><strong>Provisional Diagnosis:</strong> {{ visit.provisional_diagnosis }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
+

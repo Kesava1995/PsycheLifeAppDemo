@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Prescription{% endblock %}
+
+{% block extra_css %}
+<style>
+.action-bar { max-width: 210mm; margin: 0 auto 20px auto; display: flex; justify-content: space-between; }
+.prescription-paper { background: white; width: 210mm; min-height: 297mm; margin: 0 auto; padding: 15mm; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+.rx-header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px; }
+.hospital-info h1 { font-size: 18pt; margin: 0; text-transform: uppercase; }
+.hospital-info p { margin: 2px 0; font-size: 10pt; }
+.contact-info { text-align: right; font-size: 9pt; }
+.doc-title { text-align: center; font-weight: bold; text-decoration: underline; margin: 10px 0; }
+.patient-info-box { border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 8px 0; display: flex; font-size: 10pt; margin-bottom: 20px; }
+.info-left { flex: 1.5; border-right: 1px dashed #ccc; padding-right: 10px; }
+.info-right { flex: 1; padding-left: 15px; }
+.info-row { margin-bottom: 4px; }
+.rx-table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+.rx-table th, .rx-table td { border: 1px solid #000; padding: 8px; }
+.rx-footer { margin-top: 40px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 10pt; }
+@media print {
+  .action-bar { display: none; }
+  body { background: white; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# --- LOGIC BLOCK: Set Variables based on Mode --- #}
+{% if guest %}
+  {# Guest Mode Variables #}
+  {% set doc_name = guest_doctor.name %}
+  {% set clinic = guest_doctor.clinic if guest_doctor.clinic else 'ElevenEleven Health' %}
+  {% set address = guest_doctor.address if guest_doctor.address else 'Psychiatry & Wellness Center' %}
+  {% set doc_reg = guest_doctor.registration %}
+  {% set doc_qual = guest_doctor.qualification %}
+  
+  {# Guest Patient Variables #}
+  {% set p_name = guest_patient.name %}
+  {% set p_age = guest_patient.age %}
+  {% set p_sex = guest_patient.sex %}
+  {% set p_addr = guest_patient.address %}
+  
+  {# Guest Signature (No Image) #}
+  {% set doc_sig = None %}
+
+{% else %}
+  {# Logged-In Mode Variables #}
+  {% set doc_name = patient.doctor.full_name or patient.doctor.username %}
+  {% set clinic = patient.doctor.clinic_name or 'ElevenEleven Health' %}
+  {% set address = patient.doctor.address_text or 'Psychiatry & Wellness Center' %}
+  {% set doc_reg = patient.doctor.kmc_code %}
+  {% set doc_qual = '' %}
+  
+  {# DB Patient Variables #}
+  {% set p_name = patient.name %}
+  {% set p_age = patient.age %}
+  {% set p_sex = patient.sex %}
+  {% set p_addr = patient.address %}
+  
+  {# Doctor Signature Image #}
+  {% set doc_sig = patient.doctor.signature_filename %}
+{% endif %}
+
+{% if guest %}
+<div style="border:1px solid #cc0000; padding:10px; margin-bottom:15px;">
+  <strong>Guest Mode – First Visit Prescription</strong><br>
+  Doctor details are self-declared and this prescription is not stored.
+</div>
+{% endif %}
+
+<div class="action-bar">
+  <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Dashboard</a>
+  <button onclick="window.print()" class="btn btn-primary">🖨 Print</button>
+</div>
+
+<div class="prescription-paper">
+
+  <div class="rx-header">
+    <div class="hospital-info">
+      <h1>{{ clinic }}</h1>
+      <p>{{ address }}</p>
+    </div>
+    <div class="contact-info">
+      <p><strong>Dr. {{ doc_name }}</strong></p>
+      {% if doc_qual %}<p>{{ doc_qual }}</p>{% endif %}
+      {% if doc_reg %}<p>Reg: {{ doc_reg }}</p>{% endif %}
+    </div>
+  </div>
+
+  <div class="doc-title">Prescription</div>
+
+  <div class="patient-info-box">
+    <div class="info-left">
+      <div><strong>{{ p_name }}</strong></div>
+      <div>{{ p_sex }} / {{ p_age }} Years</div>
+      <div>{{ p_addr }}</div>
+    </div>
+    <div class="info-right">
+      <div class="info-row"><strong>Date:</strong> {{ visit.date.strftime('%d/%m/%Y') }}</div>
+      <div class="info-row"><strong>Department:</strong> Psychiatry</div>
+    </div>
+  </div>
+
+  <table class="rx-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Drug</th>
+        <th>Instructions</th>
+        <th>Duration</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% if visit.medication_entries %}
+      {% for med in visit.medication_entries %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ med.drug_name }} {{ med.dose_mg }}</td>
+        <td>{{ med.note or '-' }}</td>
+        <td>{{ med.duration_text or '-' }}</td>
+      </tr>
+      {% endfor %}
+    {% else %}
+      <tr>
+        <td colspan="4" style="text-align:center;">No medications prescribed</td>
+      </tr>
+    {% endif %}
+    </tbody>
+  </table>
+
+  {% if visit.provisional_diagnosis %}
+  <p style="margin-top:20px;"><strong>Provisional Diagnosis:</strong> {{ visit.provisional_diagnosis }}</p>
+  {% endif %}
+
+  <div class="rx-footer">
+    <div>Dispensed By / Pharmacist</div>
+    <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end;">
+      
+      {# --- SIGNATURE LOGIC --- #}
+      {% if doc_sig %}
+        {# 1. Standard Doctor Signature (File) #}
+        <img src="{{ url_for('static', filename='signatures/' + doc_sig) }}" style="height: 60px; margin-bottom: 5px; max-width: 150px;">
+      
+      {% elif guest_signature_b64 %}
+        {# 2. Guest Mode Signature (Base64) [FIX ADDED HERE] #}
+        <img src="data:image/png;base64,{{ guest_signature_b64 }}" style="height: 60px; margin-bottom: 5px; max-width: 150px;">
+      
+      {% else %}
+        {# 3. No Signature Provided #}
+        <div style="height: 50px;"></div>
+        <div style="font-size: 0.8em; color: #666; margin-bottom: 5px;">(Signature)</div>
+      {% endif %}
+      
+      <strong>Dr. {{ doc_name }}</strong><br>
+      {% if doc_reg %}Reg: {{ doc_reg }}{% endif %}
+    </div>
+  </div>
+
+  {% if lifchart_url %}
+  <div style="margin-top: 30px; text-align: center; border-top: 1px dashed #ccc; padding-top: 15px;">
+    <p style="margin-bottom: 10px; font-weight: bold;">Scan to View Interactive Life Chart</p>
+    {# We use a library or external service for QR in HTML preview if needed, or just a placeholder if not generating image server-side #}
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data={{ lifchart_url }}" alt="QR Code">
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
