@@ -72,7 +72,7 @@
         </aside>
         <main class="main-content">
             <div class="visit-card">
-                <form method="POST" action="{{ url_for('dashboard') }}" enctype="multipart/form-data">
+                <form method="POST" action="{{ url_for('dashboard') }}" enctype="multipart/form-data" id="visitForm">
                     <h2 style="margin-bottom: 20px;">New Patient & First Visit</h2>
                     <div class="patient-grid">
                         <div class="row-2-col">
@@ -301,43 +301,58 @@
         let pendingWorkflow = null;
 
         function openDoctorModal(workflow) {
-            pendingWorkflow = workflow;
-            document.getElementById('doctorModal').style.display = 'block';
+            // Logic: If Guest, show modal. If Doctor, submit immediately.
+            {% if session.get('guest') %}
+                // GUEST MODE: Show the modal
+                pendingWorkflow = workflow;
+                document.getElementById('doctorModal').style.display = 'block';
+            {% else %}
+                // DOCTOR MODE: Submit immediately
+                document.getElementById('workflow_input').value = workflow;
+                
+                const form = document.getElementById('visitForm');
+                if (!form) { alert("Error: Form not found! Check id='visitForm'"); return; }
+                
+                // Submit to dashboard
+                form.action = "{{ url_for('dashboard') }}";
+                form.submit();
+            {% endif %}
         }
 
         function confirmDoctor() {
-            const form = document.querySelector('form');
+            // Used by Guest Mode to submit from the Modal
+            const form = document.getElementById('visitForm');
+            if (!form) { alert("Error: Form not found!"); return; }
+
             document.getElementById('workflow_input').value = pendingWorkflow;
             
-            // ROUTING LOGIC: Change action based on button clicked
+            // Route based on workflow
             if (pendingWorkflow === 'prescription') {
                 form.action = "{{ url_for('guest_prescription') }}";
             } else if (pendingWorkflow === 'both') {
                 form.action = "{{ url_for('guest_both') }}";
             } else {
-                // Default for 'Generate Life Chart' (handled by dashboard logic)
                 form.action = "{{ url_for('dashboard') }}";
             }
             
             form.submit();
         }
-		
-		function submitLifeChart() {
-			const form = document.querySelector('form');
-			const hiddenInput = document.getElementById('workflow_input');
-			hiddenInput.value = 'lifechart';
+        
+        function submitLifeChart() {
+            const form = document.getElementById('visitForm');
+            if (!form) { alert("Error: Form not found!"); return; }
+            
+            document.getElementById('workflow_input').value = 'lifechart';
 
-			// LOGIC: If Guest, go directly to lifechart to preserve data. 
-			// If Logged In, go to dashboard to save to DB first.
-			
-			{% if session.get('guest') %}
-				form.action = "{{ url_for('guest_lifechart') }}";
-			{% else %}
-				form.action = "{{ url_for('dashboard') }}";
-			{% endif %}
+            // Route based on mode
+            {% if session.get('guest') %}
+                form.action = "{{ url_for('guest_lifechart') }}";
+            {% else %}
+                form.action = "{{ url_for('dashboard') }}";
+            {% endif %}
 
-			form.submit();
-		}
+            form.submit();
+        }
     </script>
 </body>
 </html>

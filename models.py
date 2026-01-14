@@ -1,5 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timezone
 
 db = SQLAlchemy()
 
@@ -96,4 +96,25 @@ class MSEEntry(db.Model):
     score = db.Column(db.Float, nullable=False)
     duration = db.Column(db.String(100))
     note = db.Column(db.Text)
+
+
+class GuestShare(db.Model):
+    __tablename__ = 'guest_shares'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    token = db.Column(db.String(36), unique=True, nullable=False)
+    data_json = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime, nullable=False)
+
+    def is_expired(self):
+        # 1. Get current UTC time
+        now = datetime.now(timezone.utc)
+        
+        # 2. Check if the DB time has timezone info
+        if self.expires_at.tzinfo is None:
+            # If DB is Naive (SQLite default), make 'now' Naive too
+            now = now.replace(tzinfo=None)
+            
+        return now > self.expires_at
 

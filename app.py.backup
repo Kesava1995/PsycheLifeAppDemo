@@ -134,123 +134,177 @@ def login():
 @app.route('/guest/lifechart', methods=['GET', 'POST'])
 def guest_lifechart():
     """
-    Generate Life Chart for Guest Mode.
-    Now uses the DB + Shared View (same as QR code) for a consistent experience.
+    Session-only lifechart for Guest Mode.
     """
-    if not session.get('guest'):
-        abort(403)
+    # 1. Initialize empty lists to prevent UnboundLocalError
+    symptoms = []
+    mse = []
+    meds = []
+    se = []
 
-    # 1. Handle POST (Form Submission from Dashboard)
+    # 2. Handle POST (Form Submission from Dashboard)
     if request.method == 'POST':
-        # --- A. CLEANUP (Keep DB healthy) ---
-        try:
-            GuestShare.query.filter(GuestShare.expires_at < datetime.now(timezone.utc)).delete()
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-
-        # --- B. CAPTURE DATA (Exact logic from guest_both) ---
-        today = date.today()
-        
-        # 1. Symptoms
-        symptoms = []
+        # --- Process Symptoms ---
         names = request.form.getlist('symptom_name[]')
         onsets = request.form.getlist('symptom_onset[]')
         progressions = request.form.getlist('symptom_progression[]')
         currents = request.form.getlist('symptom_current[]')
-        sym_notes = request.form.getlist('symptom_note[]')
-        durations = request.form.getlist('duration_text[]')
 
         for i, name in enumerate(names):
             if not name.strip(): continue
-            
-            # Helper for safe integers
-            def safe_int(val_list, idx, default=5):
-                try: return int(val_list[idx]) if idx < len(val_list) else default
-                except (ValueError, TypeError): return default
+            if i < len(onsets) and onsets[i].isdigit():
+                symptoms.append({"name": name, "score": int(onsets[i]), "phase": "Onset"})
+            if i < len(progressions) and progressions[i].isdigit():
+                symptoms.append({"name": name, "score": int(progressions[i]), "phase": "Progression"})
+            if i < len(currents) and currents[i].isdigit():
+                symptoms.append({"name": name, "score": int(currents[i]), "phase": "Current"})
 
-            onset = safe_int(onsets, i)
-            prog = safe_int(progressions, i)
-            curr = safe_int(currents, i)
-            note = sym_notes[i] if i < len(sym_notes) else ""
-            
-            # Date Calculation
-            dur_text = durations[i] if i < len(durations) else ""
-            try:
-                delta = parse_duration(dur_text) if dur_text else timedelta(days=14)
-            except:
-                delta = timedelta(days=14)
-                
-            d_onset = today - delta
-            total_days = (today - d_onset).days
-            d_prog = d_onset + timedelta(days=total_days // 2)
-            
-            # Add points with specific dates
-            symptoms.append({"name": name, "score": onset, "phase": "Onset", "note": note, "date": d_onset.isoformat()})
-            symptoms.append({"name": name, "score": prog, "phase": "Progression", "note": note, "date": d_prog.isoformat()})
-            symptoms.append({"name": name, "score": curr, "phase": "Current", "note": note, "date": today.isoformat()})
-
-        # 2. MSE Findings
-        mse = []
+        # --- Process MSE ---
         mse_cats = request.form.getlist('mse_category[]')
         mse_scores = request.form.getlist('mse_score[]')
-        mse_notes = request.form.getlist('mse_note[]')
-        for i, (cat, score) in enumerate(zip(mse_cats, mse_scores)):
-            try: val = int(score)
-            except: val = 0
-            note = mse_notes[i] if i < len(mse_notes) else ""
-            mse.append({"cat": cat, "score": val, "note": note, "date": today.isoformat()})
+        for cat, score in zip(mse_cats, mse_scores):
+            if score.isdigit():
+                mse.append({"cat": cat, "score": int(score)})
 
-        # 3. Medications
-        meds_chart = []
+        # --- Process Medications ---
         drug_names = request.form.getlist('drug_name[]')
         dose_mgs = request.form.getlist('dose_mg[]')
-        med_notes = request.form.getlist('med_note[]')
         for i, name in enumerate(drug_names):
-            if name.strip():
-                score_val = 0.0
-                dose_str = dose_mgs[i] if i < len(dose_mgs) else ""
-                if dose_str:
-                    import re
-                    nums = re.findall(r"[-+]?\d*\.\d+|\d+", dose_str)
-                    if nums: score_val = float(nums[0])
-                note = med_notes[i] if i < len(med_notes) else ""
-                meds_chart.append({"name": name, "score": score_val, "phase": "Current", "dose": dose_str, "note": note, "date": today.isoformat()})
+            if name.strip() and i < len(dose_mgs) and dose_mgs[i]:
+                try:
+                    score_val = float(dose_mgs[i])
+                except ValueError:
+                    score_val = 0.0
+                meds.append({
+                    "name": name,
+                    "score": score_val,      # For Chart (Y-axis)
+                    "dose": dose_mgs[i],     # For Modal Display
+                    "phase": "Current"
+                })
 
-        # 4. Side Effects
-        se_chart = []
+        # --- Process Side Effects ---
         se_names = request.form.getlist('side_effect_name[]')
         se_scores = request.form.getlist('side_effect_score[]')
-        se_notes = request.form.getlist('side_effect_note[]')
         for i, name in enumerate(se_names):
-            if name.strip():
-                try: val = int(se_scores[i]) if i < len(se_scores) else 0
-                except: val = 0
-                note = se_notes[i] if i < len(se_notes) else ""
-                se_chart.append({"name": name, "score": val, "phase": "Current", "note": note, "date": today.isoformat()})
+            if name.strip() and i < len(se_scores) and se_scores[i].isdigit():
+                se.append({
+                    "name": name,
+                    "score": int(se_scores[i]),
+                    "phase": "Current"
+                })
 
-        # --- C. SAVE TO DB ---
-        chart_data = {
-            'symptoms': symptoms, 'mse': mse, 'meds': meds_chart, 'se': se_chart
+        # Update Cache
+        session['guest_chart_cache'] = {
+            'symptoms': symptoms,
+            'mse': mse,
+            'meds': meds,
+            'se': se
         }
-        
-        token = str(uuid.uuid4())
-        expiry = datetime.now(timezone.utc) + timedelta(minutes=30)
-        
-        share_entry = GuestShare(
-            token=token,
-            data_json=json.dumps(chart_data),
-            expires_at=expiry
-        )
-        db.session.add(share_entry)
-        db.session.commit()
 
-        # --- D. REDIRECT TO SHARED VIEW ---
-        return redirect(url_for('guest_share_view', token=token))
+    # 3. Handle GET (Load from Cache)
+    else:
+        cached = session.get('guest_chart_cache')
+        if cached:
+            symptoms = cached.get('symptoms', [])
+            mse = cached.get('mse', [])
+            meds = cached.get('meds', [])
+            se = cached.get('se', [])
+        else:
+            flash('Life chart session expired or empty.', 'info')
 
-    # 2. Handle GET (Legacy / Fallback)
-    # If someone tries to access /guest/lifechart directly without posting data
-    return redirect(url_for('dashboard'))
+    visit_date = datetime.utcnow().strftime('%Y-%m-%d')
+
+    # ---- Build ONE synthetic visit for the Modal ----
+    # FIX: Pass the populated 'meds' and 'se' lists here
+    visit = {
+        "date": visit_date,
+        "type": "First Visit (Guest)",
+        "symptoms": symptoms,
+        "mse": mse,
+        "meds": meds,  # <--- Was empty [], now passing data
+        "se": se,      # <--- Was empty [], now passing data
+        "notes": ""
+    }
+
+    # ---- Convert to chart-ready datasets ----
+    def build_dataset(items, label_prefix):
+        datasets = {}
+        offset_days = {"Onset": -14, "Progression": -7, "Current": 0}
+
+        for item in items:
+            # Determine label (Name for symptoms/meds, Category for MSE)
+            label = item.get("name") or item.get("cat")
+            phase = item.get("phase", "Current")
+
+            point_date = (
+                datetime.strptime(visit_date, "%Y-%m-%d")
+                + timedelta(days=offset_days.get(phase, 0))
+            ).strftime("%Y-%m-%d")
+
+            if label not in datasets:
+                datasets[label] = {
+                    "label": label,
+                    "data": [],
+                    "fill": False,
+                    "tension": 0.3
+                }
+
+            datasets[label]["data"].append({
+                "x": point_date,
+                "y": item["score"],
+                "phase": phase,
+                "symptom_name": item.get("name")
+            })
+
+        for ds in datasets.values():
+            ds["data"].sort(key=lambda p: p["x"])
+
+        return list(datasets.values())
+
+    symptom_datasets = build_dataset(symptoms, "symptom")
+    mse_datasets = build_dataset(mse, "mse")
+    medication_datasets = build_dataset(meds, "med")
+    side_effect_datasets = build_dataset(se, "se")
+
+    # Unified averages
+    def unified(items):
+        if not items: return None
+        avg = sum(i["score"] for i in items) / len(items)
+        return {
+            "label": "Unified (Avg)",
+            "isUnified": True,
+            "data": [{"x": visit_date, "y": avg}],
+            "borderColor": "#000",
+            "borderWidth": 3
+        }
+
+    session.pop('guest_first_visit', None)
+
+    return render_template(
+        'life_chart.html',
+        guest=True,
+        patient=None,
+
+        symptom_datasets=symptom_datasets,
+        symptom_unified=unified(symptoms),
+
+        medication_datasets=medication_datasets,
+        med_unified=unified(meds),
+
+        side_effect_datasets=side_effect_datasets,
+        se_unified=unified(se),
+
+        mse_datasets=mse_datasets,
+        mse_unified=unified(mse),
+
+        symptom_names=sorted({s["name"] for s in symptoms if s.get("name")}),
+        med_names=sorted({m["name"] for m in meds}),
+        se_names=sorted({s["name"] for s in se}),
+        mse_categories=sorted(list(set([m["cat"] for m in mse]))),
+
+        visit_details={0: visit}
+    )
+
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     """Doctor registration."""

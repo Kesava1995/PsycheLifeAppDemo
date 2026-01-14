@@ -93,8 +93,13 @@
 <body>
 <div class="sidebar">
     <div class="nav-row">
-        <a href="{{ url_for('dashboard') }}">← Dashboard</a>
-        <a href="{{ url_for('logout') }}" style="color: red;">Logout</a>
+        {% if not guest %}
+            <a href="{{ url_for('dashboard') }}">← Dashboard</a>
+            <a href="{{ url_for('logout') }}" style="color: red;">Logout</a>
+        {% else %}
+            <span style="font-weight: 600; color: #555;">Guest View</span>
+            <span style="font-size: 0.8rem; color: #888;">Read Only</span>
+        {% endif %}
     </div>
     
     <div class="controls">

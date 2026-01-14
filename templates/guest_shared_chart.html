@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Guest Life Chart</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f4f8fb; }
+        .chart-container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { color: #333; text-align: center; margin-bottom: 5px; }
+        .subtitle { color: #666; text-align: center; margin-bottom: 20px; font-size: 0.9em; }
+        .btn-close { display: block; width: 100%; padding: 15px; margin-top: 20px; background: #666; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="chart-container">
+        <h2>Life Chart (Guest View)</h2>
+        <p class="subtitle">Generated on {{ visit_date }}</p>
+        <canvas id="guestChart" width="400" height="300"></canvas>
+    </div>
+
+    <script>
+        // 1. Parse Data passed from Flask
+        const symptomData = {{ symptom_datasets | tojson }};
+        const medData = {{ medication_datasets | tojson }};
+        const seData = {{ side_effect_datasets | tojson }};
+        const mseData = {{ mse_datasets | tojson }};
+
+        // 2. Configure Datasets
+        // We assign fixed colors since we don't have the full palette logic here
+        const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+        
+        let allDatasets = [];
+        
+        // Helper to colorize and add
+        function addSets(sets, type) {
+            sets.forEach((ds, i) => {
+                ds.borderColor = colors[i % colors.length];
+                ds.backgroundColor = ds.borderColor;
+                ds.pointRadius = 5;
+                ds.borderWidth = 2;
+                ds.fill = false;
+                
+                // Make dashed lines for everything except Symptoms
+                if (type !== 'symptom') ds.borderDash = [5, 5];
+                
+                allDatasets.push(ds);
+            });
+        }
+
+        addSets(symptomData, 'symptom');
+        addSets(medData, 'med');
+        addSets(seData, 'se');
+        addSets(mseData, 'mse');
+
+        // 3. Render Chart
+        const ctx = document.getElementById('guestChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: { datasets: allDatasets },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { unit: 'day' },
+                        title: { display: true, text: 'Date' }
+                    },
+                    y: {
+                        min: 0, max: 10,
+                        title: { display: true, text: 'Score / Dose' }
+                    }
+                },
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.raw.y;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
