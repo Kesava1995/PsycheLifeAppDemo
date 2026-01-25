@@ -5,8 +5,8 @@ PsycheLife - Medical web app for psychiatric patient management.
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response, session, abort
 from functools import wraps
 from datetime import datetime, date, timedelta, timezone
-from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare
-from medical_utils import get_unified_dose, calculate_start_date, parse_duration, calculate_midpoint_date
+from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry
+from medical_utils import get_unified_dose, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency
 import io
 import os
 from reportlab.lib.pagesizes import letter, A4
@@ -16,7 +16,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 import qrcode
-from urllib.parse import urljoin
+from urllib.parse import urljoin, unquote
 from werkzeug.utils import secure_filename
 import base64
 import uuid
@@ -36,6 +36,15 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 db.init_app(app)
 
+# Ensure tables are created (especially new Phase 2 tables)
+with app.app_context():
+    db.create_all()
+
+# --- Register Helper for Templates ---
+@app.context_processor
+def utility_processor():
+    """Register utility functions for use in templates."""
+    return dict(format_frequency=format_frequency)
 
 # Hardcoded credentials (for demo - replace with database lookup in production)
 VALID_CREDENTIALS = {
@@ -132,10 +141,12 @@ def login():
     return redirect(url_for('landing'))
 
 @app.route('/guest/lifechart', methods=['GET', 'POST'])
+@app.route('/guest/lifechart', methods=['GET', 'POST'])
 def guest_lifechart():
     """
     Generate Life Chart for Guest Mode.
-    Now uses the DB + Shared View (same as QR code) for a consistent experience.
+    Now uses the DB + Shared View (same as QR code) for a consis@app.route('/guest/lifechart', methods=['GET', 'POST'])
+tent experience.
     """
     if not session.get('guest'):
         abort(403)
@@ -311,6 +322,11 @@ def profile():
         doctor.clinic_name = request.form.get('clinic_name', '').strip()
         doctor.kmc_code = request.form.get('kmc_code', '').strip()
         doctor.address_text = request.form.get('address_text', '').strip()
+        
+        # --- PHASE 1 UPDATES: Phone & Email ---
+        doctor.phone = request.form.get('phone', '').strip()
+        doctor.email = request.form.get('email', '').strip()
+        
         doctor.social_handle = request.form.get('social_handle', '').strip()
         
         # Handle Signature Upload
@@ -348,11 +364,7 @@ def dashboard():
             flash('Please fill in all required fields.', 'error')
             return redirect(url_for('dashboard'))
         
-        try:
-            visit_date = datetime.strptime(visit_date_str, '%Y-%m-%d').date()
-        except ValueError:
-            flash('Invalid date format.', 'error')
-            return redirect(url_for('dashboard'))
+        visit_date = parse_date(visit_date_str) or date.today()
         
         # Get or create doctor
         doctor = Doctor.query.filter_by(username=session.get('username', 'admin')).first()
@@ -368,6 +380,11 @@ def dashboard():
             age=int(age),
             sex=sex,
             address=address,
+            phone=request.form.get('phone'),
+            attender_name=request.form.get('attender_name'),
+            attender_relation=request.form.get('attender_relation'),
+            attender_reliability=request.form.get('attender_reliability'),
+            personal_notes=request.form.get('personal_notes'),
             doctor_id=doctor.id
         )
         db.session.add(patient)
@@ -379,7 +396,8 @@ def dashboard():
             date=visit_date,
             visit_type='First',
             provisional_diagnosis=request.form.get('provisional_diagnosis', ''),
-            differential_diagnosis=request.form.get('differential_diagnosis', '')
+            differential_diagnosis=request.form.get('differential_diagnosis', ''),
+            next_visit_date=parse_date(request.form.get('next_visit_date'))  # NEW
         )
         db.session.add(visit)
         db.session.flush()
@@ -390,12 +408,12 @@ def dashboard():
         db.session.commit()
         
         # Handle workflow
-        workflow = request.form.get('workflow')
-        if workflow == 'prescription':
+        submit_action = request.form.get('submit_action')
+        if submit_action == 'prescription':
             return redirect(url_for('preview_prescription', visit_id=visit.id))
-        elif workflow == 'lifechart':
-            return redirect(url_for('life_chart', patient_id=patient.id))
-        elif workflow == 'both':
+        elif submit_action == 'lifechart':
+            return redirect(url_for('life_chart', patient_id=patient.id, visit_id=visit.id))
+        elif submit_action == 'both':
             return redirect(url_for('preview_prescription', visit_id=visit.id, include_qr='true'))
         else:
             return redirect(url_for('patient_detail', patient_id=patient.id))
@@ -423,86 +441,152 @@ def guest_lifechart_proxy():
 
 
 
+def parse_date(date_str):
+    """Helper to parse date strings safely."""
+    if not date_str:
+        return None
+    try:
+        return datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return None
+
 def process_visit_form_data(visit, form_data):
     """Helper function to process and save visit form data."""
-    # Process symptoms
-    symptom_names = form_data.getlist('symptom_name[]')
-    symptom_onsets = form_data.getlist('symptom_onset[]')
-    symptom_progressions = form_data.getlist('symptom_progression[]')
-    symptom_currents = form_data.getlist('symptom_current[]')
-    duration_texts = form_data.getlist('duration_text[]')
-    symptom_notes = form_data.getlist('symptom_note[]')
     
-    for i, name in enumerate(symptom_names):
+    # NEW: Next Visit Date
+    next_date = form_data.get('next_visit_date')
+    if next_date:
+        visit.next_visit_date = parse_date(next_date)
+    
+    visit.note = form_data.get('visit_note', '')
+    
+    # Helper for Duration (Single Field Now)
+    def get_duration(index, prefix):
+        # Reads 'symptom_duration[]' list directly
+        dur_list = form_data.getlist(f'{prefix}_duration[]')
+        return dur_list[index] if index < len(dur_list) else ""
+
+    # 1. Stressors (Phase 2)
+    stressors = form_data.getlist('stressors[]')
+    stressor_note = form_data.get('stressor_note', '')
+    for s in stressors:
+        if s.strip():
+            db.session.add(StressorEntry(visit_id=visit.id, stressor_type=s, note=stressor_note))
+
+    # 2. Personality (Phase 2)
+    traits = form_data.getlist('personality[]')
+    pers_note = form_data.get('personality_note', '')
+    for t in traits:
+        if t.strip():
+            db.session.add(PersonalityEntry(visit_id=visit.id, trait=t, note=pers_note))
+
+    # 3. SYMPTOMS
+    s_names = form_data.getlist('symptom_name[]')
+    s_onsets = form_data.getlist('symptom_onset[]')
+    s_progs = form_data.getlist('symptom_progression[]')
+    s_currs = form_data.getlist('symptom_current[]')
+    s_notes = form_data.getlist('symptom_note[]')
+    
+    for i, name in enumerate(s_names):
         if name.strip():
             entry = SymptomEntry(
                 visit_id=visit.id,
                 symptom_name=name,
-                score_onset=float(symptom_onsets[i]) if i < len(symptom_onsets) and symptom_onsets[i] else None,
-                score_progression=float(symptom_progressions[i]) if i < len(symptom_progressions) and symptom_progressions[i] else None,
-                score_current=float(symptom_currents[i]) if i < len(symptom_currents) and symptom_currents[i] else 0,
-                duration_text=duration_texts[i] if i < len(duration_texts) else '',
-                note=symptom_notes[i] if i < len(symptom_notes) else ''
+                score_onset=float(s_onsets[i]) if i < len(s_onsets) and s_onsets[i] else None,
+                score_progression=float(s_progs[i]) if i < len(s_progs) and s_progs[i] else None,
+                score_current=float(s_currs[i]) if i < len(s_currs) and s_currs[i] else 0,
+                duration_text=get_duration(i, 'symptom'),  # Helper
+                note=s_notes[i] if i < len(s_notes) else ''
             )
             db.session.add(entry)
     
-    # Process medications
-    drug_names = form_data.getlist('drug_name[]')
-    drug_types = form_data.getlist('drug_type[]')
-    dose_mgs = form_data.getlist('dose_mg[]')
-    med_duration_texts = form_data.getlist('med_duration_text[]')
-    med_notes = form_data.getlist('med_note[]')
-    
-    for i, name in enumerate(drug_names):
+    # 4. Medications
+    d_names = form_data.getlist('drug_name[]')
+    d_types = form_data.getlist('drug_type[]')
+    d_vals = form_data.getlist('dose_val[]')
+    d_units = form_data.getlist('dose_unit[]')
+    d_freqs = form_data.getlist('frequency[]')
+    d_notes = form_data.getlist('med_note[]')
+    d_durs = form_data.getlist('med_duration[]')  # Direct list for meds
+
+    for i, name in enumerate(d_names):
         if name.strip():
+            # Combine Dose + Unit (e.g. "10 mg")
+            val = d_vals[i] if i < len(d_vals) else ""
+            unit = d_units[i] if i < len(d_units) else "mg"
+            combined_dose = f"{val} {unit}" if val else ""
+
             entry = MedicationEntry(
                 visit_id=visit.id,
                 drug_name=name,
-                drug_type=drug_types[i] if i < len(drug_types) else None,
-                dose_mg=dose_mgs[i] if i < len(dose_mgs) else '',
-                duration_text=med_duration_texts[i] if i < len(med_duration_texts) else '',
-                note=med_notes[i] if i < len(med_notes) else ''
+                drug_type=d_types[i] if i < len(d_types) else None,
+                dose_mg=combined_dose, 
+                frequency=d_freqs[i] if i < len(d_freqs) else '',
+                duration_text=d_durs[i] if i < len(d_durs) else '',
+                note=d_notes[i] if i < len(d_notes) else ''
             )
             db.session.add(entry)
-    
-    # Process side effects
+
+    # 5. Side Effects
     se_names = form_data.getlist('side_effect_name[]')
-    se_scores = form_data.getlist('side_effect_score[]')
+    se_onsets = form_data.getlist('side_effect_onset[]')
+    se_progs = form_data.getlist('side_effect_progression[]')
+    se_currs = form_data.getlist('side_effect_current[]')
     se_notes = form_data.getlist('side_effect_note[]')
-    
+
+    # Fallback for old field name (backward compatibility)
+    if not se_currs or all(not x for x in se_currs):
+        se_scores_old = form_data.getlist('side_effect_score[]')
+        se_currs = se_scores_old
+
     for i, name in enumerate(se_names):
         if name.strip():
+            # Handle float/int conversion safely
+            curr_val = float(se_currs[i]) if i < len(se_currs) and se_currs[i] else 0
+            
             entry = SideEffectEntry(
                 visit_id=visit.id,
                 side_effect_name=name,
-                score=float(se_scores[i]) if i < len(se_scores) and se_scores[i] else 0,
-                note=se_notes[i] if i < len(se_notes) else ''
+                score_onset=float(se_onsets[i]) if i < len(se_onsets) and se_onsets[i] else None,
+                score_progression=float(se_progs[i]) if i < len(se_progs) and se_progs[i] else None,
+                score_current=curr_val,
+                duration_text=get_duration(i, 'side_effect'),  # New Duration
+                note=se_notes[i] if i < len(se_notes) else '',
+                # CRITICAL FIX: Populate legacy score column
+                score=int(curr_val)
             )
             db.session.add(entry)
-    
-    # Process MSE entries
-    mse_categories = form_data.getlist('mse_category[]')
-    mse_finding_names = form_data.getlist('mse_finding_name[]')
-    mse_scores = form_data.getlist('mse_score[]')
-    mse_durations = form_data.getlist('mse_duration[]')
+
+    # 6. MSE
+    mse_cats = form_data.getlist('mse_category[]')
+    mse_findings = form_data.getlist('mse_finding_name[]')
+    mse_onsets = form_data.getlist('mse_onset[]')
+    mse_progs = form_data.getlist('mse_progression[]')
+    mse_currs = form_data.getlist('mse_current[]')
     mse_notes = form_data.getlist('mse_note[]')
     
-    for i, cat in enumerate(mse_categories):
-        if cat:
+    # Fallback for old field name (backward compatibility)
+    if not mse_currs or all(not x for x in mse_currs):
+        mse_scores_old = form_data.getlist('mse_score[]')
+        mse_currs = mse_scores_old
+    
+    for i, cat in enumerate(mse_cats):
+        if cat and i < len(mse_findings) and mse_findings[i].strip():
+            curr_val = float(mse_currs[i]) if i < len(mse_currs) and mse_currs[i] else 0
+            
             entry = MSEEntry(
                 visit_id=visit.id,
                 category=cat,
-                finding_name=mse_finding_names[i] if i < len(mse_finding_names) else '',
-                score=float(mse_scores[i]) if i < len(mse_scores) and mse_scores[i] else 0,
-                duration=mse_durations[i] if i < len(mse_durations) else '',
-                note=mse_notes[i] if i < len(mse_notes) else ''
+                finding_name=mse_findings[i],
+                score_onset=float(mse_onsets[i]) if i < len(mse_onsets) and mse_onsets[i] else None,
+                score_progression=float(mse_progs[i]) if i < len(mse_progs) and mse_progs[i] else None,
+                score_current=curr_val,
+                duration=get_duration(i, 'mse'),  # Helper (Maps to mse_duration_val[])
+                note=mse_notes[i] if i < len(mse_notes) else '',
+                # CRITICAL FIX: Populate legacy score column
+                score=int(curr_val)
             )
             db.session.add(entry)
-    
-    # Process visit note
-    visit_note = form_data.get('visit_note', '')
-    if visit_note:
-        visit.note = visit_note
 
 
 @app.route('/patient/<int:patient_id>')
@@ -521,25 +605,26 @@ def add_visit(patient_id):
     patient = Patient.query.get_or_404(patient_id)
     
     if request.method == 'POST':
-        visit_date_str = request.form.get('date')
-        if not visit_date_str:
-            flash('Please select a date.', 'error')
-            return redirect(url_for('add_visit', patient_id=patient_id))
+        # 1. Update Patient Attender Details (NEW)
+        if request.form.get('attender_name'):
+            patient.attender_name = request.form.get('attender_name')
+        if request.form.get('attender_relation'):
+            patient.attender_relation = request.form.get('attender_relation')
+        if request.form.get('attender_reliability'):
+            patient.attender_reliability = request.form.get('attender_reliability')
         
-        try:
-            visit_date = datetime.strptime(visit_date_str, '%Y-%m-%d').date()
-        except ValueError:
-            flash('Invalid date format.', 'error')
-            return redirect(url_for('add_visit', patient_id=patient_id))
-        
-        # Create visit
+        # 2. Create Visit
+        visit_date = parse_date(request.form.get('date')) or date.today()
         visit = Visit(
             patient_id=patient.id,
             date=visit_date,
             visit_type='Follow-up',
-            provisional_diagnosis=request.form.get('provisional_diagnosis', ''),
-            differential_diagnosis=request.form.get('differential_diagnosis', '')
+            next_visit_date=parse_date(request.form.get('next_visit_date'))
         )
+        # Save diagnosis if provided (from life chart or add visit)
+        if request.form.get('provisional_diagnosis'): visit.provisional_diagnosis = request.form.get('provisional_diagnosis')
+        if request.form.get('differential_diagnosis'): visit.differential_diagnosis = request.form.get('differential_diagnosis')
+        
         db.session.add(visit)
         db.session.flush()
         
@@ -553,7 +638,7 @@ def add_visit(patient_id):
         if submit_action == 'prescription':
             return redirect(url_for('preview_prescription', visit_id=visit.id))
         elif submit_action == 'lifechart':
-            return redirect(url_for('life_chart', patient_id=patient.id))
+            return redirect(url_for('life_chart', patient_id=patient.id, visit_id=visit.id))
         elif submit_action == 'both':
             return redirect(url_for('preview_prescription', visit_id=visit.id, include_qr='true'))
         else:
@@ -571,47 +656,159 @@ def add_visit(patient_id):
 @app.route('/visit/<int:visit_id>/edit', methods=['GET', 'POST'])
 @doctor_required
 def edit_visit(visit_id):
-    """Edit an existing visit."""
+    """Edit an existing visit and update patient details."""
     visit = Visit.query.get_or_404(visit_id)
     patient = visit.patient
     
     if request.method == 'POST':
-        # Update visit date
-        visit_date_str = request.form.get('date')
-        if visit_date_str:
-            try:
-                visit.date = datetime.strptime(visit_date_str, '%Y-%m-%d').date()
-            except ValueError:
-                flash('Invalid date format.', 'error')
+        # --- 1. Update Patient Details (Conditional Check) ---
+        # FIX: Only update these fields if they exist in the form.
+        # This prevents the LifeChart form (which lacks these fields) from wiping data.
         
-        # Update diagnosis
+        if 'age' in request.form:
+            try:
+                patient.age = int(request.form.get('age'))
+            except (ValueError, TypeError):
+                pass  # Keep old age if invalid
+
+        if 'sex' in request.form:
+            patient.sex = request.form.get('sex')
+            
+        if 'address' in request.form:
+            patient.address = request.form.get('address')
+            
+        if 'phone' in request.form:
+            patient.phone = request.form.get('phone')
+            
+        if 'attender_name' in request.form:
+            patient.attender_name = request.form.get('attender_name')
+            
+        if 'attender_relation' in request.form:
+            patient.attender_relation = request.form.get('attender_relation')
+            
+        if 'attender_reliability' in request.form:
+            patient.attender_reliability = request.form.get('attender_reliability')
+            
+        if 'personal_notes' in request.form:
+            patient.personal_notes = request.form.get('personal_notes')
+
+        # --- 2. Update Visit Data ---
+        visit.date = parse_date(request.form.get('date')) or visit.date
+        visit.next_visit_date = parse_date(request.form.get('next_visit_date'))  # NEW
+        
         visit.provisional_diagnosis = request.form.get('provisional_diagnosis', '')
         visit.differential_diagnosis = request.form.get('differential_diagnosis', '')
         
-        # Delete existing entries
+        # --- 3. Replace Entries (Delete Old -> Add New) ---
         SymptomEntry.query.filter_by(visit_id=visit.id).delete()
         MedicationEntry.query.filter_by(visit_id=visit.id).delete()
         SideEffectEntry.query.filter_by(visit_id=visit.id).delete()
         MSEEntry.query.filter_by(visit_id=visit.id).delete()
         
-        # Process new form data
+        # Phase 2: Clear new tables
+        StressorEntry.query.filter_by(visit_id=visit.id).delete()
+        PersonalityEntry.query.filter_by(visit_id=visit.id).delete()
+        
+        # Use the updated helper from Phase 1
         process_visit_form_data(visit, request.form)
         
         db.session.commit()
         
-        # Handle submit_action
+        # --- 4. Redirection Logic ---
         submit_action = request.form.get('submit_action')
         if submit_action == 'prescription':
             return redirect(url_for('preview_prescription', visit_id=visit.id))
         elif submit_action == 'lifechart':
-            return redirect(url_for('life_chart', patient_id=patient.id))
+            return redirect(url_for('life_chart', patient_id=patient.id, visit_id=visit.id))
         elif submit_action == 'both':
             return redirect(url_for('preview_prescription', visit_id=visit.id, include_qr='true'))
         else:
             return redirect(url_for('patient_detail', patient_id=patient.id))
     
+    # --- FIND PREVIOUS VISIT (Carry-Forward Logic) ---
+    # Find the visit that happened immediately before the current one
+    previous_visit = Visit.query.filter(
+        Visit.patient_id == patient.id,
+        Visit.date < visit.date
+    ).order_by(Visit.date.desc()).first()
+    
+    # If same date, use ID to distinguish order
+    if not previous_visit:
+        previous_visit = Visit.query.filter(
+            Visit.patient_id == patient.id,
+            Visit.date == visit.date,
+            Visit.id < visit.id
+        ).order_by(Visit.id.desc()).first()
+    
     # GET request
-    return render_template('edit_visit.html', visit=visit, patient=patient)
+    return render_template('edit_visit.html', visit=visit, patient=patient, previous_visit=previous_visit)
+
+
+@app.route('/visit/<int:visit_id>/update_clinical', methods=['POST'])
+@login_required
+def update_clinical(visit_id):
+    """
+    Lightweight update for the Life Chart view.
+    Updates ONLY: Diagnosis, Notes, Next Date, and Medications.
+    Preserves: Symptoms, MSE, Side Effects, Stressors, Personality.
+    """
+    visit = Visit.query.get_or_404(visit_id)
+    
+    # 1. Update Basic Visit Fields
+    visit.note = request.form.get('visit_note', '')
+    visit.provisional_diagnosis = request.form.get('provisional_diagnosis', '')
+    visit.differential_diagnosis = request.form.get('differential_diagnosis', '')
+    
+    next_date = request.form.get('next_visit_date')
+    if next_date:
+        visit.next_visit_date = parse_date(next_date)
+
+    # 2. Update Medications ONLY (Wipe old meds for this visit, write new ones)
+    # We do NOT touch SymptomEntry, MSEEntry, SideEffectEntry here.
+    MedicationEntry.query.filter_by(visit_id=visit.id).delete()
+    
+    # Retrieve drug types
+    d_types = request.form.getlist('drug_type[]')
+    d_names = request.form.getlist('drug_name[]')
+    d_vals = request.form.getlist('dose_val[]')
+    d_units = request.form.getlist('dose_unit[]')
+    d_freqs = request.form.getlist('frequency[]')
+    d_durs = request.form.getlist('med_duration[]')
+
+    for i, name in enumerate(d_names):
+        if name.strip():
+            val = d_vals[i] if i < len(d_vals) else ""
+            unit = d_units[i] if i < len(d_units) else "mg"
+            combined_dose = f"{val} {unit}" if val else ""
+
+            entry = MedicationEntry(
+                visit_id=visit.id,
+                # Save Drug Type (Default to 'Generic' if missing)
+                drug_type=d_types[i] if i < len(d_types) else 'Generic',
+                drug_name=name,
+                dose_mg=combined_dose, 
+                frequency=d_freqs[i] if i < len(d_freqs) else '',
+                duration_text=d_durs[i] if i < len(d_durs) else ''
+            )
+            db.session.add(entry)
+
+    # 3. Commit Changes
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error saving changes: {str(e)}", "error")
+
+    # 4. Handle Redirection
+    submit_action = request.form.get('submit_action')
+    
+    if submit_action == 'prescription':
+        return redirect(url_for('preview_prescription', visit_id=visit.id))
+    elif submit_action == 'lifechart':
+        # Refresh the same page
+        return redirect(url_for('life_chart', patient_id=visit.patient_id, visit_id=visit.id))
+    
+    return redirect(url_for('life_chart', patient_id=visit.patient_id, visit_id=visit.id))
 
 
 def prepare_chart_data(patient_id: int) -> dict:
@@ -891,29 +1088,351 @@ def mse_chart_preview():
 
 
 
+# --- CHART LOGIC 4-PANEL ---
 @app.route('/life_chart/<int:patient_id>')
 @login_required
 def life_chart(patient_id):
-    """Life chart visualization page."""
     patient = Patient.query.get_or_404(patient_id)
-    chart_data = prepare_chart_data(patient_id)
+    visits = Visit.query.filter_by(patient_id=patient.id).order_by(Visit.date).all()
     
+    # Check if a specific visit_id was passed in the URL (e.g., ?visit_id=5)
+    target_visit_id = request.args.get('visit_id', type=int)
+    target_visit = None
+    
+    if target_visit_id:
+        # Fetch the specific visit to populate the form
+        target_visit = Visit.query.get(target_visit_id)
+        # Security: Ensure this visit actually belongs to this patient
+        if target_visit and target_visit.patient_id != patient.id:
+            target_visit = None
+    
+    # 1. Helpers
+    def get_days(dur_str):
+        if not dur_str: return 0
+        d = parse_duration(dur_str)
+        return d.days if d else 0
+
+    def build_clinical_points(entry, v_date, type_lbl):
+        pts = []
+        days = get_days(getattr(entry, 'duration_text', '')) or get_days(getattr(entry, 'duration', ''))
+        start = v_date - timedelta(days=days) if days else v_date
+        
+        # Onset (at Start Date)
+        if entry.score_onset is not None:
+            pts.append({'x': start.strftime('%Y-%m-%d'), 'y': entry.score_onset, 'detail': f"{type_lbl} Onset", 'phase': 'Onset'})
+        # Progression (at Midpoint)
+        if entry.score_progression is not None and days > 0:
+            mid = start + timedelta(days=days/2)
+            pts.append({'x': mid.strftime('%Y-%m-%d'), 'y': entry.score_progression, 'detail': f"{type_lbl} Progression", 'phase': 'Progression'})
+        # Current (at Visit Date)
+        if entry.score_current is not None:
+            pts.append({'x': v_date.strftime('%Y-%m-%d'), 'y': entry.score_current, 'detail': f"{type_lbl} Current", 'phase': 'Current'})
+        return pts
+
+    def build_med_points(entry, v_date):
+        pts = []
+        days = get_days(entry.duration_text)
+        dose = get_unified_dose(entry.drug_name, entry.dose_mg)
+        # Daily points from visit date onwards
+        duration = max(1, days)
+        for i in range(duration):
+            d = v_date + timedelta(days=i)
+            pts.append({
+                'x': d.strftime('%Y-%m-%d'),
+                'y': dose,
+                'detail': f"Freq: {entry.frequency}"
+            })
+        return pts
+
+    # 2. Gather Data (Separated by Chart)
+    symptoms = {}
+    meds = {}
+    se = {}
+    mse = {}
+    
+    # Visit Details for Modal
+    visit_details = {}
+
+    for v in visits:
+        v_date_str = v.date.strftime('%Y-%m-%d')
+        
+        # Build Modal Data
+        visit_details[v_date_str] = {
+            'date': v_date_str,
+            'symptoms': [{'name': s.symptom_name, 'score': s.score_current, 'note': s.note} for s in v.symptom_entries],
+            'meds': [{'name': m.drug_name, 'dose': m.dose_mg, 'freq': m.frequency} for m in v.medication_entries],
+            'se': [{'name': s.side_effect_name, 'score': s.score_current} for s in v.side_effect_entries],
+            'mse': [{'cat': m.category, 'name': m.finding_name, 'score': m.score_current} for m in v.mse_entries]
+        }
+
+        for s in v.symptom_entries:
+            if s.symptom_name not in symptoms: symptoms[s.symptom_name] = []
+            symptoms[s.symptom_name].extend(build_clinical_points(s, v.date, 'Symptom'))
+            
+        for m in v.medication_entries:
+            if m.drug_name not in meds: meds[m.drug_name] = []
+            meds[m.drug_name].extend(build_med_points(m, v.date))
+            
+        for s in v.side_effect_entries:
+            if s.side_effect_name not in se: se[s.side_effect_name] = []
+            se[s.side_effect_name].extend(build_clinical_points(s, v.date, 'Side Effect'))
+            
+        for m in v.mse_entries:
+            # Use Finding Name as key for individual lines
+            label = m.finding_name if m.finding_name else m.category
+            if label not in mse: mse[label] = []
+            mse[label].extend(build_clinical_points(m, v.date, f"MSE ({m.category})"))
+
+    # 3. Format Function (Calculates Phase for Unified Lines)
+    def calculate_unified(data_map, label, color):
+        daily_sums = {}
+        daily_counts = {}
+        
+        # Determine all points contributing to unified
+        for item_points in data_map.values():
+            for p in item_points:
+                date_key = p['x']
+                daily_sums[date_key] = daily_sums.get(date_key, 0) + p['y']
+                daily_counts[date_key] = daily_counts.get(date_key, 0) + 1
+        
+        if not daily_sums: return None
+        
+        unified_points = []
+        for k, v in daily_sums.items():
+            avg = v / daily_counts[k]
+            # Create breakdown for tooltip
+            breakdown = []
+            is_current = False
+            for name, points in data_map.items():
+                for pt in points:
+                    if pt['x'] == k:
+                        breakdown.append({'name': name, 'score': pt['y']})
+                        # Determine phase for unified point
+                        if pt.get('phase') == 'Current':
+                            is_current = True
+            
+            unified_points.append({
+                'x': k, 
+                'y': avg, 
+                'detail': 'Average',
+                'breakdown': breakdown,
+                'phase': 'Current' if is_current else 'History' 
+            })
+            
+        unified_points.sort(key=lambda p: p['x'])
+
+        return {
+            "label": label,
+            "data": unified_points,
+            "borderColor": color,
+            "backgroundColor": "white",
+            "pointBorderColor": color,
+            "borderWidth": 4,
+            "fill": False,
+            "pointRadius": 2,
+            "pointHoverRadius": 4,
+            "pointHitRadius": 6,
+            "tension": 0.4,
+            "isUnified": True
+        }
+
+    def build_dataset(data_map, prefix):
+        datasets = []
+        colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#e6194b', '#3cb44b', '#ffe119', '#4363d8']
+        for i, (label, points) in enumerate(data_map.items()):
+            datasets.append({
+                'label': label,
+                'data': sorted(points, key=lambda x: x['x']),
+                'borderColor': colors[i % len(colors)],
+                'backgroundColor': colors[i % len(colors)],
+                'fill': False,
+                'tension': 0.2,
+                'hidden': True
+            })
+        return datasets
+
+    # 4. Render
     return render_template(
         'life_chart.html',
         patient=patient,
-        symptom_datasets=chart_data['symptom_datasets'],
-        symptom_unified=chart_data.get('symptom_unified'),
-        medication_datasets=chart_data['medication_datasets'], # Explicitly named
-        med_unified=chart_data.get('med_unified'),
-        side_effect_datasets=chart_data['side_effect_datasets'], # Explicitly named
-        se_unified=chart_data.get('se_unified'),
-        mse_datasets=chart_data['mse_datasets'],
-        mse_unified=chart_data.get('mse_unified'),
-        symptom_names=chart_data.get('symptom_names', []),
-        med_names=chart_data.get('med_names', []),
-        se_names=chart_data.get('se_names', []),
-        mse_categories=chart_data.get('mse_categories', []),
-        visit_details=chart_data.get('visit_details', {})
+        visit=target_visit,  # Pass the target visit for context-aware form
+        today=date.today(),
+        guest=session.get('role') == 'guest',
+        
+        # Data for Charts
+        symptom_datasets=build_dataset(symptoms, "symptom"),
+        medication_datasets=build_dataset(meds, "med"),
+        side_effect_datasets=build_dataset(se, "se"),
+        mse_datasets=build_dataset(mse, "mse"),
+        
+        # Unified Lines
+        symptom_unified=calculate_unified(symptoms, "Unified Symptoms (Avg)", "black"),
+        med_unified=calculate_unified(meds, "Unified Meds (Avg)", "black"),
+        se_unified=calculate_unified(se, "Unified SE (Avg)", "black"),
+        mse_unified=calculate_unified(mse, "Unified MSE (Avg)", "black"),
+        
+        # Lists for Sidebar Checklists
+        symptom_names=list(symptoms.keys()),
+        med_names=list(meds.keys()),
+        se_names=list(se.keys()),
+        mse_categories=list(mse.keys()),
+        
+        visit_details=visit_details
+    )
+
+
+@app.route('/life_chart/export/<int:patient_id>')
+@login_required
+def preview_lifechart(patient_id):
+    """Preview/Export Life Chart with date range and visible datasets filter."""
+    patient = Patient.query.get_or_404(patient_id)
+    
+    start_str = request.args.get('start')
+    end_str = request.args.get('end')
+    # Use unquote to handle special characters in drug names
+    visible_labels_str = unquote(request.args.get('visible', ''))
+    
+    try:
+        start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_str, '%Y-%m-%d').date()
+    except:
+        start_date = date.today() - timedelta(days=365)
+        end_date = date.today()
+
+    # Fetch Data (Filter visits by date range for efficiency)
+    visits = Visit.query.filter(
+        Visit.patient_id == patient.id,
+        Visit.date >= start_date,
+        Visit.date <= end_date
+    ).order_by(Visit.date).all()
+
+    # Helper functions (same as life_chart route)
+    def get_days(dur_str):
+        if not dur_str: return 0
+        d = parse_duration(dur_str)
+        return d.days if d else 0
+
+    def build_clinical_points(entry, v_date, type_lbl):
+        pts = []
+        days = get_days(getattr(entry, 'duration_text', '')) or get_days(getattr(entry, 'duration', ''))
+        start = v_date - timedelta(days=days) if days else v_date
+        
+        # Onset
+        if hasattr(entry, 'score_onset') and entry.score_onset is not None:
+            pts.append({'x': start.strftime('%Y-%m-%d'), 'y': float(entry.score_onset), 'phase': 'Onset'})
+        # Progression
+        if hasattr(entry, 'score_progression') and entry.score_progression is not None and days > 0:
+            mid = start + timedelta(days=days/2)
+            pts.append({'x': mid.strftime('%Y-%m-%d'), 'y': float(entry.score_progression), 'phase': 'Progression'})
+        # Current
+        if hasattr(entry, 'score_current') and entry.score_current is not None:
+            pts.append({'x': v_date.strftime('%Y-%m-%d'), 'y': float(entry.score_current), 'phase': 'Current'})
+        elif hasattr(entry, 'score') and entry.score is not None:
+            pts.append({'x': v_date.strftime('%Y-%m-%d'), 'y': float(entry.score), 'phase': 'Current'})
+        
+        return pts
+
+    def build_med_points(entry, v_date):
+        pts = []
+        days = get_days(entry.duration_text)
+        # Use a simple dose conversion (you may need to adjust this)
+        try:
+            dose_str = entry.dose_mg or '0'
+            dose_val = float(dose_str.split()[0]) if dose_str.split() else 0
+        except:
+            dose_val = 0
+        duration = max(1, days)
+        for i in range(duration):
+            d = v_date + timedelta(days=i)
+            pts.append({
+                'x': d.strftime('%Y-%m-%d'),
+                'y': dose_val,
+                'detail': f"Freq: {entry.frequency}"
+            })
+        return pts
+
+    # Build data maps from visits
+    symptoms = {}
+    meds = {}
+    se = {}
+    mse = {}
+
+    for visit in visits:
+        for s in visit.symptom_entries:
+            if s.symptom_name not in symptoms:
+                symptoms[s.symptom_name] = []
+            symptoms[s.symptom_name].extend(build_clinical_points(s, visit.date, 'Symptom'))
+            
+        for m in visit.medication_entries:
+            if m.drug_name not in meds:
+                meds[m.drug_name] = []
+            meds[m.drug_name].extend(build_med_points(m, visit.date))
+            
+        for s in visit.side_effect_entries:
+            if s.side_effect_name not in se:
+                se[s.side_effect_name] = []
+            se[s.side_effect_name].extend(build_clinical_points(s, visit.date, 'Side Effect'))
+            
+        for m in visit.mse_entries:
+            label = m.finding_name if m.finding_name else m.category
+            if label not in mse:
+                mse[label] = []
+            mse[label].extend(build_clinical_points(m, visit.date, f"MSE ({m.category})"))
+
+    # Initialize Grouping Dictionary (Order determines Chart Order)
+    grouped_data = {
+        'Symptoms': [],
+        'Medications': [],
+        'Side Effects': [],
+        'MSE Findings': []
+    }
+
+    # Helper to Populate Groups
+    # CRITICAL FIX: keys must match what build_dataset expects ("symptom", "mse", "se", "med")
+    def build_dataset(data_map, prefix):
+        datasets = []
+        colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#e6194b', '#3cb44b', '#ffe119', '#4363d8']
+        for i, (label, points) in enumerate(data_map.items()):
+            datasets.append({
+                'label': label,
+                'data': sorted(points, key=lambda x: x['x']),
+                'borderColor': colors[i % len(colors)],
+                'backgroundColor': colors[i % len(colors)],
+                'fill': False,
+                'tension': 0.2,
+                'hidden': False
+            })
+        return datasets
+
+    def add_to_group(data, type_key, category):
+        datasets = build_dataset(data, type_key)
+        for ds in datasets:
+            ds['category'] = category
+            grouped_data[category].append(ds)
+
+    # Execute Mapping (Recommended Order: Symptoms -> Meds -> Side Effects -> MSE)
+    add_to_group(symptoms, "symptom", "Symptoms")
+    add_to_group(meds, "med", "Medications")      # Moved Meds up
+    add_to_group(se, "se", "Side Effects")
+    add_to_group(mse, "mse", "MSE Findings")
+
+    # Filter by Label
+    if visible_labels_str:
+        visible_labels = set(x.strip() for x in visible_labels_str.split(','))
+        
+        for cat in grouped_data:
+            # Only keep datasets where the label matches a checked item
+            grouped_data[cat] = [
+                d for d in grouped_data[cat] 
+                if d['label'] in visible_labels
+            ]
+
+    return render_template(
+        'preview_lifechart.html',
+        patient=patient,
+        grouped_datasets=grouped_data,
+        start_date=start_date,
+        end_date=end_date
     )
 
 
@@ -1000,7 +1519,7 @@ def generate_prescription_pdf(visit_id, include_qr=False):
             str(idx),
             drug_display,
             med.dose_mg or '-',
-            med.note or '-',  # Frequency mapped to note
+            med.frequency or med.note or '-',  # Use frequency field, fallback to note for backward compatibility
             med.duration_text or '-'
         ])
     

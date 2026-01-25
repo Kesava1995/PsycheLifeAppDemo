@@ -19,6 +19,10 @@ class Doctor(db.Model):
     social_handle = db.Column(db.String(100)) # e.g. "@drjohnpsych"
     signature_filename = db.Column(db.String(200)) # Path to uploaded image
     
+    # Phase 1: New Contact Details
+    phone = db.Column(db.String(20))
+    email = db.Column(db.String(120))
+    
     patients = db.relationship('Patient', backref='doctor', lazy=True)
 
 
@@ -31,6 +35,14 @@ class Patient(db.Model):
     sex = db.Column(db.String(10), nullable=False)
     address = db.Column(db.Text)
     doctor_id = db.Column(db.Integer, db.ForeignKey('doctors.id'), nullable=False)
+    
+    # Phase 1: Extended Details
+    phone = db.Column(db.String(20))  # Optional Phone
+    attender_name = db.Column(db.String(100))
+    attender_relation = db.Column(db.String(50))
+    attender_reliability = db.Column(db.String(10))  # 'Yes' or 'No'
+    personal_notes = db.Column(db.Text)  # Doctor's personal ID notes
+    
     visits = db.relationship('Visit', backref='patient', lazy=True, cascade='all, delete-orphan')
 
 
@@ -43,12 +55,20 @@ class Visit(db.Model):
     visit_type = db.Column(db.String(20), nullable=False)  # 'First' or 'Follow-up'
     provisional_diagnosis = db.Column(db.Text)
     differential_diagnosis = db.Column(db.Text)
+    
+    # NEW: Follow-up Date
+    next_visit_date = db.Column(db.Date)
+    
     note = db.Column(db.Text)
     
     symptom_entries = db.relationship('SymptomEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
     medication_entries = db.relationship('MedicationEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
     side_effect_entries = db.relationship('SideEffectEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
     mse_entries = db.relationship('MSEEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
+    
+    # Phase 2: New Relationships
+    stressor_entries = db.relationship('StressorEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
+    personality_entries = db.relationship('PersonalityEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
 
 
 class SymptomEntry(db.Model):
@@ -72,8 +92,12 @@ class MedicationEntry(db.Model):
     drug_name = db.Column(db.String(200), nullable=False)
     drug_type = db.Column(db.String(50))  # 'Brand' or 'Generic'
     dose_mg = db.Column(db.String(50))
+    
+    # Phase 1: Frequency Dropdown (0-0-1 etc)
+    frequency = db.Column(db.String(20))
+    
     duration_text = db.Column(db.String(100))
-    note = db.Column(db.Text)  # Used for frequency/instructions
+    note = db.Column(db.Text)  # Instructions (Before/After food)
 
 
 class SideEffectEntry(db.Model):
@@ -82,8 +106,24 @@ class SideEffectEntry(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     visit_id = db.Column(db.Integer, db.ForeignKey('visits.id'), nullable=False)
     side_effect_name = db.Column(db.String(200), nullable=False)
-    score = db.Column(db.Float, nullable=False)
+    
+    # Phase 1: 3 Sliders Support
+    score_onset = db.Column(db.Float)
+    score_progression = db.Column(db.Float)
+    score_current = db.Column(db.Float, nullable=False)  # Renamed from 'score' conceptually
+    
+    # NEW: Duration Support
+    duration_text = db.Column(db.String(100))
+    
     note = db.Column(db.Text)
+    
+    # --- FIX FOR CRASH: Explicitly map the legacy 'score' column ---
+    score = db.Column(db.Integer, default=0)
+    
+    # Backward compatibility property if needed
+    @property
+    def score_prop(self):
+        return self.score_current
 
 
 class MSEEntry(db.Model):
@@ -93,9 +133,22 @@ class MSEEntry(db.Model):
     visit_id = db.Column(db.Integer, db.ForeignKey('visits.id'), nullable=False)
     category = db.Column(db.String(50), nullable=False)  # 'Thought', 'Perception', 'Affect'
     finding_name = db.Column(db.String(200))
-    score = db.Column(db.Float, nullable=False)
+    
+    # Phase 1: 3 Sliders Support
+    score_onset = db.Column(db.Float)
+    score_progression = db.Column(db.Float)
+    score_current = db.Column(db.Float, nullable=False)  # Renamed from 'score'
+    
     duration = db.Column(db.String(100))
     note = db.Column(db.Text)
+    
+    # --- FIX FOR CRASH: Explicitly map the legacy 'score' column ---
+    score = db.Column(db.Integer, default=0)
+    
+    # Backward compatibility property if needed
+    @property
+    def score_prop(self):
+        return self.score_current
 
 
 class GuestShare(db.Model):
@@ -118,3 +171,22 @@ class GuestShare(db.Model):
             
         return now > self.expires_at
 
+
+# --- Phase 2: New Models ---
+
+class StressorEntry(db.Model):
+    __tablename__ = 'stressor_entries'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    visit_id = db.Column(db.Integer, db.ForeignKey('visits.id'), nullable=False)
+    stressor_type = db.Column(db.String(200)) # e.g., Financial, Loss
+    note = db.Column(db.Text)
+
+
+class PersonalityEntry(db.Model):
+    __tablename__ = 'personality_entries'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    visit_id = db.Column(db.Integer, db.ForeignKey('visits.id'), nullable=False)
+    trait = db.Column(db.String(200)) # e.g., Paranoid, Borderline
+    note = db.Column(db.Text)

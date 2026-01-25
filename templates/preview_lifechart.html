@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Life Chart Export - {{ patient.name }}</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        /* --- FIX 1: GLOBAL RESET --- */
+        * { box-sizing: border-box; } 
+
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            margin: 0; padding: 0; 
+            background: #e9eff4;
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        .action-bar {
+            width: 100%; max-width: 297mm; padding: 15px 0;
+            display: flex; gap: 10px; justify-content: flex-end;
+        }
+        .btn {
+            padding: 8px 16px; border: none; border-radius: 4px; 
+            cursor: pointer; font-size: 13px; font-weight: 600; color: white;
+        }
+        .btn-print { background: #333; }
+        .btn-png { background: #007bff; }
+        .btn-pdf { background: #dc3545; }
+
+        /* A4 Landscape Container - LOCKED SIZE */
+        .a4-container {
+            width: 297mm; 
+            height: 209mm; /* Exact height */
+            background: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: 0;
+            overflow: hidden; /* Prevent charts from pushing layout out */
+            position: relative;
+        }
+
+        .sidebar {
+            background: #fcfcfc; border-right: 1px solid #ddd;
+            padding: 20px; display: flex; flex-direction: column; overflow: hidden;
+        }
+        .header-info { margin-bottom: 10px; border-bottom: 2px solid #333; padding-bottom: 5px; }
+        .header-info h2 { margin: 0; font-size: 20px; text-transform: uppercase; }
+        .header-info p { margin: 2px 0 0; font-size: 11px; color: #555; }
+        
+        .cat-group { margin-bottom: 10px; }
+        .cat-title { font-size: 10px; font-weight: 700; color: #999; border-bottom: 1px solid #eee; margin-bottom: 4px; }
+        .legend-item { display: flex; align-items: center; margin-bottom: 3px; font-size: 11px; font-weight: 600; }
+        .color-box { width: 10px; height: 10px; margin-right: 8px; flex-shrink: 0; }
+
+        /* --- FIX 2: STRICT FLEX CONTAINERS --- */
+        .charts-column {
+            display: flex;
+            flex-direction: column;
+            padding: 10px 15px;
+            height: 100%; /* Fill A4 exactly */
+            overflow: hidden;
+        }
+        
+        .chart-wrapper {
+            flex: 1; /* Split height evenly */
+            min-height: 0; /* ALLOW SHRINKING (Crucial Fix) */
+            display: flex; flex-direction: column;
+            margin-bottom: 5px;
+            overflow: hidden;
+        }
+        
+        .chart-title { font-size: 11px; font-weight: 700; color: #666; margin-left: 5px; }
+        
+        .canvas-container { 
+            flex: 1; 
+            position: relative; 
+            width: 100%; 
+            height: 100%; /* Force Canvas to fit container */
+            overflow: hidden; 
+        }
+
+        @media print {
+            body { background: white; margin: 0; }
+            .action-bar { display: none; }
+            .a4-container { box-shadow: none; width: 100vw; height: 100vh; }
+            @page { size: landscape; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="action-bar">
+        <button onclick="window.print()" class="btn btn-print">🖨 Print</button>
+        <button onclick="downloadPNG()" class="btn btn-png">🖼 Download PNG</button>
+        <button onclick="downloadPDF()" class="btn btn-pdf">📄 Download PDF</button>
+    </div>
+
+    <div class="a4-container" id="captureArea">
+        <div class="sidebar">
+            <div class="header-info">
+                <h2>{{ patient.name }}</h2>
+                <p>DOB: {{ patient.age }} / {{ patient.sex }}</p>
+                <p>{{ start_date.strftime('%d %b %Y') }} - {{ end_date.strftime('%d %b %Y') }}</p>
+            </div>
+
+            {% for category, datasets in grouped_datasets.items() %}
+                {% if datasets %}
+                <div class="cat-group">
+                    <div class="cat-title">{{ "Chief Complaints" if category == "Symptoms" else category }}</div>
+                    {% for ds in datasets %}
+                    <div class="legend-item">
+                        <div class="color-box" style="background-color: {{ ds.borderColor }};"></div>
+                        <span>{{ ds.label }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <div class="charts-column">
+            {% for category, datasets in grouped_datasets.items() %}
+                {% if datasets %}
+                <div class="chart-wrapper">
+                    <div class="chart-title">{{ "Chief Complaints" if category == "Symptoms" else category }}</div>
+                    <div class="canvas-container">
+                        <canvas id="chart-{{ category|replace(' ', '_') }}"></canvas>
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false, // Allows stretching/shrinking
+            animation: false,
+            layout: { padding: { left: 5, right: 10, top: 5, bottom: 5 } },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: { unit: 'month', displayFormats: { month: 'MMM yy' } },
+                    min: '{{ start_date.strftime("%Y-%m-%d") }}',
+                    max: '{{ end_date.strftime("%Y-%m-%d") }}',
+                    ticks: { font: { size: 9 }, maxRotation: 0 },
+                    grid: { display: true, color: '#f0f0f0' }
+                },
+                y: {
+                    min: 0, max: 10,
+                    ticks: { font: { size: 9 }, stepSize: 2 },
+                    grid: { color: '#f0f0f0' },
+                    beginAtZero: true
+                }
+            },
+            plugins: { legend: { display: false } },
+            elements: { point: { radius: 2 }, line: { tension: 0.2, borderWidth: 2 } }
+        };
+
+        const allData = {{ grouped_datasets|tojson }};
+
+        // FIX: Loop through keys and find the matching ID explicitly
+        for (const [category, datasets] of Object.entries(allData)) {
+            if (datasets && datasets.length > 0) {
+                // Generate the ID exactly how Jinja did (replace spaces with underscores)
+                const safeId = 'chart-' + category.replace(/ /g, '_');
+                const canvas = document.getElementById(safeId);
+                
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: { datasets: datasets },
+                        options: commonOptions
+                    });
+                }
+            }
+        }
+
+        // --- 2. DOWNLOAD HANDLERS ---
+        
+        function downloadPNG() {
+            html2canvas(document.getElementById("captureArea"), { scale: 2 }).then(c => {
+                const a = document.createElement('a'); a.download = 'Chart_{{ patient.name }}.png';
+                a.href = c.toDataURL("image/png"); a.click();
+            });
+        }
+        function downloadPDF() {
+            html2canvas(document.getElementById("captureArea"), { scale: 2 }).then(c => {
+                const pdf = new window.jspdf.jsPDF('l', 'mm', 'a4');
+                pdf.addImage(c.toDataURL('image/png'), 'PNG', 0, 0, 297, 210);
+                pdf.save('Chart_{{ patient.name }}.pdf');
+            });
+        }
+    </script>
+</body>
+</html>

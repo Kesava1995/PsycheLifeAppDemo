@@ -2,357 +2,425 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - ElevenEleven Health</title>
     <style>
         :root { --primary-blue: #A5DCFE; --primary-dark: #7ab8e0; --bg-color: #f4f8fb; --sidebar-width: 280px; }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
         body { background-color: var(--bg-color); height: 100vh; overflow: hidden; display: flex; }
-        
+        .app-container { display: flex; width: 100%; height: 100%; } 
         .sidebar { width: var(--sidebar-width); background: #fff; border-right: 1px solid #eaecf0; padding: 32px 24px; display: flex; flex-direction: column; flex-shrink: 0; }
-        .sidebar-header { display: flex; align-items: center; gap: 12px; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #f2f4f7; }
-        .user-avatar { width: 48px; height: 48px; border-radius: 50%; background-color: #f2f4f7; background-image: url('https://ui-avatars.com/api/?name={{ session.get("username", "Dr") }}&background=random&color=fff'); background-size: cover; }
-        .user-info { display: flex; flex-direction: column; }
-        .user-name { font-weight: 600; font-size: 16px; color: #101828; line-height: 24px; }
-        .user-role { font-size: 14px; color: #667085; line-height: 20px; }
-        .nav-links { display: flex; flex-direction: column; gap: 4px; }
-        .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 6px; text-decoration: none; color: #344054; font-weight: 500; font-size: 15px; transition: all 0.2s; }
-        .nav-item:hover { background-color: #f9fafb; color: #101828; }
-        .section-label { font-size: 12px; font-weight: 600; color: #98a2b3; margin-top: 32px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
-        .patient-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
-        .patient-item { padding: 8px 12px; border-radius: 6px; font-size: 14px; color: #667085; cursor: pointer; text-decoration: none; display: block; }
-        .patient-item:hover { background-color: #f2f4f7; color: #101828; }
-        .nav-item.logout { margin-top: auto; color: #b42318; }
-        .nav-item.logout:hover { background-color: #fef3f2; }
-
-        .app-container { display: flex; width: 100%; height: 100%; }
         .main-content { flex: 1; overflow-y: auto; padding: 30px; background: var(--primary-blue); }
         .visit-card { background: white; border-radius: 12px; padding: 25px; width: 95%; max-width: 1400px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
         .section-header { display: flex; align-items: center; gap: 15px; margin-top: 25px; margin-bottom: 15px; border-bottom: 2px solid var(--bg-color); padding-bottom: 8px; }
         .section-title { font-size: 1.1rem; font-weight: 600; color: #555; }
-        input[type="text"], input[type="number"], input[type="date"], textarea, select { width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px; }
-        .add-btn { background: var(--primary-dark); color: white; border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; }
-        .patient-grid { display: grid; gap: 15px; }
+        .add-btn { background: var(--primary-dark); color: white; border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        
+        .subsection-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; margin-top: 15px; }
+        .subsection-title { font-size: 0.9rem; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .entry-wrapper { border: 1px solid #eee; padding: 15px; margin-bottom: 10px; border-radius: 8px; background: #fafafa; position: relative; }
+        .row-flex { display: flex; gap: 15px; align-items: flex-start; }
+        
+        /* Slider CSS */
+        .sliders-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; flex: 2.5; }
+        .slider-group { display: flex; flex-direction: column; align-items: center; width: 100%; }
+        .slider-group label { font-size: 10px; color: #666; margin-bottom: 4px; text-transform: uppercase; white-space: nowrap; }
+        .slider-wrapper { display: flex; align-items: center; gap: 8px; width: 100%; padding: 0 5px; }
+        input[type=range] { -webkit-appearance: none; width: 100%; height: 5px; cursor: pointer; margin: 0; padding: 0; background: #ddd; border-radius: 3px; flex: 1; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: var(--primary-dark); cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        .slider-val { font-size: 11px; font-weight: bold; color: #555; width: 20px; text-align: right; }
+        
+        .note-btn { background: none; border: none; cursor: pointer; font-size: 1.2rem; color: #999; }
+        .note-input { display: none; width: 100%; margin-top: 8px; padding: 8px; border: 1px dashed #ccc; background-color: #fffdf0; }
+        .remove-btn { color: #ff6b6b; background: none; border: none; font-weight: bold; cursor: pointer; font-size: 14px; margin-left: 5px; }
+        .btn { padding: 15px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; color: white; font-size: 16px; margin-top: 10px; }
+        
+        .patient-grid { display: grid; gap: 15px; background: #f9fafb; padding: 20px; border-radius: 8px; border: 1px solid #eee; }
+        .row-3-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
         .row-2-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .note-btn { background: none; border: none; cursor: pointer; font-size: 1.2rem; margin-left: 5px; color: #888; padding: 0; vertical-align: middle; }
-        .note-btn:hover { color: var(--primary-dark); }
-        .note-input { display: none; width: 100%; margin-top: 8px; padding: 8px; border: 1px dashed #ccc; border-radius: 4px; background-color: #fffdf0; font-size: 0.9rem; }
-        .entry-wrapper { margin-bottom: 15px; }
-        .symptom-entry { background: #fafafa; padding: 15px; border-radius: 8px; }
-        .symptom-top-row { display: flex; gap: 15px; margin-bottom: 15px; align-items: center; }
-        .symptom-slider-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
-        .med-row { display: grid; grid-template-columns: 100px 2fr 1fr 1fr auto auto; gap: 15px; align-items: center; }
-        .side-effect-row { display: flex; gap: 15px; align-items: center; }
-        .mse-row { display: flex; align-items: center; gap: 15px; padding: 10px; background: #fff; }
-        .mse-wrapper { border-bottom: 1px solid #f0f0f0; margin-bottom: 5px; }
-        .mse-label { width: 100px; font-weight: 600; }
-        .btn { padding: 15px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; color: white; font-size: 16px; }
+        
+        input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px; }
+        
+        /* NEW STYLES FOR PHASE 2 */
+        .click-trigger-row { display: flex; gap: 20px; margin-bottom: 20px; }
+        .click-trigger { 
+            flex: 1; 
+            padding: 12px; 
+            border: 1px dashed #7ab8e0; 
+            border-radius: 6px; 
+            color: #555; 
+            cursor: pointer; 
+            background: #fdfdfd; 
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .click-trigger:hover { background: #f0f8ff; border-color: #4facfe; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal-content { background: white; margin: 10% auto; padding: 20px; width: 400px; border-radius: 8px; }
+        .checklist-group label { display: block; margin-bottom: 8px; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="app-container">
         <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="user-avatar"></div>
-                <div class="user-info">
-                    <span class="user-name">Dr. {{ session.get('username', 'User')|title }}</span>
-                    <span class="user-role">ElevenEleven Health</span>
-                </div>
-            </div>
-            <div class="nav-links">
-                <a href="{{ url_for('profile') }}" class="nav-item"><span class="nav-icon">👤</span> Profile</a>
-            </div>
-            <div class="section-label">My Patients</div>
-            <div class="patient-list">
-                {% for patient in patients %}
-                <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="patient-item">{{ patient.name }}</a>
+            <div style="font-weight:bold; margin-bottom:20px;">Dr. {{ session.get('username') }}</div>
+            <a href="{{ url_for('profile') }}" style="text-decoration:none; color:#333; margin-bottom:20px; display:block;">👤 Profile</a>
+            <input type="text" id="search" placeholder="Search Patients..." onkeyup="filterPatients()" style="width:100%; padding:8px; margin-bottom:10px;">
+            <div id="patientList" style="flex:1; overflow-y:auto;">
+                {% for p in patients %}
+                <a href="{{ url_for('patient_detail', patient_id=p.id) }}" class="patient-item" style="display:block; padding:10px; border-bottom:1px solid #eee; text-decoration:none; color:#333;">
+                    <b>{{ p.name }}</b><br><span style="font-size:12px; color:#666;">{{ p.sex }}, {{ p.age }}y</span>
+                </a>
                 {% endfor %}
             </div>
-            <a href="{{ url_for('logout') }}" class="nav-item logout"><span class="nav-icon">🚪</span> Log Out</a>
+            <a href="{{ url_for('logout') }}" style="color:red; margin-top:20px; display:block;">Log Out</a>
         </aside>
+
         <main class="main-content">
             <div class="visit-card">
-                <form method="POST" action="{{ url_for('dashboard') }}" enctype="multipart/form-data" id="visitForm">
+                <form method="POST" action="{{ url_for('dashboard') }}" id="visitForm">
                     <h2 style="margin-bottom: 20px;">New Patient & First Visit</h2>
+                    
                     <div class="patient-grid">
                         <div class="row-2-col">
-                            <input type="text" name="patient_name" placeholder="Patient Name" required>
-                            <input type="number" name="age" placeholder="Age" required>
+                            <div><label>Patient Name *</label><input type="text" name="patient_name" required></div>
+                            <div><label>Phone</label><input type="text" name="phone"></div>
                         </div>
                         <div class="row-2-col">
-                            <select name="sex" required>
-                                <option value="">Select Gender</option>
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                                <option value="Other">Other</option>
-                            </select>
-                            <input type="date" name="visit_date" value="{{ today.strftime('%Y-%m-%d') }}" required>
+                            <div><label>Age *</label><input type="number" name="age" required></div>
+                            <div><label>Sex *</label><select name="sex"><option>Male</option><option>Female</option><option>Other</option></select></div>
                         </div>
-                        <input type="text" name="address" placeholder="Address (Optional)">
-                    </div>
-                    
-                    <div class="section-header">
-                        <span class="section-title">Symptoms</span>
-                        <button type="button" class="add-btn" onclick="addSymptom()">+</button>
-                    </div>
-                    <div id="symptoms-container">
-                        <div class="entry-wrapper symptom-wrapper">
-                            <div class="symptom-entry">
-                                <div class="symptom-top-row" style="display: flex; gap: 10px; align-items: center;">
-                                    <input type="text" name="symptom_name[]" placeholder="Symptom Name" style="flex: 3;">
-                                    <input type="text" name="duration_text[]" placeholder="Duration" style="flex: 1; min-width: 100px;">
-                                    <div style="display: flex; align-items: center; flex: 2; gap: 5px;">
-                                        <span style="font-size: 0.8rem; color: #666; white-space: nowrap;">Current:</span>
-                                        <input type="range" name="symptom_current[]" min="0" max="10" value="5" style="width: 100%;" oninput="this.nextElementSibling.innerText = this.value">
-                                        <span style="min-width: 20px; text-align: right; font-weight: bold;">5</span>
-                                    </div>
-                                    <button type="button" class="note-btn" onclick="toggleNote(this)" title="Add Note">📝</button>
-                                </div>
-                                <div class="symptom-slider-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #eee;">
-                                    <div style="display: flex; align-items: center; gap: 5px;">
-                                        <span style="font-size: 0.9rem; color: #666; width: 50px;">Onset</span>
-                                        <input type="range" name="symptom_onset[]" min="0" max="10" value="5" style="flex: 1;" oninput="this.nextElementSibling.innerText = this.value">
-                                        <span style="font-weight: bold; width: 20px; text-align: right;">5</span>
-                                    </div>
-                                    <div style="display: flex; align-items: center; gap: 5px;">
-                                        <span style="font-size: 0.9rem; color: #666; width: 80px;">Progression</span>
-                                        <input type="range" name="symptom_progression[]" min="0" max="10" value="5" style="flex: 1;" oninput="this.nextElementSibling.innerText = this.value">
-                                        <span style="font-weight: bold; width: 20px; text-align: right;">5</span>
-                                    </div>
-                                </div>
-                                <input type="text" class="note-input" name="symptom_note[]" placeholder="Add symptom notes here...">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="section-header">
-                        <span class="section-title">Medications</span>
-                        <button type="button" class="add-btn" onclick="addMedication()">+</button>
-                    </div>
-                    <div id="meds-container">
-                        <div class="entry-wrapper med-wrapper">
-                            <div class="med-row">
-                                <select name="drug_type[]">
-                                    <option value="Generic">Generic</option>
-                                    <option value="Brand">Brand</option>
-                                </select>
-                                <input type="text" name="drug_name[]" placeholder="Drug Name">
-                                <input type="text" name="dose_mg[]" placeholder="Dose">
-                                <input type="text" name="med_duration_text[]" placeholder="Duration">
-                                <button type="button" class="note-btn" onclick="toggleNote(this)" title="Add Note">📝</button>
-                            </div>
-                            <input type="text" class="note-input" name="med_note[]" placeholder="Add medication notes here...">
-                        </div>
-                    </div>
-
-                    <div class="section-header">
-                        <span class="section-title">Side Effects</span>
-                        <button type="button" class="add-btn" onclick="addSideEffect()">+</button>
-                    </div>
-                    <div id="side-effects-container">
-                        <div class="entry-wrapper side-effect-wrapper">
-                            <div class="side-effect-row" style="display: flex; gap: 15px; align-items: center;">
-                                <input type="text" name="side_effect_name[]" placeholder="Side Effect Name" style="flex: 2;">
-                                <div style="display: flex; align-items: center; flex: 1; gap: 5px;">
-                                    <span style="font-size: 0.8rem; color: #666;">Severity:</span>
-                                    <input type="range" name="side_effect_score[]" min="0" max="10" value="3" style="width: 100%;" oninput="this.nextElementSibling.innerText = this.value">
-                                    <span style="font-weight: bold; width: 20px; text-align: right;">3</span>
-                                </div>
-                                <button type="button" class="note-btn" onclick="toggleNote(this)" title="Add Note">📝</button>
-                            </div>
-                            <input type="text" class="note-input" name="side_effect_note[]" placeholder="Add side effect notes here...">
-                        </div>
-                    </div>
-                    
-                    <div class="section-header">
-                        <span class="section-title">MSE Findings</span>
-                    </div>
-                    <div class="entry-wrapper mse-wrapper">
-                        <div class="mse-row">
-                            <div class="mse-label">Thought</div>
-                            <input type="hidden" name="mse_category[]" value="Thought">
-                            <input type="text" name="mse_finding_name[]" placeholder="Finding" style="flex: 2;">
-                            <input type="text" name="mse_duration[]" placeholder="Duration" style="width: 150px;">
-                            <input type="range" name="mse_score[]" min="0" max="10" value="5" style="flex: 1;" oninput="this.nextElementSibling.innerText = this.value">
-							<span style="min-width:30px; text-align:right;font-weight: bold;">5</span>
-                            <button type="button" class="note-btn" onclick="toggleNote(this)" title="Add Note">📝</button>
-                        </div>
-                        <input type="text" class="note-input" name="mse_note[]" placeholder="Add note for thought...">
-                    </div>
-                    <div class="entry-wrapper mse-wrapper">
-                        <div class="mse-row">
-                            <div class="mse-label">Perception</div>
-                            <input type="hidden" name="mse_category[]" value="Perception">
-                            <input type="text" name="mse_finding_name[]" placeholder="Finding" style="flex: 2;">
-                            <input type="text" name="mse_duration[]" placeholder="Duration" style="width: 150px;">
-                            <input type="range" name="mse_score[]" min="0" max="10" value="5" style="flex: 1;" oninput="this.nextElementSibling.innerText = this.value">
-							<span style="min-width:30px; text-align:right;font-weight: bold;">5</span>
-                            <button type="button" class="note-btn" onclick="toggleNote(this)" title="Add Note">📝</button>
-                        </div>
-                        <input type="text" class="note-input" name="mse_note[]" placeholder="Add note for perception...">
-                    </div>
-                    <div class="entry-wrapper mse-wrapper">
-                        <div class="mse-row">
-                            <div class="mse-label">Affect</div>
-                            <input type="hidden" name="mse_category[]" value="Affect">
-                            <input type="text" name="mse_finding_name[]" placeholder="Finding" style="flex: 2;">
-                            <input type="text" name="mse_duration[]" placeholder="Duration" style="width: 150px;">
-                            <input type="range" name="mse_score[]" min="0" max="10" value="5" style="flex: 1;" oninput="this.nextElementSibling.innerText = this.value">
-							<span style="min-width:30px; text-align:right;font-weight: bold;">5</span>
-                            <button type="button" class="note-btn" onclick="toggleNote(this)" title="Add Note">📝</button>
-                        </div>
-                        <input type="text" class="note-input" name="mse_note[]" placeholder="Add note for affect...">
-                    </div>
-
-                    <div style="margin-top: 30px;" class="entry-wrapper diagnosis-section">
-                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                            <h3 style="font-size: 1rem; margin: 0;">Diagnosis</h3>
-                            <button type="button" class="note-btn" onclick="toggleNote(this)" title="Add General Visit Note">📝</button>
-                        </div>
-                        <textarea class="note-input" name="notes" placeholder="General visit notes..." style="margin-bottom: 15px;"></textarea>
+                        <div><label>Address</label><textarea name="address" rows="1"></textarea></div>
                         
-                        <textarea name="provisional_diagnosis" rows="3" placeholder="Provisional Diagnosis"></textarea>
-                        <textarea name="differential_diagnosis" rows="3" placeholder="Differential Diagnosis" style="margin-top: 10px;"></textarea>
+                        <div class="row-3-col">
+                            <div><label>Attender Name</label><input type="text" name="attender_name"></div>
+                            <div><label>Relation</label><input type="text" name="attender_relation"></div>
+                            <div><label>Reliability</label><select name="attender_reliability"><option>Yes</option><option>No</option></select></div>
+                        </div>
+                        
+                        <div><label>ID Notes (Doctor Only)</label><textarea name="personal_notes" rows="1"></textarea></div>
+                        <input type="hidden" name="visit_date" value="{{ today.strftime('%Y-%m-%d') }}">
                     </div>
 
-                    <input type="hidden" name="workflow" id="workflow_input">
-
-                    <div style="display: flex; gap: 15px; margin-top: 30px; padding-top: 30px; border-top: 2px solid #e0e0e0;">
-						<button type="button" onclick="openDoctorModal('prescription')" class="btn" style="flex: 1; background: linear-gradient(135deg, #A5DCFE 0%, #7BC4F0 100%); color: #000;">💊 Generate Prescription</button>
-						<button type="button" onclick="submitLifeChart()" class="btn" style="flex: 1; background: linear-gradient(135deg, #A5DCFE 0%, #7BC4F0 100%); color: #000;">📈 Generate Life Chart</button>
-						<button type="button" onclick="openDoctorModal('both')" class="btn" style="flex: 1; background: linear-gradient(135deg, #A5DCFE 0%, #7BC4F0 100%); color: #000;">💊📈 Generate Both</button>
-					</div>
-
-                    <div id="doctorModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000;">
-                        <div style="background:#fff; max-width:450px; margin:5% auto; padding:25px; border-radius:8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-                            <h3 style="margin-top:0; color:#333;">Doctor Profile (Guest)</h3>
-                            <p style="font-size:13px; color:#666; margin-bottom:15px;">Enter details for this session's prescription.</p>
-                            
-                            <label style="font-size:12px; font-weight:bold; display:block; margin-bottom:5px;">Full Name</label>
-                            <input type="text" name="doctor_name" placeholder="Dr. Name" style="width:100%; margin-bottom:10px; padding:8px; border:1px solid #ccc; border-radius:4px;">
-                            
-                            <label style="font-size:12px; font-weight:bold; display:block; margin-bottom:5px;">Clinic Name</label>
-                            <input type="text" name="clinic_name" placeholder="PsycheLife" style="width:100%; margin-bottom:10px; padding:8px; border:1px solid #ccc; border-radius:4px;">
-                            
-							<label style="font-size:12px; font-weight:bold; display:block; margin-bottom:5px;">Qualification (e.g. MBBS, MD)</label>
-							<input type="text" name="doctor_qualification" placeholder="MBBS, DPM" style="width:100%; margin-bottom:10px; padding:8px; border:1px solid #ccc; border-radius:4px;">
-
-							<label style="font-size:12px; font-weight:bold; display:block; margin-bottom:5px;">Registration Code</label>
-							<input type="text" name="doctor_registration" placeholder="KMC-12345" style="width:100%; margin-bottom:10px; padding:8px; border:1px solid #ccc; border-radius:4px;">
-                    
-                            <label style="font-size:12px; font-weight:bold; display:block; margin-bottom:5px;">Clinic Address</label>
-                            <textarea name="clinic_address" placeholder="Full Address..." rows="3" style="width:100%; margin-bottom:10px; padding:8px; border:1px solid #ccc; border-radius:4px; font-family:sans-serif;"></textarea>
-                            
-                            <label style="font-size:12px; font-weight:bold; display:block; margin-bottom:5px;">Signature Image (Optional)</label>
-                            <input type="file" name="signature_upload" accept="image/*" style="width:100%; margin-bottom:20px; font-size:12px;">
-                    
-                            <div style="display:flex; justify-content:flex-end; gap:10px;">
-                                <button type="button" onclick="document.getElementById('doctorModal').style.display='none'" class="btn" style="background:#ccc; padding:10px 20px;">Cancel</button>
-                                <button type="button" onclick="confirmDoctor()" class="btn" style="background:#7ab8e0; padding:10px 20px;">Save & Generate</button>
-                            </div>
+                    <div class="section-header"><span class="section-title">Background Factors</span></div>
+                    <div class="click-trigger-row">
+                        <div class="click-trigger" onclick="document.getElementById('modalStress').style.display='block'">
+                            <span>⚠️ Stressors</span><span>▼</span>
+                        </div>
+                        <div class="click-trigger" onclick="document.getElementById('modalPers').style.display='block'">
+                            <span>🧠 Personality</span><span>▼</span>
                         </div>
                     </div>
-                    </form>
+
+                    <div class="section-header"><span class="section-title">Chief Complaints</span><button type="button" class="add-btn" onclick="addSymptom()">+</button></div>
+                    <div id="symptoms-container"></div>
+
+                    <div class="section-header"><span class="section-title">MSE Findings</span></div>
+                    <div class="subsection-header"><span class="subsection-title">Thought</span><button type="button" class="add-btn" onclick="addMSE('Thought')">+</button></div>
+                    <div id="mse-thought-container"></div>
+                    
+                    <div class="subsection-header"><span class="subsection-title">Perception</span><button type="button" class="add-btn" onclick="addMSE('Perception')">+</button></div>
+                    <div id="mse-perception-container"></div>
+                    
+                    <div class="subsection-header"><span class="subsection-title">Affect</span><button type="button" class="add-btn" onclick="addMSE('Affect')">+</button></div>
+                    <div id="mse-affect-container"></div>
+
+                    <div class="section-header"><span class="section-title">Side Effects</span><button type="button" class="add-btn" onclick="addSideEffect()">+</button></div>
+                    <div id="side-effects-container"></div>
+
+                    <div style="text-align:center; margin: 30px 0;">
+                        <button type="submit" name="submit_action" value="lifechart" class="btn" style="background:var(--primary-dark); width:auto; padding:10px 40px;">🔄 Update Life Chart</button>
+                    </div>
+
+                    <div class="section-header"><span class="section-title">Medications</span><button type="button" class="add-btn" onclick="addMedication()">+</button></div>
+                    <div id="meds-container"></div>
+
+                    <div class="section-header"><span class="section-title">Diagnosis</span></div>
+
+                    <div style="margin-top:20px; background:#fff; padding:15px; border:1px solid #eee; border-radius:8px;">
+                        <div class="row-2-col">
+                            <div>
+                                <label>Provisional Diagnosis</label>
+                                <textarea name="provisional_diagnosis" rows="2"></textarea>
+                                <div style="margin-top: 5px; display: flex; gap: 10px;">
+                                    <button type="button" class="btn" onclick="showCriteria('ICD')" style="background: #e0e0e0; color: #333; font-size: 11px; padding: 4px 10px; width: auto; border: 1px solid #ccc;">
+                                        Show ICD-10
+                                    </button>
+                                    <button type="button" class="btn" onclick="showCriteria('DSM')" style="background: #e0e0e0; color: #333; font-size: 11px; padding: 4px 10px; width: auto; border: 1px solid #ccc;">
+                                        Show DSM-5
+                                    </button>
+                                </div>
+                            </div>
+                            <div><label>Differential Diagnosis</label><textarea name="differential_diagnosis" rows="2"></textarea></div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 20px; background:#f9fafb; padding:15px; border-radius:8px; display:flex; gap:20px; align-items:center;">
+                        <div>
+                            <label>Next Follow-up Date</label>
+                            <input type="date" name="next_visit_date" id="nextVisitDate">
+                        </div>
+                        <div style="flex:1;">
+                            <label>General Visit Note</label>
+                            <input type="text" name="visit_note" placeholder="Summary...">
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 15px; margin-top: 30px;">
+                        <button type="submit" name="submit_action" value="prescription" class="btn" style="flex:1; background:#7BC4F0; color:#000;">💊 Prescription</button>
+                        <!--<button type="submit" name="submit_action" value="lifechart" class="btn" style="flex:1; background:#f5576c; color:#fff;">📈 LifeChart</button>-->
+                        <button type="submit" name="submit_action" value="both" class="btn" style="flex:1; background:#4facfe; color:#fff;">Generate Both</button>
+                    </div>
+
+                    <div id="modalStress" class="modal">
+                        <div class="modal-content">
+                            <h3>Select Stressors</h3>
+                            <div class="checklist-group">
+                                <label><input type="checkbox" name="stressors[]" value="Inter-personal/Familial"> Inter-personal / Familial</label>
+                                <label><input type="checkbox" name="stressors[]" value="Loss/Bereavement"> Loss / Bereavement</label>
+                                <label><input type="checkbox" name="stressors[]" value="Financial/Occupational"> Financial / Occupational</label>
+                                <label><input type="checkbox" name="stressors[]" value="Health/Medical"> Health / Medical</label>
+                                <label><input type="checkbox" name="stressors[]" value="Violence"> Physical / Sexual Violence</label>
+                                <label><input type="checkbox" name="stressors[]" value="Other"> Other</label>
+                            </div>
+                            <textarea name="stressor_note" placeholder="Notes on stressors..." rows="2" style="margin-top:10px;"></textarea>
+                            <button type="button" class="btn" style="margin-top:15px;" onclick="document.getElementById('modalStress').style.display='none'">Done</button>
+                        </div>
+                    </div>
+
+                    <div id="modalPers" class="modal">
+                        <div class="modal-content">
+                            <h3>Premorbid Personality</h3>
+                            <div class="checklist-group" style="height:200px; overflow-y:auto;">
+                                <label><input type="checkbox" name="personality[]" value="Paranoid"> Paranoid</label>
+                                <label><input type="checkbox" name="personality[]" value="Schizoid"> Schizoid</label>
+                                <label><input type="checkbox" name="personality[]" value="Schizotypal"> Schizotypal</label>
+                                <label><input type="checkbox" name="personality[]" value="Antisocial"> Antisocial</label>
+                                <label><input type="checkbox" name="personality[]" value="Borderline"> Borderline</label>
+                                <label><input type="checkbox" name="personality[]" value="Histrionic"> Histrionic</label>
+                                <label><input type="checkbox" name="personality[]" value="Narcissistic"> Narcissistic</label>
+                                <label><input type="checkbox" name="personality[]" value="Avoidant"> Avoidant</label>
+                                <label><input type="checkbox" name="personality[]" value="Dependent"> Dependent</label>
+                                <label><input type="checkbox" name="personality[]" value="Anankastic"> Anankastic</label>
+								<label><input type="checkbox" name="personality[]" value="Neuroticism" > Neuroticism</label>
+								<label><input type="checkbox" name="personality[]" value="Low Conscientiousness" > Low Conscientiousness</label>
+								<label><input type="checkbox" name="personality[]" value="Low Agreeableness" > Low Agreeableness</label>
+								<label><input type="checkbox" name="personality[]" value="High Extraversion" > High Extraversion</label>
+								<label><input type="checkbox" name="personality[]" value="Low Openness" > Low Openness</label>
+								<label><input type="checkbox" name="personality[]" value="High Introversion" > High Introversion</label>
+								<label><input type="checkbox" name="personality[]" value="Others" > Others</label>
+                            </div>
+                            <textarea name="personality_note" placeholder="Notes on personality..." rows="2" style="margin-top:10px;"></textarea>
+                            <button type="button" class="btn" style="margin-top:15px;" onclick="document.getElementById('modalPers').style.display='none'">Done</button>
+                        </div>
+                    </div>
+
+                </form>
             </div>
         </main>
     </div>
+
+    <datalist id="duration-options-list"></datalist>
+    <datalist id="freq-options-list">
+        <option value="1-0-0">Morning</option>
+        <option value="1-0-1">Morning & Night</option>
+        <option value="0-0-1">Night</option>
+        <option value="1-1-1">Morning, Afternoon & Night</option>
+        <option value="0-1-0">Afternoon</option>
+        <option value="SOS">As Needed</option>
+    </datalist>
+
     <script>
         function toggleNote(btn) {
-            const wrapper = btn.closest('.entry-wrapper');
-            const input = wrapper.querySelector('.note-input');
-            input.style.display = (input.style.display === 'none' || input.style.display === '') ? 'block' : 'none';
+            const el = btn.closest('.entry-wrapper').querySelector('.note-input');
+            el.style.display = el.style.display === 'block' ? 'none' : 'block';
         }
+        function updVal(slider) { slider.nextElementSibling.innerText = slider.value; }
+        
+        window.addEventListener('load', () => {
+            const d = new Date(); d.setDate(d.getDate() + 30);
+            document.getElementById('nextVisitDate').value = d.toISOString().split('T')[0];
+            addSymptom(); addMedication(); addSideEffect();
+            addMSE('Thought'); addMSE('Perception'); addMSE('Affect');
+        });
 
-        function addSymptom() {
-            const container = document.getElementById('symptoms-container');
-            const template = container.querySelector('.symptom-wrapper');
-            const newRow = template.cloneNode(true);
-            newRow.querySelectorAll('input[type="text"]').forEach(i => i.value = '');
-            newRow.querySelectorAll('input[type="range"]').forEach(i => i.value = 5);
-            const currentSpan = newRow.querySelector('.symptom-top-row span:last-of-type');
-            if(currentSpan) currentSpan.innerText = '5';
-            newRow.querySelectorAll('.symptom-slider-row span').forEach(s => { if(!isNaN(s.innerText)) s.innerText = '5'; });
-            newRow.querySelector('.note-input').style.display = 'none';
-            container.appendChild(newRow);
-        }
-
-        function addMedication() {
-            const container = document.getElementById('meds-container');
-            const template = container.querySelector('.med-wrapper');
-            const newRow = template.cloneNode(true);
-            newRow.querySelectorAll('input[type="text"]').forEach(i => i.value = '');
-            newRow.querySelector('.note-input').style.display = 'none';
-            container.appendChild(newRow);
-        }
-
-        function addSideEffect() {
-            const container = document.getElementById('side-effects-container');
-            const template = container.querySelector('.side-effect-wrapper');
-            const newRow = template.cloneNode(true);
-            newRow.querySelectorAll('input[type="text"]').forEach(i => i.value = '');
-            newRow.querySelector('input[type="range"]').value = 3;
-            const scoreSpan = newRow.querySelector('.side-effect-row span:last-of-type');
-            if(scoreSpan) scoreSpan.innerText = '3';
-            newRow.querySelector('.note-input').style.display = 'none';
-            container.appendChild(newRow);
-        }
-
-        // --- DOCTOR MODAL & SUBMISSION LOGIC ---
-        let pendingWorkflow = null;
-
-        function openDoctorModal(workflow) {
-            // Logic: If Guest, show modal. If Doctor, submit immediately.
-            {% if session.get('guest') %}
-                // GUEST MODE: Show the modal
-                pendingWorkflow = workflow;
-                document.getElementById('doctorModal').style.display = 'block';
-            {% else %}
-                // DOCTOR MODE: Submit immediately
-                document.getElementById('workflow_input').value = workflow;
-                
-                const form = document.getElementById('visitForm');
-                if (!form) { alert("Error: Form not found! Check id='visitForm'"); return; }
-                
-                // Submit to dashboard
-                form.action = "{{ url_for('dashboard') }}";
-                form.submit();
-            {% endif %}
-        }
-
-        function confirmDoctor() {
-            // Used by Guest Mode to submit from the Modal
-            const form = document.getElementById('visitForm');
-            if (!form) { alert("Error: Form not found!"); return; }
-
-            document.getElementById('workflow_input').value = pendingWorkflow;
+        // --- SMART DROPDOWN LOGIC ---
+        function updateDurationOptions(input) {
+            const val = input.value.trim();
+            const list = document.getElementById('duration-options-list');
             
-            // Route based on workflow
-            if (pendingWorkflow === 'prescription') {
-                form.action = "{{ url_for('guest_prescription') }}";
-            } else if (pendingWorkflow === 'both') {
-                form.action = "{{ url_for('guest_both') }}";
-            } else {
-                form.action = "{{ url_for('dashboard') }}";
+            const num = parseFloat(val);
+            if (!isNaN(num) && num > 0) {
+                list.innerHTML = ''; // Clear current
+                ['Days', 'Weeks', 'Months', 'Years'].forEach(unit => {
+                    const opt = document.createElement('option');
+                    opt.value = `${num} ${unit}`;
+                    list.appendChild(opt);
+                });
             }
+        }
+
+        function updateFreqOptions(input) {
+            const val = input.value.trim().replace(/-/g, ''); // strip dashes for matching
+            const list = document.getElementById('freq-options-list');
             
-            form.submit();
+            // Map inputs like "101" to "1-0-1"
+            const map = {
+                '1': '1-0-0', '10': '1-0-0', '100': '1-0-0',
+                '01': '0-1-0', '010': '0-1-0',
+                '001': '0-0-1', 
+                '101': '1-0-1', 
+                '111': '1-1-1',
+                'sos': 'SOS'
+            };
+            
+            if (map[val]) {
+                // Add this specific mapping as a high-priority option
+                // Note: We can't clear default options easily without losing them, 
+                // but we can append this match to ensure it appears.
+                let opt = document.createElement('option');
+                opt.value = map[val];
+                opt.label = `${val} -> ${map[val]}`;
+                list.appendChild(opt);
+            }
+        }
+
+        function createRowHTML(type, cat='') {
+            const isMSE = type === 'mse';
+            const prefix = isMSE ? 'mse' : type; 
+            
+            let contentHTML = '';
+            
+            // --- MEDICATIONS ROW (25% Name + Even Dist) ---
+            if (type === 'med') {
+                contentHTML = `
+                <div class="row-flex" style="align-items:center;">
+                    <select name="drug_type[]" style="width:60px; flex:none;"><option>Generic</option><option>Brand</option></select>
+                    <input type="text" name="drug_name[]" placeholder="Drug Name" style="width:25%; flex:0 0 25%;">
+                    
+                    <div style="display:flex; gap:0; flex:1; min-width:120px;">
+                        <input type="text" name="dose_val[]" placeholder="Dose" style="flex:1; border-radius:4px 0 0 4px; border-right:none;">
+                        <select name="dose_unit[]" style="width:55px; border-radius:0 4px 4px 0; background:#f0f0f0;"><option>mg</option><option>mcg</option></select>
+                    </div>
+                    
+                    <input type="text" list="freq-options-list" name="frequency[]" placeholder="Freq" style="flex:1; min-width:80px;" oninput="updateFreqOptions(this)">
+                    <input type="text" list="duration-options-list" name="${prefix}_duration[]" placeholder="Duration" style="flex:1; min-width:80px;" oninput="updateDurationOptions(this)">
+                    
+                    <button type="button" class="note-btn" onclick="toggleNote(this)">📝</button>
+                    <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button>
+                </div>
+                `;
+            } else {
+                // --- OTHER ROWS (Symptoms, SE, MSE) ---
+                let slidersHTML = `
+                <div class="sliders-container">
+                    <div class="slider-group"><label>Severity at Onset</label><div class="slider-wrapper"><input type="range" name="${prefix}_onset[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div>
+                    <div class="slider-group"><label>Severity during Course</label><div class="slider-wrapper"><input type="range" name="${prefix}_progression[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div>
+                    <div class="slider-group"><label>Current Severity</label><div class="slider-wrapper"><input type="range" name="${prefix}_current[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div>
+                </div>`;
+                
+                let inputName = isMSE ? 
+                    `<input type="hidden" name="mse_category[]" value="${cat}"><input type="text" name="mse_finding_name[]" placeholder="Finding..." style="flex:1.5;">` :
+                    `<input type="text" name="${prefix}_name[]" placeholder="Name" style="flex:1.5;">`;
+
+                // Single Duration Input with Type Dropdown
+                let durationHTML = `<input type="text" list="duration-options-list" name="${prefix}_duration[]" placeholder="Duration" style="flex:0.5; min-width:100px;" oninput="updateDurationOptions(this)">`;
+
+                contentHTML = `
+                <div class="row-flex" style="align-items:center;">
+                    ${inputName}
+                    ${slidersHTML}
+                    ${durationHTML}
+                    <button type="button" class="note-btn" onclick="toggleNote(this)">📝</button>
+                    <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button>
+                </div>`;
+            }
+
+            return `<div class="entry-wrapper">${contentHTML}<input type="text" class="note-input" name="${prefix}_note[]" placeholder="Notes (e.g. After Food)..."></div>`;
+        }
+
+        function addSymptom() { document.getElementById('symptoms-container').insertAdjacentHTML('beforeend', createRowHTML('symptom')); }
+        function addMedication() { document.getElementById('meds-container').insertAdjacentHTML('beforeend', createRowHTML('med')); }
+        function addSideEffect() { document.getElementById('side-effects-container').insertAdjacentHTML('beforeend', createRowHTML('side_effect')); }
+        function addMSE(cat) { 
+            const containerId = 'mse-' + cat.toLowerCase() + '-container';
+            document.getElementById(containerId).insertAdjacentHTML('beforeend', createRowHTML('mse', cat)); 
         }
         
-        function submitLifeChart() {
-            const form = document.getElementById('visitForm');
-            if (!form) { alert("Error: Form not found!"); return; }
-            
-            document.getElementById('workflow_input').value = 'lifechart';
-
-            // Route based on mode
-            {% if session.get('guest') %}
-                form.action = "{{ url_for('guest_lifechart') }}";
-            {% else %}
-                form.action = "{{ url_for('dashboard') }}";
-            {% endif %}
-
-            form.submit();
+        function filterPatients() {
+            var filter = document.getElementById("search").value.toUpperCase();
+            var items = document.getElementsByClassName("patient-item");
+            for (var i = 0; i < items.length; i++) {
+                items[i].style.display = items[i].innerText.toUpperCase().indexOf(filter) > -1 ? "" : "none";
+            }
         }
     </script>
+
+<div id="criteriaModal" class="modal" style="z-index: 9999;">
+    <div class="modal-content" style="max-width: 700px; max-height: 80vh; overflow-y: auto;">
+        <span class="close-btn" onclick="document.getElementById('criteriaModal').style.display='none'">&times;</span>
+        <h3 id="criteriaTitle" style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:10px;">Diagnostic Criteria</h3>
+        <div id="criteriaBody" style="font-family: 'Segoe UI', sans-serif; font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap;"></div>
+    </div>
+</div>
+
+<script>
+    // --- TEXTBOOK DATA DICTIONARY ---
+    // Sources: Kaplan & Sadock (DSM-5), Neeraj Ahuja (ICD-10)
+    const diagnosisDB = {
+        "depression": {
+            "DSM": "DSM-5 Criteria for Major Depressive Disorder:\n\nA. Five (or more) of the following during the same 2-week period; at least one is (1) depressed mood or (2) loss of interest/pleasure:\n1. Depressed mood most of the day, nearly every day.\n2. Markedly diminished interest or pleasure in all, or almost all, activities.\n3. Significant weight loss/gain or decrease/increase in appetite.\n4. Insomnia or hypersomnia nearly every day.\n5. Psychomotor agitation or retardation.\n6. Fatigue or loss of energy.\n7. Feelings of worthlessness or excessive/inappropriate guilt.\n8. Diminished ability to think/concentrate, or indecisiveness.\n9. Recurrent thoughts of death, suicidal ideation.\n\nB. Symptoms cause clinically significant distress or impairment.",
+            "ICD": "ICD-10 Criteria for Depressive Episode (F32):\n\nKey Symptoms (At least 2 required):\n1. Depressed mood.\n2. Loss of interest and enjoyment.\n3. Reduced energy leading to increased fatiguability and diminished activity.\n\nAssociated Symptoms (At least 2 others):\n- Reduced concentration and attention\n- Reduced self-esteem and self-confidence\n- Ideas of guilt and unworthiness\n- Bleak and pessimistic views of the future\n- Ideas or acts of self-harm or suicide\n- Disturbed sleep\n- Diminished appetite"
+        },
+        "schizophrenia": {
+            "DSM": "DSM-5 Criteria for Schizophrenia:\n\nA. Two (or more) of the following for 1 month (at least one must be 1, 2, or 3):\n1. Delusions\n2. Hallucinations\n3. Disorganized speech (e.g., frequent derailment or incoherence)\n4. Grossly disorganized or catatonic behavior\n5. Negative symptoms (i.e., diminished emotional expression or avolition)\n\nB. Level of functioning is markedly below the level achieved prior to onset.\nC. Continuous signs of disturbance persist for at least 6 months.",
+            "ICD": "ICD-10 Criteria for Schizophrenia (F20):\n\nAt least one very clear symptom from group (a) to (d), OR two from group (e) to (h):\n\n(a) Thought echo, thought insertion or withdrawal, thought broadcasting.\n(b) Delusions of control, influence, or passivity; delusional perception.\n(c) Hallucinatory voices giving a running commentary or discussing the patient.\n(d) Persistent delusions of other kinds that are culturally inappropriate.\n(e) Persistent hallucinations in any modality + fleeting delusions/overvalued ideas.\n(f) Breaks in the train of thought (incoherence/neologisms).\n(g) Catatonic behaviour.\n(h) 'Negative' symptoms (apathy, paucity of speech, blunting of affect)."
+        },
+        "bipolar": {
+            "DSM": "DSM-5 Criteria for Manic Episode (Bipolar I):\n\nA. A distinct period of abnormally and persistently elevated, expansive, or irritable mood and increased activity/energy (lasting at least 1 week).\n\nB. Three (or more) of the following (4 if mood is only irritable):\n1. Inflated self-esteem or grandiosity.\n2. Decreased need for sleep (e.g., feels rested after 3 hours).\n3. More talkative than usual or pressure to keep talking.\n4. Flight of ideas or subjective experience that thoughts are racing.\n5. Distractibility.\n6. Increase in goal-directed activity or psychomotor agitation.\n7. Excessive involvement in activities with painful consequences (e.g., buying sprees).",
+            "ICD": "ICD-10 Criteria for Manic Episode (F30):\n\n1. Mood must be predominantly elevated, expansive, or irritable.\n2. At least three symptoms must be present (four if mood is irritable):\n- Increased activity or physical restlessness\n- Increased talkativeness ('pressure of speech')\n- Flight of ideas or subjective experience that thoughts are racing\n- Loss of normal social inhibitions\n- Decreased need for sleep\n- Inflated self-esteem or grandiosity\n- Distractibility or constant changes in activity\n- Foolish or reckless behaviour"
+        },
+        "anxiety": {
+            "DSM": "DSM-5 Criteria for Generalized Anxiety Disorder (GAD):\n\nA. Excessive anxiety and worry occurring more days than not for at least 6 months.\nB. The individual finds it difficult to control the worry.\nC. Associated with three (or more) of the following:\n1. Restlessness or feeling keyed up or on edge.\n2. Being easily fatigued.\n3. Difficulty concentrating or mind going blank.\n4. Irritability.\n5. Muscle tension.\n6. Sleep disturbance.",
+            "ICD": "ICD-10 Criteria for Generalized Anxiety Disorder (F41.1):\n\nPrimary symptoms of anxiety most days for at least several weeks/months:\n1. Apprehension (worries about future misfortune, feeling 'on edge', difficulty concentrating).\n2. Motor tension (restless fidgeting, tension headaches, trembling, inability to relax).\n3. Autonomic overactivity (lightheadedness, sweating, tachycardia, tachypnea, epigastric discomfort)."
+        }
+    };
+
+    function showCriteria(type) {
+        // 1. Get the Diagnosis Text
+        const textInputs = document.getElementsByName('provisional_diagnosis');
+        if (!textInputs.length) return;
+        
+        // Use the first found input's value
+        const rawText = textInputs[0].value.toLowerCase();
+        
+        if (!rawText.trim()) {
+            alert("Please type a diagnosis first (e.g., 'Schizophrenia', 'Depression').");
+            return;
+        }
+
+        // 2. Simple Keyword Matching
+        let matchKey = null;
+        if (rawText.includes("depress") || rawText.includes("mdd")) matchKey = "depression";
+        else if (rawText.includes("schizo") || rawText.includes("f20")) matchKey = "schizophrenia";
+        else if (rawText.includes("bipolar") || rawText.includes("mania") || rawText.includes("manic")) matchKey = "bipolar";
+        else if (rawText.includes("anxiet") || rawText.includes("gad") || rawText.includes("panic")) matchKey = "anxiety";
+        
+        // 3. Populate Modal
+        const modal = document.getElementById('criteriaModal');
+        const title = document.getElementById('criteriaTitle');
+        const body = document.getElementById('criteriaBody');
+        
+        if (matchKey && diagnosisDB[matchKey]) {
+            title.innerText = `${type} Verification: ${matchKey.charAt(0).toUpperCase() + matchKey.slice(1)}`;
+            body.innerText = diagnosisDB[matchKey][type];
+        } else {
+            title.innerText = `${type} Criteria Not Found`;
+            body.innerText = "Automatic criteria lookup failed for: '" + rawText + "'.\n\n(This demo supports: Depression, Schizophrenia, Bipolar, Anxiety)";
+        }
+        
+        modal.style.display = 'block';
+    }
+</script>
 </body>
 </html>

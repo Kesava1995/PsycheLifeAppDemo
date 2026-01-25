@@ -1,169 +1,242 @@
-{% extends "base.html" %}
-{% block title %}Prescription{% endblock %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prescription</title>
+    <style>
+        :root {
+            --primary-blue: #A5DCFE;
+            --primary-dark: #7ab8e0;
+            --text-color: #333;
+            --border-color: #e0e0e0;
+            --bg-color: #f4f8fb;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        
+        /* Layout for Screen */
+        .action-bar { max-width: 210mm; margin: 20px auto; display: flex; justify-content: space-between; }
+        .btn {
+            padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;
+            text-decoration: none; display: inline-block; font-size: 14px; transition: 0.2s;
+        }
+        .btn-primary { background: var(--primary-dark); color: white; }
+        .btn-secondary { background: #e0e0e0; color: #333; }
+        
+        /* A4 Paper Styling */
+        .prescription-paper {
+            background: white; width: 210mm; min-height: 297mm; margin: 0 auto;
+            padding: 15mm; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        /* Header */
+        .rx-header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
+        .hospital-info h1 { font-size: 22pt; margin: 0; color: var(--primary-dark); text-transform: uppercase; }
+        .hospital-info p { margin: 4px 0; font-size: 10pt; color: #555; }
+        .doctor-info { text-align: right; font-size: 10pt; }
+        
+        /* Patient Box */
+        .patient-info-box {
+            display: flex; border: 1px solid #000; padding: 10px; margin-bottom: 20px; font-size: 11pt;
+        }
+        .info-left { flex: 1.5; border-right: 1px solid #000; padding-right: 15px; }
+        .info-right { flex: 1; padding-left: 15px; }
+        .info-row { margin-bottom: 5px; }
+        
+        /* Clinical Details Section (CC, SE, MSE) */
+        .clinical-section { margin-bottom: 20px; font-size: 11pt; border-bottom: 1px dashed #ddd; padding-bottom: 10px; }
+        .clinical-row { display: flex; margin-bottom: 8px; }
+        .clinical-label { font-weight: bold; width: 140px; flex-shrink: 0; }
+        .clinical-data { flex: 1; }
+        .mse-group { display: inline-block; margin-right: 15px; }
+        .mse-group span { font-weight: 600; text-decoration: underline; font-size: 10pt; }
 
-{% block extra_css %}
-<style>
-.action-bar { max-width: 210mm; margin: 0 auto 20px auto; display: flex; justify-content: space-between; }
-.prescription-paper { background: white; width: 210mm; min-height: 297mm; margin: 0 auto; padding: 15mm; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-.rx-header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px; }
-.hospital-info h1 { font-size: 18pt; margin: 0; text-transform: uppercase; }
-.hospital-info p { margin: 2px 0; font-size: 10pt; }
-.contact-info { text-align: right; font-size: 9pt; }
-.doc-title { text-align: center; font-weight: bold; text-decoration: underline; margin: 10px 0; }
-.patient-info-box { border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 8px 0; display: flex; font-size: 10pt; margin-bottom: 20px; }
-.info-left { flex: 1.5; border-right: 1px dashed #ccc; padding-right: 10px; }
-.info-right { flex: 1; padding-left: 15px; }
-.info-row { margin-bottom: 4px; }
-.rx-table { width: 100%; border-collapse: collapse; font-size: 10pt; }
-.rx-table th, .rx-table td { border: 1px solid #000; padding: 8px; }
-.rx-footer { margin-top: 40px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 10pt; }
-@media print {
-  .action-bar { display: none; }
-  body { background: white; }
-}
-</style>
-{% endblock %}
+        /* Rx Table */
+        .rx-table { width: 100%; border-collapse: collapse; font-size: 11pt; margin-bottom: 20px; }
+        .rx-table th { border-bottom: 2px solid #000; padding: 8px; text-align: left; background: #f9f9f9; }
+        .rx-table td { border-bottom: 1px solid #ddd; padding: 12px 8px; vertical-align: top; }
+        
+        /* Footer */
+        .rx-footer {
+            position: absolute; bottom: 15mm; left: 15mm; right: 15mm;
+            display: flex; justify-content: space-between; align-items: flex-end;
+            font-size: 10pt; border-top: 1px solid #000; padding-top: 10px;
+        }
+        
+        /* Print Rules */
+        @media print {
+            .action-bar { display: none; }
+            body { background: white; }
+            .prescription-paper { box-shadow: none; margin: 0; width: 100%; }
+        }
+    </style>
+</head>
+<body>
 
-{% block content %}
-
-{# --- LOGIC BLOCK: Set Variables based on Mode --- #}
-{% if guest %}
-  {# Guest Mode Variables #}
-  {% set doc_name = guest_doctor.name %}
-  {% set clinic = guest_doctor.clinic if guest_doctor.clinic else 'ElevenEleven Health' %}
-  {% set address = guest_doctor.address if guest_doctor.address else 'Psychiatry & Wellness Center' %}
-  {% set doc_reg = guest_doctor.registration %}
-  {% set doc_qual = guest_doctor.qualification %}
-  
-  {# Guest Patient Variables #}
-  {% set p_name = guest_patient.name %}
-  {% set p_age = guest_patient.age %}
-  {% set p_sex = guest_patient.sex %}
-  {% set p_addr = guest_patient.address %}
-  
-  {# Guest Signature (No Image) #}
-  {% set doc_sig = None %}
-
-{% else %}
-  {# Logged-In Mode Variables #}
-  {% set doc_name = patient.doctor.full_name or patient.doctor.username %}
-  {% set clinic = patient.doctor.clinic_name or 'ElevenEleven Health' %}
-  {% set address = patient.doctor.address_text or 'Psychiatry & Wellness Center' %}
-  {% set doc_reg = patient.doctor.kmc_code %}
-  {% set doc_qual = '' %}
-  
-  {# DB Patient Variables #}
-  {% set p_name = patient.name %}
-  {% set p_age = patient.age %}
-  {% set p_sex = patient.sex %}
-  {% set p_addr = patient.address %}
-  
-  {# Doctor Signature Image #}
-  {% set doc_sig = patient.doctor.signature_filename %}
-{% endif %}
-
-{% if guest %}
-<div style="border:1px solid #cc0000; padding:10px; margin-bottom:15px;">
-  <strong>Guest Mode – First Visit Prescription</strong><br>
-  Doctor details are self-declared and this prescription is not stored.
-</div>
-{% endif %}
-
-<div class="action-bar">
-  <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Dashboard</a>
-  <button onclick="window.print()" class="btn btn-primary">🖨 Print</button>
-</div>
-
-<div class="prescription-paper">
-
-  <div class="rx-header">
-    <div class="hospital-info">
-      <h1>{{ clinic }}</h1>
-      <p>{{ address }}</p>
+    <div class="action-bar">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+        <button onclick="window.print()" class="btn btn-primary">🖨 Print / Save as PDF</button>
     </div>
-    <div class="contact-info">
-      <p><strong>Dr. {{ doc_name }}</strong></p>
-      {% if doc_qual %}<p>{{ doc_qual }}</p>{% endif %}
-      {% if doc_reg %}<p>Reg: {{ doc_reg }}</p>{% endif %}
+
+    <div class="prescription-paper">
+        <div class="rx-header">
+            <div class="hospital-info">
+                <h1>{{ guest_doctor.clinic if guest else (patient.doctor.clinic_name or "ElevenEleven Health") }}</h1>
+                <p>{{ guest_doctor.address if guest else (patient.doctor.address_text or "Psychiatry & Wellness Center") }}</p>
+                <p>Phone: {{ guest_doctor.phone if guest else (patient.doctor.phone or "") }}</p>
+            </div>
+            <div class="doctor-info">
+                <p><strong>Dr. {{ guest_doctor.name if guest else (patient.doctor.full_name or session.get('username')|title) }}</strong></p>
+                <p>{{ guest_doctor.qualification if guest else "MBBS, MD (Psychiatry)" }}</p>
+                <p>Reg: {{ guest_doctor.registration if guest else (patient.doctor.kmc_code or "KMC-12345") }}</p>
+            </div>
+        </div>
+
+        <div class="patient-info-box">
+            <div class="info-left">
+                <div class="info-row"><strong>Name:</strong> {{ guest_patient.name if guest else patient.name }}</div>
+                <div class="info-row"><strong>Age/Sex:</strong> {{ guest_patient.age if guest else patient.age }} / {{ guest_patient.sex if guest else patient.sex }}</div>
+                <div class="info-row"><strong>Address:</strong> {{ guest_patient.address if guest else patient.address }}</div>
+            </div>
+            <div class="info-right">
+                <div class="info-row"><strong>Date:</strong> {{ visit.date.strftime('%d-%m-%Y') if visit.date else "Today" }}</div>
+                <div class="info-row"><strong>Visit ID:</strong> #{{ visit.id if not guest else "Guest" }}</div>
+                
+                {% if visit.next_visit_date %}
+                <div class="info-row" style="margin-top: 5px; color: #d9534f;">
+                    <strong>Next Follow-up:</strong> {{ visit.next_visit_date.strftime('%d-%m-%Y') }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if visit.symptom_entries or visit.side_effect_entries or visit.mse_entries %}
+        <div class="clinical-section">
+            
+            {% if visit.symptom_entries %}
+            <div class="clinical-row">
+                <div class="clinical-label">Chief Complaints:</div>
+                <div class="clinical-data">
+                    {% for s in visit.symptom_entries %}
+                        {{ s.symptom_name }}{% if s.duration_text %} x {{ s.duration_text }}{% endif %}{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if visit.side_effect_entries %}
+            <div class="clinical-row">
+                <div class="clinical-label">Side Effects:</div>
+                <div class="clinical-data">
+                    {% for s in visit.side_effect_entries %}
+                        {{ s.side_effect_name }}{% if s.duration_text %} x {{ s.duration_text }}{% endif %}{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if visit.mse_entries %}
+                {# Filter MSE entries manually using Jinja #}
+                {% set thoughts = [] %}
+                {% set perceptions = [] %}
+                {% set affects = [] %}
+
+                {% for m in visit.mse_entries %}
+                    {% if m.category == 'Thought' %}{% set _ = thoughts.append(m.finding_name) %}{% endif %}
+                    {% if m.category == 'Perception' %}{% set _ = perceptions.append(m.finding_name) %}{% endif %}
+                    {% if m.category == 'Affect' %}{% set _ = affects.append(m.finding_name) %}{% endif %}
+                {% endfor %}
+
+                {% if thoughts or perceptions or affects %}
+                <div class="clinical-row">
+                    <div class="clinical-label">MSE Findings:</div>
+                    <div class="clinical-data">
+                        {% if thoughts %}
+                            <div class="mse-group"><span>Thought:</span> {{ thoughts|join(', ') }}</div>
+                        {% endif %}
+                        {% if perceptions %}
+                            <div class="mse-group"><span>Perception:</span> {{ perceptions|join(', ') }}</div>
+                        {% endif %}
+                        {% if affects %}
+                            <div class="mse-group"><span>Affect:</span> {{ affects|join(', ') }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            {% endif %}
+
+        </div>
+        {% endif %}
+        {% if visit.provisional_diagnosis %}
+        <div style="margin-bottom: 20px; font-weight: bold;">
+            <span style="font-size: 14pt;">Dx:</span> 
+            <span style="font-size: 12pt; margin-left: 10px;">{{ visit.provisional_diagnosis }}</span>
+        </div>
+        {% endif %}
+
+        <table class="rx-table">
+            <thead>
+                <tr>
+                    <th style="width: 5%;">#</th>
+                    <th style="width: 40%;">Medicine</th>
+                    <th style="width: 35%;">Frequency & Instructions</th> <th style="width: 20%;">Duration</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in visit.medication_entries %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>
+                        <div style="font-weight: bold; font-size: 12pt;">
+                            {{ entry.drug_name }}
+                            {% if entry.drug_type == 'Generic' %} <span style="font-weight:normal; font-size:9pt; color:#666;">(Gen)</span>{% endif %}
+                        </div>
+                        {% if entry.dose_mg %}
+                        <div style="font-size: 10pt; color: #555;">{{ entry.dose_mg }}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="font-weight: 600;">
+                            {{ format_frequency(entry.frequency) }}
+                        </div>
+                        
+                        {% if entry.note %}
+                        <div style="font-style: italic; font-size: 10pt; margin-top: 2px;">
+                            ({{ entry.note }})
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td>{{ entry.duration_text }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="rx-footer">
+            <div style="font-size: 8pt; color: #777;">
+                Generated by PsycheLife<br>
+                Valid for 3 months unless specified
+            </div>
+            <div style="text-align: right;">
+                {% if guest and guest_signature_b64 %}
+                    <img src="data:image/png;base64,{{ guest_signature_b64 }}" style="max-height: 50px; display: block; margin-left: auto;">
+                {% elif not guest and patient.doctor.signature_filename %}
+                    <img src="{{ url_for('static', filename='signatures/' + patient.doctor.signature_filename) }}" style="max-height: 60px; display: block; margin-left: auto;">
+                {% else %}
+                    <div style="height: 50px;"></div>
+                {% endif %}
+                <div style="border-top: 1px solid #000; padding-top: 5px; margin-top: 5px; display: inline-block;">
+                    <strong>Dr. {{ guest_doctor.name if guest else (patient.doctor.full_name or session.get('username')|title) }}</strong>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <div class="doc-title">Prescription</div>
-
-  <div class="patient-info-box">
-    <div class="info-left">
-      <div><strong>{{ p_name }}</strong></div>
-      <div>{{ p_sex }} / {{ p_age }} Years</div>
-      <div>{{ p_addr }}</div>
-    </div>
-    <div class="info-right">
-      <div class="info-row"><strong>Date:</strong> {{ visit.date.strftime('%d/%m/%Y') }}</div>
-      <div class="info-row"><strong>Department:</strong> Psychiatry</div>
-    </div>
-  </div>
-
-  <table class="rx-table">
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Drug</th>
-        <th>Instructions</th>
-        <th>Duration</th>
-      </tr>
-    </thead>
-    <tbody>
-    {% if visit.medication_entries %}
-      {% for med in visit.medication_entries %}
-      <tr>
-        <td>{{ loop.index }}</td>
-        <td>{{ med.drug_name }} {{ med.dose_mg }}</td>
-        <td>{{ med.note or '-' }}</td>
-        <td>{{ med.duration_text or '-' }}</td>
-      </tr>
-      {% endfor %}
-    {% else %}
-      <tr>
-        <td colspan="4" style="text-align:center;">No medications prescribed</td>
-      </tr>
-    {% endif %}
-    </tbody>
-  </table>
-
-  {% if visit.provisional_diagnosis %}
-  <p style="margin-top:20px;"><strong>Provisional Diagnosis:</strong> {{ visit.provisional_diagnosis }}</p>
-  {% endif %}
-
-  <div class="rx-footer">
-    <div>Dispensed By / Pharmacist</div>
-    <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end;">
-      
-      {# --- SIGNATURE LOGIC --- #}
-      {% if doc_sig %}
-        {# 1. Standard Doctor Signature (File) #}
-        <img src="{{ url_for('static', filename='signatures/' + doc_sig) }}" style="height: 60px; margin-bottom: 5px; max-width: 150px;">
-      
-      {% elif guest_signature_b64 %}
-        {# 2. Guest Mode Signature (Base64) [FIX ADDED HERE] #}
-        <img src="data:image/png;base64,{{ guest_signature_b64 }}" style="height: 60px; margin-bottom: 5px; max-width: 150px;">
-      
-      {% else %}
-        {# 3. No Signature Provided #}
-        <div style="height: 50px;"></div>
-        <div style="font-size: 0.8em; color: #666; margin-bottom: 5px;">(Signature)</div>
-      {% endif %}
-      
-      <strong>Dr. {{ doc_name }}</strong><br>
-      {% if doc_reg %}Reg: {{ doc_reg }}{% endif %}
-    </div>
-  </div>
-
-  {% if lifchart_url %}
-  <div style="margin-top: 30px; text-align: center; border-top: 1px dashed #ccc; padding-top: 15px;">
-    <p style="margin-bottom: 10px; font-weight: bold;">Scan to View Interactive Life Chart</p>
-    {# We use a library or external service for QR in HTML preview if needed, or just a placeholder if not generating image server-side #}
-    <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data={{ lifchart_url }}" alt="QR Code">
-  </div>
-  {% endif %}
-
-</div>
-{% endblock %}
+</body>
+</html>

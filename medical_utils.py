@@ -63,10 +63,35 @@ def calculate_midpoint_date(start_date, end_date):
 def get_unified_dose(drug_name, dose_mg):
     """
     Normalizes medication doses for visualization.
-    Currently returns the dose as a float, but can be expanded 
-    to convert different drugs to a standard equivalent if needed.
     """
     try:
-        return float(dose_mg)
-    except (ValueError, TypeError):
+        if not dose_mg: return 0.0
+        # Extract first number found
+        match = re.search(r"[-+]?\d*\.\d+|\d+", str(dose_mg))
+        return float(match.group()) if match else 0.0
+    except:
         return 0.0
+
+# --- NEW: PRESCRIPTION LANGUAGE CONVERTER ---
+def format_frequency(code):
+    """
+    Converts clinical frequency codes (1-0-1) into patient-friendly text.
+    """
+    if not code:
+        return ""
+    
+    # Strip whitespace to be safe
+    code = code.strip()
+        
+    mapping = {
+        "1-0-0": "Once a day (Morning)",
+        "0-1-0": "Once a day (Afternoon)",
+        "0-0-1": "Once a day (Night)",
+        "1-0-1": "Twice a day (Morning & Night)",
+        "1-1-0": "Twice a day (Morning & Afternoon)",
+        "0-1-1": "Twice a day (Afternoon & Night)",
+        "1-1-1": "Thrice a day (Morning, Afternoon & Night)",
+        "SOS": "As needed (SOS)"
+    }
+    
+    return mapping.get(code, code) # Return original if not found (e.g. custom text)

@@ -9,20 +9,27 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
     
     <style>
-        :root { --primary: #A5DCFE; --dark: #7ab8e0; --bg: #f4f8fb; }
-        body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); height: 100vh; display: flex; overflow: hidden; }
+        :root { --primary: #A5DCFE; --dark: #7ab8e0; --bg: #f4f8fb; --text-main: #333; }
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); height: 100vh; display: flex; overflow: hidden; }
         
-        /* SIDEBAR */
-        .sidebar { width: 260px; background: white; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; flex-shrink: 0; z-index: 2; }
-        .nav-row { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fafafa; }
+        /* SIDEBAR STYLES (Unchanged) */
+        .sidebar { width: 280px; background: white; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; flex-shrink: 0; z-index: 2; }
+        .nav-row { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fafafa; }
         .nav-row a { text-decoration: none; color: #555; font-weight: 600; font-size: 0.9rem; }
         .controls { padding: 15px; overflow-y: auto; flex: 1; }
-        .control-group { margin-bottom: 25px; }
-        .control-title { font-weight: bold; margin-bottom: 10px; color: #333; font-size: 0.95rem; border-bottom: 2px solid var(--primary); padding-bottom: 2px; }
-        .checkbox-item { display: flex; align-items: center; margin-bottom: 6px; font-size: 0.9rem; color: #555; cursor: pointer; }
-        .checkbox-item input { margin-right: 8px; cursor: pointer; accent-color: var(--dark); }
+        
+        .sidebar-group { background: white; border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: 15px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+        .group-header { background: #f1f3f5; padding: 8px 12px; font-size: 0.85rem; font-weight: 700; color: #495057; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e9ecef; }
+        .list-container { padding: 5px 0; }
+        
+        .sidebar-item { display: grid; grid-template-columns: 24px 20px 1fr; gap: 8px; align-items: center; padding: 8px 12px; font-size: 0.9rem; color: var(--text-main); cursor: pointer; transition: background 0.15s; border-left: 3px solid transparent; }
+        .sidebar-item:hover { background: #f8f9fa; border-left-color: var(--dark); }
+        .sidebar-item input { width: 16px; height: 16px; margin: 0; accent-color: var(--dark); cursor: pointer; justify-self: center; }
+        .color-dot { width: 12px; height: 12px; border-radius: 50%; margin: 0; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.1); justify-self: center; }
+        .item-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+        .sidebar-item.unified-item { background: #fcfcfc; border-bottom: 1px dashed #eee; font-weight: 600; }
 
-        /* MAIN CONTENT */
+        /* MAIN CONTENT AREA */
         .main-content { 
             flex: 1; 
             padding: 15px; 
@@ -33,61 +40,144 @@
             background: #f8f9fa;
         }
 
-        /* CHART CONTAINERS */
-        .chart-wrapper {
+        /* --- NEW WIDGET SYSTEM STYLES --- */
+        
+        /* Widget Toolbar */
+        .widget-toolbar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .widget-selector {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-size: 0.9rem;
+            min-width: 200px;
+        }
+        .add-widget-btn {
+            background: var(--dark);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .add-widget-btn:hover { background: #5a9bc4; }
+        .add-widget-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+        /* Grid Container */
+        .widget-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* 2 Column Grid */
+            gap: 15px;
+            align-items: start; /* Prevents stretching height automatically */
+        }
+
+        /* Individual Widget Card */
+        .widget-card {
             background: white;
             border-radius: 8px;
-            padding: 10px 15px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             display: flex;
             flex-direction: column;
             position: relative;
-            resize: vertical;
-            overflow: hidden;
-            min-height: 200px;
+            /* Enable Vertical Resizing by User */
+            resize: vertical; 
+            overflow: hidden; 
+            min-height: 250px;
+            height: 400px; /* Default Height */
+            border: 1px solid #e0e0e0;
+            transition: box-shadow 0.2s;
+        }
+        
+        .widget-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-color: #ccc;
         }
 
-        #wrapper-symptoms { height: 45vh; }
+        /* Sizing Classes for Grid */
+        .span-full { grid-column: span 2; }
+        .span-half { grid-column: span 1; }
 
-        .middle-row-container {
+        /* Widget Header */
+        .widget-header {
+            padding: 8px 12px;
+            background: #fdfdfd;
+            border-bottom: 1px solid #eee;
             display: flex;
-            gap: 15px;
-            height: 35vh; 
-            min-height: 200px;
-            resize: vertical;
-            overflow: hidden;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move; /* Implies dragging conceptually */
         }
+        .widget-title {
+            font-weight: bold;
+            color: var(--dark);
+            font-size: 0.95rem;
+            user-select: none;
+        }
+        .widget-controls {
+            display: flex;
+            gap: 8px;
+        }
+        .widget-icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #999;
+            font-size: 1.1rem;
+            padding: 0;
+            line-height: 1;
+        }
+        .widget-icon-btn:hover { color: #555; }
+        .widget-icon-btn.remove:hover { color: red; }
 
-        #wrapper-meds, #wrapper-se {
+        .canvas-container { 
             flex: 1; 
-            height: 100%;
-            resize: none; 
-        }
-
-        #wrapper-mse { height: 30vh; }
-
-        .chart-title { 
-            font-weight: bold; 
-            color: var(--dark); 
-            font-size: 0.95rem; 
-            margin-bottom: 6px; 
-            flex-shrink: 0; 
-        }
-
-        .canvas-container {
-            flex: 1;
-            position: relative;
-            width: 100%;
-            height: calc(100% - 6px);
+            position: relative; 
+            width: 100%; 
+            height: calc(100% - 35px); /* Subtract header height */
             min-height: 0; 
-            padding-top: 4px;
+            padding: 5px; 
+            box-sizing: border-box;
         }
 
-        /* MODAL */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+
+        /* WORKFLOW INPUTS (Separate Section) */
+        .form-section-separator {
+            margin-top: 10px;
+            border-top: 2px dashed #e0e0e0;
+            padding-top: 20px;
+        }
+        .workflow-card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 30px; }
+        .row-2-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        input, textarea, select { width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px; font-family: inherit; box-sizing: border-box; }
+        .btn { padding: 12px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; color: white; background: var(--dark); width: 100%; font-size: 1rem; }
+        
+        /* MEDICATION ROW STYLES */
+        .entry-wrapper { border: 1px solid #eee; padding: 10px; margin-bottom: 8px; border-radius: 6px; background: #fafafa; }
+        .row-flex { display: flex; gap: 10px; align-items: center; }
+        .note-btn { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: #999; }
+        .note-input { display: none; width: 100%; margin-top: 5px; padding: 5px; border: 1px dashed #ccc; background: #fffdf0; }
+        .remove-btn { color: #ff6b6b; background: none; border: none; cursor: pointer; font-weight: bold; }
+        .add-btn-small { background: var(--dark); color: white; border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; float: right; }
+
+        /* MODAL (Double Click) */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; }
         .modal-content { background: white; margin: 5% auto; padding: 25px; width: 60%; max-width: 600px; border-radius: 12px; max-height: 80vh; overflow-y: auto; }
         .detail-row { margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 3px; font-size: 0.9rem; }
         .close-btn { float: right; font-size: 24px; cursor: pointer; color: #aaa; }
+
+        /* DAILY SUMMARY POPUP (Single Click) */
+        .daily-summary-popup { display: none; position: absolute; background: white; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); padding: 15px; z-index: 1500; min-width: 250px; max-width: 350px; font-size: 0.9rem; }
+        .daily-summary-header { font-weight: bold; color: var(--dark); margin-bottom: 8px; border-bottom: 2px solid #f0f0f0; padding-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
+        .daily-summary-content ul { list-style: none; padding: 0; margin: 0; }
+        .daily-summary-content li { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px dashed #eee; }
+        .daily-summary-cat { font-weight: 700; color: #555; font-size: 0.8rem; text-transform: uppercase; margin-top: 5px; margin-bottom: 2px; }
+        .pop-close { cursor: pointer; font-size: 16px; color: #999; }
+        .pop-close:hover { color: red; }
     </style>
 </head>
 <body>
@@ -103,69 +193,177 @@
     </div>
     
     <div class="controls">
-        <div class="control-group">
-            <div class="control-title">Unified Charts (Averages)</div>
-            <label class="checkbox-item"><input type="checkbox" id="check-unified-symptoms" checked onchange="toggleUnified('symptoms')"> Symptoms</label>
-            <label class="checkbox-item"><input type="checkbox" id="check-unified-meds" checked onchange="toggleUnified('meds')"> Medication</label>
-            <label class="checkbox-item"><input type="checkbox" id="check-unified-se" checked onchange="toggleUnified('se')"> Side-effects</label>
-            <label class="checkbox-item"><input type="checkbox" id="check-unified-mse" checked onchange="toggleUnified('mse')"> MSE Findings</label>
+        <div class="sidebar-group">
+            <div class="group-header">Chief Complaints</div>
+            <div class="list-container">
+                <label class="sidebar-item unified-item">
+                    <input type="checkbox" id="check-unified-symptoms" checked onchange="toggleUnified('symptoms')">
+                    <span class="color-dot" style="background:black;"></span>
+                    <span class="item-text">Unified (Average)</span>
+                </label>
+                {% for ds in symptom_datasets %}
+                <label class="sidebar-item">
+                    <input type="checkbox" class="chk-symptoms" value="{{ ds.label }}" onchange="toggleDataset('symptoms', '{{ ds.label }}')">
+                    <span class="color-dot" style="background:{{ ds.borderColor }};"></span>
+                    <span class="item-text">{{ ds.label }}</span>
+                </label>
+                {% endfor %}
+            </div>
         </div>
 
-        <div class="control-group">
-            <div class="control-title">Symptoms</div>
-            <label class="checkbox-item" style="font-weight:bold; color:var(--dark);"><input type="checkbox" onchange="toggleAll('symptoms', this.checked)"> Select All</label>
-            {% for name in symptom_names %}
-            <label class="checkbox-item"><input type="checkbox" class="chk-symptoms" value="{{ name }}" onchange="toggleDataset('symptoms', '{{ name }}')"> {{ name }}</label>
-            {% endfor %}
+        <div class="sidebar-group">
+            <div class="group-header">Medications</div>
+            <div class="list-container">
+                <label class="sidebar-item unified-item">
+                    <input type="checkbox" id="check-unified-meds" checked onchange="toggleUnified('meds')">
+                    <span class="color-dot" style="background:black;"></span>
+                    <span class="item-text">Unified (Average)</span>
+                </label>
+                {% for ds in medication_datasets %}
+                <label class="sidebar-item">
+                    <input type="checkbox" class="chk-meds" value="{{ ds.label }}" onchange="toggleDataset('meds', '{{ ds.label }}')">
+                    <span class="color-dot" style="background:{{ ds.borderColor }};"></span>
+                    <span class="item-text">{{ ds.label }}</span>
+                </label>
+                {% endfor %}
+            </div>
         </div>
 
-        <div class="control-group">
-            <div class="control-title">Medications</div>
-            <label class="checkbox-item" style="font-weight:bold; color:var(--dark);"><input type="checkbox" onchange="toggleAll('meds', this.checked)"> Select All</label>
-            {% for name in med_names %}
-            <label class="checkbox-item"><input type="checkbox" class="chk-meds" value="{{ name }}" onchange="toggleDataset('meds', '{{ name }}')"> {{ name }}</label>
-            {% endfor %}
+        <div class="sidebar-group">
+            <div class="group-header">Side Effects</div>
+            <div class="list-container">
+                <label class="sidebar-item unified-item">
+                    <input type="checkbox" id="check-unified-se" checked onchange="toggleUnified('se')">
+                    <span class="color-dot" style="background:black;"></span>
+                    <span class="item-text">Unified (Average)</span>
+                </label>
+                {% for ds in side_effect_datasets %}
+                <label class="sidebar-item">
+                    <input type="checkbox" class="chk-se" value="{{ ds.label }}" onchange="toggleDataset('se', '{{ ds.label }}')">
+                    <span class="color-dot" style="background:{{ ds.borderColor }};"></span>
+                    <span class="item-text">{{ ds.label }}</span>
+                </label>
+                {% endfor %}
+            </div>
         </div>
 
-        <div class="control-group">
-            <div class="control-title">Side Effects</div>
-            <label class="checkbox-item" style="font-weight:bold; color:var(--dark);"><input type="checkbox" onchange="toggleAll('se', this.checked)"> Select All</label>
-            {% for name in se_names %}
-            <label class="checkbox-item"><input type="checkbox" class="chk-se" value="{{ name }}" onchange="toggleDataset('se', '{{ name }}')"> {{ name }}</label>
-            {% endfor %}
-        </div>
-
-        <div class="control-group">
-            <div class="control-title">MSE Findings</div>
-            <label class="checkbox-item" style="font-weight:bold; color:var(--dark);"><input type="checkbox" onchange="toggleAll('mse', this.checked)"> Select All</label>
-            {% for cat in mse_categories %}
-            <label class="checkbox-item"><input type="checkbox" class="chk-mse" value="{{ cat }}" onchange="toggleDataset('mse', '{{ cat }}')"> {{ cat }}</label>
-            {% endfor %}
+        <div class="sidebar-group">
+            <div class="group-header">MSE Findings</div>
+            <div class="list-container">
+                <label class="sidebar-item unified-item">
+                    <input type="checkbox" id="check-unified-mse" checked onchange="toggleUnified('mse')">
+                    <span class="color-dot" style="background:black;"></span>
+                    <span class="item-text">Unified (Average)</span>
+                </label>
+                {% for ds in mse_datasets %}
+                <label class="sidebar-item">
+                    <input type="checkbox" class="chk-mse" value="{{ ds.label }}" onchange="toggleDataset('mse', '{{ ds.label }}')">
+                    <span class="color-dot" style="background:{{ ds.borderColor }};"></span>
+                    <span class="item-text">{{ ds.label }}</span>
+                </label>
+                {% endfor %}
+            </div>
         </div>
     </div>
 </div>
 
 <div class="main-content">
-    <div class="chart-wrapper" id="wrapper-symptoms">
-        <div class="chart-title">Symptoms</div>
-        <div class="canvas-container"><canvas id="chartSymptoms"></canvas></div>
+    
+    <div class="widget-toolbar">
+        <select id="widgetSelector" class="widget-selector">
+            <option value="" disabled selected>Select chart to add...</option>
+            </select>
+        <button onclick="addSelectedWidget()" class="add-widget-btn">Insert Chart</button>
+        <button onclick="openDownloadModal()" class="btn" style="padding: 5px 10px; font-size: 13px; height: 30px; background: #555; color: white; margin-left: auto;">Download</button>
     </div>
 
-    <div class="middle-row-container">
-        <div class="chart-wrapper" id="wrapper-meds">
-            <div class="chart-title">Medications</div>
-            <div class="canvas-container"><canvas id="chartMeds"></canvas></div>
+    <div id="dashboardArea" class="widget-grid">
         </div>
-        <div class="chart-wrapper" id="wrapper-se">
-            <div class="chart-title">Side Effects</div>
-            <div class="canvas-container"><canvas id="chartSE"></canvas></div>
-        </div>
-    </div>
 
-    <div class="chart-wrapper" id="wrapper-mse">
-        <div class="chart-title">MSE Findings</div>
-        <div class="canvas-container"><canvas id="chartMSE"></canvas></div>
+    <div class="form-section-separator"></div>
+
+    <div class="workflow-card">
+        <form method="POST" action="{{ url_for('update_clinical', visit_id=visit.id) if visit else url_for('add_visit', patient_id=patient.id) }}">
+            
+            <h3 style="margin-top:0; color:#333; border-bottom:1px solid #eee; padding-bottom:10px;">
+                {{ 'Edit Visit Details' if visit else 'Save New Visit from Chart' }}
+            </h3>
+
+            <div class="row-2-col">
+                <div>
+                    <label style="display:block; margin-bottom:5px; font-weight:600; color:#555;">Provisional Diagnosis</label>
+                    <textarea name="provisional_diagnosis" rows="2">{{ visit.provisional_diagnosis if visit else '' }}</textarea>
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom:5px; font-weight:600; color:#555;">Differential Diagnosis</label>
+                    <textarea name="differential_diagnosis" rows="2">{{ visit.differential_diagnosis if visit else '' }}</textarea>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <h4 style="margin:0 0 10px 0; color:#555; display:flex; justify-content:space-between;">
+                    Medications 
+                    <button type="button" class="add-btn-small" onclick="addMedication()">+</button>
+                </h4>
+                
+                <div id="meds-container">
+                    {% if visit and visit.medication_entries %}
+                        {% for entry in visit.medication_entries %}
+                        {% set dose_str = entry.dose_mg|string if entry.dose_mg else '' %}
+                        {% set d_val = dose_str.split(' ')[0] if ' ' in dose_str else dose_str %}
+                        {% set d_unit = dose_str.split(' ')[1] if ' ' in dose_str else 'mg' %}
+                        <div class="entry-wrapper">
+                            <div class="row-flex">
+                                <select name="drug_type[]" style="width:100px; flex:none;">
+                                    <option value="Generic" {% if entry.drug_type == 'Generic' or not entry.drug_type %}selected{% endif %}>Generic</option>
+                                    <option value="Brand" {% if entry.drug_type == 'Brand' %}selected{% endif %}>Brand</option>
+                                </select>
+                                <input type="text" name="drug_name[]" value="{{ entry.drug_name }}" placeholder="Drug" style="width:25%;">
+                                <input type="text" name="dose_val[]" value="{{ d_val }}" placeholder="Dose" style="flex:1;">
+                                <select name="dose_unit[]" style="width:55px;">
+                                    <option {% if d_unit == 'mg' %}selected{% endif %}>mg</option>
+                                    <option {% if d_unit == 'mcg' %}selected{% endif %}>mcg</option>
+                                </select>
+                                <input list="freq-options-list" name="frequency[]" value="{{ entry.frequency or '' }}" placeholder="Freq" style="flex:1;" oninput="updateFreqOptions(this)">
+                                <input list="duration-options-list" name="med_duration[]" value="{{ entry.duration_text or '' }}" placeholder="Dur" style="flex:1;" oninput="updateDurationOptions(this)">
+                                <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <div style="background:#f9fafb; padding:15px; border-radius:8px; margin-top:20px; display:flex; gap:20px; align-items:center;">
+                <div>
+                    <label style="font-weight:600; color:#555;">Next Follow-up Date</label>
+                    <input type="date" name="next_visit_date" id="nextVisitDate" value="{{ visit.next_visit_date.strftime('%Y-%m-%d') if visit and visit.next_visit_date else '' }}">
+                </div>
+                <div style="flex:1;">
+                    <label style="font-weight:600; color:#555;">Visit Note</label>
+                    <input type="text" name="visit_note" value="{{ visit.note if visit else '' }}" placeholder="Summary...">
+                </div>
+                <input type="hidden" name="date" value="{{ visit.date.strftime('%Y-%m-%d') if visit and visit.date else today }}">
+            </div>
+
+            <div style="margin-top:20px; display:flex; gap:10px;">
+                <button type="submit" name="submit_action" value="lifechart" class="btn" style="background:#f5576c;">
+                    {{ 'Update & Refresh Chart' if visit else 'Save & Refresh Chart' }}
+                </button>
+                <button type="submit" name="submit_action" value="prescription" class="btn" style="background:#7BC4F0; color:#000;">
+                    {{ 'Update & Gen Prescription' if visit else 'Save & Gen Prescription' }}
+                </button>
+            </div>
+        </form>
     </div>
+</div>
+
+<div id="dailySummary" class="daily-summary-popup">
+    <div class="daily-summary-header">
+        <span id="dsDate">Date</span>
+        <span class="pop-close" onclick="closeDailySummary()">✕</span>
+    </div>
+    <div class="daily-summary-content" id="dsContent"></div>
 </div>
 
 <div id="visitModal" class="modal">
@@ -176,81 +374,179 @@
     </div>
 </div>
 
+<datalist id="duration-options-list"></datalist>
+<datalist id="freq-options-list">
+    <option value="1-0-0">Morning</option>
+    <option value="1-0-1">Morning & Night</option>
+	<option value="1-0-1">Morning & Afternoon</option>
+    <option value="0-0-1">Night</option>
+    <option value="1-1-1">Morning, Afternoon & Night</option>
+    <option value="0-1-0">Afternoon</option>
+    <option value="SOS">As Needed</option>
+</datalist>
+
 <script>
-    // --- DATA INITIALIZATION ---
+    // --- DATA ---
     const rawData = {
         symptoms: {{ symptom_datasets | tojson }},
         symptomsUnified: {{ symptom_unified | tojson }},
-        
         meds: {{ medication_datasets | tojson }}, 
         medsUnified: {{ med_unified | tojson }},
-        
         se: {{ side_effect_datasets | tojson }}, 
         seUnified: {{ se_unified | tojson }},
-        
         mse: {{ mse_datasets | tojson }},
         mseUnified: {{ mse_unified | tojson }},
         details: {{ visit_details | tojson }}
     };
+	
+	let suppressSingleClickUntil = 0;
+    let charts = {}; // Global chart instance storage
 
+    // --- CHART OPTIONS ---
     const commonOptions = {
-        responsive: true,
-        maintainAspectRatio: false, 
+        responsive: true, maintainAspectRatio: false, 
         scales: {
-            x: {
-                type: 'time',
-                time: { unit: 'day' },
-                title: { display: true, text: 'Date' },
-                ticks: { source: 'auto' }
-            },
-            y: {
-                beginAtZero: true,
-                title: { display: true, text: 'Score / Value' }
-            }
+            x: { type: 'time', time: { unit: 'day' }, title: { display: true, text: 'Date' } },
+            y: { beginAtZero: true, title: { display: true, text: 'Score' } }
         },
         plugins: {
-            zoom: {
-                pan: { enabled: true, mode: 'x' },
-                zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
-            },
-            tooltip: {
-                mode: 'nearest',
-                intersect: true,
-                callbacks: {
-                    title: (items) => items[0].raw.x.split('T')[0],
-                    afterLabel: function(context) {
-                        if (context.raw.detail) {
-                            return 'Detail: ' + context.raw.detail;
-                        }
-                        return '';
-                    }
-                }
-            },
+            zoom: { zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }, pan: { enabled: true, mode: 'x' } },
+            tooltip: { mode: 'nearest', intersect: true },
             legend: { display: false } 
         },
-        // --- UPDATED CLICK HANDLER (Fix for Onset/Progression) ---
         onClick: (e, activeEls, chart) => {
-            if (!activeEls.length) return;
-
-            const index = activeEls[0].index;
-            const datasetIndex = activeEls[0].datasetIndex;
-            const point = chart.data.datasets[datasetIndex].data[index];
-
-            // 1. Is it a historical point? (Onset or Progression)
-            //    These don't have a visit record, so show the specific history modal.
-            if (point.phase === 'Onset' || point.phase === 'Progression') {
-                showHistoryModal(point);
-            } 
-            // 2. Otherwise, treat it as a Visit/Current point.
-            //    Look up the full details using the Date.
-            else if (point.x) {
-                const clickedDate = point.x.split('T')[0];
-                showModalByDate(clickedDate);
-            }
+            if (Date.now() < suppressSingleClickUntil) return;
+            if (chart.clickTimeout) clearTimeout(chart.clickTimeout);
+            chart.clickTimeout = setTimeout(() => {
+                if (Date.now() < suppressSingleClickUntil) return;
+                if (!activeEls.length) return;
+                const idx = activeEls[0].index;
+                const dIdx = activeEls[0].datasetIndex;
+                const point = chart.data.datasets[dIdx].data[idx];
+                showDailySummary(point.x.split('T')[0], e.native.clientX, e.native.clientY);
+            }, 260);
         }
     };
 
-    function createChart(ctxId, datasets, unified) {
+    // --- WIDGET CONFIGURATION ---
+    const widgetConfig = {
+        'symptoms': { title: 'Chief Complaints', chartId: 'chartSymptoms', createData: () => ({ sets: rawData.symptoms, unified: rawData.symptomsUnified }) },
+        'meds': { title: 'Medications', chartId: 'chartMeds', createData: () => ({ sets: rawData.meds, unified: rawData.medsUnified }) },
+        'se': { title: 'Side Effects', chartId: 'chartSE', createData: () => ({ sets: rawData.se, unified: rawData.seUnified }) },
+        'mse': { title: 'MSE Findings', chartId: 'chartMSE', createData: () => ({ sets: rawData.mse, unified: rawData.mseUnified }) }
+    };
+
+    // Initial Layout Order as requested
+    // Row 1: Symptoms (Full), Row 2: Meds(Half) SE(Half), Row 3: MSE (Full)
+    const initialLayout = [
+        { key: 'symptoms', width: 'span-full' },
+        { key: 'meds', width: 'span-half' },
+        { key: 'se', width: 'span-half' },
+        { key: 'mse', width: 'span-full' }
+    ];
+
+    let activeWidgets = []; // Tracks currently displayed widgets
+
+    // --- WIDGET LOGIC ---
+
+    function initDashboard() {
+        const area = document.getElementById('dashboardArea');
+        area.innerHTML = ''; // Clear
+        activeWidgets = [];
+
+        initialLayout.forEach(item => {
+            addWidgetToDOM(item.key, item.width);
+        });
+
+        updateWidgetDropdown();
+    }
+
+    function addWidgetToDOM(key, widthClass = 'span-full') {
+        if (activeWidgets.includes(key)) return; // Prevent duplicates
+
+        const config = widgetConfig[key];
+        const area = document.getElementById('dashboardArea');
+        
+        // Create HTML Structure
+        const div = document.createElement('div');
+        div.className = `widget-card ${widthClass}`;
+        div.id = `widget-${key}`;
+        div.innerHTML = `
+            <div class="widget-header">
+                <span class="widget-title">${config.title}</span>
+                <div class="widget-controls">
+                    <button class="widget-icon-btn" onclick="toggleWidgetWidth('${key}')" title="Toggle Width">⇲</button>
+                    <button class="widget-icon-btn remove" onclick="removeWidget('${key}')" title="Remove">✕</button>
+                </div>
+            </div>
+            <div class="canvas-container">
+                <canvas id="${config.chartId}"></canvas>
+            </div>
+        `;
+
+        area.appendChild(div);
+        activeWidgets.push(key);
+
+        // Initialize Chart.js instance
+        const dataObj = config.createData();
+        initChartInstance(key, config.chartId, dataObj.sets, dataObj.unified);
+        updateWidgetDropdown();
+    }
+
+    function removeWidget(key) {
+        const el = document.getElementById(`widget-${key}`);
+        if(el) {
+            // Destroy chart instance to free memory
+            if(charts[key]) {
+                charts[key].destroy();
+                delete charts[key];
+            }
+            el.remove();
+            activeWidgets = activeWidgets.filter(k => k !== key);
+            updateWidgetDropdown();
+        }
+    }
+
+    function addSelectedWidget() {
+        const sel = document.getElementById('widgetSelector');
+        const key = sel.value;
+        if(key) {
+            // Default new widgets to full width
+            addWidgetToDOM(key, 'span-full');
+            sel.value = "";
+        }
+    }
+
+    function toggleWidgetWidth(key) {
+        const el = document.getElementById(`widget-${key}`);
+        if (el.classList.contains('span-full')) {
+            el.classList.replace('span-full', 'span-half');
+        } else {
+            el.classList.replace('span-half', 'span-full');
+        }
+        // Chart needs to know resize happened
+        if(charts[key]) charts[key].resize();
+    }
+
+    function updateWidgetDropdown() {
+        const sel = document.getElementById('widgetSelector');
+        sel.innerHTML = '<option value="" disabled selected>Select chart to add...</option>';
+        Object.keys(widgetConfig).forEach(key => {
+            if(!activeWidgets.includes(key)) {
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.innerText = widgetConfig[key].title;
+                sel.appendChild(opt);
+            }
+        });
+        // Disable button if no options
+        const btn = document.querySelector('.add-widget-btn');
+        btn.disabled = (sel.options.length === 1);
+    }
+
+    // --- CHART GENERATION LOGIC ---
+
+    function initChartInstance(key, ctxId, datasets, unified) {
         const finalData = [];
         if (unified) finalData.push(unified);
         if (datasets) finalData.push(...datasets);
@@ -258,7 +554,7 @@
         const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
         finalData.forEach((ds, i) => {
             if (ds.isUnified) return;
-            const c = colors[i % colors.length];
+            const c = ds.borderColor || colors[i % colors.length];
             ds.borderColor = c;
             ds.backgroundColor = c;
             ds.pointRadius = 5;
@@ -267,174 +563,272 @@
         });
 
         const ctx = document.getElementById(ctxId);
-        if (!ctx) return null;
+        if (!ctx) return;
 
-        return new Chart(ctx, {
-            type: 'line',
-            data: { datasets: finalData },
-            options: commonOptions
+        // Destroy existing if re-initializing same canvas ID
+        if(Chart.getChart(ctxId)) Chart.getChart(ctxId).destroy();
+
+        const newChart = new Chart(ctx, { type: 'line', data: { datasets: finalData }, options: commonOptions });
+
+        // Double Click Handler
+        ctx.addEventListener('dblclick', (e) => {
+            suppressSingleClickUntil = Date.now() + 400;
+            if (newChart.clickTimeout) clearTimeout(newChart.clickTimeout);
+            closeDailySummary();
+            const activeEls = newChart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
+            if (!activeEls.length) return;
+            const index = activeEls[0].index;
+            const datasetIndex = activeEls[0].datasetIndex;
+            const point = newChart.data.datasets[datasetIndex].data[index];
+            if (['Onset','Progression','History'].includes(point.phase)) {
+                showHistoryModal(point);
+            } else if (point.x) {
+                showModalByDate(point.x.split('T')[0]);
+            }
         });
+
+        // Hide non-unified by default (same as original logic)
+        newChart.data.datasets.forEach(ds => { if (!ds.isUnified) ds.hidden = true; });
+        newChart.update();
+
+        charts[key] = newChart;
     }
 
-    // Initialize Charts
-    const charts = {
-        symptoms: createChart('chartSymptoms', rawData.symptoms, rawData.symptomsUnified),
-        meds: createChart('chartMeds', rawData.meds, rawData.medsUnified),
-        se: createChart('chartSE', rawData.se, rawData.seUnified),
-        mse: createChart('chartMSE', rawData.mse, rawData.mseUnified)
-    };
-    
-    // Default hidden state
-    Object.values(charts).forEach(chart => {
-        if (!chart) return;
-        chart.data.datasets.forEach(ds => {
-            if (!ds.isUnified) ds.hidden = true;
-        });
-        chart.update();
-    });
-
-    // --- SIDEBAR LOGIC ---
+    // --- SIDEBAR TOGGLES (Updated to check chart existence) ---
     function toggleUnified(type) {
-        const chart = charts[type];
-        if (!chart) return;
-        const checkbox = document.getElementById(`check-unified-${type}`);
-        if(chart.data.datasets[0] && chart.data.datasets[0].isUnified) {
-            chart.setDatasetVisibility(0, checkbox.checked);
-            chart.update();
-        }
+        const chart = charts[type]; if(!chart) return;
+        const cb = document.getElementById(`check-unified-${type}`);
+        if(chart.data.datasets[0].isUnified) { chart.setDatasetVisibility(0, cb.checked); chart.update(); }
     }
-
     function toggleDataset(type, label) {
-        const chart = charts[type];
-        if (!chart) return;
-        const dsIndex = chart.data.datasets.findIndex(ds => ds.label === label);
-        if (dsIndex !== -1) {
-            const cbs = document.querySelectorAll(`.chk-${type}`);
+        const chart = charts[type]; if(!chart) return;
+        const idx = chart.data.datasets.findIndex(ds => ds.label === label);
+        if(idx !== -1) {
             let isChecked = false;
-            cbs.forEach(cb => { if(cb.value === label) isChecked = cb.checked; });
-            
-            chart.setDatasetVisibility(dsIndex, isChecked);
-            chart.update();
+            document.querySelectorAll(`.chk-${type}`).forEach(c => { if(c.value===label) isChecked = c.checked; });
+            chart.setDatasetVisibility(idx, isChecked); chart.update();
         }
     }
 
-    function toggleAll(type, checked) {
-        document.querySelectorAll(`.chk-${type}`).forEach(cb => {
-            cb.checked = checked;
-            toggleDataset(type, cb.value);
+    // --- POPUP LOGIC (Generic) ---
+    function showDailySummary(dateStr, x, y) {
+        const popup = document.getElementById('dailySummary');
+        const content = document.getElementById('dsContent');
+        document.getElementById('dsDate').innerText = dateStr;
+        content.innerHTML = '';
+        
+        let hasData = false;
+        // Iterate only over active charts
+        Object.keys(charts).forEach(key => {
+            const chartObj = charts[key];
+            const groupName = widgetConfig[key].title;
+            let groupHtml = '';
+            chartObj.data.datasets.forEach(ds => {
+                if (ds.hidden) return;
+                const point = ds.data.find(p => p.x && p.x.startsWith(dateStr));
+                if (point) {
+                    let val = point.y; let det = point.detail || '';
+                    if (key === 'meds') val = `${val} mg`;
+                    groupHtml += `<li><span style="color:${ds.borderColor}; font-weight:bold;">● ${ds.label}</span>: ${val} <br><small style="color:#666; margin-left:15px;">${det}</small></li>`;
+                }
+            });
+            if (groupHtml) { content.innerHTML += `<div class="daily-summary-cat">${groupName}</div><ul>${groupHtml}</ul>`; hasData = true; }
         });
+
+        if (!hasData) content.innerHTML = '<em>No visible data points.</em>';
+        popup.style.left = Math.min(x + 10, window.innerWidth - 300) + 'px';
+        popup.style.top = Math.min(y + 10, window.innerHeight - 300) + 'px';
+        popup.style.display = 'block';
     }
+    function closeDailySummary() { document.getElementById('dailySummary').style.display = 'none'; }
     
-    // --- MAIN MODAL (For Visits / Current Date) ---
+    // Existing Modal Logic (Unchanged but ensured references work)
     function showModalByDate(date) {
         const modal = document.getElementById('visitModal');
         const body = document.getElementById('modalBody');
-        const title = document.getElementById('modalDate');
-
-        title.innerText = date;
+        document.getElementById('modalDate').innerText = date + " (Full Record)";
         body.innerHTML = '';
-
-        // Find visit by Date Match
         const visit = Object.values(rawData.details).find(v => v.date === date);
+        if (!visit) { body.innerHTML = '<p>No full visit record found (Calculated Point).</p>'; modal.style.display='block'; return; }
+        const sections = [['Symptoms', visit.symptoms], ['Medications', visit.meds], ['Side Effects', visit.se], ['MSE Findings', visit.mse]];
+        sections.forEach(([heading, items]) => {
+            if (!items || !items.length) return;
+            body.innerHTML += `<h4>${heading}</h4>`;
+            items.forEach(i => {
+                let line = (heading==='Medications') ? `${i.name} — ${i.dose} (${i.freq})` : `${i.name} — Score ${i.score}`;
+                body.innerHTML += `<div class="detail-row">${line}</div>`;
+            });
+        });
+        modal.style.display = 'block';
+    }
+    function showHistoryModal(point) {
+        document.getElementById('modalDate').innerText = `${point.x.split('T')[0]} (${point.phase})`;
+        let contentHtml = '';
+        if (point.breakdown && point.breakdown.length > 0) {
+            contentHtml += '<ul>';
+            point.breakdown.forEach(item => { contentHtml += `<li><strong>${item.name}:</strong> ${item.score}</li>`; });
+            contentHtml += '</ul>';
+        } else {
+            contentHtml += `<p><strong>Score:</strong> ${point.y}</p><p>${point.detail || ''}</p>`;
+        }
+        document.getElementById('modalBody').innerHTML = `<div style="background:#e3f2fd; padding:15px; border-radius:8px;">${contentHtml}</div>`;
+        document.getElementById('visitModal').style.display = 'block';
+    }
+    function closeModal() { document.getElementById('visitModal').style.display = 'none'; }
+    window.onclick = function(event) { 
+        if (event.target == document.getElementById('visitModal')) closeModal();
+        if (event.target != document.getElementById('dailySummary') && !event.target.closest('.daily-summary-popup') && event.target.tagName !== 'CANVAS') { closeDailySummary(); }
+    }
+
+    // Form Logic (Unchanged)
+    // --- SMART FREQUENCY DROPDOWN LOGIC ---
+    function updateFreqOptions(input) {
+        const val = input.value.trim().replace(/-/g, ''); // strip dashes for matching
+        const list = document.getElementById('freq-options-list');
         
-        if (!visit) {
-            body.innerHTML = '<p>No full visit details available for this date.</p>';
-            modal.style.display = 'block';
+        // Map inputs like "101" to "1-0-1"
+        const map = {
+            '1': '1-0-0', '10': '1-0-0', '100': '1-0-0',
+            '01': '0-1-0', '010': '0-1-0',
+            '001': '0-0-1', 
+            '101': '1-0-1', 
+            '111': '1-1-1',
+            'sos': 'SOS'
+        };
+        
+        if (map[val]) {
+            // Create a temporary option to show the suggestion
+            let opt = document.createElement('option');
+            opt.value = map[val];
+            opt.label = `${val} -> ${map[val]}`;
+            list.appendChild(opt);
+        }
+    }
+    function updateDurationOptions(input) {
+        const v = parseFloat(input.value); if(!isNaN(v)) { 
+            const l = document.getElementById('duration-options-list'); l.innerHTML=''; 
+            ['Days','Weeks','Months'].forEach(u => { let o=document.createElement('option'); o.value=`${v} ${u}`; l.appendChild(o); });
+        }
+    }
+    function addMedication() {
+        const h = `<div class="entry-wrapper"><div class="row-flex">
+            <select name="drug_type[]" style="width:70px; flex:none;">
+                <option value="Generic" selected>Gen</option>
+                <option value="Brand">Brand</option>
+            </select>
+            <input type="text" name="drug_name[]" placeholder="Drug" style="width:25%;">
+            <input type="text" name="dose_val[]" placeholder="Dose" style="flex:1;">
+            <select name="dose_unit[]" style="width:55px;"><option>mg</option><option>mcg</option></select>
+            <input list="freq-options-list" name="frequency[]" placeholder="Freq" style="flex:1;" oninput="updateFreqOptions(this)">
+            <input list="duration-options-list" name="med_duration[]" placeholder="Dur" style="flex:1;" oninput="updateDurationOptions(this)">
+            <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button>
+        </div></div>`;
+        document.getElementById('meds-container').insertAdjacentHTML('beforeend', h);
+    }
+
+    window.onload = function() {
+        initDashboard(); // LOAD DASHBOARD WIDGETS
+        
+        // DATE LOGIC: Only set default Next Visit Date if the input is empty (Add Mode)
+        const nextVisitInput = document.getElementById('nextVisitDate');
+        if (!nextVisitInput.value) {
+            const d = new Date(); d.setDate(d.getDate() + 30);
+            nextVisitInput.value = d.toISOString().split('T')[0];
+        }
+
+        // MEDICATION LOGIC: Only add a blank row if container is empty (Add Mode)
+        // In Edit Mode, Jinja has already populated the div.
+        const medContainer = document.getElementById('meds-container');
+        if (medContainer.children.length === 0) {
+            addMedication();
+        }
+    };
+
+    // --- EXPORT FUNCTIONS ---
+    function openDownloadModal() {
+        // 1. Calculate Earliest and Latest Dates from JS Chart Data
+        let minDate = null;
+        let maxDate = null;
+
+        // Loop through all datasets to find absolute min/max
+        if (typeof rawData !== 'undefined') {
+            // Check all dataset types
+            const allDatasets = [
+                ...rawData.symptoms,
+                ...rawData.meds,
+                ...rawData.se,
+                ...rawData.mse,
+                rawData.symptomsUnified,
+                rawData.medsUnified,
+                rawData.seUnified,
+                rawData.mseUnified
+            ].filter(ds => ds && ds.data);
+
+            allDatasets.forEach(ds => {
+                if (ds.data) {
+                    ds.data.forEach(pt => {
+                        if (pt && pt.x) {
+                            const d = new Date(pt.x);
+                            if (!isNaN(d.getTime())) {
+                                if (!minDate || d < minDate) minDate = d;
+                                if (!maxDate || d > maxDate) maxDate = d;
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        // 2. Set inputs (Format YYYY-MM-DD)
+        if (minDate) document.getElementById('exportStartDate').value = minDate.toISOString().split('T')[0];
+        if (maxDate) document.getElementById('exportEndDate').value = maxDate.toISOString().split('T')[0];
+
+        // 3. Show Modal
+        document.getElementById('downloadModal').style.display = 'block';
+    }
+
+    function submitExport() {
+        const start = document.getElementById('exportStartDate').value;
+        const end = document.getElementById('exportEndDate').value;
+        
+        // 4. Get Currently Visible Lines (By LABEL Name)
+        const checkboxes = document.querySelectorAll('.chk-symptoms, .chk-mse, .chk-se, .chk-meds');
+        const visibleLabels = [];
+        checkboxes.forEach(cb => {
+            if (cb.checked) {
+                // The checkbox value is already the label
+                visibleLabels.push(cb.value);
+            }
+        });
+
+        if (!start || !end) {
+            alert("Please select both start and end dates.");
             return;
         }
 
-        const sections = [
-            ['Symptoms', visit.symptoms],
-            ['Medications', visit.meds],
-            ['Side Effects', visit.se],
-            ['MSE Findings', visit.mse]
-        ];
-
-        sections.forEach(([heading, items]) => {
-            if (!items || !items.length) return;
-
-            body.innerHTML += `<h4>${heading}</h4>`;
-            items.forEach(i => {
-                let line = '';
-
-                if (heading === 'Medications') {
-                    // Use 'dose' for display if available, else score
-                    line = `${i.name} — ${i.dose ? i.dose : (i.score + 'mg')}`;
-                } 
-                else if (heading === 'Side Effects') {
-                    line = `${i.name} — Score ${i.score}`;
-                } 
-                else if (heading === 'Symptoms') {
-                    // Clarify phase if exists
-                    const p = i.phase ? `(${i.phase})` : '';
-                    line = `${i.name} — Score ${i.score} ${p}`;
-                } 
-                else if (heading === 'MSE Findings') {
-                    line = `${i.cat} : ${i.name || ''} — Score ${i.score}`;
-                }
-
-                body.innerHTML += `
-                    <div class="detail-row">
-                        ${line}
-                        ${i.note ? `<br><small>📝 ${i.note}</small>` : ''}
-                    </div>
-                `;
-            });
-        });
-
-        modal.style.display = 'block';
-    }
-
-    // --- HISTORY MODAL (For Onset / Progression) ---
-    function showHistoryModal(point) {
-        const pointDate = point.x.split('T')[0];
-        const reportedDate = point.reported_on ? point.reported_on.split('T')[0] : 'Unknown';
-        
-        document.getElementById('modalDate').innerText = `${pointDate} (${point.phase})`;
-        
-        let contentHtml = '';
-        
-        if (point.breakdown && point.breakdown.length > 0) {
-            // Unified Point Breakdown
-            contentHtml += `<ul style="padding-left: 20px; margin-top: 10px; margin-bottom: 10px;">`;
-            point.breakdown.forEach(item => {
-                contentHtml += `<li style="margin-bottom: 4px;"><strong>${item.name}:</strong> ${item.score}/10</li>`;
-            });
-            contentHtml += `</ul>`;
-        } else {
-            // Single Data Point
-            contentHtml += `<p><strong>Score:</strong> ${point.y}/10</p>`;
-            if (point.symptom_name) {
-                contentHtml = `<h3 style="margin-top:0; color:#0d47a1;">${point.symptom_name}</h3>` + contentHtml;
-            }
-            if (point.detail) {
-                contentHtml += `<p><strong>Note:</strong> ${point.detail}</p>`;
-            }
-        }
-
-        let html = `
-            <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; border-left: 5px solid #2196f3;">
-                ${contentHtml}
-                <hr style="border:0; border-top:1px solid #bbdefb; margin: 15px 0;">
-                <p style="font-size: 0.9rem; color: #555;">
-                    <em>This is a retrospective data point reported during the visit on <strong>${reportedDate}</strong>.</em>
-                </p>
-            </div>
-        `;
-        
-        document.getElementById('modalBody').innerHTML = html;
-        document.getElementById('visitModal').style.display = 'block';
-    }
-
-    function closeModal() {
-        document.getElementById('visitModal').style.display = 'none';
-    }
-    
-    window.onclick = function(event) {
-        if (event.target == document.getElementById('visitModal')) {
-            closeModal();
-        }
+        // 5. Open Preview (Sending 'visible' as names now)
+        // EncodeURIComponent ensures special characters in drug names don't break the URL
+        const namesParam = visibleLabels.map(s => encodeURIComponent(s)).join(',');
+        const url = `{{ url_for('preview_lifechart', patient_id=patient.id) }}?start=${start}&end=${end}&visible=${namesParam}`;
+        window.open(url, '_blank');
+        document.getElementById('downloadModal').style.display = 'none';
     }
 </script>
+
+<div id="downloadModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000;">
+    <div style="background:white; margin:10% auto; padding:20px; width:350px; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.2);">
+        <h3 style="margin-top:0;">Export Life Chart</h3>
+        <label style="display:block; margin:10px 0 5px; font-weight:600;">Start Date</label>
+        <input type="date" id="exportStartDate" style="width:100%; padding:8px;">
+        
+        <label style="display:block; margin:10px 0 5px; font-weight:600;">End Date</label>
+        <input type="date" id="exportEndDate" style="width:100%; padding:8px;">
+        
+        <div style="margin-top:20px; text-align:right;">
+			<button onclick="submitExport()" class="btn">Preview PDF/Image</button>
+			<button onclick="document.getElementById('downloadModal').style.display='none'" class="btn" style="background:#ccc; color:#333;margin-top:20px;">Cancel</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
