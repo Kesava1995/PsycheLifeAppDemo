@@ -104,17 +104,17 @@ def landing():
 def login():
     """Login handler - processes login from landing page."""
     if request.method == 'POST':
-        username = request.form.get('username')
+        email = request.form.get('email')
         password = request.form.get('password')
         
         # Check hardcoded credentials first (for backward compatibility)
-        if username in VALID_CREDENTIALS and VALID_CREDENTIALS[username] == password:
+        if email in VALID_CREDENTIALS and VALID_CREDENTIALS[email] == password:
             session['logged_in'] = True
-            session['username'] = username
+            session['email'] = email
             session['role'] = 'doctor'
             
             # --- UPDATED: Fetch ID so profile retrieval works for admin ---
-            doc = Doctor.query.filter_by(username=username).first()
+            doc = Doctor.query.filter_by(email=email).first()
             if doc:
                 session['doctor_id'] = doc.id
             # -------------------------------------------------------------
@@ -123,12 +123,12 @@ def login():
             return redirect(url_for('dashboard'))
         
         # Check database for doctor
-        doctor = Doctor.query.filter_by(username=username).first()
+        doctor = Doctor.query.filter_by(email=email).first()
         if doctor:
             from werkzeug.security import check_password_hash
             if check_password_hash(doctor.password_hash, password):
                 session['logged_in'] = True
-                session['username'] = username
+                session['email'] = email
                 session['doctor_id'] = doctor.id
                 session['role'] = 'doctor'
                 flash('Login successful!', 'success')
