@@ -34,6 +34,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'signatures')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
+os.makedirs(os.path.join(basedir, 'instance'), exist_ok=True)
 db.init_app(app)
 
 # Ensure tables are created (especially new Phase 2 tables)
@@ -48,7 +49,7 @@ def utility_processor():
 
 # Hardcoded credentials (for demo - replace with database lookup in production)
 VALID_CREDENTIALS = {
-    'admin': 'doctor'
+    'admin@hospital.com': 'doctor'
 }
 
 
@@ -84,6 +85,7 @@ def init_db():
             from werkzeug.security import generate_password_hash
             default_doctor = Doctor(
                 username='admin',
+                email='admin@hospital.com',
                 password_hash=generate_password_hash('doctor')
             )
             db.session.add(default_doctor)
@@ -266,28 +268,33 @@ tent experience.
 def signup():
     """Doctor registration."""
     if request.method == 'POST':
-        firstname = request.form.get('firstname', '').strip()
-        lastname = request.form.get('lastname', '').strip()
+        # 1. Capture Full Name from landing.html
+        full_name = request.form.get('fullname', '').strip()
+        email = request.form.get('email', '').strip()
         mobile = request.form.get('mobile', '').strip()
         specialty = request.form.get('specialty', '').strip()
         password = request.form.get('password', '')
         
-        if not all([firstname, lastname, mobile, password]):
+        if not all([full_name, email, password]):
             flash('Please fill in all required fields.', 'error')
             return redirect(url_for('landing'))
         
-        # Create username from firstname + lastname
-        username = f"{firstname.lower()}{lastname.lower()}"
+        # 2. Generate a username from Full Name (remove spaces, lowercase)
+        # e.g., "John Doe" -> "johndoe"
+        username = "".join(full_name.split()).lower()
         
-        # Check if username already exists
-        if Doctor.query.filter_by(username=username).first():
-            flash('An account with this name already exists. Please use a different name or log in.', 'error')
+        # Check if email or username exists
+        if Doctor.query.filter((Doctor.username == username) | (Doctor.email == email)).first():
+            flash('Account already exists.', 'error')
             return redirect(url_for('landing'))
         
-        # Create new doctor
+        # 3. Create Doctor with full_name
         from werkzeug.security import generate_password_hash
         doctor = Doctor(
             username=username,
+            full_name=full_name,
+            email=email,
+            phone=mobile,
             password_hash=generate_password_hash(password)
         )
         db.session.add(doctor)
@@ -296,7 +303,6 @@ def signup():
         flash('Account created successfully! Please log in.', 'success')
         return redirect(url_for('landing'))
     
-    # GET request - redirect to landing
     return redirect(url_for('landing'))
 
 
@@ -424,13 +430,19 @@ def dashboard():
     patients = []
     
     if not is_guest:
-        doctor = Doctor.query.filter_by(username=session.get('username', 'admin')).first()
+        # Fetch by ID (more robust than username, which may not be in session)
+        if 'doctor_id' in session:
+            doctor = Doctor.query.get(session['doctor_id'])
+        else:
+            # Fallback for admin/legacy
+            doctor = Doctor.query.filter_by(username=session.get('username', 'admin')).first()
+            
         if doctor:
             patients = Patient.query.filter_by(doctor_id=doctor.id).all()
     
     today = date.today()
     
-    return render_template('dashboard.html', patients=patients, today=today, is_guest=is_guest)
+    return render_template('dashboard.html', patients=patients, today=today, is_guest=is_guest, doctor=doctor)
 
 
 @app.route('/guest/lifechart_proxy', methods=['POST'])
@@ -650,7 +662,8 @@ def add_visit(patient_id):
     # Fetch the most recent visit to copy data from
     last_visit = Visit.query.filter_by(patient_id=patient.id).order_by(Visit.date.desc()).first()
     
-    return render_template('add_visit.html', patient=patient, today=today, last_visit=last_visit)
+    doctor = Doctor.query.get(session.get('doctor_id'))
+    return render_template('add_visit.html', patient=patient, today=today, last_visit=last_visit, doctor=doctor)
 
 
 @app.route('/visit/<int:visit_id>/edit', methods=['GET', 'POST'])
@@ -740,8 +753,8 @@ def edit_visit(visit_id):
             Visit.id < visit.id
         ).order_by(Visit.id.desc()).first()
     
-    # GET request
-    return render_template('edit_visit.html', visit=visit, patient=patient, previous_visit=previous_visit)
+    doctor = Doctor.query.get(session.get('doctor_id'))
+    return render_template('edit_visit.html', visit=visit, patient=patient, previous_visit=previous_visit, doctor=doctor)
 
 
 @app.route('/visit/<int:visit_id>/update_clinical', methods=['POST'])

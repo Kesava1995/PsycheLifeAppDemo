@@ -402,6 +402,18 @@
 
     <div class="right-panel">
         <div class="auth-card">
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div style="padding: 12px; margin-bottom: 20px; border-radius: 8px; font-size: 0.9rem; text-align: center;
+                    {% if category == 'error' %} background: #ffebee; color: #c62828; border: 1px solid #ffcdd2;
+                    {% else %} background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; {% endif %}">
+                    {{ message }}
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
             <div class="auth-header">
                 <h2 id="form-title">Welcome Back!</h2>
                 <p id="form-subtitle">Sign In To Continue using email</p>

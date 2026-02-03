@@ -72,7 +72,7 @@
 
     <div class="app-container">
         <aside class="sidebar">
-            <div style="font-weight:bold; margin-bottom:20px;">Dr. {{ session.get('username') }}</div>
+            <div style="font-weight:bold; margin-bottom:20px;">Dr. {{ doctor.full_name if doctor and doctor.full_name else 'Doctor' }}</div>
             <a href="{{ url_for('dashboard') }}" style="text-decoration:none; color:#333;">🏠 Dashboard</a>
             <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" style="display:block; margin-top:10px; text-decoration:none; color:#333;">⬅️ Back</a>
         </aside>
@@ -287,13 +287,6 @@
                         <button type="submit" name="submit_action" value="lifechart" class="btn" style="background:var(--primary-dark); width:auto; padding:10px 40px;">🔄 Update Life Chart</button>
                     </div>
 
-                    <div class="section-header"><span class="section-title">Medications</span><button type="button" class="add-btn" onclick="addMedication()">+</button></div>
-                    <div id="meds-container">
-                        {% for entry in visit.medication_entries %}
-                        {{ row_template_med(entry) }}
-                        {% endfor %}
-                    </div>
-
                     <div class="section-header"><span class="section-title">Diagnosis</span></div>
                     <div class="diagnosis-grid">
                         <div>
@@ -309,6 +302,13 @@
                             </div>
                         </div>
                         <div><label>Differential Diagnosis</label><textarea name="differential_diagnosis" rows="3">{{ visit.differential_diagnosis }}</textarea></div>
+                    </div>
+					
+					<div class="section-header"><span class="section-title">Medications</span><button type="button" class="add-btn" onclick="addMedication()">+</button></div>
+                    <div id="meds-container">
+                        {% for entry in visit.medication_entries %}
+                        {{ row_template_med(entry) }}
+                        {% endfor %}
                     </div>
 
                     <div style="margin-top: 10px; background:#f9fafb; padding:20px; border-radius:8px;">

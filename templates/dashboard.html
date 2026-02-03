@@ -63,7 +63,7 @@
 <body>
     <div class="app-container">
         <aside class="sidebar">
-            <div style="font-weight:bold; margin-bottom:20px;">Dr. {{ session.get('username') }}</div>
+            <div style="font-weight:bold; margin-bottom:20px;">Dr. {{ doctor.full_name if doctor and doctor.full_name else 'Doctor' }}</div>
             <a href="{{ url_for('profile') }}" style="text-decoration:none; color:#333; margin-bottom:20px; display:block;">👤 Profile</a>
             <input type="text" id="search" placeholder="Search Patients..." onkeyup="filterPatients()" style="width:100%; padding:8px; margin-bottom:10px;">
             <div id="patientList" style="flex:1; overflow-y:auto;">
@@ -132,9 +132,6 @@
                         <button type="submit" name="submit_action" value="lifechart" class="btn" style="background:var(--primary-dark); width:auto; padding:10px 40px;">🔄 Update Life Chart</button>
                     </div>
 
-                    <div class="section-header"><span class="section-title">Medications</span><button type="button" class="add-btn" onclick="addMedication()">+</button></div>
-                    <div id="meds-container"></div>
-
                     <div class="section-header"><span class="section-title">Diagnosis</span></div>
 
                     <div style="margin-top:20px; background:#fff; padding:15px; border:1px solid #eee; border-radius:8px;">
@@ -154,6 +151,9 @@
                             <div><label>Differential Diagnosis</label><textarea name="differential_diagnosis" rows="2"></textarea></div>
                         </div>
                     </div>
+					
+					<div class="section-header"><span class="section-title">Medications</span><button type="button" class="add-btn" onclick="addMedication()">+</button></div>
+                    <div id="meds-container"></div>
                     
                     <div style="margin-top: 20px; background:#f9fafb; padding:15px; border-radius:8px; display:flex; gap:20px; align-items:center;">
                         <div>
