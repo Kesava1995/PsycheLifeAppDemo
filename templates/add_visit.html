@@ -17,7 +17,13 @@
         .subsection-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; margin-top: 15px; }
         .subsection-title { font-size: 0.9rem; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
         .entry-wrapper { border: 1px solid #eee; padding: 15px; margin-bottom: 10px; border-radius: 8px; background: #fafafa; position: relative; }
-        .row-flex { display: flex; gap: 15px; align-items: flex-start; }
+        /* Update this class in dashboard.html, add_visit.html, and edit_visit.html */
+        .row-flex { 
+            display: flex; 
+            gap: 15px; 
+            align-items: center; 
+            flex-wrap: wrap; /* This enables the wrapping */
+        }
         .sliders-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; flex: 2.5; }
         .slider-group { display: flex; flex-direction: column; align-items: center; width: 100%; }
         .slider-group label { font-size: 10px; color: #666; margin-bottom: 4px; text-transform: uppercase; white-space: nowrap; }
@@ -47,23 +53,48 @@
 </head>
 <body>
     
-    {% macro row_template_med(entry) %}
-    {% set dose_str = entry.dose_mg|string if entry.dose_mg else '' %}
-    {% set d_val = dose_str.split(' ')[0] if ' ' in dose_str else dose_str %}
-    {% set d_unit = dose_str.split(' ')[1] if ' ' in dose_str else 'mg' %}
+    {% macro row_template_med(entry, unique_id) %}
     <div class="entry-wrapper">
-        <div class="row-flex" style="align-items:center;">
-            <select name="drug_type[]" style="width:60px; flex:none;"><option {% if entry.drug_type=='Gen'%}selected{%endif%}>Gen</option><option {% if entry.drug_type=='Brand'%}selected{%endif%}>Brand</option></select>
-            <input type="text" name="drug_name[]" value="{{ entry.drug_name }}" style="width:25%; flex:0 0 25%;">
-            <div style="display:flex; gap:0; flex:1; min-width:120px;">
-                <input type="text" name="dose_val[]" value="{{ d_val }}" style="flex:1;">
-                <select name="dose_unit[]" style="width:55px;"><option {% if d_unit=='mg'%}selected{%endif%}>mg</option><option {% if d_unit=='mcg'%}selected{%endif%}>mcg</option></select>
+        <div style="display:flex; align-items:center; gap:10px; width:100%;">
+            <select name="drug_type[]" style="width:120px; flex:none;">
+                <option value="Gen" {% if entry.drug_type=='Gen'%}selected{%endif%}>Generic</option>
+                <option value="Brand" {% if entry.drug_type=='Brand'%}selected{%endif%}>Brand</option>
+            </select>
+
+            <input type="text" name="drug_name[]" value="{{ entry.drug_name }}" style="flex:2; min-width:150px;">
+            
+            <div style="flex:1; min-width:100px;">
+                <input type="text" name="dose_full[]" value="{{ entry.dose_mg }}" list="dose-list-{{ unique_id }}" oninput="updateDoseOptions(this)">
+                <datalist id="dose-list-{{ unique_id }}"></datalist>
             </div>
-            <input type="text" list="freq-options-list" name="frequency[]" value="{{ entry.frequency }}" style="flex:1; min-width:80px;" oninput="updateFreqOptions(this)">
+
             <input type="text" list="duration-options-list" name="med_duration[]" value="{{ entry.duration_text or '' }}" style="flex:1; min-width:80px;" oninput="updateDurationOptions(this)">
-            <button type="button" class="note-btn" onclick="toggleNote(this)">📝</button>
-            <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button>
+            
+            <div style="display:flex; gap:5px; flex:none;">
+                <button type="button" class="note-btn" onclick="toggleNote(this)">📝</button>
+                <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button>
+            </div>
         </div>
+
+        <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:8px; gap:8px;">
+            <span style="font-size:11px; font-weight:600; color:#888; text-transform:uppercase;">Frequency</span>
+            
+            <input type="hidden" name="frequency[]" value="{{ entry.frequency or '1-0-1' }}">
+            
+            <div class="freq-container" style="display:flex; align-items:center;">
+                {% set parts = entry.frequency.split('-') if entry.frequency and '-' in entry.frequency else [entry.frequency] if entry.frequency else ['1','0','1'] %}
+                {% for p in parts %}
+                    <input type="text" class="freq-box" value="{{ p }}" style="width:25px; text-align:center; padding:5px 2px;" oninput="handleFreqInput(this)">
+                    {% if not loop.last %}<span style="margin:0 2px">-</span>{% endif %}
+                {% endfor %}
+            </div>
+            
+            <div style="display:flex; flex-direction:column; margin-left:2px;">
+                <button type="button" class="add-freq-btn" onclick="addFreqBox(this)" style="font-size:10px; line-height:10px; padding:0 2px; cursor:pointer; margin-bottom:1px;">+</button>
+                <button type="button" onclick="removeFreqBox(this)" style="font-size:10px; line-height:10px; padding:0 2px; cursor:pointer;">-</button>
+            </div>
+        </div>
+        
         <input type="text" class="note-input" name="med_note[]" value="{{ entry.note or '' }}">
     </div>
     {% endmacro %}
@@ -233,7 +264,7 @@
                     <div id="meds-container">
                         {% if last_visit %}
                             {% for entry in last_visit.medication_entries %}
-                            {{ row_template_med(entry) }}
+                            {{ row_template_med(entry, loop.index) }}
                             {% endfor %}
                         {% endif %}
                     </div>
@@ -324,7 +355,8 @@
             const num = parseFloat(val);
             if (!isNaN(num) && num > 0) {
                 list.innerHTML = ''; 
-                ['Days', 'Weeks', 'Months', 'Years'].forEach(unit => {
+                // Removed 'Years' from the array below
+                ['Days', 'Weeks', 'Months'].forEach(unit => {
                     const opt = document.createElement('option');
                     opt.value = `${num} ${unit}`;
                     list.appendChild(opt);
@@ -332,16 +364,61 @@
             }
         }
 
-        function updateFreqOptions(input) {
-            const val = input.value.trim().replace(/-/g, '');
-            const list = document.getElementById('freq-options-list');
-            const map = { '1':'1-0-0', '10':'1-0-0', '100':'1-0-0', '01':'0-1-0', '010':'0-1-0', '001':'0-0-1', '101':'1-0-1', '111':'1-1-1', 'sos':'SOS' };
-            if (map[val]) {
-                let opt = document.createElement('option');
-                opt.value = map[val];
-                opt.label = `${val} -> ${map[val]}`;
+        // --- SMART DOSE DROPDOWN ---
+        function updateDoseOptions(input) {
+            const val = input.value.trim();
+            const match = val.match(/[\d\.]+/);
+            if (!match) return;
+            const num = match[0];
+            const listId = input.getAttribute('list');
+            const list = document.getElementById(listId);
+            if (!list) return;
+            list.innerHTML = '';
+            ['mg', 'g', 'mcg', 'ml', 'IU', 'Tablet'].forEach(unit => {
+                const opt = document.createElement('option');
+                opt.value = `${num} ${unit}`;
                 list.appendChild(opt);
+            });
+        }
+
+        // --- DYNAMIC FREQUENCY BOXES ---
+        function handleFreqInput(input) {
+            const container = input.closest('.freq-container');
+            updateHiddenFreq(container);
+            const boxes = container.querySelectorAll('.freq-box');
+            if (input === boxes[boxes.length - 1] && input.value !== '') {
+                addFreqBox(container.nextElementSibling.querySelector('.add-freq-btn'));
             }
+        }
+        function addFreqBox(btn) {
+            const wrapper = btn.closest('.entry-wrapper').querySelector('.freq-container');
+            const sep = document.createElement('span');
+            sep.innerText = '-';
+            sep.style.margin = '0 2px';
+            wrapper.appendChild(sep);
+            const inp = document.createElement('input');
+            inp.type = 'text';
+            inp.className = 'freq-box';
+            inp.style = "width:25px; text-align:center; padding:5px 2px;";
+            inp.oninput = function() { handleFreqInput(this); };
+            wrapper.appendChild(inp);
+            updateHiddenFreq(wrapper);
+        }
+        function removeFreqBox(btn) {
+            const wrapper = btn.closest('.entry-wrapper').querySelector('.freq-container');
+            const boxes = wrapper.querySelectorAll('.freq-box');
+            const seps = wrapper.querySelectorAll('span');
+            if (boxes.length > 1) {
+                boxes[boxes.length - 1].remove();
+                if (seps.length > 0) seps[seps.length - 1].remove();
+                updateHiddenFreq(wrapper);
+            }
+        }
+        function updateHiddenFreq(container) {
+            const boxes = container.querySelectorAll('.freq-box');
+            const values = Array.from(boxes).map(b => b.value.trim() || '0');
+            const hiddenInput = container.parentElement.querySelector('input[name="frequency[]"]');
+            if (hiddenInput) hiddenInput.value = values.join('-');
         }
 
         function createRowHTML(type, cat='') {
@@ -349,20 +426,36 @@
             const prefix = isMSE ? 'mse' : type; 
             let contentHTML = '';
             
-            // Meds Row (Optimized Layout)
             if (type === 'med') {
+                const uniqueId = Date.now() + Math.random();
                 contentHTML = `
-                <div class="row-flex" style="align-items:center;">
-                    <select name="drug_type[]" style="width:60px; flex:none;"><option>Gen</option><option>Brand</option></select>
-                    <input type="text" name="drug_name[]" placeholder="Drug Name" style="width:25%; flex:0 0 25%;">
-                    <div style="display:flex; gap:0; flex:1; min-width:120px;">
-                        <input type="text" name="dose_val[]" placeholder="Dose" style="flex:1; border-radius:4px 0 0 4px; border-right:none;">
-                        <select name="dose_unit[]" style="width:55px; border-radius:0 4px 4px 0; background:#f0f0f0;"><option>mg</option><option>mcg</option></select>
+                <div style="display:flex; align-items:center; gap:10px; width:100%;">
+                    <select name="drug_type[]" style="width:120px; flex:none;"><option value="Gen">Generic</option><option value="Brand">Brand</option></select>
+                    <input type="text" name="drug_name[]" placeholder="Drug Name" style="flex:2; min-width:150px;">
+                    <div style="flex:1; min-width:100px;">
+                        <input type="text" name="dose_full[]" list="dose-list-${uniqueId}" placeholder="Dose" oninput="updateDoseOptions(this)">
+                        <datalist id="dose-list-${uniqueId}"></datalist>
                     </div>
-                    <input type="text" list="freq-options-list" name="frequency[]" placeholder="Freq" style="flex:1; min-width:80px;" oninput="updateFreqOptions(this)">
-                    <input type="text" list="duration-options-list" name="${prefix}_duration[]" placeholder="Duration" style="flex:1; min-width:80px;" oninput="updateDurationOptions(this)">
-                    <button type="button" class="note-btn" onclick="toggleNote(this)">📝</button>
-                    <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button>
+                    <input type="text" list="duration-options-list" name="med_duration[]" placeholder="Duration" style="flex:1; min-width:80px;" oninput="updateDurationOptions(this)">
+                    <div style="display:flex; gap:5px; flex:none;">
+                        <button type="button" class="note-btn" onclick="toggleNote(this)">📝</button>
+                        <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:8px; gap:8px;">
+                    <span style="font-size:11px; font-weight:600; color:#888; text-transform:uppercase;">Frequency</span>
+                    <input type="hidden" name="frequency[]" value="1-0-1">
+                    <div class="freq-container" style="display:flex; align-items:center;">
+                        <input type="text" class="freq-box" value="1" style="width:25px; text-align:center; padding:5px 2px;" oninput="handleFreqInput(this)">
+                        <span style="margin:0 2px">-</span>
+                        <input type="text" class="freq-box" value="0" style="width:25px; text-align:center; padding:5px 2px;" oninput="handleFreqInput(this)">
+                        <span style="margin:0 2px">-</span>
+                        <input type="text" class="freq-box" value="1" style="width:25px; text-align:center; padding:5px 2px;" oninput="handleFreqInput(this)">
+                    </div>
+                    <div style="display:flex; flex-direction:column; margin-left:2px;">
+                        <button type="button" class="add-freq-btn" onclick="addFreqBox(this)" style="font-size:10px; line-height:10px; padding:0 2px; cursor:pointer; margin-bottom:1px;">+</button>
+                        <button type="button" onclick="removeFreqBox(this)" style="font-size:10px; line-height:10px; padding:0 2px; cursor:pointer;">-</button>
+                    </div>
                 </div>`;
             } else {
                 let slidersHTML = `

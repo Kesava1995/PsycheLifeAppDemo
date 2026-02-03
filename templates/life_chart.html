@@ -84,8 +84,8 @@
             display: flex;
             flex-direction: column;
             position: relative;
-            /* Enable Vertical Resizing by User */
-            resize: vertical; 
+            /* Enable Both Vertical and Horizontal Resizing */
+            resize: both; 
             overflow: hidden; 
             min-height: 250px;
             height: 400px; /* Default Height */
@@ -93,6 +93,43 @@
             transition: box-shadow 0.2s;
         }
         
+        /* New Sticky Tooltip Style (matches standard Chart.js hover look) */
+        .sticky-tooltip {
+            position: fixed; 
+            background: rgba(0, 0, 0, 0.8); /* Standard Chart.js dark background */
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            pointer-events: none; /* Allows clicking through the tooltip */
+            z-index: 5000;
+            transform: translate(-50%, -120%); /* Centers and places it above the point */
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+            transition: opacity 0.15s ease-in-out;
+        }
+        /* Small Triangle Arrow at the bottom */
+        .sticky-tooltip::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
+        }
+        .tooltip-color-box {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            margin-right: 6px;
+            border-radius: 2px; /* Slight rounded corners for the box */
+            border: 1px solid rgba(255,255,255,0.8);
+            vertical-align: middle;
+        }
+
         .widget-card:hover {
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             border-color: #ccc;
@@ -201,6 +238,10 @@
                     <span class="color-dot" style="background:black;"></span>
                     <span class="item-text">Unified (Average)</span>
                 </label>
+                <label class="sidebar-item" style="border-bottom:1px solid #eee; margin-bottom:5px;">
+                    <input type="checkbox" onchange="toggleAll('symptoms', this)">
+                    <span></span> <span class="item-text" style="font-weight:700; color:#555; font-style:italic;">Select All</span>
+                </label>
                 {% for ds in symptom_datasets %}
                 <label class="sidebar-item">
                     <input type="checkbox" class="chk-symptoms" value="{{ ds.label }}" onchange="toggleDataset('symptoms', '{{ ds.label }}')">
@@ -218,6 +259,10 @@
                     <input type="checkbox" id="check-unified-meds" checked onchange="toggleUnified('meds')">
                     <span class="color-dot" style="background:black;"></span>
                     <span class="item-text">Unified (Average)</span>
+                </label>
+                <label class="sidebar-item" style="border-bottom:1px solid #eee; margin-bottom:5px;">
+                    <input type="checkbox" onchange="toggleAll('meds', this)">
+                    <span></span> <span class="item-text" style="font-weight:700; color:#555; font-style:italic;">Select All</span>
                 </label>
                 {% for ds in medication_datasets %}
                 <label class="sidebar-item">
@@ -237,6 +282,10 @@
                     <span class="color-dot" style="background:black;"></span>
                     <span class="item-text">Unified (Average)</span>
                 </label>
+                <label class="sidebar-item" style="border-bottom:1px solid #eee; margin-bottom:5px;">
+                    <input type="checkbox" onchange="toggleAll('se', this)">
+                    <span></span> <span class="item-text" style="font-weight:700; color:#555; font-style:italic;">Select All</span>
+                </label>
                 {% for ds in side_effect_datasets %}
                 <label class="sidebar-item">
                     <input type="checkbox" class="chk-se" value="{{ ds.label }}" onchange="toggleDataset('se', '{{ ds.label }}')">
@@ -254,6 +303,10 @@
                     <input type="checkbox" id="check-unified-mse" checked onchange="toggleUnified('mse')">
                     <span class="color-dot" style="background:black;"></span>
                     <span class="item-text">Unified (Average)</span>
+                </label>
+                <label class="sidebar-item" style="border-bottom:1px solid #eee; margin-bottom:5px;">
+                    <input type="checkbox" onchange="toggleAll('mse', this)">
+                    <span></span> <span class="item-text" style="font-weight:700; color:#555; font-style:italic;">Select All</span>
                 </label>
                 {% for ds in mse_datasets %}
                 <label class="sidebar-item">
@@ -309,22 +362,32 @@
                 <div id="meds-container">
                     {% if visit and visit.medication_entries %}
                         {% for entry in visit.medication_entries %}
-                        {% set dose_str = entry.dose_mg|string if entry.dose_mg else '' %}
-                        {% set d_val = dose_str.split(' ')[0] if ' ' in dose_str else dose_str %}
-                        {% set d_unit = dose_str.split(' ')[1] if ' ' in dose_str else 'mg' %}
+                        {% set unique_id = entry.id if entry.id else loop.index %}
                         <div class="entry-wrapper">
-                            <div class="row-flex">
+                            <div class="row-flex" style="align-items:center;">
                                 <select name="drug_type[]" style="width:100px; flex:none;">
                                     <option value="Generic" {% if entry.drug_type == 'Generic' or not entry.drug_type %}selected{% endif %}>Generic</option>
                                     <option value="Brand" {% if entry.drug_type == 'Brand' %}selected{% endif %}>Brand</option>
                                 </select>
                                 <input type="text" name="drug_name[]" value="{{ entry.drug_name }}" placeholder="Drug" style="width:25%;">
-                                <input type="text" name="dose_val[]" value="{{ d_val }}" placeholder="Dose" style="flex:1;">
-                                <select name="dose_unit[]" style="width:55px;">
-                                    <option {% if d_unit == 'mg' %}selected{% endif %}>mg</option>
-                                    <option {% if d_unit == 'mcg' %}selected{% endif %}>mcg</option>
-                                </select>
-                                <input list="freq-options-list" name="frequency[]" value="{{ entry.frequency or '' }}" placeholder="Freq" style="flex:1;" oninput="updateFreqOptions(this)">
+                                <div style="flex:1; min-width:80px;">
+                                    <input type="text" name="dose_full[]" value="{{ entry.dose_mg or '' }}" list="dose-list-lc-{{ unique_id }}" placeholder="Dose" oninput="updateDoseOptionsLC(this)">
+                                    <datalist id="dose-list-lc-{{ unique_id }}"></datalist>
+                                </div>
+                                <div style="flex:1.5; display:flex; align-items:center; min-width:140px;">
+                                    <input type="hidden" name="frequency[]" value="{{ entry.frequency or '1-0-1' }}">
+                                    <div class="freq-container" style="display:flex; align-items:center;">
+                                        {% set parts = entry.frequency.split('-') if entry.frequency and '-' in entry.frequency else [entry.frequency] if entry.frequency else ['1','0','1'] %}
+                                        {% for p in parts %}
+                                        <input type="text" class="freq-box" value="{{ p }}" style="width:22px; text-align:center; padding:4px 2px;" oninput="handleFreqInputLC(this)">
+                                        {% if not loop.last %}<span style="margin:0 2px">-</span>{% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    <div style="display:flex; flex-direction:column; margin-left:4px;">
+                                        <button type="button" class="add-freq-btn" onclick="addFreqBoxLC(this)" style="font-size:10px; padding:0 2px; cursor:pointer;">+</button>
+                                        <button type="button" onclick="removeFreqBoxLC(this)" style="font-size:10px; padding:0 2px; cursor:pointer;">-</button>
+                                    </div>
+                                </div>
                                 <input list="duration-options-list" name="med_duration[]" value="{{ entry.duration_text or '' }}" placeholder="Dur" style="flex:1;" oninput="updateDurationOptions(this)">
                                 <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button>
                             </div>
@@ -401,6 +464,7 @@
 	
 	let suppressSingleClickUntil = 0;
     let charts = {}; // Global chart instance storage
+    let activeStickyDate = null; // Remember active date for zoom/pan sync
 
     // --- CHART OPTIONS ---
     const commonOptions = {
@@ -410,21 +474,66 @@
             y: { beginAtZero: true, title: { display: true, text: 'Score' } }
         },
         plugins: {
-            zoom: { zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }, pan: { enabled: true, mode: 'x' } },
-            tooltip: { mode: 'nearest', intersect: true },
+            // --- UPDATED ZOOM CONFIGURATION ---
+            zoom: { 
+                zoom: { 
+                    wheel: { enabled: true }, 
+                    pinch: { enabled: true }, 
+                    mode: 'x',
+                    // Listener for Zooming
+                    onZoom: ({chart}) => { if(activeStickyDate) showStickyTooltips(activeStickyDate); }
+                }, 
+                pan: { 
+                    enabled: true, 
+                    mode: 'x',
+                    // Listener for Panning (Dragging)
+                    onPan: ({chart}) => { if(activeStickyDate) showStickyTooltips(activeStickyDate); }
+                } 
+            },
+            tooltip: { enabled: true, mode: 'nearest', intersect: true },
             legend: { display: false } 
         },
+        // --- UPDATED CLICK HANDLER ---
         onClick: (e, activeEls, chart) => {
             if (Date.now() < suppressSingleClickUntil) return;
             if (chart.clickTimeout) clearTimeout(chart.clickTimeout);
+
             chart.clickTimeout = setTimeout(() => {
-                if (Date.now() < suppressSingleClickUntil) return;
-                if (!activeEls.length) return;
-                const idx = activeEls[0].index;
-                const dIdx = activeEls[0].datasetIndex;
-                const point = chart.data.datasets[dIdx].data[idx];
-                showDailySummary(point.x.split('T')[0], e.native.clientX, e.native.clientY);
-            }, 260);
+                const xScale = chart.scales.x;
+                if (!xScale) return;
+
+                let dateStr = "";
+                const points = chart.getElementsAtEventForMode(e, 'nearest', { intersect: false, axis: 'x' }, true);
+
+                if (points.length > 0) {
+                    const firstPoint = points[0];
+                    const dataItem = chart.data.datasets[firstPoint.datasetIndex].data[firstPoint.index];
+                    if (dataItem && dataItem.x) dateStr = dataItem.x.split('T')[0];
+                } 
+                
+                if (!dateStr) {
+                    // Fallback Logic
+                    const nativeEvent = e.native != null ? e.native : e;
+                    const canvasPos = Chart.helpers.getRelativePosition(nativeEvent, chart);
+                    const chartArea = chart.chartArea;
+                    const canvasX = Math.max(chartArea.left, Math.min(chartArea.right, canvasPos.x));
+                    const dateValue = xScale.getValueForPixel(canvasX);
+                    
+                    if (dateValue) {
+                        const dateObj = new Date(dateValue);
+                        if (dateObj.getHours() >= 12) dateObj.setDate(dateObj.getDate() + 1);
+                        const year = dateObj.getFullYear();
+                        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                        const day = String(dateObj.getDate()).padStart(2, '0');
+                        dateStr = `${year}-${month}-${day}`;
+                    }
+                }
+
+                if (dateStr) {
+                    activeStickyDate = dateStr; // Save the date for zoom/pan sync
+                    showStickyTooltips(dateStr);
+                }
+            }, 220); 
         }
     };
 
@@ -574,12 +683,16 @@
         ctx.addEventListener('dblclick', (e) => {
             suppressSingleClickUntil = Date.now() + 400;
             if (newChart.clickTimeout) clearTimeout(newChart.clickTimeout);
-            closeDailySummary();
+            
+            // FIX: Explicitly clear the new sticky tooltips when opening modal
+            clearStickyTooltips(); 
+            
             const activeEls = newChart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
             if (!activeEls.length) return;
             const index = activeEls[0].index;
             const datasetIndex = activeEls[0].datasetIndex;
             const point = newChart.data.datasets[datasetIndex].data[index];
+            
             if (['Onset','Progression','History'].includes(point.phase)) {
                 showHistoryModal(point);
             } else if (point.x) {
@@ -608,6 +721,144 @@
             document.querySelectorAll(`.chk-${type}`).forEach(c => { if(c.value===label) isChecked = c.checked; });
             chart.setDatasetVisibility(idx, isChecked); chart.update();
         }
+    }
+
+    // --- SIDEBAR "SELECT ALL" LOGIC ---
+    function toggleAll(type, checkbox) {
+        const chart = charts[type]; 
+        if (!chart) return;
+
+        // 1. Update Chart Datasets (Skip unified)
+        chart.data.datasets.forEach((ds, index) => {
+            if (!ds.isUnified) {
+                 chart.setDatasetVisibility(index, checkbox.checked);
+            }
+        });
+        chart.update();
+
+        // 2. Sync Individual Checkboxes in Sidebar
+        document.querySelectorAll(`.chk-${type}`).forEach(cb => {
+            cb.checked = checkbox.checked;
+        });
+    }
+
+    // --- STICKY TOOLTIPS LOGIC (Metadata Based + Scroll Sync + Overlap Prevention) ---
+
+    function showStickyTooltips(dateStr) {
+        clearStickyTooltips();
+        
+        // 1. Collect all Tooltip Candidates (Data & Positions)
+        let candidates = [];
+
+        Object.keys(charts).forEach(key => {
+            const chart = charts[key];
+            if (!chart) return;
+            
+            const chartArea = chart.chartArea;
+            const canvasRect = chart.canvas.getBoundingClientRect();
+
+            chart.data.datasets.forEach((ds, dsIndex) => {
+                if (chart.isDatasetVisible(dsIndex)) {
+                    // Find matching data point
+                    const index = ds.data.findIndex(p => p.x && p.x.toString().startsWith(dateStr));
+                    
+                    if (index !== -1) {
+                        const meta = chart.getDatasetMeta(dsIndex);
+                        const element = meta.data[index];
+
+                        if (element && !element.skip) {
+                            const x = element.x;
+                            const y = element.y;
+
+                            // Bounds Check (Visible area only)
+                            if (x >= chartArea.left - 5 && x <= chartArea.right + 5 && 
+                                y >= chartArea.top - 5 && y <= chartArea.bottom + 5) {
+                                
+                                // Calculate Absolute Screen Position
+                                const absX = canvasRect.left + x;
+                                const absY = canvasRect.top + y;
+
+                                candidates.push({
+                                    absX, absY,
+                                    dataset: ds,
+                                    point: ds.data[index],
+                                    chartType: key
+                                });
+                            }
+                        }
+                    }
+                }
+            });
+        });
+
+        if (candidates.length === 0) return;
+
+        // 2. Create Elements (Initially hidden to measure size)
+        const domElements = candidates.map(c => {
+            const el = createTooltipElement(c.absX, c.absY, c.dataset, c.point, c.chartType);
+            el.style.opacity = '0'; // Hide during calculation
+            return { el, ...c };
+        });
+
+        // 3. Collision Resolution (Prevent Overlap)
+        // Sort by Y position (top to bottom) so we handle them in order
+        domElements.sort((a, b) => a.absY - b.absY);
+
+        for (let i = 0; i < domElements.length; i++) {
+            for (let j = i + 1; j < domElements.length; j++) {
+                const A = domElements[i];
+                const B = domElements[j];
+
+                // Get current positions (getBoundingClientRect is expensive, so we calculate relative)
+                const rectA = A.el.getBoundingClientRect();
+                const rectB = B.el.getBoundingClientRect();
+
+                // Check Intersection
+                const overlapX = (rectA.left < rectB.right && rectA.right > rectB.left);
+                const overlapY = (rectA.top < rectB.bottom && rectA.bottom > rectB.top);
+
+                if (overlapX && overlapY) {
+                    // Collision Detected! Push B down.
+                    const pushDown = (rectA.bottom - rectB.top) + 5;
+                    
+                    const currentTop = parseFloat(B.el.style.top);
+                    B.el.style.top = (currentTop + pushDown) + 'px';
+                }
+            }
+        }
+
+        // 4. Reveal Elements
+        domElements.forEach(item => item.el.style.opacity = '1');
+    }
+
+    // Helper function to create the DOM element
+    function createTooltipElement(x, y, dataset, point, chartType) {
+        const div = document.createElement('div');
+        div.className = 'sticky-tooltip';
+        
+        // Position
+        div.style.left = x + 'px';
+        div.style.top = y + 'px';
+        
+        // Content
+        let valDisplay = point.y;
+        if (chartType === 'meds') valDisplay += ' mg';
+        
+        div.innerHTML = `
+            <span class="tooltip-color-box" style="background:${dataset.borderColor}"></span>
+            <span style="font-weight:600;">${dataset.label}:</span> ${valDisplay}
+        `;
+        
+        if (point.detail) {
+            div.innerHTML += `<div style="margin-top:2px; font-weight:normal; opacity:0.8;">${point.detail}</div>`;
+        }
+        
+        document.body.appendChild(div);
+        return div;
+    }
+
+    function clearStickyTooltips() {
+        document.querySelectorAll('.sticky-tooltip').forEach(el => el.remove());
     }
 
     // --- POPUP LOGIC (Generic) ---
@@ -676,8 +927,21 @@
     }
     function closeModal() { document.getElementById('visitModal').style.display = 'none'; }
     window.onclick = function(event) { 
+        // Close Modal Logic
         if (event.target == document.getElementById('visitModal')) closeModal();
-        if (event.target != document.getElementById('dailySummary') && !event.target.closest('.daily-summary-popup') && event.target.tagName !== 'CANVAS') { closeDailySummary(); }
+        
+        // Close Sticky Tooltips Logic
+        // If we didn't click a canvas and didn't click a tooltip, clear them.
+        if (!event.target.closest('canvas') && !event.target.closest('.sticky-tooltip')) {
+            clearStickyTooltips();
+            activeStickyDate = null; // Reset state
+        }
+        
+        // Close Daily Summary Popup (if still used)
+        const summaryPopup = document.getElementById('dailySummary');
+        if (summaryPopup && summaryPopup.style.display === 'block' && !event.target.closest('.daily-summary-popup')) {
+            closeDailySummary();
+        }
     }
 
     // Form Logic (Unchanged)
@@ -710,16 +974,81 @@
             ['Days','Weeks','Months'].forEach(u => { let o=document.createElement('option'); o.value=`${v} ${u}`; l.appendChild(o); });
         }
     }
+    // --- SMART DOSE (Life Chart) ---
+    function updateDoseOptionsLC(input) {
+        const val = input.value.trim();
+        const match = val.match(/[\d\.]+/);
+        if (!match) return;
+        const num = match[0];
+        const listId = input.getAttribute('list');
+        const list = document.getElementById(listId);
+        if (!list) return;
+        list.innerHTML = '';
+        ['mg', 'g', 'mcg', 'ml', 'IU', 'Tablet'].forEach(unit => {
+            const opt = document.createElement('option');
+            opt.value = num + ' ' + unit;
+            list.appendChild(opt);
+        });
+    }
+    function handleFreqInputLC(input) {
+        const container = input.closest('.freq-container');
+        updateHiddenFreqLC(container);
+        const boxes = container.querySelectorAll('.freq-box');
+        if (input === boxes[boxes.length - 1] && input.value !== '') addFreqBoxLC(container.nextElementSibling.querySelector('.add-freq-btn'));
+    }
+    function addFreqBoxLC(btn) {
+        const wrapper = btn.closest('.row-flex').querySelector('.freq-container');
+        const sep = document.createElement('span');
+        sep.innerText = '-';
+        sep.style.margin = '0 2px';
+        wrapper.appendChild(sep);
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.className = 'freq-box';
+        inp.style = 'width:22px; text-align:center; padding:4px 2px;';
+        inp.oninput = function() { handleFreqInputLC(this); };
+        wrapper.appendChild(inp);
+        updateHiddenFreqLC(wrapper);
+    }
+    function removeFreqBoxLC(btn) {
+        const wrapper = btn.closest('.row-flex').querySelector('.freq-container');
+        const boxes = wrapper.querySelectorAll('.freq-box');
+        const seps = wrapper.querySelectorAll('span');
+        if (boxes.length > 1) {
+            boxes[boxes.length - 1].remove();
+            if (seps.length > 0) seps[seps.length - 1].remove();
+            updateHiddenFreqLC(wrapper);
+        }
+    }
+    function updateHiddenFreqLC(container) {
+        const boxes = container.querySelectorAll('.freq-box');
+        const values = Array.from(boxes).map(b => b.value.trim() || '0');
+        const hiddenInput = container.parentElement.querySelector('input[name="frequency[]"]');
+        if (hiddenInput) hiddenInput.value = values.join('-');
+    }
     function addMedication() {
-        const h = `<div class="entry-wrapper"><div class="row-flex">
-            <select name="drug_type[]" style="width:70px; flex:none;">
-                <option value="Generic" selected>Gen</option>
-                <option value="Brand">Brand</option>
-            </select>
+        const uid = Date.now() + Math.random();
+        const h = `<div class="entry-wrapper"><div class="row-flex" style="align-items:center;">
+            <select name="drug_type[]" style="width:100px; flex:none;"><option value="Generic" selected>Gen</option><option value="Brand">Brand</option></select>
             <input type="text" name="drug_name[]" placeholder="Drug" style="width:25%;">
-            <input type="text" name="dose_val[]" placeholder="Dose" style="flex:1;">
-            <select name="dose_unit[]" style="width:55px;"><option>mg</option><option>mcg</option></select>
-            <input list="freq-options-list" name="frequency[]" placeholder="Freq" style="flex:1;" oninput="updateFreqOptions(this)">
+            <div style="flex:1; min-width:80px;">
+                <input type="text" name="dose_full[]" list="dose-list-lc-${uid}" placeholder="Dose" oninput="updateDoseOptionsLC(this)">
+                <datalist id="dose-list-lc-${uid}"></datalist>
+            </div>
+            <div style="flex:1.5; display:flex; align-items:center; min-width:140px;">
+                <input type="hidden" name="frequency[]" value="1-0-1">
+                <div class="freq-container" style="display:flex; align-items:center;">
+                    <input type="text" class="freq-box" value="1" style="width:22px; text-align:center; padding:4px 2px;" oninput="handleFreqInputLC(this)">
+                    <span style="margin:0 2px">-</span>
+                    <input type="text" class="freq-box" value="0" style="width:22px; text-align:center; padding:4px 2px;" oninput="handleFreqInputLC(this)">
+                    <span style="margin:0 2px">-</span>
+                    <input type="text" class="freq-box" value="1" style="width:22px; text-align:center; padding:4px 2px;" oninput="handleFreqInputLC(this)">
+                </div>
+                <div style="display:flex; flex-direction:column; margin-left:4px;">
+                    <button type="button" class="add-freq-btn" onclick="addFreqBoxLC(this)" style="font-size:10px; padding:0 2px; cursor:pointer;">+</button>
+                    <button type="button" onclick="removeFreqBoxLC(this)" style="font-size:10px; padding:0 2px; cursor:pointer;">-</button>
+                </div>
+            </div>
             <input list="duration-options-list" name="med_duration[]" placeholder="Dur" style="flex:1;" oninput="updateDurationOptions(this)">
             <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button>
         </div></div>`;
@@ -741,6 +1070,16 @@
         const medContainer = document.getElementById('meds-container');
         if (medContainer.children.length === 0) {
             addMedication();
+        }
+
+        // --- SYNC TOOLTIPS ON VERTICAL SCROLL ---
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) {
+            mainContent.addEventListener('scroll', () => {
+                if (activeStickyDate) {
+                    showStickyTooltips(activeStickyDate);
+                }
+            }, { passive: true }); // passive improves scroll performance
         }
     };
 

@@ -72,26 +72,53 @@ def get_unified_dose(drug_name, dose_mg):
     except:
         return 0.0
 
-# --- NEW: PRESCRIPTION LANGUAGE CONVERTER ---
+# --- PRESCRIPTION LANGUAGE CONVERTER (Positional logic) ---
 def format_frequency(code):
     """
-    Converts clinical frequency codes (1-0-1) into patient-friendly text.
+    Parses frequency codes based on the number of segments (digits separated by hyphens).
+    0 = Omit, 1+ = Quantity.
     """
-    if not code:
-        return ""
-    
-    # Strip whitespace to be safe
-    code = code.strip()
-        
-    mapping = {
-        "1-0-0": "Once a day (Morning)",
-        "0-1-0": "Once a day (Afternoon)",
-        "0-0-1": "Once a day (Night)",
-        "1-0-1": "Twice a day (Morning & Night)",
-        "1-1-0": "Twice a day (Morning & Afternoon)",
-        "0-1-1": "Twice a day (Afternoon & Night)",
-        "1-1-1": "Thrice a day (Morning, Afternoon & Night)",
-        "SOS": "As needed (SOS)"
+    if not code: return ""
+    code = str(code).strip()
+
+    # If it's a legacy code (e.g. SOS) or just text, return as is
+    if '-' not in code and not code.isdigit():
+        return code
+
+    parts = code.split('-')
+    count = len(parts)
+
+    # Define time slots based on the number of 'boxes'
+    mappings = {
+        2: ["Morning", "Night"],
+        3: ["Morning", "Afternoon", "Night"],
+        4: ["Morning", "Afternoon", "Evening", "Night"],
+        5: ["Dawn", "Morning", "Afternoon", "Evening", "Night"]
     }
-    
-    return mapping.get(code, code) # Return original if not found (e.g. custom text)
+
+    # Fallback for unsupported lengths (e.g. 1 or >=6)
+    if count not in mappings:
+        return code
+
+    time_slots = mappings[count]
+    output_parts = []
+
+    # Simple number-to-word map
+    qty_map = {'1': 'One', '2': 'Two', '3': 'Three', '0.5': 'Half', '1/2': 'Half'}
+
+    for i, val in enumerate(parts):
+        val = val.strip()
+        if val == '0' or not val:
+            continue
+
+        qty = qty_map.get(val, val)  # Use word if known, else number
+        time = time_slots[i]
+        output_parts.append(f"{qty} in {time}")
+
+    if not output_parts:
+        return ""
+
+    if len(output_parts) == 1:
+        return output_parts[0]
+
+    return ", ".join(output_parts[:-1]) + " & " + output_parts[-1]

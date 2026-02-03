@@ -217,7 +217,7 @@ tent experience.
         # 3. Medications
         meds_chart = []
         drug_names = request.form.getlist('drug_name[]')
-        dose_mgs = request.form.getlist('dose_mg[]')
+        dose_mgs = request.form.getlist('dose_full[]') or request.form.getlist('dose_mg[]')
         med_notes = request.form.getlist('med_note[]')
         for i, name in enumerate(drug_names):
             if name.strip():
@@ -515,24 +515,19 @@ def process_visit_form_data(visit, form_data):
     # 4. Medications
     d_names = form_data.getlist('drug_name[]')
     d_types = form_data.getlist('drug_type[]')
-    d_vals = form_data.getlist('dose_val[]')
-    d_units = form_data.getlist('dose_unit[]')
+    # Read the combined dose string directly
+    d_full_doses = form_data.getlist('dose_full[]')
     d_freqs = form_data.getlist('frequency[]')
     d_notes = form_data.getlist('med_note[]')
-    d_durs = form_data.getlist('med_duration[]')  # Direct list for meds
+    d_durs = form_data.getlist('med_duration[]')
 
     for i, name in enumerate(d_names):
         if name.strip():
-            # Combine Dose + Unit (e.g. "10 mg")
-            val = d_vals[i] if i < len(d_vals) else ""
-            unit = d_units[i] if i < len(d_units) else "mg"
-            combined_dose = f"{val} {unit}" if val else ""
-
             entry = MedicationEntry(
                 visit_id=visit.id,
                 drug_name=name,
-                drug_type=d_types[i] if i < len(d_types) else None,
-                dose_mg=combined_dose, 
+                drug_type=d_types[i] if i < len(d_types) else 'Generic',
+                dose_mg=d_full_doses[i] if i < len(d_full_doses) else '',
                 frequency=d_freqs[i] if i < len(d_freqs) else '',
                 duration_text=d_durs[i] if i < len(d_durs) else '',
                 note=d_notes[i] if i < len(d_notes) else ''
@@ -779,29 +774,24 @@ def update_clinical(visit_id):
     # 2. Update Medications ONLY (Wipe old meds for this visit, write new ones)
     # We do NOT touch SymptomEntry, MSEEntry, SideEffectEntry here.
     MedicationEntry.query.filter_by(visit_id=visit.id).delete()
-    
-    # Retrieve drug types
+
     d_types = request.form.getlist('drug_type[]')
     d_names = request.form.getlist('drug_name[]')
-    d_vals = request.form.getlist('dose_val[]')
-    d_units = request.form.getlist('dose_unit[]')
+    d_full_doses = request.form.getlist('dose_full[]')
     d_freqs = request.form.getlist('frequency[]')
     d_durs = request.form.getlist('med_duration[]')
+    d_notes = request.form.getlist('med_note[]')
 
     for i, name in enumerate(d_names):
         if name.strip():
-            val = d_vals[i] if i < len(d_vals) else ""
-            unit = d_units[i] if i < len(d_units) else "mg"
-            combined_dose = f"{val} {unit}" if val else ""
-
             entry = MedicationEntry(
                 visit_id=visit.id,
-                # Save Drug Type (Default to 'Generic' if missing)
                 drug_type=d_types[i] if i < len(d_types) else 'Generic',
                 drug_name=name,
-                dose_mg=combined_dose, 
+                dose_mg=d_full_doses[i] if i < len(d_full_doses) else '',
                 frequency=d_freqs[i] if i < len(d_freqs) else '',
-                duration_text=d_durs[i] if i < len(d_durs) else ''
+                duration_text=d_durs[i] if i < len(d_durs) else '',
+                note=d_notes[i] if i < len(d_notes) else ''
             )
             db.session.add(entry)
 
@@ -1532,7 +1522,7 @@ def generate_prescription_pdf(visit_id, include_qr=False):
             str(idx),
             drug_display,
             med.dose_mg or '-',
-            med.frequency or med.note or '-',  # Use frequency field, fallback to note for backward compatibility
+            format_frequency(med.frequency) or med.note or '-',
             med.duration_text or '-'
         ])
     
@@ -1755,9 +1745,9 @@ def guest_both():
     # C. Medications
     meds_chart = []
     drug_names = request.form.getlist('drug_name[]')
-    dose_mgs = request.form.getlist('dose_mg[]')
+    dose_mgs = request.form.getlist('dose_full[]') or request.form.getlist('dose_mg[]')
     med_notes = request.form.getlist('med_note[]')
-    
+
     for i, name in enumerate(drug_names):
         if name.strip():
             score_val = 0.0
@@ -1813,7 +1803,7 @@ def guest_both():
         "provisional_diagnosis": request.form.get('provisional_diagnosis', ''),
         "medication_entries": []
     }
-    durations = request.form.getlist('med_duration_text[]')
+    durations = request.form.getlist('med_duration[]') or request.form.getlist('med_duration_text[]')
 
     for i, name in enumerate(drug_names):
         if name.strip():
