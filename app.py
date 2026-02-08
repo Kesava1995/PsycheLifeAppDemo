@@ -359,20 +359,20 @@ def profile():
 def dashboard():
     """Dashboard - New Patient & First Visit creation."""
     
-    # 1. Fetch Doctor
+    # --- FIX START: Fetch doctor using ID first (matches your login) ---
     doctor = None
     if 'doctor_id' in session:
         doctor = Doctor.query.get(session['doctor_id'])
     else:
-        # Fallback for legacy sessions only
+        # Fallback only if ID is missing
         doctor = Doctor.query.filter_by(username=session.get('username', 'admin')).first()
-
-    # --- SAFETY FIX: If session exists but Doctor is missing (Stale Session), Force Logout ---
+    
+    # SAFETY: Force logout if session says we are logged in but doctor is missing
     if 'doctor_id' in session and not doctor:
         session.clear()
-        flash('Session invalid (Doctor account not found). Please log in again.', 'error')
+        flash('Session error. Please log in again.', 'error')
         return redirect(url_for('landing'))
-    # ---------------------------------------------------------------------------------------
+    # --- FIX END ---
 
     if request.method == 'POST':
         # Get patient info
@@ -388,10 +388,11 @@ def dashboard():
         
         visit_date = parse_date(visit_date_str) or date.today()
         
-        # Double check doctor exists before saving
+        # --- CRITICAL FIX: Don't re-fetch "admin". Use the doctor we found above. ---
         if not doctor:
-            flash('Error: No doctor account identified. Please log in.', 'error')
-            return redirect(url_for('logout'))
+             flash('Error: No doctor account identified. Please log in.', 'error')
+             return redirect(url_for('logout'))
+        # --------------------------------------------------------------------------
 
         # Create patient
         patient = Patient(
@@ -404,7 +405,7 @@ def dashboard():
             attender_relation=request.form.get('attender_relation'),
             attender_reliability=request.form.get('attender_reliability'),
             personal_notes=request.form.get('personal_notes'),
-            doctor_id=doctor.id  # Correctly links to the logged-in doctor
+            doctor_id=doctor.id # This is now the CORRECT ID
         )
         db.session.add(patient)
         db.session.flush()
