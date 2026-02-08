@@ -359,14 +359,15 @@ def profile():
 def dashboard():
     """Dashboard - New Patient & First Visit creation."""
     
-    # --- FIX: Fetch the correct doctor for BOTH GET and POST ---
+    # --- FIX 1: Consistent Doctor Lookup for both GET and POST ---
+    # We prioritize the ID stored in the session by the login function.
     doctor = None
     if 'doctor_id' in session:
         doctor = Doctor.query.get(session['doctor_id'])
     else:
-        # Fallback for legacy admin
+        # Fallback only if ID is missing (e.g. legacy admin session)
         doctor = Doctor.query.filter_by(username=session.get('username', 'admin')).first()
-    # --- FIX END ---
+    # -------------------------------------------------------------
 
     if request.method == 'POST':
         # Get patient info
@@ -382,10 +383,15 @@ def dashboard():
         
         visit_date = parse_date(visit_date_str) or date.today()
         
-        # Safety check if doctor is somehow still missing (shouldn't happen if logged in)
+        # --- FIX 2: Ensure we have a valid doctor before saving ---
+        # The previous code tried to re-fetch doctor using 'username' which failed.
         if not doctor:
-            flash('Error: Doctor profile not found. Please relogin.', 'error')
-            return redirect(url_for('logout'))
+            # If no doctor is found, try admin fallback; otherwise error out.
+            doctor = Doctor.query.filter_by(username='admin').first()
+            if not doctor:
+                flash('Error: No doctor account found. Please log in.', 'error')
+                return redirect(url_for('logout'))
+        # ----------------------------------------------------------
 
         # Create patient
         patient = Patient(
@@ -398,7 +404,7 @@ def dashboard():
             attender_relation=request.form.get('attender_relation'),
             attender_reliability=request.form.get('attender_reliability'),
             personal_notes=request.form.get('personal_notes'),
-            doctor_id=doctor.id
+            doctor_id=doctor.id  # FIX 3: Uses the correct ID from the session lookup
         )
         db.session.add(patient)
         db.session.flush()
