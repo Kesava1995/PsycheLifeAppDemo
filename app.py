@@ -359,20 +359,18 @@ def profile():
 def dashboard():
     """Dashboard - New Patient & First Visit creation."""
     
-    # --- FIX START: Fetch doctor using ID first (matches your login) ---
+    # Fetch doctor: use session doctor_id so patient list matches logged-in account
     doctor = None
-    if 'doctor_id' in session:
-        doctor = Doctor.query.get(session['doctor_id'])
+    doc_id = session.get('doctor_id')
+    if doc_id is not None:
+        doctor = Doctor.query.get(doc_id)
     else:
-        # Fallback only if ID is missing
         doctor = Doctor.query.filter_by(username=session.get('username', 'admin')).first()
-    
-    # SAFETY: Force logout if session says we are logged in but doctor is missing
+
     if 'doctor_id' in session and not doctor:
         session.clear()
         flash('Session error. Please log in again.', 'error')
         return redirect(url_for('landing'))
-    # --- FIX END ---
 
     if request.method == 'POST':
         # Get patient info
@@ -438,10 +436,9 @@ def dashboard():
         else:
             return redirect(url_for('patient_detail', patient_id=patient.id))
     
-    # GET request - show dashboard
+    # GET request - show dashboard (patients scoped to logged-in doctor only)
     is_guest = session.get('role') == 'guest'
     patients = []
-    
     if not is_guest and doctor:
         patients = Patient.query.filter_by(doctor_id=doctor.id).all()
     
