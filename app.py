@@ -358,6 +358,16 @@ def profile():
 @login_required
 def dashboard():
     """Dashboard - New Patient & First Visit creation."""
+    
+    # --- FIX: Fetch the correct doctor for BOTH GET and POST ---
+    doctor = None
+    if 'doctor_id' in session:
+        doctor = Doctor.query.get(session['doctor_id'])
+    else:
+        # Fallback for legacy admin
+        doctor = Doctor.query.filter_by(username=session.get('username', 'admin')).first()
+    # --- FIX END ---
+
     if request.method == 'POST':
         # Get patient info
         patient_name = request.form.get('patient_name')
@@ -372,14 +382,11 @@ def dashboard():
         
         visit_date = parse_date(visit_date_str) or date.today()
         
-        # Get or create doctor
-        doctor = Doctor.query.filter_by(username=session.get('username', 'admin')).first()
+        # Safety check if doctor is somehow still missing (shouldn't happen if logged in)
         if not doctor:
-            from werkzeug.security import generate_password_hash
-            doctor = Doctor(username=session.get('username', 'admin'), password_hash=generate_password_hash('doctor'))
-            db.session.add(doctor)
-            db.session.commit()
-        
+            flash('Error: Doctor profile not found. Please relogin.', 'error')
+            return redirect(url_for('logout'))
+
         # Create patient
         patient = Patient(
             name=patient_name,
@@ -403,7 +410,7 @@ def dashboard():
             visit_type='First',
             provisional_diagnosis=request.form.get('provisional_diagnosis', ''),
             differential_diagnosis=request.form.get('differential_diagnosis', ''),
-            next_visit_date=parse_date(request.form.get('next_visit_date'))  # NEW
+            next_visit_date=parse_date(request.form.get('next_visit_date'))
         )
         db.session.add(visit)
         db.session.flush()
@@ -426,19 +433,10 @@ def dashboard():
     
     # GET request - show dashboard
     is_guest = session.get('role') == 'guest'
-    doctor = None
     patients = []
     
-    if not is_guest:
-        # Fetch by ID (more robust than username, which may not be in session)
-        if 'doctor_id' in session:
-            doctor = Doctor.query.get(session['doctor_id'])
-        else:
-            # Fallback for admin/legacy
-            doctor = Doctor.query.filter_by(username=session.get('username', 'admin')).first()
-            
-        if doctor:
-            patients = Patient.query.filter_by(doctor_id=doctor.id).all()
+    if not is_guest and doctor:
+        patients = Patient.query.filter_by(doctor_id=doctor.id).all()
     
     today = date.today()
     
