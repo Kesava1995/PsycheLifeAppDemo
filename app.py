@@ -114,13 +114,13 @@ def login():
             session['logged_in'] = True
             session['email'] = email
             session['role'] = 'doctor'
-            
-            # --- UPDATED: Fetch ID so profile retrieval works for admin ---
+            # Always set doctor_id: match by email first, then fallback to username 'admin'
+            # (in case admin record has email=None or typo like "gamil")
             doc = Doctor.query.filter_by(email=email).first()
+            if not doc:
+                doc = Doctor.query.filter_by(username='admin').first()
             if doc:
                 session['doctor_id'] = doc.id
-            # -------------------------------------------------------------
-            
             flash('Login successful!', 'success')
             return redirect(url_for('dashboard'))
         
@@ -358,18 +358,13 @@ def profile():
 @login_required
 def dashboard():
     """Dashboard - New Patient & First Visit creation."""
-    
-    # Fetch doctor: use session doctor_id so patient list matches logged-in account
-    doctor = None
+    # No fallback to admin: if there's no doctor_id, the user shouldn't be here.
     doc_id = session.get('doctor_id')
-    if doc_id is not None:
-        doctor = Doctor.query.get(doc_id)
-    else:
-        doctor = Doctor.query.filter_by(username=session.get('username', 'admin')).first()
+    doctor = Doctor.query.get(doc_id) if doc_id is not None else None
 
-    if 'doctor_id' in session and not doctor:
+    if not doctor:
         session.clear()
-        flash('Session error. Please log in again.', 'error')
+        flash('Session expired. Please log in.', 'error')
         return redirect(url_for('landing'))
 
     if request.method == 'POST':
