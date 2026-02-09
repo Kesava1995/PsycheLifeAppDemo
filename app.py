@@ -387,6 +387,9 @@ def dashboard():
              return redirect(url_for('logout'))
         # --------------------------------------------------------------------------
 
+        # Debugging: Print to terminal to see who is adding the patient
+        print(f"DEBUG: Adding patient for Doctor ID: {doctor.id} Name: {getattr(doctor, 'full_name', None) or doctor.email or doctor.username}")
+
         # Create patient
         patient = Patient(
             name=patient_name,
