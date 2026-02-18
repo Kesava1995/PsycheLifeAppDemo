@@ -5,7 +5,7 @@ PsycheLife - Medical web app for psychiatric patient management.
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response, session, abort
 from functools import wraps
 from datetime import datetime, date, timedelta, timezone
-from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry
+from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile
 from medical_utils import get_unified_dose, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency
 import io
 import os
@@ -387,8 +387,12 @@ def dashboard():
              return redirect(url_for('logout'))
         # --------------------------------------------------------------------------
 
-        # Debugging: Print to terminal to see who is adding the patient
-        print(f"DEBUG: Adding patient for Doctor ID: {doctor.id} Name: {getattr(doctor, 'full_name', None) or doctor.email or doctor.username}")
+        # Capture Relation Logic: "Others" -> use custom text
+        relation = request.form.get('attender_relation')
+        if relation == 'Others':
+            other_rel = request.form.get('attender_relation_other')
+            if other_rel and other_rel.strip():
+                relation = other_rel.strip()
 
         # Create patient
         patient = Patient(
@@ -398,7 +402,7 @@ def dashboard():
             address=address,
             phone=request.form.get('phone'),
             attender_name=request.form.get('attender_name'),
-            attender_relation=request.form.get('attender_relation'),
+            attender_relation=relation,
             attender_reliability=request.form.get('attender_reliability'),
             personal_notes=request.form.get('personal_notes'),
             doctor_id=doctor.id # This is now the CORRECT ID
@@ -595,6 +599,19 @@ def process_visit_form_data(visit, form_data):
             )
             db.session.add(entry)
 
+    # 7. Safety and Medical Profile (separate table)
+    drug_alg = form_data.get('drug_allergies', '').strip()
+    med_comorb = form_data.get('medical_comorbidities', '').strip()
+    non_psych_meds = form_data.get('non_psychiatric_meds', '').strip()
+    if drug_alg or med_comorb or non_psych_meds:
+        profile = SafetyMedicalProfile(
+            visit_id=visit.id,
+            drug_allergies=drug_alg,
+            medical_comorbidities=med_comorb,
+            non_psychiatric_meds=non_psych_meds
+        )
+        db.session.add(profile)
+
 
 @app.route('/patient/<int:patient_id>')
 @login_required
@@ -612,11 +629,16 @@ def add_visit(patient_id):
     patient = Patient.query.get_or_404(patient_id)
     
     if request.method == 'POST':
-        # 1. Update Patient Attender Details (NEW)
+        # 1. Update Patient Attender Details
         if request.form.get('attender_name'):
             patient.attender_name = request.form.get('attender_name')
         if request.form.get('attender_relation'):
-            patient.attender_relation = request.form.get('attender_relation')
+            relation = request.form.get('attender_relation')
+            if relation == 'Others':
+                other_rel = request.form.get('attender_relation_other')
+                if other_rel and other_rel.strip():
+                    relation = other_rel.strip()
+            patient.attender_relation = relation
         if request.form.get('attender_reliability'):
             patient.attender_reliability = request.form.get('attender_reliability')
         
@@ -692,7 +714,12 @@ def edit_visit(visit_id):
             patient.attender_name = request.form.get('attender_name')
             
         if 'attender_relation' in request.form:
-            patient.attender_relation = request.form.get('attender_relation')
+            relation = request.form.get('attender_relation')
+            if relation == 'Others':
+                other_rel = request.form.get('attender_relation_other')
+                if other_rel and other_rel.strip():
+                    relation = other_rel.strip()
+            patient.attender_relation = relation
             
         if 'attender_reliability' in request.form:
             patient.attender_reliability = request.form.get('attender_reliability')
@@ -716,6 +743,7 @@ def edit_visit(visit_id):
         # Phase 2: Clear new tables
         StressorEntry.query.filter_by(visit_id=visit.id).delete()
         PersonalityEntry.query.filter_by(visit_id=visit.id).delete()
+        SafetyMedicalProfile.query.filter_by(visit_id=visit.id).delete()
         
         # Use the updated helper from Phase 1
         process_visit_form_data(visit, request.form)

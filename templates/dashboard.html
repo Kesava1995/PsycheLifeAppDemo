@@ -63,7 +63,8 @@
         .click-trigger:hover { background: #f0f8ff; border-color: #4facfe; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
         .modal-content { background: white; margin: 10% auto; padding: 20px; width: 400px; border-radius: 8px; }
-        .checklist-group label { display: block; margin-bottom: 8px; cursor: pointer; }
+        .checklist-group label { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer; }
+        .checklist-group input[type="checkbox"] { width: auto; margin: 0; }
     </style>
 </head>
 <body>
@@ -85,7 +86,8 @@
         <main class="main-content">
             <div class="visit-card">
                 <form method="POST" action="{{ url_for('dashboard') }}" id="visitForm">
-                    <h2 style="margin-bottom: 20px;">New Patient & First Visit</h2>
+                    <h2 style="margin-bottom: 20px;">New Registration</h2>
+                    <div class="section-header" style="margin-top: 0;"><span class="section-title">Socio-Demographic details</span></div>
                     
                     <div class="patient-grid">
                         <div class="row-2-col">
@@ -96,15 +98,33 @@
                             <div><label>Age *</label><input type="number" name="age" required></div>
                             <div><label>Sex *</label><select name="sex"><option>Male</option><option>Female</option><option>Other</option></select></div>
                         </div>
-                        <div><label>Address</label><textarea name="address" rows="1"></textarea></div>
+                        <div><label>Address</label><textarea name="address" rows="1" style="resize: none;"></textarea></div>
                         
                         <div class="row-3-col">
                             <div><label>Attender Name</label><input type="text" name="attender_name"></div>
-                            <div><label>Relation</label><input type="text" name="attender_relation"></div>
+                            <div>
+                                <label>Relation</label>
+                                <input type="text" name="attender_relation" id="attender_relation" list="relation-options" oninput="toggleRelationOther(this)" onchange="validateRelation(this)" placeholder="Select or type..." autocomplete="off">
+                                <datalist id="relation-options">
+                                    <option value="Mother"></option>
+                                    <option value="Father"></option>
+                                    <option value="Sister"></option>
+                                    <option value="Brother"></option>
+                                    <option value="Uncle"></option>
+                                    <option value="Aunt"></option>
+                                    <option value="Friend"></option>
+                                    <option value="Brother-in-law"></option>
+                                    <option value="Sister-in-law"></option>
+                                    <option value="Father-in-law"></option>
+                                    <option value="Mother-in-law"></option>
+                                    <option value="Others"></option>
+                                </datalist>
+                                <input type="text" name="attender_relation_other" id="attender_relation_other" style="display:none; margin-top:5px;" placeholder="Specify other relation">
+                            </div>
                             <div><label>Reliability</label><select name="attender_reliability"><option>Yes</option><option>No</option></select></div>
                         </div>
                         
-                        <div><label>ID Notes (Doctor Only)</label><textarea name="personal_notes" rows="1"></textarea></div>
+                        <div><label>Identification Notes (Doctor Only)</label><textarea name="personal_notes" rows="1" style="resize: none;"></textarea></div>
                         <input type="hidden" name="visit_date" value="{{ today.strftime('%Y-%m-%d') }}">
                     </div>
 
@@ -130,6 +150,24 @@
                     
                     <div class="subsection-header"><span class="subsection-title">Affect</span><button type="button" class="add-btn" onclick="addMSE('Affect')">+</button></div>
                     <div id="mse-affect-container"></div>
+
+                    <div class="section-header"><span class="section-title">Safety and Medical Profile</span></div>
+                    <div class="patient-grid" style="margin-bottom: 20px;">
+                        <div class="row-3-col">
+                            <div>
+                                <label>Drug Allergies/ hypersensitivities</label>
+                                <textarea name="drug_allergies" rows="2" style="resize:none;">{{ last_visit.safety_profile.drug_allergies if last_visit and last_visit.safety_profile else (visit.safety_profile.drug_allergies if visit and visit.safety_profile else '') }}</textarea>
+                            </div>
+                            <div>
+                                <label>Medical Comorbidities</label>
+                                <textarea name="medical_comorbidities" rows="2" style="resize:none;">{{ last_visit.safety_profile.medical_comorbidities if last_visit and last_visit.safety_profile else (visit.safety_profile.medical_comorbidities if visit and visit.safety_profile else '') }}</textarea>
+                            </div>
+                            <div>
+                                <label>Current Non-Psychiatric Medication</label>
+                                <textarea name="non_psychiatric_meds" rows="2" style="resize:none;">{{ last_visit.safety_profile.non_psychiatric_meds if last_visit and last_visit.safety_profile else (visit.safety_profile.non_psychiatric_meds if visit and visit.safety_profile else '') }}</textarea>
+                            </div>
+                        </div>
+                    </div>
 
                     <div class="section-header"><span class="section-title">Side Effects</span><button type="button" class="add-btn" onclick="addSideEffect()">+</button></div>
                     <div id="side-effects-container"></div>
@@ -178,7 +216,7 @@
                         <button type="submit" name="submit_action" value="both" class="btn" style="flex:1; background:#4facfe; color:#fff;">Generate Both</button>
                     </div>
 
-                    <div id="modalStress" class="modal">
+                    <div id="modalStress" class="modal" onclick="if(event.target == this) this.style.display='none'">
                         <div class="modal-content">
                             <h3>Select Stressors</h3>
                             <div class="checklist-group">
@@ -190,11 +228,11 @@
                                 <label><input type="checkbox" name="stressors[]" value="Other"> Other</label>
                             </div>
                             <textarea name="stressor_note" placeholder="Notes on stressors..." rows="2" style="margin-top:10px;"></textarea>
-                            <button type="button" class="btn" style="margin-top:15px;" onclick="document.getElementById('modalStress').style.display='none'">Done</button>
+                            <button type="button" class="btn" style="margin-top:15px; background-color:#a5dcfe; color:#333;" onclick="document.getElementById('modalStress').style.display='none'">Done</button>
                         </div>
                     </div>
 
-                    <div id="modalPers" class="modal">
+                    <div id="modalPers" class="modal" onclick="if(event.target == this) this.style.display='none'">
                         <div class="modal-content">
                             <h3>Premorbid Personality</h3>
                             <div class="checklist-group" style="height:200px; overflow-y:auto;">
@@ -217,7 +255,7 @@
 								<label><input type="checkbox" name="personality[]" value="Others" > Others</label>
                             </div>
                             <textarea name="personality_note" placeholder="Notes on personality..." rows="2" style="margin-top:10px;"></textarea>
-                            <button type="button" class="btn" style="margin-top:15px;" onclick="document.getElementById('modalPers').style.display='none'">Done</button>
+                            <button type="button" class="btn" style="margin-top:15px; background-color:#a5dcfe; color:#333;" onclick="document.getElementById('modalPers').style.display='none'">Done</button>
                         </div>
                     </div>
 
@@ -283,13 +321,50 @@
             });
         }
 
+        function toggleRelationOther(inputElement) {
+            var otherInput = inputElement.parentElement.querySelector('#attender_relation_other');
+            if (inputElement.value === 'Others') {
+                otherInput.style.display = 'block';
+                otherInput.focus();
+            } else {
+                otherInput.style.display = 'none';
+                otherInput.value = '';
+            }
+        }
+        function validateRelation(inputElement) {
+            var listId = inputElement.getAttribute('list');
+            var datalist = document.getElementById(listId);
+            var options = Array.from(datalist.options).map(function(opt) { return opt.value; });
+            options.push('');
+            if (!options.includes(inputElement.value)) {
+                alert("Please select a relation from the list. If not listed, select 'Others'.");
+                inputElement.value = '';
+                toggleRelationOther(inputElement);
+            }
+        }
+
         // --- DYNAMIC FREQUENCY BOXES ---
         function handleFreqInput(input) {
+            let val = input.value;
+            if (val.toLowerCase() === 'h') {
+                input.value = '½';
+            } else if (val.length > 1) {
+                input.value = val.slice(-1);
+                if (input.value.toLowerCase() === 'h') input.value = '½';
+            }
             const container = input.closest('.freq-container');
             updateHiddenFreq(container);
-            const boxes = container.querySelectorAll('.freq-box');
+            const boxes = Array.from(container.querySelectorAll('.freq-box'));
+            const currentIndex = boxes.indexOf(input);
+            if (input.value !== '' && currentIndex < boxes.length - 1) {
+                boxes[currentIndex + 1].focus();
+            }
             if (input === boxes[boxes.length - 1] && input.value !== '') {
                 addFreqBox(container.nextElementSibling.querySelector('.add-freq-btn'));
+                setTimeout(() => {
+                    const newBoxes = container.querySelectorAll('.freq-box');
+                    newBoxes[newBoxes.length - 1].focus();
+                }, 10);
             }
         }
         function addFreqBox(btn) {

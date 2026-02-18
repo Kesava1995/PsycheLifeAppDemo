@@ -173,6 +173,22 @@
 
         </div>
         {% endif %}
+        {% if visit.safety_profile and (visit.safety_profile.drug_allergies or visit.safety_profile.medical_comorbidities or visit.safety_profile.non_psychiatric_meds) %}
+        <div class="clinical-row" style="margin-top: 10px; flex-direction: column;">
+            <div class="clinical-label" style="width: 100%; border-bottom: 1px solid #ddd; margin-bottom: 5px;">Safety & Medical Profile:</div>
+            <div class="clinical-data" style="padding-left: 10px;">
+                {% if visit.safety_profile.drug_allergies %}
+                    <div class="mse-group"><span>Allergies:</span> {{ visit.safety_profile.drug_allergies }}</div>
+                {% endif %}
+                {% if visit.safety_profile.medical_comorbidities %}
+                    <div class="mse-group"><span>Comorbidities:</span> {{ visit.safety_profile.medical_comorbidities }}</div>
+                {% endif %}
+                {% if visit.safety_profile.non_psychiatric_meds %}
+                    <div class="mse-group"><span>Non-Psych Meds:</span> {{ visit.safety_profile.non_psychiatric_meds }}</div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
         {% if visit.provisional_diagnosis %}
         <div style="margin-bottom: 20px; font-weight: bold;">
             <span style="font-size: 14pt;">Dx:</span> 

@@ -117,13 +117,20 @@ def migrate():
                     print(f"  - {col} exists")
 
             # 6. Update VISITS Table
-            # New field: next_visit_date
+            # New fields: next_visit_date, drug_allergies, medical_comorbidities, non_psychiatric_meds
             print("\n[Visits Table]")
-            if not column_exists(cursor, 'visits', 'next_visit_date'):
-                cursor.execute("ALTER TABLE visits ADD COLUMN next_visit_date DATE")
-                print("  + Added next_visit_date")
-            else:
-                print("  - next_visit_date exists")
+            visit_cols = [
+                ('next_visit_date', 'DATE'),
+                ('drug_allergies', 'TEXT'),
+                ('medical_comorbidities', 'TEXT'),
+                ('non_psychiatric_meds', 'TEXT')
+            ]
+            for col, dtype in visit_cols:
+                if not column_exists(cursor, 'visits', col):
+                    cursor.execute(f"ALTER TABLE visits ADD COLUMN {col} {dtype}")
+                    print(f"  + Added {col}")
+                else:
+                    print(f"  - {col} exists")
 
             # 7. Phase 2: Create STRESSOR_ENTRIES Table
             print("\n[Phase 2: Stressor Entries Table]")
@@ -156,6 +163,35 @@ def migrate():
                 print("  + Created personality_entries table")
             else:
                 print("  - personality_entries table exists")
+
+            # 9. Phase 3: Create SAFETY_MEDICAL_PROFILES Table & Migrate Data
+            print("\n[Phase 3: Safety Medical Profiles Table]")
+            if not table_exists(cursor, 'safety_medical_profiles'):
+                cursor.execute("""
+                    CREATE TABLE safety_medical_profiles (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        visit_id INTEGER NOT NULL,
+                        drug_allergies TEXT,
+                        medical_comorbidities TEXT,
+                        non_psychiatric_meds TEXT,
+                        FOREIGN KEY (visit_id) REFERENCES visits (id)
+                    )
+                """)
+                print("  + Created safety_medical_profiles table")
+                # Migrate existing data from visits if columns exist
+                if column_exists(cursor, 'visits', 'drug_allergies'):
+                    cursor.execute("""
+                        INSERT INTO safety_medical_profiles (visit_id, drug_allergies, medical_comorbidities, non_psychiatric_meds)
+                        SELECT id, drug_allergies, medical_comorbidities, non_psychiatric_meds
+                        FROM visits
+                        WHERE drug_allergies IS NOT NULL AND drug_allergies != ''
+                           OR medical_comorbidities IS NOT NULL AND medical_comorbidities != ''
+                           OR non_psychiatric_meds IS NOT NULL AND non_psychiatric_meds != ''
+                    """)
+                    migrated = cursor.rowcount
+                    print(f"  > Migrated {migrated} visit(s) to safety_medical_profiles")
+            else:
+                print("  - safety_medical_profiles table exists")
 
             connection.commit()
             print("\n--- Migration Completed Successfully! ---")

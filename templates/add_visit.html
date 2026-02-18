@@ -48,7 +48,8 @@
         .click-trigger:hover { background: #f0f8ff; border-color: #4facfe; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
         .modal-content { background: white; margin: 10% auto; padding: 20px; width: 400px; border-radius: 8px; }
-        .checklist-group label { display: block; margin-bottom: 8px; cursor: pointer; }
+        .checklist-group label { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer; }
+        .checklist-group input[type="checkbox"] { width: auto; margin: 0; }
     </style>
 </head>
 <body>
@@ -119,7 +120,25 @@
                         <h4 style="margin-top:0; color:#555;">Update Patient Particulars</h4>
                         <div class="row-3-col">
                             <div><label>Attender Name</label><input type="text" name="attender_name" value="{{ patient.attender_name or '' }}"></div>
-                            <div><label>Relation</label><input type="text" name="attender_relation" value="{{ patient.attender_relation or '' }}"></div>
+                            <div>
+                                <label>Relation</label>
+                                <input type="text" name="attender_relation" id="attender_relation" list="relation-options" oninput="toggleRelationOther(this)" onchange="validateRelation(this)" value="{% if patient.attender_relation and patient.attender_relation not in ['Mother','Father','Sister','Brother','Uncle','Aunt','Friend','Brother-in-law','Sister-in-law','Father-in-law','Mother-in-law'] %}Others{% else %}{{ patient.attender_relation or '' }}{% endif %}" placeholder="Select or type..." autocomplete="off">
+                                <datalist id="relation-options">
+                                    <option value="Mother"></option>
+                                    <option value="Father"></option>
+                                    <option value="Sister"></option>
+                                    <option value="Brother"></option>
+                                    <option value="Uncle"></option>
+                                    <option value="Aunt"></option>
+                                    <option value="Friend"></option>
+                                    <option value="Brother-in-law"></option>
+                                    <option value="Sister-in-law"></option>
+                                    <option value="Father-in-law"></option>
+                                    <option value="Mother-in-law"></option>
+                                    <option value="Others"></option>
+                                </datalist>
+                                <input type="text" name="attender_relation_other" id="attender_relation_other" style="display:{% if patient.attender_relation and patient.attender_relation not in ['Mother','Father','Sister','Brother','Uncle','Aunt','Friend','Brother-in-law','Sister-in-law','Father-in-law','Mother-in-law'] %}block{% else %}none{% endif %}; margin-top:5px;" placeholder="Specify other relation" value="{% if patient.attender_relation and patient.attender_relation not in ['Mother','Father','Sister','Brother','Uncle','Aunt','Friend','Brother-in-law','Sister-in-law','Father-in-law','Mother-in-law'] %}{{ patient.attender_relation }}{% endif %}">
+                            </div>
                             <div><label>Reliability</label><select name="attender_reliability"><option value="Yes" {% if patient.attender_reliability=='Yes' %}selected{%endif%}>Yes</option><option value="No" {% if patient.attender_reliability=='No' %}selected{%endif%}>No</option></select></div>
                         </div>
                     </div>
@@ -213,6 +232,24 @@
                         </div>
                     {% endfor %}
 
+                    <div class="section-header"><span class="section-title">Safety and Medical Profile</span></div>
+                    <div class="patient-grid" style="margin-bottom: 20px;">
+                        <div class="row-3-col">
+                            <div>
+                                <label>Drug Allergies/ hypersensitivities</label>
+                                <textarea name="drug_allergies" rows="2" style="resize:none;">{{ last_visit.safety_profile.drug_allergies if last_visit and last_visit.safety_profile else (visit.safety_profile.drug_allergies if visit and visit.safety_profile else '') }}</textarea>
+                            </div>
+                            <div>
+                                <label>Medical Comorbidities</label>
+                                <textarea name="medical_comorbidities" rows="2" style="resize:none;">{{ last_visit.safety_profile.medical_comorbidities if last_visit and last_visit.safety_profile else (visit.safety_profile.medical_comorbidities if visit and visit.safety_profile else '') }}</textarea>
+                            </div>
+                            <div>
+                                <label>Current Non-Psychiatric Medication</label>
+                                <textarea name="non_psychiatric_meds" rows="2" style="resize:none;">{{ last_visit.safety_profile.non_psychiatric_meds if last_visit and last_visit.safety_profile else (visit.safety_profile.non_psychiatric_meds if visit and visit.safety_profile else '') }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="section-header"><span class="section-title">Side Effects</span><button type="button" class="add-btn" onclick="addSideEffect()">+</button></div>
                     <div id="side-effects-container">
                         {% if last_visit %}
@@ -282,7 +319,7 @@
                         <button type="submit" name="submit_action" value="both" class="btn" style="flex:1; background:#4facfe;">Generate Both</button>
                     </div>
 
-                    <div id="modalStress" class="modal">
+                    <div id="modalStress" class="modal" onclick="if(event.target == this) this.style.display='none'">
                         <div class="modal-content">
                             <h3>Select Stressors</h3>
                             <div class="checklist-group">
@@ -294,11 +331,11 @@
                                 <label><input type="checkbox" name="stressors[]" value="Other" {% if 'Other' in last_stressors %}checked{% endif %}> Other</label>
                             </div>
                             <textarea name="stressor_note" placeholder="Notes on stressors..." rows="2" style="margin-top:10px;">{{ last_stressor_note }}</textarea>
-                            <button type="button" class="btn" style="margin-top:15px;" onclick="document.getElementById('modalStress').style.display='none'">Done</button>
+                            <button type="button" class="btn" style="margin-top:15px; background-color:#a5dcfe; color:#333;" onclick="document.getElementById('modalStress').style.display='none'">Done</button>
                         </div>
                     </div>
 
-                    <div id="modalPers" class="modal">
+                    <div id="modalPers" class="modal" onclick="if(event.target == this) this.style.display='none'">
                         <div class="modal-content">
                             <h3>Premorbid Personality</h3>
                             <div class="checklist-group" style="height:200px; overflow-y:auto;">
@@ -321,7 +358,7 @@
 								<label><input type="checkbox" name="personality[]" value="Others" {% if 'Others' in last_traits %}checked{% endif %}> Others</label>
                             </div>
                             <textarea name="personality_note" placeholder="Notes on personality..." rows="2" style="margin-top:10px;">{{ last_pers_note }}</textarea>
-                            <button type="button" class="btn" style="margin-top:15px;" onclick="document.getElementById('modalPers').style.display='none'">Done</button>
+                            <button type="button" class="btn" style="margin-top:15px; background-color:#a5dcfe; color:#333;" onclick="document.getElementById('modalPers').style.display='none'">Done</button>
                         </div>
                     </div>
 
@@ -381,13 +418,50 @@
             });
         }
 
+        function toggleRelationOther(inputElement) {
+            var otherInput = inputElement.parentElement.querySelector('#attender_relation_other');
+            if (inputElement.value === 'Others') {
+                otherInput.style.display = 'block';
+                otherInput.focus();
+            } else {
+                otherInput.style.display = 'none';
+                otherInput.value = '';
+            }
+        }
+        function validateRelation(inputElement) {
+            var listId = inputElement.getAttribute('list');
+            var datalist = document.getElementById(listId);
+            var options = Array.from(datalist.options).map(function(opt) { return opt.value; });
+            options.push('');
+            if (!options.includes(inputElement.value)) {
+                alert("Please select a relation from the list. If not listed, select 'Others'.");
+                inputElement.value = '';
+                toggleRelationOther(inputElement);
+            }
+        }
+
         // --- DYNAMIC FREQUENCY BOXES ---
         function handleFreqInput(input) {
+            let val = input.value;
+            if (val.toLowerCase() === 'h') {
+                input.value = '½';
+            } else if (val.length > 1) {
+                input.value = val.slice(-1);
+                if (input.value.toLowerCase() === 'h') input.value = '½';
+            }
             const container = input.closest('.freq-container');
             updateHiddenFreq(container);
-            const boxes = container.querySelectorAll('.freq-box');
+            const boxes = Array.from(container.querySelectorAll('.freq-box'));
+            const currentIndex = boxes.indexOf(input);
+            if (input.value !== '' && currentIndex < boxes.length - 1) {
+                boxes[currentIndex + 1].focus();
+            }
             if (input === boxes[boxes.length - 1] && input.value !== '') {
                 addFreqBox(container.nextElementSibling.querySelector('.add-freq-btn'));
+                setTimeout(() => {
+                    const newBoxes = container.querySelectorAll('.freq-box');
+                    newBoxes[newBoxes.length - 1].focus();
+                }, 10);
             }
         }
         function addFreqBox(btn) {

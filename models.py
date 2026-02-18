@@ -56,7 +56,6 @@ class Visit(db.Model):
     provisional_diagnosis = db.Column(db.Text)
     differential_diagnosis = db.Column(db.Text)
     
-    # NEW: Follow-up Date
     next_visit_date = db.Column(db.Date)
     
     note = db.Column(db.Text)
@@ -69,6 +68,7 @@ class Visit(db.Model):
     # Phase 2: New Relationships
     stressor_entries = db.relationship('StressorEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
     personality_entries = db.relationship('PersonalityEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
+    safety_profile = db.relationship('SafetyMedicalProfile', backref='visit', uselist=False, cascade='all, delete-orphan')
 
 
 class SymptomEntry(db.Model):
@@ -190,3 +190,14 @@ class PersonalityEntry(db.Model):
     visit_id = db.Column(db.Integer, db.ForeignKey('visits.id'), nullable=False)
     trait = db.Column(db.String(200)) # e.g., Paranoid, Borderline
     note = db.Column(db.Text)
+
+
+class SafetyMedicalProfile(db.Model):
+    __tablename__ = 'safety_medical_profiles'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    visit_id = db.Column(db.Integer, db.ForeignKey('visits.id'), nullable=False)
+    
+    drug_allergies = db.Column(db.Text)
+    medical_comorbidities = db.Column(db.Text)
+    non_psychiatric_meds = db.Column(db.Text)
