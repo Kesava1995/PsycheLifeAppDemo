@@ -151,7 +151,7 @@
                             <div><label>Reliability</label><select name="attender_reliability"><option value="Yes" {% if patient.attender_reliability=='Yes'%}selected{%endif%}>Yes</option><option value="No" {% if patient.attender_reliability=='No'%}selected{%endif%}>No</option></select></div>
                         </div>
                         
-                        <div style="grid-column: span 4;"><label>ID Notes</label><input type="text" name="personal_notes" value="{{ patient.personal_notes }}"></div>
+                        <div style="grid-column: span 4;"><label>Identification Notes</label><input type="text" name="personal_notes" value="{{ patient.personal_notes }}"></div>
                     </div>
 
                     {% set current_stressors = visit.stressor_entries | map(attribute='stressor_type') | list %}
