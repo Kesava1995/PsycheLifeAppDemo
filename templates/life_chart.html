@@ -221,7 +221,7 @@
 <div class="sidebar">
     <div class="nav-row">
         {% if not guest %}
-            <a href="{{ url_for('dashboard') }}">← Dashboard</a>
+            <a href="{{ url_for('first_visit') }}">← First Visit</a>
             <a href="{{ url_for('logout') }}" style="color: red;">Logout</a>
         {% else %}
             <span style="font-weight: 600; color: #555;">Guest View</span>

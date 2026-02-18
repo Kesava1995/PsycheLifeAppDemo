@@ -107,9 +107,9 @@ def init_db():
 def landing():
     """Landing page - Facebook-style login/signup."""
     if 'logged_in' in session and session.get('logged_in'):
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('first_visit'))
     if 'guest' in session:
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('first_visit'))
     return render_template('landing.html')
 
 
@@ -133,7 +133,7 @@ def login():
             if doc:
                 session['doctor_id'] = doc.id
             flash('Login successful!', 'success')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('first_visit'))
         
         # Check database for doctor
         doctor = Doctor.query.filter_by(email=email).first()
@@ -145,7 +145,7 @@ def login():
                 session['doctor_id'] = doctor.id
                 session['role'] = 'doctor'
                 flash('Login successful!', 'success')
-                return redirect(url_for('dashboard'))
+                return redirect(url_for('first_visit'))
         
         flash('Invalid credentials. Please try again.', 'error')
         return redirect(url_for('landing'))
@@ -274,7 +274,7 @@ tent experience.
 
     # 2. Handle GET (Legacy / Fallback)
     # If someone tries to access /guest/lifechart directly without posting data
-    return redirect(url_for('dashboard'))
+    return redirect(url_for('first_visit'))
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     """Doctor registration."""
@@ -332,7 +332,7 @@ def profile():
     doctor = Doctor.query.get(session.get('doctor_id'))
     if not doctor:
         flash('Doctor not found.', 'error')
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('first_visit'))
     
     if request.method == 'POST':
         doctor.full_name = request.form.get('full_name', '').strip()
@@ -357,7 +357,7 @@ def profile():
         
         db.session.commit()
         flash('Profile updated successfully!', 'success')
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('first_visit'))
         
     return render_template('profile.html', doctor=doctor)
 
@@ -365,10 +365,16 @@ def profile():
 # Root route is now handled by landing()
 
 
-@app.route('/dashboard', methods=['GET', 'POST'])
+@app.route('/dashboard')
+def dashboard_redirect():
+    """Redirect old dashboard URL to first_visit."""
+    return redirect(url_for('first_visit'))
+
+
+@app.route('/first_visit', methods=['GET', 'POST'])
 @login_required
-def dashboard():
-    """Dashboard - New Patient & First Visit creation."""
+def first_visit():
+    """First Visit - New Patient & First Visit creation."""
     # No fallback to admin: if there's no doctor_id, the user shouldn't be here.
     doc_id = session.get('doctor_id')
     doctor = Doctor.query.get(doc_id) if doc_id is not None else None
@@ -388,7 +394,7 @@ def dashboard():
         
         if not all([patient_name, age, sex, visit_date_str]):
             flash('Please fill in all required fields.', 'error')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('first_visit'))
         
         visit_date = parse_date(visit_date_str) or date.today()
         
@@ -449,7 +455,7 @@ def dashboard():
         else:
             return redirect(url_for('patient_detail', patient_id=patient.id))
     
-    # GET request - show dashboard (patients scoped to logged-in doctor only)
+    # GET request - show first visit (patients scoped to logged-in doctor only)
     is_guest = session.get('role') == 'guest'
     patients = []
     if not is_guest and doctor:
@@ -457,7 +463,7 @@ def dashboard():
     
     today = date.today()
     
-    return render_template('dashboard.html', patients=patients, today=today, is_guest=is_guest, doctor=doctor)
+    return render_template('first_visit.html', patients=patients, today=today, is_guest=is_guest, doctor=doctor)
 
 
 @app.route('/guest/lifechart_proxy', methods=['POST'])
@@ -1671,7 +1677,7 @@ def start_guest():
     session['role'] = 'guest'
     session['guest_first_visit'] = True
     flash('Guest mode enabled. Data will not be saved.', 'info')
-    return redirect(url_for('dashboard'))
+    return redirect(url_for('first_visit'))
     
 @app.route('/guest/first_visit')
 def guest_first_visit():

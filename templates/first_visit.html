@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard - Continuum Psychiatry</title>
+    <title>First Visit - Continuum Psychiatry</title>
     <style>
         :root { --primary-blue: #A5DCFE; --primary-dark: #7ab8e0; --bg-color: #f4f8fb; --sidebar-width: 280px; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
@@ -20,7 +20,7 @@
         .subsection-title { font-size: 0.9rem; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
         
         .entry-wrapper { border: 1px solid #eee; padding: 15px; margin-bottom: 10px; border-radius: 8px; background: #fafafa; position: relative; }
-        /* Update this class in dashboard.html, add_visit.html, and edit_visit.html */
+        /* Update this class in first_visit.html, add_visit.html, and edit_visit.html */
         .row-flex { 
             display: flex; 
             gap: 15px; 
@@ -85,7 +85,7 @@
 
         <main class="main-content">
             <div class="visit-card">
-                <form method="POST" action="{{ url_for('dashboard') }}" id="visitForm">
+                <form method="POST" action="{{ url_for('first_visit') }}" id="visitForm">
                     <h2 style="margin-bottom: 20px;">New Registration</h2>
                     <div class="section-header" style="margin-top: 0;"><span class="section-title">Socio-Demographic details</span></div>
                     
