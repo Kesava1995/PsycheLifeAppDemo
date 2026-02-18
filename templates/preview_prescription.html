@@ -50,7 +50,7 @@
         .info-row { margin-bottom: 5px; }
         
         /* Clinical Details Section (CC, SE, MSE) */
-        .clinical-section { margin-bottom: 20px; font-size: 11pt; border-bottom: 1px dashed #ddd; padding-bottom: 10px; }
+        .clinical-section { margin-bottom: 20px; font-size: 10pt; border-bottom: 1px dashed #ddd; padding-bottom: 10px; }
         .clinical-row { display: flex; margin-bottom: 8px; }
         .clinical-label { font-weight: bold; width: 140px; flex-shrink: 0; }
         .clinical-data { flex: 1; }
@@ -58,7 +58,7 @@
         .mse-group span { font-weight: 600; text-decoration: underline; font-size: 10pt; }
 
         /* Rx Table */
-        .rx-table { width: 100%; border-collapse: collapse; font-size: 11pt; margin-bottom: 20px; }
+        .rx-table { width: 100%; border-collapse: collapse; font-size: 10pt; margin-bottom: 20px; }
         .rx-table th { border-bottom: 2px solid #000; padding: 8px; text-align: left; background: #f9f9f9; }
         .rx-table td { border-bottom: 1px solid #ddd; padding: 12px 8px; vertical-align: top; }
         
@@ -66,7 +66,7 @@
         .rx-footer {
             position: absolute; bottom: 15mm; left: 15mm; right: 15mm;
             display: flex; justify-content: space-between; align-items: flex-end;
-            font-size: 10pt; border-top: 1px solid #000; padding-top: 10px;
+            font-size: 9pt; border-top: 1px solid #000; padding-top: 10px;
         }
         
         /* Print Rules */
@@ -174,8 +174,8 @@
         </div>
         {% endif %}
         {% if visit.safety_profile and (visit.safety_profile.drug_allergies or visit.safety_profile.medical_comorbidities or visit.safety_profile.non_psychiatric_meds) %}
-        <div class="clinical-row" style="margin-top: 10px; flex-direction: column;">
-            <div class="clinical-label" style="width: 100%; border-bottom: 1px solid #ddd; margin-bottom: 5px;">Safety & Medical Profile:</div>
+        <div class="clinical-row" style="flex-direction: column;">
+            <div class="clinical-label" style="width: 100%; ">Safety & Medical Profile:</div>
             <div class="clinical-data" style="padding-left: 10px;">
                 {% if visit.safety_profile.drug_allergies %}
                     <div class="mse-group"><span>Allergies:</span> {{ visit.safety_profile.drug_allergies }}</div>
@@ -191,45 +191,82 @@
         {% endif %}
         {% if visit.provisional_diagnosis %}
         <div style="margin-bottom: 20px; font-weight: bold;">
-            <span style="font-size: 14pt;">Dx:</span> 
-            <span style="font-size: 12pt; margin-left: 10px;">{{ visit.provisional_diagnosis }}</span>
+            <span style="font-size: 12pt;">Dx:</span> 
+            <span style="font-size: 11pt; margin-left: 10px;">{{ visit.provisional_diagnosis }}</span>
         </div>
         {% endif %}
 
         <table class="rx-table">
             <thead>
                 <tr>
-                    <th style="width: 5%;">#</th>
+                    <th style="width: 5%;">S.No</th>
                     <th style="width: 40%;">Medicine</th>
-                    <th style="width: 35%;">Frequency & Instructions</th> <th style="width: 20%;">Duration</th>
+                    <th style="width: 35%;">Frequency & Instructions</th>
+                    <th style="width: 20%;">Duration</th>
                 </tr>
             </thead>
             <tbody>
                 {% for entry in visit.medication_entries %}
-                <tr>
-                    <td>{{ loop.index }}</td>
-                    <td>
-                        <div style="font-weight: bold; font-size: 12pt;">
-                            {{ entry.drug_name }}
-                            {% if entry.drug_type == 'Generic' %} <span style="font-weight:normal; font-size:9pt; color:#666;">(Gen)</span>{% endif %}
-                        </div>
-                        {% if entry.dose_mg %}
-                        <div style="font-size: 10pt; color: #555;">{{ entry.dose_mg }}</div>
+                {% if entry.is_tapering and entry.taper_plan %}
+                    {% set plan = entry.taper_plan|from_json %}
+                    {% set plan_length = plan|length %}
+                    {% set outer_index = loop.index %}
+                    
+                    {% for step in plan %}
+                    <tr>
+                        {% if loop.first %}
+                        <td rowspan="{{ plan_length + 1 }}" style="vertical-align: top;">{{ outer_index }}</td>
+                        <td rowspan="{{ plan_length + 1 }}" style="vertical-align: top;">
+                            <div style="font-size: 12pt;">
+                                {% if entry.drug_type == 'Gen' or entry.drug_type == 'Generic' %}<span style="font-weight: bold; font-size: 7pt;">[Generic]</span> {% endif %}{{ entry.drug_name }}
+                            </div>
+                            <div style="font-weight: bold; font-size: 7pt; color: #555; margin-top: 4px;">(Tapering)</div>
+                        </td>
                         {% endif %}
-                    </td>
-                    <td>
-                        <div style="font-weight: 600;">
-                            {{ format_frequency(entry.frequency) }}
-                        </div>
                         
-                        {% if entry.note %}
-                        <div style="font-style: italic; font-size: 10pt; margin-top: 2px;">
-                            ({{ entry.note }})
-                        </div>
-                        {% endif %}
-                    </td>
-                    <td>{{ entry.duration_text }}</td>
-                </tr>
+                        <td style="vertical-align: top; {% if not loop.last %}border-bottom: 1px dashed #e0e0e0;{% endif %}">
+                            <div style="font-size: 9.5pt;">
+                                Take {% if step.dose_mg %}{{ step.dose_mg }} {% endif %}{{ format_frequency(step.frequency) }}{% if loop.last %},{% endif %}
+                            </div>
+                            {% if step.note %}
+                            <div style="font-style: italic; font-size: 10pt; margin-top: 2px;">({{ step.note }})</div>
+                            {% endif %}
+                        </td>
+                        
+                        <td style="vertical-align: top; {% if not loop.last %}border-bottom: 1px dashed #e0e0e0;{% endif %}">
+                            <div style="font-size: 9.5pt;">{{ step.duration_text }}</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    
+                    <tr>
+                        <td style="vertical-align: top; padding-top: 4px;">
+                            <div style="font-size: 9.5pt;">then stop / review.</div>
+                        </td>
+                        <td style="vertical-align: top;"></td>
+                    </tr>
+
+                {% else %}
+                    <tr>
+                        <td style="vertical-align: top;">{{ loop.index }}</td>
+                        <td style="vertical-align: top;">
+                            <div style="font-weight: bold; font-size: 8pt;">
+                                {% if entry.drug_type == 'Gen' or entry.drug_type == 'Generic' %}[Generic] {% endif %}{{ entry.drug_name }}</div>
+                            {% if entry.dose_mg %}
+                            <div style="font-size: 10pt; color: #555;">{{ entry.dose_mg }}</div>
+                            {% endif %}
+                        </td>
+                        <td style="vertical-align: top;">
+                            <div style="font-size: 11pt;">
+                                Take {% if entry.dose_mg %}{{ entry.dose_mg }} {% endif %}{{ format_frequency(entry.frequency) }}
+                            </div>
+                            {% if entry.note %}
+                            <div style="font-style: italic; font-size: 10pt; margin-top: 2px;">({{ entry.note }})</div>
+                            {% endif %}
+                        </td>
+                        <td style="vertical-align: top;">{{ entry.duration_text }}</td>
+                    </tr>
+                {% endif %}
                 {% endfor %}
             </tbody>
         </table>

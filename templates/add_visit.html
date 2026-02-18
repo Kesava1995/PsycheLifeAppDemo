@@ -54,7 +54,7 @@
 </head>
 <body>
     
-    {% macro row_template_med(entry, unique_id) %}
+    {% macro row_template_med(entry, unique_id, readonly_name=false) %}
     <div class="entry-wrapper">
         <div style="display:flex; align-items:center; gap:10px; width:100%;">
             <select name="drug_type[]" style="width:120px; flex:none;">
@@ -62,7 +62,7 @@
                 <option value="Brand" {% if entry.drug_type=='Brand'%}selected{%endif%}>Brand</option>
             </select>
 
-            <input type="text" name="drug_name[]" value="{{ entry.drug_name }}" style="flex:2; min-width:150px;">
+            <input type="text" name="drug_name[]" value="{{ entry.drug_name }}" style="flex:2; min-width:150px; {% if readonly_name %}background:#f0f8ff; border:1px dashed #7ab8e0;{% endif %}" {% if readonly_name %}readonly{% endif %}>
             
             <div style="flex:1; min-width:100px;">
                 <input type="text" name="dose_full[]" value="{{ entry.dose_mg }}" list="dose-list-{{ unique_id }}" oninput="updateDoseOptions(this)">
@@ -72,6 +72,7 @@
             <input type="text" list="duration-options-list" name="med_duration[]" value="{{ entry.duration_text or '' }}" style="flex:1; min-width:80px;" oninput="updateDurationOptions(this)">
             
             <div style="display:flex; gap:5px; flex:none;">
+                <button type="button" class="btn btn-sm" onclick="duplicateTaperRow(this)" style="padding:5px 10px; border-radius:4px; border:1px dashed #7ab8e0; background:#f0f8ff; color:#555;">+ Taper Step</button>
                 <button type="button" class="note-btn" onclick="toggleNote(this)">📝</button>
                 <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button>
             </div>
@@ -297,11 +298,20 @@
                         </div>
                     </div>
 					
-					<div class="section-header"><span class="section-title">Medications</span><button type="button" class="add-btn" onclick="addMedication()">+</button></div>
+                    <div class="section-header"><span class="section-title">Medications</span><button type="button" class="add-btn" onclick="addMedication()">+</button></div>
                     <div id="meds-container">
                         {% if last_visit %}
                             {% for entry in last_visit.medication_entries %}
-                            {{ row_template_med(entry, loop.index) }}
+                                {% if entry.is_tapering and entry.taper_plan %}
+                                    {% set steps = entry.taper_plan|from_json %}
+                                    {% for step in steps %}
+                                        {% set step_entry = {'drug_type': entry.drug_type, 'drug_name': entry.drug_name, 'dose_mg': step.dose_mg|default(''), 'duration_text': step.duration_text|default(''), 'frequency': step.frequency|default('1-0-1'), 'note': step.note|default('')} %}
+                                        {% set uid = (entry.id|string ~ '_' ~ loop.index|string) if entry.id else loop.index %}
+                                        {{ row_template_med(step_entry, uid, loop.index0 > 0) }}
+                                    {% endfor %}
+                                {% else %}
+                                    {{ row_template_med(entry, loop.index) }}
+                                {% endif %}
                             {% endfor %}
                         {% endif %}
                     </div>
@@ -512,6 +522,7 @@
                     </div>
                     <input type="text" list="duration-options-list" name="med_duration[]" placeholder="Duration" style="flex:1; min-width:80px;" oninput="updateDurationOptions(this)">
                     <div style="display:flex; gap:5px; flex:none;">
+                        <button type="button" class="btn btn-sm" onclick="duplicateTaperRow(this)" style="padding:5px 10px; border-radius:4px; border:1px dashed #7ab8e0; background:#f0f8ff; color:#555;">+ Taper Step</button>
                         <button type="button" class="note-btn" onclick="toggleNote(this)">📝</button>
                         <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button>
                     </div>
@@ -543,6 +554,40 @@
                 contentHTML = `<div class="row-flex" style="align-items:center;">${inputName}${slidersHTML}${durationHTML}<button type="button" class="note-btn" onclick="toggleNote(this)">📝</button><button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button></div>`;
             }
             return `<div class="entry-wrapper">${contentHTML}<input type="text" class="note-input" name="${prefix}_note[]" placeholder="Notes..."></div>`;
+        }
+
+        function duplicateTaperRow(btn) {
+            const currentRow = btn.closest('.entry-wrapper');
+            const newRow = currentRow.cloneNode(true);
+            const uniqueId = Date.now() + Math.random().toString().slice(2, 6);
+            const inputs = newRow.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                const name = input.getAttribute('name');
+                if (name === 'drug_name[]' || name === 'drug_type[]') {
+                    if (name === 'drug_name[]') {
+                        input.readOnly = true;
+                        input.style.backgroundColor = '#f0f8ff';
+                        input.style.border = '1px dashed #7ab8e0';
+                    }
+                } else if (name === 'frequency[]') {
+                    input.value = '1-0-1';
+                } else if (name === 'dose_full[]') {
+                    input.value = '';
+                    input.setAttribute('list', 'dose-list-' + uniqueId);
+                } else {
+                    if (input.type === 'text' || input.type === 'hidden' || input.tagName === 'TEXTAREA') input.value = '';
+                }
+            });
+            const datalist = newRow.querySelector('datalist[id^="dose-list-"]');
+            if (datalist) {
+                datalist.id = 'dose-list-' + uniqueId;
+                datalist.innerHTML = '';
+            }
+            const freqContainer = newRow.querySelector('.freq-container');
+            if (freqContainer) {
+                freqContainer.innerHTML = '<input type="text" class="freq-box" value="1" style="width:25px; text-align:center; padding:5px 2px;" oninput="handleFreqInput(this)"><span style="margin:0 2px">-</span><input type="text" class="freq-box" value="0" style="width:25px; text-align:center; padding:5px 2px;" oninput="handleFreqInput(this)"><span style="margin:0 2px">-</span><input type="text" class="freq-box" value="1" style="width:25px; text-align:center; padding:5px 2px;" oninput="handleFreqInput(this)">';
+            }
+            currentRow.parentNode.insertBefore(newRow, currentRow.nextSibling);
         }
 
         function addSymptom() { document.getElementById('symptoms-container').insertAdjacentHTML('beforeend', createRowHTML('symptom')); }

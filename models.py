@@ -98,6 +98,9 @@ class MedicationEntry(db.Model):
     
     duration_text = db.Column(db.String(100))
     note = db.Column(db.Text)  # Instructions (Before/After food)
+    
+    is_tapering = db.Column(db.Boolean, default=False)
+    taper_plan = db.Column(db.Text, nullable=True)  # JSON array of steps
 
 
 class SideEffectEntry(db.Model):

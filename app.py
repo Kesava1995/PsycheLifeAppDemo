@@ -47,6 +47,17 @@ def utility_processor():
     """Register utility functions for use in templates."""
     return dict(format_frequency=format_frequency)
 
+
+@app.template_filter('from_json')
+def from_json(value):
+    """Parse JSON string in templates. Returns empty list on invalid/empty."""
+    try:
+        if not value or value == '[]' or value == '':
+            return []
+        return json.loads(value)
+    except (TypeError, ValueError):
+        return []
+
 # Hardcoded credentials (for demo - replace with database lookup in production)
 VALID_CREDENTIALS = {
     'admin@hospital.com': 'doctor'
@@ -516,27 +527,54 @@ def process_visit_form_data(visit, form_data):
             )
             db.session.add(entry)
     
-    # 4. Medications
+    # 4. Medications (backed groups consecutive same-name rows into taper_plan)
     d_names = form_data.getlist('drug_name[]')
     d_types = form_data.getlist('drug_type[]')
-    # Read the combined dose string directly
     d_full_doses = form_data.getlist('dose_full[]')
     d_freqs = form_data.getlist('frequency[]')
     d_notes = form_data.getlist('med_note[]')
     d_durs = form_data.getlist('med_duration[]')
 
+    last_med = None
     for i, name in enumerate(d_names):
-        if name.strip():
+        if not name.strip():
+            continue
+        dose = d_full_doses[i] if i < len(d_full_doses) else ''
+        freq = d_freqs[i] if i < len(d_freqs) else ''
+        dur = d_durs[i] if i < len(d_durs) else ''
+        note = d_notes[i] if i < len(d_notes) else ''
+
+        if last_med and last_med.drug_name.strip().lower() == name.strip().lower():
+            last_med.is_tapering = True
+            taper_plan = json.loads(last_med.taper_plan) if last_med.taper_plan else []
+            if not taper_plan:
+                taper_plan.append({
+                    "dose_mg": last_med.dose_mg or '',
+                    "frequency": last_med.frequency or '',
+                    "duration_text": last_med.duration_text or '',
+                    "note": last_med.note or ''
+                })
+            taper_plan.append({
+                "dose_mg": dose,
+                "frequency": freq,
+                "duration_text": dur,
+                "note": note
+            })
+            last_med.taper_plan = json.dumps(taper_plan)
+        else:
             entry = MedicationEntry(
                 visit_id=visit.id,
                 drug_name=name,
                 drug_type=d_types[i] if i < len(d_types) else 'Generic',
-                dose_mg=d_full_doses[i] if i < len(d_full_doses) else '',
-                frequency=d_freqs[i] if i < len(d_freqs) else '',
-                duration_text=d_durs[i] if i < len(d_durs) else '',
-                note=d_notes[i] if i < len(d_notes) else ''
+                dose_mg=dose,
+                frequency=freq,
+                duration_text=dur,
+                note=note,
+                is_tapering=False,
+                taper_plan=None
             )
             db.session.add(entry)
+            last_med = entry
 
     # 5. Side Effects
     se_names = form_data.getlist('side_effect_name[]')
@@ -810,18 +848,46 @@ def update_clinical(visit_id):
     d_durs = request.form.getlist('med_duration[]')
     d_notes = request.form.getlist('med_note[]')
 
+    last_med = None
     for i, name in enumerate(d_names):
-        if name.strip():
+        if not name.strip():
+            continue
+        dose = d_full_doses[i] if i < len(d_full_doses) else ''
+        freq = d_freqs[i] if i < len(d_freqs) else ''
+        dur = d_durs[i] if i < len(d_durs) else ''
+        note = d_notes[i] if i < len(d_notes) else ''
+
+        if last_med and last_med.drug_name.strip().lower() == name.strip().lower():
+            last_med.is_tapering = True
+            taper_plan = json.loads(last_med.taper_plan) if last_med.taper_plan else []
+            if not taper_plan:
+                taper_plan.append({
+                    "dose_mg": last_med.dose_mg or '',
+                    "frequency": last_med.frequency or '',
+                    "duration_text": last_med.duration_text or '',
+                    "note": last_med.note or ''
+                })
+            taper_plan.append({
+                "dose_mg": dose,
+                "frequency": freq,
+                "duration_text": dur,
+                "note": note
+            })
+            last_med.taper_plan = json.dumps(taper_plan)
+        else:
             entry = MedicationEntry(
                 visit_id=visit.id,
                 drug_type=d_types[i] if i < len(d_types) else 'Generic',
                 drug_name=name,
-                dose_mg=d_full_doses[i] if i < len(d_full_doses) else '',
-                frequency=d_freqs[i] if i < len(d_freqs) else '',
-                duration_text=d_durs[i] if i < len(d_durs) else '',
-                note=d_notes[i] if i < len(d_notes) else ''
+                dose_mg=dose,
+                frequency=freq,
+                duration_text=dur,
+                note=note,
+                is_tapering=False,
+                taper_plan=None
             )
             db.session.add(entry)
+            last_med = entry
 
     # 3. Commit Changes
     try:
@@ -1191,7 +1257,7 @@ def life_chart(patient_id):
         visit_details[v_date_str] = {
             'date': v_date_str,
             'symptoms': [{'name': s.symptom_name, 'score': s.score_current, 'note': s.note} for s in v.symptom_entries],
-            'meds': [{'name': m.drug_name, 'dose': m.dose_mg, 'freq': m.frequency} for m in v.medication_entries],
+            'meds': [{'name': m.drug_name, 'dose': m.dose_mg, 'freq': m.frequency, 'is_tapering': m.is_tapering, 'taper_plan': m.taper_plan} for m in v.medication_entries],
             'se': [{'name': s.side_effect_name, 'score': s.score_current} for s in v.side_effect_entries],
             'mse': [{'cat': m.category, 'name': m.finding_name, 'score': m.score_current} for m in v.mse_entries]
         }
@@ -1476,14 +1542,24 @@ def preview_prescription(visit_id):
     include_qr = request.args.get('include_qr') == 'true'
     
     lifchart_url = None
+    qr_image_b64 = None
     if include_qr:
         base_url = request.url_root.rstrip('/')
         lifchart_url = f"{base_url}/life_chart/{patient.id}"
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr.add_data(lifchart_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        img_buffer = io.BytesIO()
+        img.save(img_buffer, format='PNG')
+        img_buffer.seek(0)
+        qr_image_b64 = base64.b64encode(img_buffer.getvalue()).decode('utf-8')
     
     return render_template('preview_prescription.html', 
                          patient=patient, 
                          visit=visit, 
-                         lifchart_url=lifchart_url)
+                         lifchart_url=lifchart_url,
+                         qr_image_b64=qr_image_b64)
 
 
 def generate_prescription_pdf(visit_id, include_qr=False):

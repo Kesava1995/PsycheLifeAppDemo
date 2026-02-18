@@ -362,36 +362,75 @@
                 <div id="meds-container">
                     {% if visit and visit.medication_entries %}
                         {% for entry in visit.medication_entries %}
-                        {% set unique_id = entry.id if entry.id else loop.index %}
-                        <div class="entry-wrapper">
-                            <div class="row-flex" style="align-items:center;">
-                                <select name="drug_type[]" style="width:100px; flex:none;">
-                                    <option value="Generic" {% if entry.drug_type == 'Generic' or not entry.drug_type %}selected{% endif %}>Generic</option>
-                                    <option value="Brand" {% if entry.drug_type == 'Brand' %}selected{% endif %}>Brand</option>
-                                </select>
-                                <input type="text" name="drug_name[]" value="{{ entry.drug_name }}" placeholder="Drug" style="width:25%;">
-                                <div style="flex:1; min-width:80px;">
-                                    <input type="text" name="dose_full[]" value="{{ entry.dose_mg or '' }}" list="dose-list-lc-{{ unique_id }}" placeholder="Dose" oninput="updateDoseOptionsLC(this)">
-                                    <datalist id="dose-list-lc-{{ unique_id }}"></datalist>
-                                </div>
-                                <div style="flex:1.5; display:flex; align-items:center; min-width:140px;">
-                                    <input type="hidden" name="frequency[]" value="{{ entry.frequency or '1-0-1' }}">
-                                    <div class="freq-container" style="display:flex; align-items:center;">
-                                        {% set parts = entry.frequency.split('-') if entry.frequency and '-' in entry.frequency else [entry.frequency] if entry.frequency else ['1','0','1'] %}
-                                        {% for p in parts %}
-                                        <input type="text" class="freq-box" value="{{ p }}" style="width:22px; text-align:center; padding:4px 2px;" oninput="handleFreqInputLC(this)">
-                                        {% if not loop.last %}<span style="margin:0 2px">-</span>{% endif %}
-                                        {% endfor %}
+                            {% if entry.is_tapering and entry.taper_plan %}
+                                {% set steps = entry.taper_plan|from_json %}
+                                {% for step in steps %}
+                                {% set unique_id = (entry.id|string ~ '_' ~ loop.index|string) if entry.id else loop.index %}
+                                {% set step_freq = step.frequency|default('1-0-1') %}
+                                <div class="entry-wrapper">
+                                    <div class="row-flex" style="align-items:center;">
+                                        <select name="drug_type[]" style="width:100px; flex:none;">
+                                            <option value="Generic" {% if entry.drug_type == 'Generic' or not entry.drug_type %}selected{% endif %}>Generic</option>
+                                            <option value="Brand" {% if entry.drug_type == 'Brand' %}selected{% endif %}>Brand</option>
+                                        </select>
+                                        <input type="text" name="drug_name[]" value="{{ entry.drug_name }}" placeholder="Drug" style="width:25%; {% if loop.index0 > 0 %}background:#f0f8ff; border:1px dashed #7ab8e0;{% endif %}" {% if loop.index0 > 0 %}readonly{% endif %}>
+                                        <div style="flex:1; min-width:80px;">
+                                            <input type="text" name="dose_full[]" value="{{ step.dose_mg or '' }}" list="dose-list-lc-{{ unique_id }}" placeholder="Dose" oninput="updateDoseOptionsLC(this)">
+                                            <datalist id="dose-list-lc-{{ unique_id }}"></datalist>
+                                        </div>
+                                        <div style="flex:1.5; display:flex; align-items:center; min-width:140px;">
+                                            <input type="hidden" name="frequency[]" value="{{ step_freq }}">
+                                            <div class="freq-container" style="display:flex; align-items:center;">
+                                                {% set parts = step_freq.split('-') if step_freq and '-' in step_freq else [step_freq] if step_freq else ['1','0','1'] %}
+                                                {% for p in parts %}
+                                                <input type="text" class="freq-box" value="{{ p }}" style="width:22px; text-align:center; padding:4px 2px;" oninput="handleFreqInputLC(this)">
+                                                {% if not loop.last %}<span style="margin:0 2px">-</span>{% endif %}
+                                                {% endfor %}
+                                            </div>
+                                            <div style="display:flex; flex-direction:column; margin-left:4px;">
+                                                <button type="button" class="add-freq-btn" onclick="addFreqBoxLC(this)" style="font-size:10px; padding:0 2px; cursor:pointer;">+</button>
+                                                <button type="button" onclick="removeFreqBoxLC(this)" style="font-size:10px; padding:0 2px; cursor:pointer;">-</button>
+                                            </div>
+                                        </div>
+                                        <input list="duration-options-list" name="med_duration[]" value="{{ step.duration_text or '' }}" placeholder="Dur" style="flex:1;" oninput="updateDurationOptions(this)">
+                                        <button type="button" class="btn btn-sm" onclick="duplicateTaperRowLC(this)" style="font-size:10px; padding:4px 6px; border-radius:4px; border:1px dashed #7ab8e0; background:#f0f8ff; color:#555;">+ Taper Step</button>
+                                        <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button>
                                     </div>
-                                    <div style="display:flex; flex-direction:column; margin-left:4px;">
-                                        <button type="button" class="add-freq-btn" onclick="addFreqBoxLC(this)" style="font-size:10px; padding:0 2px; cursor:pointer;">+</button>
-                                        <button type="button" onclick="removeFreqBoxLC(this)" style="font-size:10px; padding:0 2px; cursor:pointer;">-</button>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                {% set unique_id = entry.id if entry.id else loop.index %}
+                                <div class="entry-wrapper">
+                                    <div class="row-flex" style="align-items:center;">
+                                        <select name="drug_type[]" style="width:100px; flex:none;">
+                                            <option value="Generic" {% if entry.drug_type == 'Generic' or not entry.drug_type %}selected{% endif %}>Generic</option>
+                                            <option value="Brand" {% if entry.drug_type == 'Brand' %}selected{% endif %}>Brand</option>
+                                        </select>
+                                        <input type="text" name="drug_name[]" value="{{ entry.drug_name }}" placeholder="Drug" style="width:25%;">
+                                        <div style="flex:1; min-width:80px;">
+                                            <input type="text" name="dose_full[]" value="{{ entry.dose_mg or '' }}" list="dose-list-lc-{{ unique_id }}" placeholder="Dose" oninput="updateDoseOptionsLC(this)">
+                                            <datalist id="dose-list-lc-{{ unique_id }}"></datalist>
+                                        </div>
+                                        <div style="flex:1.5; display:flex; align-items:center; min-width:140px;">
+                                            <input type="hidden" name="frequency[]" value="{{ entry.frequency or '1-0-1' }}">
+                                            <div class="freq-container" style="display:flex; align-items:center;">
+                                                {% set parts = entry.frequency.split('-') if entry.frequency and '-' in entry.frequency else [entry.frequency] if entry.frequency else ['1','0','1'] %}
+                                                {% for p in parts %}
+                                                <input type="text" class="freq-box" value="{{ p }}" style="width:22px; text-align:center; padding:4px 2px;" oninput="handleFreqInputLC(this)">
+                                                {% if not loop.last %}<span style="margin:0 2px">-</span>{% endif %}
+                                                {% endfor %}
+                                            </div>
+                                            <div style="display:flex; flex-direction:column; margin-left:4px;">
+                                                <button type="button" class="add-freq-btn" onclick="addFreqBoxLC(this)" style="font-size:10px; padding:0 2px; cursor:pointer;">+</button>
+                                                <button type="button" onclick="removeFreqBoxLC(this)" style="font-size:10px; padding:0 2px; cursor:pointer;">-</button>
+                                            </div>
+                                        </div>
+                                        <input list="duration-options-list" name="med_duration[]" value="{{ entry.duration_text or '' }}" placeholder="Dur" style="flex:1;" oninput="updateDurationOptions(this)">
+                                        <button type="button" class="btn btn-sm" onclick="duplicateTaperRowLC(this)" style="font-size:10px; padding:4px 6px; border-radius:4px; border:1px dashed #7ab8e0; background:#f0f8ff; color:#555;">+ Taper Step</button>
+                                        <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button>
                                     </div>
                                 </div>
-                                <input list="duration-options-list" name="med_duration[]" value="{{ entry.duration_text or '' }}" placeholder="Dur" style="flex:1;" oninput="updateDurationOptions(this)">
-                                <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button>
-                            </div>
-                        </div>
+                            {% endif %}
                         {% endfor %}
                     {% endif %}
                 </div>
@@ -906,7 +945,18 @@
             if (!items || !items.length) return;
             body.innerHTML += `<h4>${heading}</h4>`;
             items.forEach(i => {
-                let line = (heading==='Medications') ? `${i.name} — ${i.dose} (${i.freq})` : `${i.name} — Score ${i.score}`;
+                let line;
+                if (heading==='Medications') {
+                    if (i.is_tapering && i.taper_plan) {
+                        let plan = [];
+                        try { plan = JSON.parse(i.taper_plan); } catch(e) {}
+                        line = `<strong>${i.name}</strong> <span style="font-size:0.85em; color:#e65100;">Tapering</span><div style="font-size:0.85em; padding-left:10px; border-left:2px solid #ccc; margin-top:4px;">${(plan.map(s => `&#8212; ${s.dose_mg || '—'} (${s.frequency || ''}) x ${s.duration_text || ''}`).join('<br>'))}</div>`;
+                    } else {
+                        line = `${i.name} — ${i.dose || ''} (${i.freq})`;
+                    }
+                } else {
+                    line = `${i.name} — Score ${i.score}`;
+                }
                 body.innerHTML += `<div class="detail-row">${line}</div>`;
             });
         });
@@ -1026,6 +1076,40 @@
         const hiddenInput = container.parentElement.querySelector('input[name="frequency[]"]');
         if (hiddenInput) hiddenInput.value = values.join('-');
     }
+    function duplicateTaperRowLC(btn) {
+        var currentRow = btn.closest('.entry-wrapper');
+        var newRow = currentRow.cloneNode(true);
+        var uniqueId = Date.now() + Math.random().toString().slice(2, 6);
+        var inputs = newRow.querySelectorAll('input, select, textarea');
+        inputs.forEach(function(input) {
+            var name = input.getAttribute('name');
+            if (name === 'drug_name[]' || name === 'drug_type[]') {
+                if (name === 'drug_name[]') {
+                    input.readOnly = true;
+                    input.style.backgroundColor = '#f0f8ff';
+                    input.style.border = '1px dashed #7ab8e0';
+                }
+            } else if (name === 'frequency[]') {
+                input.value = '1-0-1';
+            } else if (name === 'dose_full[]') {
+                input.value = '';
+                input.setAttribute('list', 'dose-list-lc-' + uniqueId);
+            } else {
+                if (input.type === 'text' || input.type === 'hidden' || input.tagName === 'TEXTAREA') input.value = '';
+            }
+        });
+        var datalist = newRow.querySelector('datalist[id^="dose-list-lc-"]');
+        if (datalist) {
+            datalist.id = 'dose-list-lc-' + uniqueId;
+            datalist.innerHTML = '';
+        }
+        var freqContainer = newRow.querySelector('.freq-container');
+        if (freqContainer) {
+            freqContainer.innerHTML = '<input type="text" class="freq-box" value="1" style="width:22px; text-align:center; padding:4px 2px;" oninput="handleFreqInputLC(this)"><span style="margin:0 2px">-</span><input type="text" class="freq-box" value="0" style="width:22px; text-align:center; padding:4px 2px;" oninput="handleFreqInputLC(this)"><span style="margin:0 2px">-</span><input type="text" class="freq-box" value="1" style="width:22px; text-align:center; padding:4px 2px;" oninput="handleFreqInputLC(this)">';
+        }
+        currentRow.parentNode.insertBefore(newRow, currentRow.nextSibling);
+    }
+
     function addMedication() {
         const uid = Date.now() + Math.random();
         const h = `<div class="entry-wrapper"><div class="row-flex" style="align-items:center;">
@@ -1050,8 +1134,10 @@
                 </div>
             </div>
             <input list="duration-options-list" name="med_duration[]" placeholder="Dur" style="flex:1;" oninput="updateDurationOptions(this)">
+            <button type="button" class="btn btn-sm" onclick="duplicateTaperRowLC(this)" style="font-size:10px; padding:4px 6px; border-radius:4px; border:1px dashed #7ab8e0; background:#f0f8ff; color:#555;">+ Taper Step</button>
             <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button>
-        </div></div>`;
+        </div>
+        </div>`;
         document.getElementById('meds-container').insertAdjacentHTML('beforeend', h);
     }
 
