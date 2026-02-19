@@ -204,3 +204,20 @@ class SafetyMedicalProfile(db.Model):
     drug_allergies = db.Column(db.Text)
     medical_comorbidities = db.Column(db.Text)
     non_psychiatric_meds = db.Column(db.Text)
+
+
+class DefaultTemplate(db.Model):
+    __tablename__ = 'default_templates'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    symptoms = db.Column(db.Text, nullable=False)  # Stored as JSON string
+
+
+class CustomTemplate(db.Model):
+    __tablename__ = 'custom_templates'
+    id = db.Column(db.Integer, primary_key=True)
+    doctor_id = db.Column(db.Integer, db.ForeignKey('doctors.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    symptoms = db.Column(db.Text, nullable=False)  # Stored as JSON string
+
+    __table_args__ = (db.UniqueConstraint('doctor_id', 'name', name='_doctor_template_uc'),)

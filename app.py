@@ -5,7 +5,7 @@ PsycheLife - Medical web app for psychiatric patient management.
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response, session, abort
 from functools import wraps
 from datetime import datetime, date, timedelta, timezone
-from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile
+from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, DefaultTemplate, CustomTemplate
 from medical_utils import get_unified_dose, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency
 import io
 import os
@@ -100,6 +100,23 @@ def init_db():
                 password_hash=generate_password_hash('doctor')
             )
             db.session.add(default_doctor)
+            db.session.commit()
+
+        # Populate Default Templates
+        if not DefaultTemplate.query.first():
+            defaults = {
+                "Schizophrenia": ["Suspiciousness", "Talking to self", "Poor self-care", "Verbally abusive", "Hearing non-existent voices", "Irritability", "Aggressive behavior", "Sleep disturbances"],
+                "Bipolar Disorder (Mania)": ["Increased talkativeness", "Over-familiarity", "Grandiose ideas", "Excessive spending", "Irritability", "Risk-taking behaviors", "Hyperreligious ideas", "Decreased need for sleep"],
+                "Depressive Disorder": ["Persistent low mood", "No interest in work", "Social withdrawal", "No interest in previously pleasurable activities", "Suicidal ideation", "Crying spells", "Decreased appetite", "Multiple somatic complaints", "Sleep disturbances"],
+                "Generalized Anxiety Disorder": ["Excessive worry", "Anxiousness", "Restlessness", "Palpitations", "Difficulty falling asleep"],
+                "Schizoaffective Disorder": ["Suspiciousness", "Grandiose ideas", "Over-familiarity", "Poor self-care", "Hearing non-existent voices", "Irritability", "Aggressive behavior", "Decreased need for sleep"],
+                "Obsessive-Compulsive Disorder (OCD)": ["Repetitive thoughts", "Compulsive washing", "Repetitive checking", "Fear of contamination", "Counting compulsions", "Symmetry obsessions", "Sexual obsessions", "Time-consuming rituals"],
+                "Panic Disorder": ["Breathlessness", "Palpitations", "Sweating", "Trembling", "Fear of dying", "Anticipatory anxiety", "Avoidance behavior", "Recurrent emergency room visits"],
+                "Alcohol Dependence Syndrome": ["Alcohol consumption", "Excessive consumption", "Daily consumption", "Early morning consumption", "Trembling", "Hearing non-existent voices", "Suspiciousness", "Fearfulness", "Sleep disturbances"],
+                "PTSD": ["Flashbacks", "Nightmares", "Hypervigilance", "Startle response", "Re-experiencing trauma", "Sleep disturbances"]
+            }
+            for name, syms in defaults.items():
+                db.session.add(DefaultTemplate(name=name, symptoms=json.dumps(syms)))
             db.session.commit()
 
 
@@ -464,6 +481,70 @@ def first_visit():
     today = date.today()
     
     return render_template('first_visit.html', patients=patients, today=today, is_guest=is_guest, doctor=doctor)
+
+
+@app.route('/api/templates', methods=['GET'])
+@doctor_required
+def get_templates():
+    doctor_id = session.get('doctor_id')
+    defaults = DefaultTemplate.query.all()
+    customs = CustomTemplate.query.filter_by(doctor_id=doctor_id).all()
+
+    template_dict = {}
+
+    for dt in defaults:
+        template_dict[dt.name] = {
+            "symptoms": json.loads(dt.symptoms),
+            "is_default": True,
+            "is_modified": False
+        }
+
+    for ct in customs:
+        if ct.name in template_dict:
+            template_dict[ct.name]["symptoms"] = json.loads(ct.symptoms)
+            template_dict[ct.name]["is_modified"] = True
+        else:
+            template_dict[ct.name] = {
+                "symptoms": json.loads(ct.symptoms),
+                "is_default": False,
+                "is_modified": False
+            }
+
+    return jsonify(template_dict)
+
+
+@app.route('/api/templates', methods=['POST'])
+@doctor_required
+def save_template():
+    doctor_id = session.get('doctor_id')
+    data = request.json
+    name = data.get('name')
+    symptoms = data.get('symptoms')
+
+    if not name or not symptoms:
+        return jsonify({"error": "Missing data"}), 400
+
+    custom = CustomTemplate.query.filter_by(doctor_id=doctor_id, name=name).first()
+    if custom:
+        custom.symptoms = json.dumps(symptoms)
+    else:
+        custom = CustomTemplate(doctor_id=doctor_id, name=name, symptoms=json.dumps(symptoms))
+        db.session.add(custom)
+
+    db.session.commit()
+    return jsonify({"success": True})
+
+
+@app.route('/api/templates/<path:name>', methods=['DELETE'])
+@doctor_required
+def delete_template(name):
+    doctor_id = session.get('doctor_id')
+    custom = CustomTemplate.query.filter_by(doctor_id=doctor_id, name=name).first()
+    if custom:
+        db.session.delete(custom)
+        db.session.commit()
+        return jsonify({"success": True})
+    return jsonify({"error": "Template not found"}), 404
 
 
 @app.route('/guest/lifechart_proxy', methods=['POST'])
