@@ -228,7 +228,7 @@
                         
                         <td style="vertical-align: top; {% if not loop.last %}border-bottom: 1px dashed #e0e0e0;{% endif %}">
                             <div style="font-size: 9.5pt;">
-                                Take {% if step.dose_mg %}{{ step.dose_mg }} {{ entry.form_type }}- {% endif %}{{ format_frequency(step.frequency) }}{% if loop.last %},{% endif %}
+                                Take {% if step.dose_mg %}{{ step.dose_mg }} {{ entry.form_type }} - {% endif %}{{ format_frequency(step.frequency) }}{% if loop.last %},{% endif %}
                             </div>
                             {% if step.note %}
                             <div style="font-style: italic; font-size: 10pt; margin-top: 2px;">({{ step.note }})</div>
