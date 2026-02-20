@@ -258,14 +258,11 @@
                             {% if entry.form_type %}
                             <div style="font-weight: bold; font-size: 7pt; color: #555; margin-top: 2px;">({{ entry.form_type }})</div>
                             {% endif %}
-                            
-                            {% if entry.dose_mg %}
-                            <div style="font-size: 10pt; color: #555; margin-top: 2px;">{{ entry.dose_mg }}</div>
-                            {% endif %}
+                        
                         </td>
                         <td style="vertical-align: top;">
                             <div style="font-size: 11pt;">
-                                Take {% if entry.dose_mg %}{{ entry.dose_mg }} {% endif %}{{ format_frequency(entry.frequency) }}
+                                Take {% if entry.dose_mg %}{{ entry.dose_mg }} {{ entry.form_type }} - {% endif %}{{ format_frequency(entry.frequency) }}
                             </div>
                             {% if entry.note %}
                             <div style="font-style: italic; font-size: 10pt; margin-top: 2px;">({{ entry.note }})</div>
