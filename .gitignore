@@ -1,2 +1,4 @@
-"instance/" 
-"*.db" 
+instance/
+*.db
+__pycache__/
+*.pyc
