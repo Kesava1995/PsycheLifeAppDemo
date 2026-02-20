@@ -21,7 +21,7 @@
         
         .entry-wrapper { border: 1px solid #eee; padding: 15px; margin-bottom: 10px; border-radius: 8px; background: #fafafa; position: relative; }
         /* Update this class in first_visit.html, add_visit.html, and edit_visit.html */
-        .row-flex { 
+        .row-flex {
             display: flex; 
             gap: 15px; 
             align-items: center; 
@@ -140,8 +140,9 @@
 
                     <div class="section-header">
                     <span class="section-title">Chief Complaints</span>
-                    <button type="button" class="btn" onclick="openTemplatesModal()" style="padding: 5px 15px; font-size: 12px; margin-left: 15px; background: #666; width: auto; line-height: 1;">📋 Templates</button>
                     <button type="button" class="add-btn" onclick="addSymptom()" style="margin-left: 10px;">+</button>
+					<button type="button" class="btn" onclick="openTemplatesModal()" style="padding: 5px 15px; font-size: 12px; margin-left: 15px; background: #666; width: auto; line-height: 1;">📋 Templates</button>
+            
                 </div>
                     <div id="symptoms-container"></div>
 
@@ -200,7 +201,11 @@
                         </div>
                     </div>
 					
-					<div class="section-header"><span class="section-title">Medications</span><button type="button" class="add-btn" onclick="addMedication()">+</button></div>
+					<div class="section-header" style="flex-wrap: wrap;">
+					<span class="section-title">Medications</span>
+					<button type="button" class="add-btn" onclick="addMedication()">+</button>
+					<button type="button" class="btn" onclick="document.getElementById('modalEqDose').style.display='block'" style="padding: 5px 15px; font-size: 12px; margin-left: 10px; background: #666; color: #fff; width: auto; line-height: 1; flex-shrink: 0; white-space: nowrap;">⚖️ Equivalent Dose</button>
+				</div>
                     <div id="meds-container"></div>
                     
                     <div style="margin-top: 20px; background:#f9fafb; padding:15px; border-radius:8px; display:flex; gap:20px; align-items:center;">
@@ -231,7 +236,7 @@
                                 <label><input type="checkbox" name="stressors[]" value="Violence"> Physical / Sexual Violence</label>
                                 <label><input type="checkbox" name="stressors[]" value="Other"> Other</label>
                             </div>
-                            <textarea name="stressor_note" placeholder="Notes on stressors..." rows="2" style="margin-top:10px;"></textarea>
+                            <textarea name="stressor_note" placeholder="History Notes on stressors..." rows="2" style="margin-top:10px;"></textarea>
                             <button type="button" class="btn" style="margin-top:15px; background-color:#a5dcfe; color:#333;" onclick="document.getElementById('modalStress').style.display='none'">Done</button>
                         </div>
                     </div>
@@ -258,7 +263,7 @@
 								<label><input type="checkbox" name="personality[]" value="High Introversion" > High Introversion</label>
 								<label><input type="checkbox" name="personality[]" value="Others" > Others</label>
                             </div>
-                            <textarea name="personality_note" placeholder="Notes on personality..." rows="2" style="margin-top:10px;"></textarea>
+                            <textarea name="personality_note" placeholder="History Notes on personality..." rows="2" style="margin-top:10px;"></textarea>
                             <button type="button" class="btn" style="margin-top:15px; background-color:#a5dcfe; color:#333;" onclick="document.getElementById('modalPers').style.display='none'">Done</button>
                         </div>
                     </div>
@@ -318,7 +323,7 @@
             const list = document.getElementById(listId);
             if (!list) return;
             list.innerHTML = '';
-            ['mg', 'g', 'mcg', 'ml', 'IU', 'Tablet'].forEach(unit => {
+            ['mg', 'g', 'μg', 'ml', 'IU', 'Tablet'].forEach(unit => {
                 const opt = document.createElement('option');
                 opt.value = `${num} ${unit}`;
                 list.appendChild(opt);
@@ -514,7 +519,7 @@
                 </div>`;
             }
 
-            return `<div class="entry-wrapper">${contentHTML}<input type="text" class="note-input" name="${prefix}_note[]" placeholder="Notes (e.g. After Food)..."></div>`;
+            return `<div class="entry-wrapper">${contentHTML}<input type="text" class="note-input" name="${prefix}_note[]" placeholder="History Notes (e.g. After Failure)..."></div>`;
         }
 
         function addSymptom() { document.getElementById('symptoms-container').insertAdjacentHTML('beforeend', createRowHTML('symptom')); }
@@ -773,6 +778,200 @@ function applyTemplates() {
 
     document.getElementById('modalTemplates').style.display = 'none';
 }
+</script>
+
+<div id="modalEqDose" class="modal" onclick="if(event.target == this) this.style.display='none'">
+    <div class="modal-content" style="width: 450px;">
+        <h3 style="margin-top: 0; margin-bottom: 15px; border-bottom: 2px solid #f4f8fb; padding-bottom: 10px;">Calculate Equivalent Dose</h3>
+        
+        <div style="margin-bottom: 15px;">
+            <label>Past Drug</label>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="eq_past_drug" list="eq_drug_list" placeholder="Select or type drug..." style="flex: 2; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
+                
+                <input type="text" id="eq_past_dose" list="eq_dose_list" placeholder="Dose (e.g. 10 mg)" oninput="updateEqDoseOptions(this)" style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
+                <datalist id="eq_dose_list"></datalist>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label>Current / Target Drug</label>
+            <input type="text" id="eq_target_drug" list="eq_drug_list" placeholder="Select or type target drug..." style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
+        </div>
+        
+        <datalist id="eq_drug_list"></datalist>
+
+        <button type="button" class="btn" onclick="calculateEqDose()" style="background-color: #a5dcfe; color: #333; padding: 8px 15px; font-size: 13px; width: 100%; margin-bottom: 15px;">🧮 Calculate Dose</button>
+
+        <div style="margin-bottom: 15px;">
+            <label>Equivalent Dose</label>
+            <input type="text" id="eq_result_dose" readonly style="background: #f0f8ff; border: 1px dashed #7ab8e0; font-weight: bold; width: 100%; padding: 10px; border-radius: 6px;">
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button type="button" class="btn" style="flex: 2; background-color: #7BC4F0; color: #000; margin-top: 0;" onclick="applyEqDose()">✅ Apply to Medications</button>
+            <button type="button" class="btn" style="flex: 1; background-color: #eee; color: #333; margin-top: 0;" onclick="document.getElementById('modalEqDose').style.display='none'">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const eqDrugDb = {
+        "Risperidone": { min: 2, max: 16 },
+        "Olanzapine": { min: 5, max: 20 },
+        "Haloperidol": { min: 2, max: 20 },
+        "Aripiprazole": { min: 10, max: 30 },
+        "Amisulpride": { min: 300, max: 1200 },
+        "Clozapine": { min: 6.25, max: 900 },
+        "Chlorpromazine": { min: 200, max: 1000 },
+        "Cariprazine": { min: 1.5, max: 6 },
+        "Quetiapine": { min: 150, max: 800 },
+        "Quetiapine (Sedative)": { min: 25, max: 150 },
+        "Aripiprazole (Adjuvant)": { min: 2.5, max: 10 },
+        "Lithium Carbonate": { min: 150, max: 1800 },
+        "Sodium Valproate": { min: 200, max: 3000 },
+        "Carbamazepine": { min: 100, max: 1600 },
+        "Escitalopram": { min: 10, max: 30 },
+        "Fluoxetine": { min: 20, max: 80 },
+        "Fluvoxamine": { min: 50, max: 300 },
+        "Sertraline": { min: 50, max: 200 },
+        "Paroxetine": { min: 20, max: 62.5 },
+        "Bupropion": { min: 150, max: 450 },
+        "Duloxetine": { min: 60, max: 120 },
+        "Venlafaxine": { min: 75, max: 375 },
+        "Vortioxetine": { min: 10, max: 20 }
+    };
+
+    const eqBenzoDb = {
+        "Diazepam": 10,
+        "Chlordiazepoxide": 25,
+        "Lorazepam": 2,
+        "Alprazolam": 0.5,
+        "Clonazepam": 0.5
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const drugList = document.getElementById('eq_drug_list');
+        if (drugList) {
+            let optionsHtml = '';
+            for (let d in eqDrugDb) { optionsHtml += `<option value="${d}">`; }
+            for (let b in eqBenzoDb) { optionsHtml += `<option value="${b}">`; }
+            drugList.innerHTML = optionsHtml;
+        }
+    });
+
+    function updateEqDoseOptions(input) {
+        const val = input.value.trim();
+        const match = val.match(/[\d\.]+/);
+        if (!match) return;
+        const num = match[0];
+
+        const list = document.getElementById('eq_dose_list');
+        list.innerHTML = '';
+
+        ['g', 'mg', 'μg'].forEach(unit => {
+            const opt = document.createElement('option');
+            opt.value = `${num} ${unit}`;
+            list.appendChild(opt);
+        });
+    }
+
+    function calculateEqDose() {
+        const pastDrug = document.getElementById('eq_past_drug').value.trim();
+        const targetDrug = document.getElementById('eq_target_drug').value.trim();
+        const doseInput = document.getElementById('eq_past_dose').value.trim().toLowerCase();
+
+        const match = doseInput.match(/([\d\.]+)\s*(g|mg|μg|mcg)?/);
+
+        if (!pastDrug || !targetDrug || !match) {
+            alert("Please select both drugs and enter a valid dose.");
+            return;
+        }
+
+        const rawVal = parseFloat(match[1]);
+        let inputUnit = match[2] || 'mg';
+        if (inputUnit === 'mcg') inputUnit = 'μg';
+
+        let pastDoseMg = rawVal;
+        if (inputUnit === 'g') pastDoseMg = rawVal * 1000;
+        else if (inputUnit === 'μg') pastDoseMg = rawVal / 1000;
+
+        let calcDoseMg = 0;
+
+        if (eqDrugDb[pastDrug] && eqDrugDb[targetDrug]) {
+            const pastMin = eqDrugDb[pastDrug].min;
+            const pastMax = eqDrugDb[pastDrug].max;
+            const targetMin = eqDrugDb[targetDrug].min;
+            const targetMax = eqDrugDb[targetDrug].max;
+
+            const rtp = (pastDoseMg - pastMin) / (pastMax - pastMin);
+            calcDoseMg = (rtp * (targetMax - targetMin)) + targetMin;
+
+        } else if (eqBenzoDb[pastDrug] && eqBenzoDb[targetDrug]) {
+            const ratio = eqBenzoDb[targetDrug] / eqBenzoDb[pastDrug];
+            calcDoseMg = pastDoseMg * ratio;
+        } else {
+            alert("Cannot calculate direct RTP equivalence across different drug categories (e.g., RTP to Benzo). Please select drugs from the same group.");
+            return;
+        }
+
+        calcDoseMg = Math.max(0, calcDoseMg);
+
+        let finalVal = 0;
+        let finalUnit = inputUnit;
+
+        if (inputUnit === 'g') {
+            let valInG = calcDoseMg / 1000;
+            if (valInG >= 1) {
+                finalVal = valInG;
+            } else if (calcDoseMg >= 1) {
+                finalVal = calcDoseMg;
+                finalUnit = 'mg';
+            } else {
+                finalVal = calcDoseMg * 1000;
+                finalUnit = 'μg';
+            }
+        } else if (inputUnit === 'mg') {
+            if (calcDoseMg >= 1 || calcDoseMg === 0) {
+                finalVal = calcDoseMg;
+            } else {
+                finalVal = calcDoseMg * 1000;
+                finalUnit = 'μg';
+            }
+        } else if (inputUnit === 'μg') {
+            finalVal = calcDoseMg * 1000;
+        }
+
+        const formattedVal = finalVal.toFixed(2).replace(/\.00$/, '') + ' ' + finalUnit;
+        document.getElementById('eq_result_dose').value = formattedVal;
+    }
+
+    function applyEqDose() {
+        const targetDrug = document.getElementById('eq_target_drug').value;
+        const calcDose = document.getElementById('eq_result_dose').value;
+
+        if (!targetDrug || !calcDose) {
+            alert("Please calculate the dose first.");
+            return;
+        }
+
+        addMedication();
+
+        const medNames = document.getElementsByName('drug_name[]');
+        const medDoses = document.getElementsByName('dose_full[]');
+
+        if (medNames.length > 0) {
+            medNames[medNames.length - 1].value = targetDrug;
+            medDoses[medDoses.length - 1].value = calcDose;
+        }
+
+        document.getElementById('modalEqDose').style.display = 'none';
+
+        document.getElementById('eq_past_drug').value = '';
+        document.getElementById('eq_target_drug').value = '';
+        document.getElementById('eq_past_dose').value = '';
+        document.getElementById('eq_result_dose').value = '';
+    }
 </script>
 </body>
 </html>
