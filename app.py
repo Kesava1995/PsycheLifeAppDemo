@@ -617,6 +617,7 @@ def process_visit_form_data(visit, form_data):
     # 4. Medications (backed groups consecutive same-name rows into taper_plan)
     d_names = form_data.getlist('drug_name[]')
     d_types = form_data.getlist('drug_type[]')
+    d_forms = form_data.getlist('med_form[]')
     d_full_doses = form_data.getlist('dose_full[]')
     d_freqs = form_data.getlist('frequency[]')
     d_notes = form_data.getlist('med_note[]')
@@ -653,6 +654,7 @@ def process_visit_form_data(visit, form_data):
                 visit_id=visit.id,
                 drug_name=name,
                 drug_type=d_types[i] if i < len(d_types) else 'Generic',
+                form_type=d_forms[i] if i < len(d_forms) else 'Tablet',
                 dose_mg=dose,
                 frequency=freq,
                 duration_text=dur,
@@ -930,6 +932,7 @@ def update_clinical(visit_id):
 
     d_types = request.form.getlist('drug_type[]')
     d_names = request.form.getlist('drug_name[]')
+    d_forms = request.form.getlist('med_form[]')
     d_full_doses = request.form.getlist('dose_full[]')
     d_freqs = request.form.getlist('frequency[]')
     d_durs = request.form.getlist('med_duration[]')
@@ -966,6 +969,7 @@ def update_clinical(visit_id):
                 visit_id=visit.id,
                 drug_type=d_types[i] if i < len(d_types) else 'Generic',
                 drug_name=name,
+                form_type=d_forms[i] if i < len(d_forms) else 'Tablet',
                 dose_mg=dose,
                 frequency=freq,
                 duration_text=dur,
@@ -1809,16 +1813,17 @@ def guest_prescription():
     dose_mgs = request.form.getlist('dose_mg[]')
     durations = request.form.getlist('med_duration_text[]')
     notes = request.form.getlist('med_note[]')
+    d_forms = request.form.getlist('med_form[]')
 
     for i, name in enumerate(drug_names):
         if name.strip():
-            # Append simple dictionary instead of complex object
             visit["medication_entries"].append({
                 'drug_name': name,
                 'dose_mg': dose_mgs[i] if i < len(dose_mgs) else '',
                 'duration_text': durations[i] if i < len(durations) else '',
                 'note': notes[i] if i < len(notes) else '',
-                'drug_type': None
+                'drug_type': None,
+                'form_type': d_forms[i] if i < len(d_forms) else 'Tablet'
             })
 
     session.pop('guest_first_visit', None)
@@ -1938,6 +1943,7 @@ def guest_both():
     drug_names = request.form.getlist('drug_name[]')
     dose_mgs = request.form.getlist('dose_full[]') or request.form.getlist('dose_mg[]')
     med_notes = request.form.getlist('med_note[]')
+    d_forms = request.form.getlist('med_form[]')
 
     for i, name in enumerate(drug_names):
         if name.strip():
@@ -2003,7 +2009,8 @@ def guest_both():
                 'dose_mg': dose_mgs[i] if i < len(dose_mgs) else '',
                 'duration_text': durations[i] if i < len(durations) else '',
                 'note': med_notes[i] if i < len(med_notes) else '',
-                'drug_type': None
+                'drug_type': None,
+                'form_type': d_forms[i] if i < len(d_forms) else 'Tablet'
             })
 
     session.pop('guest_first_visit', None)

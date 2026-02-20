@@ -91,6 +91,7 @@ class MedicationEntry(db.Model):
     visit_id = db.Column(db.Integer, db.ForeignKey('visits.id'), nullable=False)
     drug_name = db.Column(db.String(200), nullable=False)
     drug_type = db.Column(db.String(50))  # 'Brand' or 'Generic'
+    form_type = db.Column(db.String(50))  # 'Tablet', 'Capsule', or 'Injection'
     dose_mg = db.Column(db.String(50))
     
     # Phase 1: Frequency Dropdown (0-0-1 etc)

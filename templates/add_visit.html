@@ -62,6 +62,12 @@
                 <option value="Brand" {% if entry.drug_type=='Brand'%}selected{%endif%}>Brand</option>
             </select>
 
+            <select name="med_form[]" style="width:120px; flex:none;">
+                <option value="Tablet" {% if (entry.form_type or 'Tablet')=='Tablet' %}selected{% endif %}>Tablet</option>
+                <option value="Capsule" {% if entry.form_type=='Capsule' %}selected{% endif %}>Capsule</option>
+                <option value="Injection" {% if entry.form_type=='Injection' %}selected{% endif %}>Injection</option>
+            </select>
+
             <input type="text" name="drug_name[]" value="{{ entry.drug_name }}" style="flex:2; min-width:150px; {% if readonly_name %}background:#f0f8ff; border:1px dashed #7ab8e0;{% endif %}" {% if readonly_name %}readonly{% endif %}>
             
             <div style="flex:1; min-width:100px;">
@@ -524,6 +530,7 @@
                 contentHTML = `
                 <div style="display:flex; align-items:center; gap:10px; width:100%;">
                     <select name="drug_type[]" style="width:120px; flex:none;"><option value="Gen">Generic</option><option value="Brand">Brand</option></select>
+                    <select name="med_form[]" style="width:120px; flex:none;"><option value="Tablet">Tablet</option><option value="Capsule">Capsule</option><option value="Injection">Injection</option></select>
                     <input type="text" name="drug_name[]" placeholder="Drug Name" style="flex:2; min-width:150px;">
                     <div style="flex:1; min-width:100px;">
                         <input type="text" name="dose_full[]" list="dose-list-${uniqueId}" placeholder="Dose" oninput="updateDoseOptions(this)">
@@ -572,7 +579,7 @@
             const inputs = newRow.querySelectorAll('input, select, textarea');
             inputs.forEach(input => {
                 const name = input.getAttribute('name');
-                if (name === 'drug_name[]' || name === 'drug_type[]') {
+                if (name === 'drug_name[]' || name === 'drug_type[]' || name === 'med_form[]') {
                     if (name === 'drug_name[]') {
                         input.readOnly = true;
                         input.style.backgroundColor = '#f0f8ff';
