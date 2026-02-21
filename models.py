@@ -72,6 +72,9 @@ class Visit(db.Model):
     stressor_entries = db.relationship('StressorEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
     personality_entries = db.relationship('PersonalityEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
     safety_profile = db.relationship('SafetyMedicalProfile', backref='visit', uselist=False, cascade='all, delete-orphan')
+    major_events = db.relationship('MajorEvent', backref='visit', lazy=True, cascade='all, delete-orphan')
+    adherence_ranges = db.relationship('AdherenceRange', backref='visit', lazy=True, cascade='all, delete-orphan')
+    clinical_state_ranges = db.relationship('ClinicalStateRange', backref='visit', lazy=True, cascade='all, delete-orphan')
 
 
 class SymptomEntry(db.Model):
@@ -186,8 +189,39 @@ class StressorEntry(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     visit_id = db.Column(db.Integer, db.ForeignKey('visits.id'), nullable=False)
-    stressor_type = db.Column(db.String(200)) # e.g., Financial, Loss
+    stressor_type = db.Column(db.String(200))  # e.g., Financial, Loss
+    duration = db.Column(db.String(50), nullable=True)
     note = db.Column(db.Text)
+
+
+class MajorEvent(db.Model):
+    __tablename__ = 'major_events'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    visit_id = db.Column(db.Integer, db.ForeignKey('visits.id'), nullable=False)
+    event_type = db.Column(db.String(100), nullable=False)
+    duration = db.Column(db.String(50), nullable=True)
+    note = db.Column(db.Text)
+
+
+class AdherenceRange(db.Model):
+    __tablename__ = 'adherence_ranges'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    visit_id = db.Column(db.Integer, db.ForeignKey('visits.id'), nullable=False)
+    status = db.Column(db.String(50), nullable=False)  # 'Complete', 'Partial', 'No Adherence'
+    start_date = db.Column(db.Date, nullable=True)
+    end_date = db.Column(db.Date, nullable=True)
+
+
+class ClinicalStateRange(db.Model):
+    __tablename__ = 'clinical_state_ranges'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    visit_id = db.Column(db.Integer, db.ForeignKey('visits.id'), nullable=False)
+    state = db.Column(db.String(50), nullable=False)  # 'Recovery', 'Remission', etc.
+    start_date = db.Column(db.Date, nullable=True)
+    end_date = db.Column(db.Date, nullable=True)
 
 
 class PersonalityEntry(db.Model):
@@ -195,7 +229,7 @@ class PersonalityEntry(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     visit_id = db.Column(db.Integer, db.ForeignKey('visits.id'), nullable=False)
-    trait = db.Column(db.String(200)) # e.g., Paranoid, Borderline
+    trait = db.Column(db.String(200))  # e.g., Paranoid, Borderline
     note = db.Column(db.Text)
 
 

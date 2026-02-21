@@ -223,6 +223,19 @@
         .daily-summary-cat { font-weight: 700; color: #555; font-size: 0.8rem; text-transform: uppercase; margin-top: 5px; margin-bottom: 2px; }
         .pop-close { cursor: pointer; font-size: 16px; color: #999; }
         .pop-close:hover { color: red; }
+
+        /* Chart top bar: avoid squished controls */
+        .chart-controls-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+        .zoom-control select {
+            min-width: 150px;
+            padding: 5px;
+        }
     </style>
 </head>
 <body>
@@ -332,12 +345,12 @@
 
 <div class="main-content">
     
-    <div class="widget-toolbar">
+    <div class="widget-toolbar chart-controls-container">
         <select id="widgetSelector" class="widget-selector">
             <option value="" disabled selected>Select chart to add...</option>
             </select>
         <button onclick="addSelectedWidget()" class="add-widget-btn">Insert Chart</button>
-        <div style="display: flex; align-items: center; gap: 10px; margin-right: 15px; border-right: 1px solid #ccc; padding-right: 15px;">
+        <div class="zoom-control" style="display: flex; align-items: center; gap: 10px; margin-right: 15px; border-right: 1px solid #ccc; padding-right: 15px;">
             <select id="zoomSelect" onchange="handleZoomSelect(this.value)" class="btn btn-sm" style="background: white; border: 1px dashed #7ab8e0; color: #333; margin: 0;">
                 <option value="">Zoom View...</option>
                 <option value="week">Week-wise</option>
@@ -562,6 +575,8 @@
         mseUnified: {{ mse_unified | tojson }},
         details: {{ visit_details | tojson }}
     };
+    const backendClinicalStates = {{ clinical_states | default([]) | tojson }};
+    const backendAdherences = {{ adherences | default([]) | tojson }};
 	
 	let suppressSingleClickUntil = 0;
     let charts = {}; // Global chart instance storage
@@ -861,22 +876,34 @@
             clearStickyTooltips(); 
             
             const activeEls = newChart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
+            let dateStr = null;
+            let point = null;
+            if (activeEls.length) {
+                const index = activeEls[0].index;
+                const datasetIndex = activeEls[0].datasetIndex;
+                point = newChart.data.datasets[datasetIndex].data[index];
+                dateStr = point.x ? point.x.split('T')[0] : null;
+            } else {
+                const xScale = newChart.scales.x;
+                if (xScale) {
+                    const nativeEvent = e.native != null ? e.native : e;
+                    const canvasPos = Chart.helpers.getRelativePosition(nativeEvent, newChart);
+                    const dateValue = xScale.getValueForPixel(canvasPos.x);
+                    if (dateValue) dateStr = new Date(dateValue).toISOString().split('T')[0];
+                }
+            }
+            if (dateStr && !point) {
+                showModalByDate(dateStr);
+                return;
+            }
             if (!activeEls.length) return;
-            const index = activeEls[0].index;
-            const datasetIndex = activeEls[0].datasetIndex;
-            const point = newChart.data.datasets[datasetIndex].data[index];
-            
-            const dateStr = point.x ? point.x.split('T')[0] : null;
-            
-            // Prioritize opening full visit if a visit actually exists on this date
             const hasVisit = dateStr && Object.values(rawData.details).some(v => v.date === dateStr);
-
             if (hasVisit) {
                 showModalByDate(dateStr);
-            } else if (['Onset','Progression','History'].includes(point.phase)) {
+            } else if (point && ['Onset','Progression','History'].includes(point.phase)) {
                 showHistoryModal(point);
             } else if (dateStr) {
-                showModalByDate(dateStr); // Fallback "Calculated Point" modal
+                showModalByDate(dateStr);
             }
         });
 
@@ -923,6 +950,35 @@
                 };
             }
         }
+        let idx = 0;
+        (backendClinicalStates || []).forEach(function(s) {
+            if (!s.start || !s.end) return;
+            if (key === 'symptoms' && s.state) {
+                annotations['backend_state_' + (idx++)] = {
+                    type: 'box', xMin: s.start, xMax: s.end, yScaleID: 'y', yMin: maxY * 0.90, yMax: maxY,
+                    backgroundColor: stateColors[s.state] || 'rgba(158,158,158,0.7)', borderWidth: 0,
+                    label: { display: true, content: s.state, color: '#333', font: { size: 10 } }
+                };
+            }
+        });
+        idx = 0;
+        (backendAdherences || []).forEach(function(a) {
+            if (!a.start || !a.end) return;
+            if (key === 'symptoms') {
+                annotations['backend_adhDim_' + (idx)] = {
+                    type: 'box', xMin: a.start, xMax: a.end, yScaleID: 'y', yMin: 0, yMax: maxY * 0.08,
+                    backgroundColor: adhColorsDim[a.status] || 'rgba(200,200,200,0.15)', borderWidth: 0
+                };
+            }
+            if (key === 'meds') {
+                annotations['backend_adhSol_' + (idx)] = {
+                    type: 'box', xMin: a.start, xMax: a.end, yScaleID: 'y', yMin: maxY * 0.90, yMax: maxY,
+                    backgroundColor: adhColorsSolid[a.status] || 'rgba(100,100,100,0.8)', borderWidth: 0,
+                    label: { display: true, content: 'Adherence: ' + a.status, color: '#fff', font: { size: 10 } }
+                };
+            }
+            idx++;
+        });
         if (!newChart.options.plugins) newChart.options.plugins = {};
         newChart.options.plugins.annotation = { annotations: annotations };
         if (newChart.options.scales && newChart.options.scales.y) newChart.options.scales.y.max = maxY;

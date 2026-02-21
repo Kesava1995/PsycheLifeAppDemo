@@ -5,7 +5,7 @@ PsycheLife - Medical web app for psychiatric patient management.
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response, session, abort
 from functools import wraps
 from datetime import datetime, date, timedelta, timezone
-from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, DefaultTemplate, CustomTemplate
+from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate
 from medical_utils import get_unified_dose, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency
 import io
 import os
@@ -49,6 +49,11 @@ with app.app_context():
         db.session.rollback()
     try:
         db.session.execute(text('ALTER TABLE visits ADD COLUMN medication_adherence VARCHAR(50)'))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    try:
+        db.session.execute(text('ALTER TABLE stressor_entries ADD COLUMN duration VARCHAR(50)'))
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -595,12 +600,79 @@ def process_visit_form_data(visit, form_data):
         dur_list = form_data.getlist(f'{prefix}_duration[]')
         return dur_list[index] if index < len(dur_list) else ""
 
-    # 1. Stressors (Phase 2)
-    stressors = form_data.getlist('stressors[]')
-    stressor_note = form_data.get('stressor_note', '')
-    for s in stressors:
-        if s.strip():
-            db.session.add(StressorEntry(visit_id=visit.id, stressor_type=s, note=stressor_note))
+    # 1. Stressors (Phase 2) – from modal JSON
+    stressors_json = form_data.get('stressors_data', '')
+    if stressors_json:
+        try:
+            for se in StressorEntry.query.filter_by(visit_id=visit.id).all():
+                db.session.delete(se)
+            for item in json.loads(stressors_json):
+                if isinstance(item, dict) and item.get('stressor_type'):
+                    db.session.add(StressorEntry(
+                        visit_id=visit.id,
+                        stressor_type=item['stressor_type'],
+                        duration=item.get('duration') or None,
+                        note=item.get('note') or None
+                    ))
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # 1b. Major Events (from modal JSON)
+    major_events_json = form_data.get('major_events_data', '')
+    if major_events_json:
+        try:
+            for me in MajorEvent.query.filter_by(visit_id=visit.id).all():
+                db.session.delete(me)
+            for item in json.loads(major_events_json):
+                if isinstance(item, dict) and item.get('event_type'):
+                    db.session.add(MajorEvent(
+                        visit_id=visit.id,
+                        event_type=item['event_type'],
+                        duration=item.get('duration') or None,
+                        note=item.get('note') or None
+                    ))
+                elif isinstance(item, str) and item.strip():
+                    db.session.add(MajorEvent(visit_id=visit.id, event_type=item.strip(), duration=None, note=None))
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # 1c. Adherence Ranges (from modal JSON)
+    adherence_json = form_data.get('adherence_data', '')
+    if adherence_json:
+        try:
+            for ar in AdherenceRange.query.filter_by(visit_id=visit.id).all():
+                db.session.delete(ar)
+            for item in json.loads(adherence_json):
+                if isinstance(item, dict) and item.get('status'):
+                    start_d = parse_date(item.get('start')) if item.get('start') else None
+                    end_d = parse_date(item.get('end')) if item.get('end') else None
+                    db.session.add(AdherenceRange(
+                        visit_id=visit.id,
+                        status=item['status'],
+                        start_date=start_d,
+                        end_date=end_d
+                    ))
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # 1d. Clinical State Ranges (from modal JSON)
+    clinical_state_json = form_data.get('clinical_state_data', '')
+    if clinical_state_json:
+        try:
+            for csr in ClinicalStateRange.query.filter_by(visit_id=visit.id).all():
+                db.session.delete(csr)
+            for item in json.loads(clinical_state_json):
+                if isinstance(item, dict) and item.get('state'):
+                    start_d = parse_date(item.get('start')) if item.get('start') else None
+                    end_d = parse_date(item.get('end')) if item.get('end') else None
+                    db.session.add(ClinicalStateRange(
+                        visit_id=visit.id,
+                        state=item['state'],
+                        start_date=start_d,
+                        end_date=end_d
+                    ))
+        except (json.JSONDecodeError, TypeError):
+            pass
 
     # 2. Personality (Phase 2)
     traits = form_data.getlist('personality[]')
@@ -919,7 +991,11 @@ def edit_visit(visit_id):
         ).order_by(Visit.id.desc()).first()
     
     doctor = Doctor.query.get(session.get('doctor_id'))
-    return render_template('edit_visit.html', visit=visit, patient=patient, previous_visit=previous_visit, doctor=doctor)
+    major_events_data = json.dumps([{'event_type': e.event_type, 'duration': e.duration or '', 'note': e.note or ''} for e in visit.major_events])
+    stressors_data = json.dumps([{'stressor_type': s.stressor_type, 'duration': s.duration or '', 'note': s.note or ''} for s in visit.stressor_entries])
+    adherence_data = json.dumps([{'status': a.status, 'start': a.start_date.strftime('%Y-%m-%d') if a.start_date else None, 'end': a.end_date.strftime('%Y-%m-%d') if a.end_date else None} for a in visit.adherence_ranges])
+    clinical_state_data = json.dumps([{'state': c.state, 'start': c.start_date.strftime('%Y-%m-%d') if c.start_date else None, 'end': c.end_date.strftime('%Y-%m-%d') if c.end_date else None} for c in visit.clinical_state_ranges])
+    return render_template('edit_visit.html', visit=visit, patient=patient, previous_visit=previous_visit, doctor=doctor, major_events_data=major_events_data, stressors_data=stressors_data, adherence_data=adherence_data, clinical_state_data=clinical_state_data)
 
 
 @app.route('/visit/<int:visit_id>/update_clinical', methods=['POST'])
@@ -1505,7 +1581,24 @@ def life_chart(patient_id):
             })
         return datasets
 
-    # 4. Render
+    # 4. Clinical State and Adherence Ranges (for annotation bands)
+    clinical_states = []
+    adherences = []
+    for v in visits:
+        for s in ClinicalStateRange.query.filter_by(visit_id=v.id).all():
+            clinical_states.append({
+                'state': s.state,
+                'start': s.start_date.strftime('%Y-%m-%d') if s.start_date else None,
+                'end': s.end_date.strftime('%Y-%m-%d') if s.end_date else None
+            })
+        for a in AdherenceRange.query.filter_by(visit_id=v.id).all():
+            adherences.append({
+                'status': a.status,
+                'start': a.start_date.strftime('%Y-%m-%d') if a.start_date else None,
+                'end': a.end_date.strftime('%Y-%m-%d') if a.end_date else None
+            })
+
+    # 5. Render
     return render_template(
         'life_chart.html',
         patient=patient,
@@ -1531,7 +1624,9 @@ def life_chart(patient_id):
         se_names=list(se.keys()),
         mse_categories=list(mse.keys()),
         
-        visit_details=visit_details
+        visit_details=visit_details,
+        clinical_states=clinical_states,
+        adherences=adherences
     )
 
 

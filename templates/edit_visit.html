@@ -52,6 +52,36 @@
         .modal-content { background: white; margin: 10% auto; padding: 20px; width: 400px; border-radius: 8px; }
         .checklist-group label { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer; }
         .checklist-group input[type="checkbox"] { width: auto; margin: 0; }
+
+        /* Major Events modal: position + checkbox alignment */
+        #majorEventsModal .modal-content {
+            margin-top: 5% !important;
+        }
+        .major-event-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+            cursor: pointer;
+        }
+        .major-event-group label input[type="checkbox"] {
+            margin: 0;
+        }
+        /* Grid modals (Bootstrap-like row/col) */
+        .container-fluid.px-0 { padding-left: 0; padding-right: 0; }
+        .row { display: flex; flex-wrap: wrap; margin-left: -6px; margin-right: -6px; }
+        .row.align-items-center { align-items: center; }
+        .row.border-bottom { border-bottom: 1px solid #e0e0e0; }
+        .row.font-weight-bold { font-weight: 700; }
+        .col-3, .col-4, .col-5 { padding-left: 6px; padding-right: 6px; box-sizing: border-box; }
+        .col-3 { flex: 0 0 25%; max-width: 25%; }
+        .col-4 { flex: 0 0 33.333%; max-width: 33.333%; }
+        .col-5 { flex: 0 0 41.666%; max-width: 41.666%; }
+        .mb-2 { margin-bottom: 8px; }
+        .form-check { display: flex; align-items: center; }
+        .form-check-input { margin-top: 0; }
+        .form-check-label.ml-2 { margin-left: 8px; cursor: pointer; margin-bottom: 0; }
+        .form-control, .form-control-sm { width: 100%; padding: 6px 8px; border: 1px solid #e0e0e0; border-radius: 4px; box-sizing: border-box; }
     </style>
 </head>
 <body>
@@ -155,21 +185,23 @@
                         <div style="grid-column: span 4;"><label>Identification Notes</label><input type="text" name="personal_notes" value="{{ patient.personal_notes }}"></div>
                     </div>
 
-                    {% set current_stressors = visit.stressor_entries | map(attribute='stressor_type') | list %}
-                    {% set stressor_note = visit.stressor_entries[0].note if visit.stressor_entries else '' %}
-
                     {% set current_traits = visit.personality_entries | map(attribute='trait') | list %}
                     {% set pers_note = visit.personality_entries[0].note if visit.personality_entries else '' %}
 
                     <div class="section-header"><span class="section-title">Background Factors</span></div>
                     <div class="click-trigger-row">
-                        <div class="click-trigger" onclick="document.getElementById('modalStress').style.display='block'">
-                            <span>⚠️ Stressors ({{ current_stressors|length }})</span><span>▼</span>
+                        <div class="click-trigger" onclick="openModal('stressorsModal')">
+                            <span>⚠️ Stressors</span><span>▼</span>
                         </div>
                         <div class="click-trigger" onclick="document.getElementById('modalPers').style.display='block'">
                             <span>🧠 Personality ({{ current_traits|length }})</span><span>▼</span>
                         </div>
+                        <div class="click-trigger" onclick="openModal('majorEventsModal')">
+                            <span>📌 Major Events</span><span>▼</span>
+                        </div>
                     </div>
+                    <input type="hidden" name="stressors_data" id="stressors_data" value="{{ stressors_data|default('[]') }}">
+                    <input type="hidden" name="major_events_data" id="major_events_data" value="{{ major_events_data|default('[]') }}">
 
                     <div class="section-header">
                     <span class="section-title">Chief Complaints</span>
@@ -374,15 +406,8 @@
 
             <div style="margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
                 <h4 style="margin:0 0 10px 0; color:#555;">Current Clinical State</h4>
-                <select name="clinical_state" class="form-control" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc;">
-                    <option value="" {% if visit and visit.clinical_state == '' %}selected{% endif %}>Select State...</option>
-                    <option value="Recovery" {% if visit and visit.clinical_state == 'Recovery' %}selected{% endif %}>Recovery</option>
-                    <option value="Remission" {% if visit and visit.clinical_state == 'Remission' %}selected{% endif %}>Remission</option>
-                    <option value="Partial Remission" {% if visit and visit.clinical_state == 'Partial Remission' %}selected{% endif %}>Partial Remission</option>
-                    <option value="Relapse" {% if visit and visit.clinical_state == 'Relapse' %}selected{% endif %}>Relapse</option>
-                    <option value="Hospitalisation" {% if visit and visit.clinical_state == 'Hospitalisation' %}selected{% endif %}>Hospitalisation</option>
-                    <option value="Loss of Follow-up" {% if visit and visit.clinical_state == 'Loss of Follow-up' %}selected{% endif %}>Loss of Follow-up</option>
-                </select>
+                <button type="button" class="btn" style="margin-top:0; padding:8px 14px; font-size:12px; background:#666; color:#fff;" onclick="openClinicalStateRangesModal()">Manage Clinical State Ranges (dates)</button>
+                <input type="hidden" name="clinical_state_data" id="clinical_state_data" value="{{ clinical_state_data|default('[]') }}">
             </div>
 					
 					<div class="section-header" style="flex-wrap: wrap;">
@@ -390,14 +415,10 @@
 					<button type="button" class="add-btn" onclick="addMedication()">+</button>
 					<button type="button" class="btn" onclick="document.getElementById('modalEqDose').style.display='block'" style="padding: 5px 15px; font-size: 12px; margin-left: 10px; background: #666; color: #fff; width: auto; line-height: 1; flex-shrink: 0; white-space: nowrap;">⚖️ Equivalent Dose</button>
 				</div>
-                <div style="margin-bottom: 15px;">
-                    <label style="font-size: 13px; font-weight: 600; color: #555; margin-right: 10px;">Medication Adherence:</label>
-                    <select name="medication_adherence" class="form-control" style="width: auto; display: inline-block; padding: 6px; font-size: 13px; border-radius: 4px; border: 1px solid #ccc;">
-                        <option value="" {% if visit and visit.medication_adherence == '' %}selected{% endif %}>Select Adherence...</option>
-                        <option value="Complete" {% if visit and visit.medication_adherence == 'Complete' %}selected{% endif %}>Complete</option>
-                        <option value="Partial" {% if visit and visit.medication_adherence == 'Partial' %}selected{% endif %}>Partial</option>
-                        <option value="No Adherence" {% if visit and visit.medication_adherence == 'No Adherence' %}selected{% endif %}>No Adherence</option>
-                    </select>
+                <div style="margin-bottom: 15px; display: flex; align-items: center;">
+                    <label style="font-size: 13px; font-weight: 600; color: #555; margin-right: 10px; margin-bottom: 0;">Medication Adherence:</label>
+                    <button type="button" class="btn" style="margin-left:0; padding:6px 12px; font-size:12px; background:#666; color:#fff; margin-top:0;" onclick="openAdherenceRangesModal()">Manage Adherence Ranges (dates)</button>
+                    <input type="hidden" name="adherence_data" id="adherence_data" value="{{ adherence_data|default('[]') }}">
                 </div>
                     <div id="meds-container">
                         {% for entry in visit.medication_entries %}
@@ -427,19 +448,87 @@
                         <button type="submit" name="submit_action" value="both" class="btn" style="flex:1; background:linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">🚀 Generate Both</button>
                     </div>
 
-                    <div id="modalStress" class="modal" onclick="if(event.target == this) this.style.display='none'">
-                        <div class="modal-content">
-                            <h3>Select Stressors</h3>
-                            <div class="checklist-group">
-                                <label><input type="checkbox" name="stressors[]" value="Inter-personal/Familial" {% if 'Inter-personal/Familial' in current_stressors %}checked{% endif %}> Inter-personal / Familial</label>
-                                <label><input type="checkbox" name="stressors[]" value="Loss/Bereavement" {% if 'Loss/Bereavement' in current_stressors %}checked{% endif %}> Loss / Bereavement</label>
-                                <label><input type="checkbox" name="stressors[]" value="Financial/Occupational" {% if 'Financial/Occupational' in current_stressors %}checked{% endif %}> Financial / Occupational</label>
-                                <label><input type="checkbox" name="stressors[]" value="Health/Medical" {% if 'Health/Medical' in current_stressors %}checked{% endif %}> Health / Medical</label>
-                                <label><input type="checkbox" name="stressors[]" value="Violence" {% if 'Violence' in current_stressors %}checked{% endif %}> Physical / Sexual Violence</label>
-                                <label><input type="checkbox" name="stressors[]" value="Other" {% if 'Other' in current_stressors %}checked{% endif %}> Other</label>
+                    <div id="stressorsModal" class="modal" onclick="if(event.target === this) closeModal('stressorsModal')">
+                        <div class="modal-content" style="width: 480px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; margin-top: 5vh;">
+                            <h4 style="margin-top: 0;">Select Stressors</h4>
+                            <div style="overflow-y: auto; flex-grow: 1; padding-right: 10px;">
+                                <div class="checklist-group">
+                                    <label><input type="checkbox" class="stressor-checkbox" value="Familial or Relationship issues"> Familial or Relationship issues</label>
+                                    <label><input type="checkbox" class="stressor-checkbox" value="Loss, Bereavement"> Loss, Bereavement</label>
+                                    <label><input type="checkbox" class="stressor-checkbox" value="Divorce / Separation"> Divorce / Separation</label>
+                                    <label><input type="checkbox" class="stressor-checkbox" value="Academic/ occupational Stress"> Academic/ occupational Stress</label>
+                                    <label><input type="checkbox" class="stressor-checkbox" value="Financial/ Legal"> Financial/ Legal</label>
+                                    <label><input type="checkbox" class="stressor-checkbox" value="Medical/ Biological"> Medical/ Biological</label>
+                                    <label><input type="checkbox" class="stressor-checkbox" value="Physical or Sexual Violence"> Physical or Sexual Violence</label>
+                                    <label><input type="checkbox" class="stressor-checkbox" value="Others – Specify"> Others – Specify</label>
+                                </div>
+                                <div id="stressors-inputs-container" style="margin-top:12px;"></div>
                             </div>
-                            <textarea name="stressor_note" placeholder="Notes on stressors..." rows="2" style="margin-top:10px;">{{ stressor_note }}</textarea>
-                            <button type="button" class="btn" style="margin-top:15px; background-color:#a5dcfe; color:#333;" onclick="document.getElementById('modalStress').style.display='none'">Done</button>
+                            <div style="margin-top:15px; padding-top:15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
+                                <button type="button" class="btn" style="margin-top:0; background:#7ab8e0; color:#fff;" onclick="saveStressors()">Save Stressors</button>
+                                <button type="button" class="btn" style="margin-top:0; background:#888; color:#fff;" onclick="closeModal('stressorsModal')">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="majorEventsModal" class="modal" onclick="if(event.target === this) closeModal('majorEventsModal')">
+                        <div class="modal-content" style="width: 480px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; margin-top: 5vh;">
+                            <h4 style="margin-top: 0;">Select Major Events</h4>
+                            <div style="overflow-y: auto; flex-grow: 1; padding-right: 10px;">
+                                <div class="checklist-group">
+                                    <label><input type="checkbox" class="major-event-checkbox" value="Hospitalization"> Hospitalization</label>
+                                    <label><input type="checkbox" class="major-event-checkbox" value="Suicide"> Suicide</label>
+                                    <label><input type="checkbox" class="major-event-checkbox" value="Major Medication Change"> Major Medication Change</label>
+                                    <label><input type="checkbox" class="major-event-checkbox" value="Stoppage of medications"> Stoppage of medications</label>
+                                    <label><input type="checkbox" class="major-event-checkbox" value="Marriage"> Marriage</label>
+                                    <label><input type="checkbox" class="major-event-checkbox" value="Menarche/ Menopause"> Menarche/ Menopause</label>
+                                    <label><input type="checkbox" class="major-event-checkbox" value="ECT or any Intervention given"> ECT or any Intervention given</label>
+                                    <label><input type="checkbox" class="major-event-checkbox" value="Major Medical event"> Major Medical event</label>
+                                    <label><input type="checkbox" class="major-event-checkbox" value="Legal issues"> Legal issues</label>
+                                </div>
+                                <div id="major-events-inputs-container" style="margin-top:12px;"></div>
+                            </div>
+                            <div style="margin-top:15px; padding-top:15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
+                                <button type="button" class="btn" style="margin-top:0; background:#7ab8e0; color:#fff;" onclick="saveMajorEvents()">Save Events</button>
+                                <button type="button" class="btn" style="margin-top:0; background:#888; color:#fff;" onclick="closeModal('majorEventsModal')">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="adherenceRangesModal" class="modal" onclick="if(event.target === this) closeAdherenceRangesModal()">
+                        <div class="modal-content" style="width: 480px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; margin-top: 5vh;">
+                            <h4 style="margin-top: 0;">Adherence Ranges (with dates)</h4>
+                            <div style="overflow-y: auto; flex-grow: 1; padding-right: 10px;">
+                                <div class="checklist-group">
+                                    <label><input type="checkbox" class="adherence-checkbox" value="Complete"> Complete</label>
+                                    <label><input type="checkbox" class="adherence-checkbox" value="Partial"> Partial</label>
+                                    <label><input type="checkbox" class="adherence-checkbox" value="No Adherence"> No Adherence</label>
+                                </div>
+                                <div id="adherence-ranges-container" style="margin-top:12px;"></div>
+                            </div>
+                            <div style="margin-top:15px; padding-top:15px; border-top: 1px solid #eee;">
+                                <button type="button" class="btn" style="margin-top:0; background:#888; color:#fff;" onclick="closeAdherenceRangesModal()">Done</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="clinicalStateRangesModal" class="modal" onclick="if(event.target === this) closeClinicalStateRangesModal()">
+                        <div class="modal-content" style="width: 480px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; margin-top: 5vh;">
+                            <h4 style="margin-top: 0;">Clinical State Ranges (with dates)</h4>
+                            <div style="overflow-y: auto; flex-grow: 1; padding-right: 10px;">
+                                <div class="checklist-group">
+                                    <label><input type="checkbox" class="clinical-state-checkbox" value="Recovery"> Recovery</label>
+                                    <label><input type="checkbox" class="clinical-state-checkbox" value="Remission"> Remission</label>
+                                    <label><input type="checkbox" class="clinical-state-checkbox" value="Partial Remission"> Partial Remission</label>
+                                    <label><input type="checkbox" class="clinical-state-checkbox" value="Relapse"> Relapse</label>
+                                    <label><input type="checkbox" class="clinical-state-checkbox" value="Hospitalisation"> Hospitalisation</label>
+                                    <label><input type="checkbox" class="clinical-state-checkbox" value="Loss of Follow-up"> Loss of Follow-up</label>
+                                </div>
+                                <div id="clinical-state-ranges-container" style="margin-top:12px;"></div>
+                            </div>
+                            <div style="margin-top:15px; padding-top:15px; border-top: 1px solid #eee;">
+                                <button type="button" class="btn" style="margin-top:0; background:#888; color:#fff;" onclick="closeClinicalStateRangesModal()">Done</button>
+                            </div>
                         </div>
                     </div>
 
@@ -489,6 +578,222 @@
         function toggleNote(btn) { btn.closest('.entry-wrapper').querySelector('.note-input').style.display='block'; }
         function updVal(slider) { slider.nextElementSibling.innerText = slider.value; }
         
+        document.addEventListener('DOMContentLoaded', function() { bindAdherenceCheckboxes(); bindClinicalStateCheckboxes(); });
+
+        // --- Modals (Major Events + Stressors) ---
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'block';
+            if (modalId === 'majorEventsModal') restoreMajorEventsFromHidden();
+            if (modalId === 'stressorsModal') restoreStressorsFromHidden();
+        }
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+        // --- STRESSORS LOGIC (checklist + inputs below, like Clinical State) ---
+        document.querySelectorAll('.stressor-checkbox').forEach(function(box) {
+            box.addEventListener('change', function() {
+                var container = document.getElementById('stressors-inputs-container');
+                var safeId = 'st-input-' + this.value.replace(/[^a-zA-Z0-9]/g, '');
+                if (this.checked) {
+                    var html = '<div id="' + safeId + '" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 10px;">' +
+                        '<strong style="font-size: 13px; color: #333;">' + this.value.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</strong>' +
+                        '<div style="display: flex; gap: 10px; margin-top: 5px;">' +
+                        '<div style="flex: 1;"><input type="text" class="form-control form-control-sm st-duration" placeholder="Duration (e.g. 2 weeks)"></div>' +
+                        '<div style="flex: 2;"><input type="text" class="form-control form-control-sm st-note" placeholder="Note / Details"></div>' +
+                        '</div></div>';
+                    container.insertAdjacentHTML('beforeend', html);
+                } else {
+                    var el = document.getElementById(safeId);
+                    if (el) el.remove();
+                }
+            });
+        });
+        function saveStressors() {
+            var data = [];
+            document.querySelectorAll('.stressor-checkbox:checked').forEach(function(box) {
+                var safeId = 'st-input-' + box.value.replace(/[^a-zA-Z0-9]/g, '');
+                var row = document.getElementById(safeId);
+                if (row) {
+                    data.push({
+                        stressor_type: box.value,
+                        duration: row.querySelector('.st-duration').value,
+                        note: row.querySelector('.st-note').value
+                    });
+                }
+            });
+            document.getElementById('stressors_data').value = JSON.stringify(data);
+            closeModal('stressorsModal');
+        }
+        function restoreStressorsFromHidden() {
+            document.querySelectorAll('.stressor-checkbox').forEach(function(cb) { cb.checked = false; });
+            document.getElementById('stressors-inputs-container').innerHTML = '';
+            try {
+                var v = document.getElementById('stressors_data').value;
+                if (!v) return;
+                var list = JSON.parse(v);
+                list.forEach(function(st) {
+                    var type = st.stressor_type || st;
+                    document.querySelectorAll('.stressor-checkbox').forEach(function(cb) {
+                        if (cb.value === type) {
+                            cb.checked = true;
+                            var safeId = 'st-input-' + cb.value.replace(/[^a-zA-Z0-9]/g, '');
+                            var container = document.getElementById('stressors-inputs-container');
+                            var html = '<div id="' + safeId + '" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 10px;">' +
+                                '<strong style="font-size: 13px; color: #333;"></strong>' +
+                                '<div style="display: flex; gap: 10px; margin-top: 5px;">' +
+                                '<div style="flex: 1;"><input type="text" class="form-control form-control-sm st-duration" placeholder="Duration (e.g. 2 weeks)"></div>' +
+                                '<div style="flex: 2;"><input type="text" class="form-control form-control-sm st-note" placeholder="Note / Details"></div>' +
+                                '</div></div>';
+                            container.insertAdjacentHTML('beforeend', html);
+                            var row = document.getElementById(safeId);
+                            row.querySelector('strong').textContent = cb.value;
+                            row.querySelector('.st-duration').value = st.duration || '';
+                            row.querySelector('.st-note').value = st.note || '';
+                        }
+                    });
+                });
+            } catch (e) {}
+        }
+
+        // --- MAJOR EVENTS LOGIC (checklist + inputs below) ---
+        document.querySelectorAll('.major-event-checkbox').forEach(function(box) {
+            box.addEventListener('change', function() {
+                var container = document.getElementById('major-events-inputs-container');
+                var safeId = 'evt-input-' + this.value.replace(/[^a-zA-Z0-9]/g, '');
+                if (this.checked) {
+                    var html = '<div id="' + safeId + '" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 10px;">' +
+                        '<strong style="font-size: 13px; color: #333;">' + this.value.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</strong>' +
+                        '<div style="display: flex; gap: 10px; margin-top: 5px;">' +
+                        '<div style="flex: 1;"><input type="text" class="form-control form-control-sm evt-duration" placeholder="Duration (e.g. 5 days)"></div>' +
+                        '<div style="flex: 2;"><input type="text" class="form-control form-control-sm evt-note" placeholder="Note"></div>' +
+                        '</div></div>';
+                    container.insertAdjacentHTML('beforeend', html);
+                } else {
+                    var el = document.getElementById(safeId);
+                    if (el) el.remove();
+                }
+            });
+        });
+        function saveMajorEvents() {
+            var data = [];
+            document.querySelectorAll('.major-event-checkbox:checked').forEach(function(box) {
+                var safeId = 'evt-input-' + box.value.replace(/[^a-zA-Z0-9]/g, '');
+                var row = document.getElementById(safeId);
+                if (row) {
+                    data.push({
+                        event_type: box.value,
+                        duration: row.querySelector('.evt-duration').value,
+                        note: row.querySelector('.evt-note').value
+                    });
+                }
+            });
+            document.getElementById('major_events_data').value = JSON.stringify(data);
+            closeModal('majorEventsModal');
+        }
+        function restoreMajorEventsFromHidden() {
+            document.querySelectorAll('.major-event-checkbox').forEach(function(cb) { cb.checked = false; });
+            document.getElementById('major-events-inputs-container').innerHTML = '';
+            try {
+                var v = document.getElementById('major_events_data').value;
+                if (!v) return;
+                var list = JSON.parse(v);
+                list.forEach(function(evt) {
+                    var type = evt.event_type || evt;
+                    document.querySelectorAll('.major-event-checkbox').forEach(function(cb) {
+                        if (cb.value === type) {
+                            cb.checked = true;
+                            var safeId = 'evt-input-' + cb.value.replace(/[^a-zA-Z0-9]/g, '');
+                            var container = document.getElementById('major-events-inputs-container');
+                            var html = '<div id="' + safeId + '" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 10px;">' +
+                                '<strong style="font-size: 13px; color: #333;"></strong>' +
+                                '<div style="display: flex; gap: 10px; margin-top: 5px;">' +
+                                '<div style="flex: 1;"><input type="text" class="form-control form-control-sm evt-duration" placeholder="Duration (e.g. 5 days)"></div>' +
+                                '<div style="flex: 2;"><input type="text" class="form-control form-control-sm evt-note" placeholder="Note"></div>' +
+                                '</div></div>';
+                            container.insertAdjacentHTML('beforeend', html);
+                            var row = document.getElementById(safeId);
+                            row.querySelector('strong').textContent = cb.value;
+                            row.querySelector('.evt-duration').value = evt.duration || '';
+                            row.querySelector('.evt-note').value = evt.note || '';
+                        }
+                    });
+                });
+            } catch (e) {}
+        }
+
+        // --- Adherence Ranges ---
+        function bindAdherenceCheckboxes() {
+            document.querySelectorAll('.adherence-checkbox').forEach(cb => {
+                cb.addEventListener('change', function() {
+                    const container = document.getElementById('adherence-ranges-container');
+                    const id = 'adherence-range-' + this.value.replace(/\s+/g, '_');
+                    if (this.checked) {
+                        let html = '<div class="range-group" id="' + id + '" data-status="' + this.value + '"><div class="range-row"><label>Start: <input type="date" class="range-start"></label> <label>End: <input type="date" class="range-end"></label></div><button type="button" class="btn" style="margin-top:6px; padding:4px 10px; font-size:11px; background:#7ab8e0; color:#fff;" onclick="addExtraRange(this, \'adherence\')">+ Add another range</button></div>';
+                        container.insertAdjacentHTML('beforeend', html);
+                    } else {
+                        const g = document.getElementById(id);
+                        if (g) g.remove();
+                    }
+                });
+            });
+        }
+        function addExtraRange(btn, kind) {
+            const group = btn.closest('.range-group');
+            const row = document.createElement('div');
+            row.className = 'range-row';
+            row.innerHTML = '<label>Start: <input type="date" class="range-start"></label> <label>End: <input type="date" class="range-end"></label>';
+            group.insertBefore(row, btn);
+        }
+        function closeAdherenceRangesModal() {
+            const data = [];
+            document.querySelectorAll('#adherence-ranges-container .range-group').forEach(group => {
+                const status = group.getAttribute('data-status');
+                group.querySelectorAll('.range-row').forEach(row => {
+                    const start = row.querySelector('.range-start');
+                    const end = row.querySelector('.range-end');
+                    if (start && end) data.push({ status: status, start: start.value || null, end: end.value || null });
+                });
+            });
+            document.getElementById('adherence_data').value = JSON.stringify(data);
+            closeModal('adherenceRangesModal');
+        }
+        function openAdherenceRangesModal() {
+            document.getElementById('adherenceRangesModal').style.display = 'block';
+        }
+
+        // --- Clinical State Ranges ---
+        function bindClinicalStateCheckboxes() {
+            document.querySelectorAll('.clinical-state-checkbox').forEach(cb => {
+                cb.addEventListener('change', function() {
+                    const container = document.getElementById('clinical-state-ranges-container');
+                    const id = 'clinical-state-range-' + this.value.replace(/\s+/g, '_');
+                    if (this.checked) {
+                        let html = '<div class="range-group" id="' + id + '" data-state="' + this.value + '"><div class="range-row"><label>Start: <input type="date" class="range-start"></label> <label>End: <input type="date" class="range-end"></label></div><button type="button" class="btn" style="margin-top:6px; padding:4px 10px; font-size:11px; background:#7ab8e0; color:#fff;" onclick="addExtraRange(this, \'clinical\')">+ Add another range</button></div>';
+                        container.insertAdjacentHTML('beforeend', html);
+                    } else {
+                        const g = document.getElementById(id);
+                        if (g) g.remove();
+                    }
+                });
+            });
+        }
+        function closeClinicalStateRangesModal() {
+            const data = [];
+            document.querySelectorAll('#clinical-state-ranges-container .range-group').forEach(group => {
+                const state = group.getAttribute('data-state');
+                group.querySelectorAll('.range-row').forEach(row => {
+                    const start = row.querySelector('.range-start');
+                    const end = row.querySelector('.range-end');
+                    if (start && end) data.push({ state: state, start: start.value || null, end: end.value || null });
+                });
+            });
+            document.getElementById('clinical_state_data').value = JSON.stringify(data);
+            closeModal('clinicalStateRangesModal');
+        }
+        function openClinicalStateRangesModal() {
+            document.getElementById('clinicalStateRangesModal').style.display = 'block';
+        }
+
         // Smart Dropdown Logic
         function updateDurationOptions(input) {
             const val = input.value.trim();
