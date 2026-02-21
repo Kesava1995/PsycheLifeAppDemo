@@ -200,12 +200,34 @@
                             <div><label>Differential Diagnosis</label><textarea name="differential_diagnosis" rows="2"></textarea></div>
                         </div>
                     </div>
+
+                    <div style="margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
+                        <h4 style="margin:0 0 10px 0; color:#555;">Current Clinical State</h4>
+                        <select name="clinical_state" class="form-control" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc;">
+                            <option value="" selected>Select State...</option>
+                            <option value="Recovery">Recovery</option>
+                            <option value="Remission">Remission</option>
+                            <option value="Partial Remission">Partial Remission</option>
+                            <option value="Relapse">Relapse</option>
+                            <option value="Hospitalisation">Hospitalisation</option>
+                            <option value="Loss of Follow-up">Loss of Follow-up</option>
+                        </select>
+                    </div>
 					
 					<div class="section-header" style="flex-wrap: wrap;">
 					<span class="section-title">Medications</span>
 					<button type="button" class="add-btn" onclick="addMedication()">+</button>
 					<button type="button" class="btn" onclick="document.getElementById('modalEqDose').style.display='block'" style="padding: 5px 15px; font-size: 12px; margin-left: 10px; background: #666; color: #fff; width: auto; line-height: 1; flex-shrink: 0; white-space: nowrap;">⚖️ Equivalent Dose</button>
 				</div>
+                <div style="margin-bottom: 15px;">
+                    <label style="font-size: 13px; font-weight: 600; color: #555; margin-right: 10px;">Medication Adherence:</label>
+                    <select name="medication_adherence" class="form-control" style="width: auto; display: inline-block; padding: 6px; font-size: 13px; border-radius: 4px; border: 1px solid #ccc;">
+                        <option value="" selected>Select Adherence...</option>
+                        <option value="Complete">Complete</option>
+                        <option value="Partial">Partial</option>
+                        <option value="No Adherence">No Adherence</option>
+                    </select>
+                </div>
                     <div id="meds-container"></div>
                     
                     <div style="margin-top: 20px; background:#f9fafb; padding:15px; border-radius:8px; display:flex; gap:20px; align-items:center;">

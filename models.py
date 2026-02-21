@@ -60,6 +60,9 @@ class Visit(db.Model):
     
     note = db.Column(db.Text)
     
+    clinical_state = db.Column(db.String(50), nullable=True)
+    medication_adherence = db.Column(db.String(50), nullable=True)
+    
     symptom_entries = db.relationship('SymptomEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
     medication_entries = db.relationship('MedicationEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
     side_effect_entries = db.relationship('SideEffectEntry', backref='visit', lazy=True, cascade='all, delete-orphan')

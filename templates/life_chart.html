@@ -7,6 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     
     <style>
         :root { --primary: #A5DCFE; --dark: #7ab8e0; --bg: #f4f8fb; --text-main: #333; }
@@ -336,6 +337,20 @@
             <option value="" disabled selected>Select chart to add...</option>
             </select>
         <button onclick="addSelectedWidget()" class="add-widget-btn">Insert Chart</button>
+        <div style="display: flex; align-items: center; gap: 10px; margin-right: 15px; border-right: 1px solid #ccc; padding-right: 15px;">
+            <select id="zoomSelect" onchange="handleZoomSelect(this.value)" class="btn btn-sm" style="background: white; border: 1px dashed #7ab8e0; color: #333; margin: 0;">
+                <option value="">Zoom View...</option>
+                <option value="week">Week-wise</option>
+                <option value="month">Month-wise</option>
+                <option value="year">Year-wise</option>
+                <option value="custom">Custom Range</option>
+            </select>
+            <div id="customZoomDiv" style="display:none; align-items:center; gap:5px;">
+                <input type="date" id="zoomStart" class="btn btn-sm" style="background:white; border:1px solid #ccc; padding:4px; margin:0;">
+                <input type="date" id="zoomEnd" class="btn btn-sm" style="background:white; border:1px solid #ccc; padding:4px; margin:0;">
+                <button class="btn btn-sm" onclick="applyCustomZoom()" style="background:#7ab8e0; color:white; margin:0;">Go</button>
+            </div>
+        </div>
         <button onclick="openDownloadModal()" class="btn" style="padding: 5px 10px; font-size: 13px; height: 30px; background: #555; color: white; margin-left: auto;">Download</button>
     </div>
 
@@ -363,13 +378,34 @@
                 </div>
             </div>
 
+            <div style="margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
+                <h4 style="margin:0 0 10px 0; color:#555;">Current Clinical State</h4>
+                <select name="clinical_state" style="width: 100%; max-width: 280px; padding: 10px; border-radius: 6px; border: 1px solid #ccc;">
+                    <option value="">Select State...</option>
+                    <option value="Recovery" {% if visit and visit.clinical_state == 'Recovery' %}selected{% endif %}>Recovery</option>
+                    <option value="Remission" {% if visit and visit.clinical_state == 'Remission' %}selected{% endif %}>Remission</option>
+                    <option value="Partial Remission" {% if visit and visit.clinical_state == 'Partial Remission' %}selected{% endif %}>Partial Remission</option>
+                    <option value="Relapse" {% if visit and visit.clinical_state == 'Relapse' %}selected{% endif %}>Relapse</option>
+                    <option value="Hospitalisation" {% if visit and visit.clinical_state == 'Hospitalisation' %}selected{% endif %}>Hospitalisation</option>
+                    <option value="Loss of Follow-up" {% if visit and visit.clinical_state == 'Loss of Follow-up' %}selected{% endif %}>Loss of Follow-up</option>
+                </select>
+            </div>
+
             <div style="margin-bottom: 20px;">
                 <h4 style="margin:0 0 10px 0; color:#555; display:flex; align-items:center;">
                     <span style="flex-grow: 1;">Medications</span>
                     <button type="button" class="add-btn-small" onclick="addMedication()" style="margin-right: 10px;">+</button>
                     <button type="button" class="btn" onclick="document.getElementById('modalEqDose').style.display='block'" style="padding: 5px 15px; font-size: 12px; background: #666; color: #fff; width: auto; line-height: 1; margin: 0; white-space: nowrap;">⚖️ Equivalent Dose</button>
                 </h4>
-                
+                <div style="margin-bottom: 10px;">
+                    <label style="font-weight: 600; color: #555; margin-right: 10px;">Medication Adherence:</label>
+                    <select name="medication_adherence" style="padding: 6px; font-size: 13px; border-radius: 4px; border: 1px solid #ccc;">
+                        <option value="">Select Adherence...</option>
+                        <option value="Complete" {% if visit and visit.medication_adherence == 'Complete' %}selected{% endif %}>Complete</option>
+                        <option value="Partial" {% if visit and visit.medication_adherence == 'Partial' %}selected{% endif %}>Partial</option>
+                        <option value="No Adherence" {% if visit and visit.medication_adherence == 'No Adherence' %}selected{% endif %}>No Adherence</option>
+                    </select>
+                </div>
                 <div id="meds-container">
                     {% if visit and visit.medication_entries %}
                         {% for entry in visit.medication_entries %}
@@ -540,21 +576,20 @@
             y: { beginAtZero: true, title: { display: true, text: 'Score' }, grace: '10%' } // Grace adds 10% breathing room above the highest point
         },
         plugins: {
-            // --- UPDATED ZOOM CONFIGURATION ---
-            zoom: { 
-                zoom: { 
-                    wheel: { enabled: true }, 
-                    pinch: { enabled: true }, 
-                    mode: 'x',
-                    // Listener for Zooming
+            zoom: {
+                zoom: {
+                    wheel: { enabled: true },
+                    pinch: { enabled: true },
+                    drag: { enabled: true },
+                    mode: 'xy',
+                    overScaleMode: 'xy',
                     onZoom: ({chart}) => { if(activeStickyDate) showStickyTooltips(activeStickyDate); }
-                }, 
-                pan: { 
-                    enabled: true, 
-                    mode: 'x',
-                    // Listener for Panning (Dragging)
+                },
+                pan: {
+                    enabled: true,
+                    mode: 'xy',
                     onPan: ({chart}) => { if(activeStickyDate) showStickyTooltips(activeStickyDate); }
-                } 
+                }
             },
             tooltip: { enabled: true, mode: 'nearest', intersect: true },
             legend: { display: false } 
@@ -845,11 +880,84 @@
             }
         });
 
+        // --- State Bands & Adherence Strips (Annotations) ---
+        let maxY = 10;
+        (newChart.data.datasets || []).forEach(d => { (d.data || []).forEach(p => { if (p.y != null && p.y > maxY) maxY = p.y; }); });
+        maxY = maxY * 1.15;
+        const stateColors = {
+            'Recovery': 'rgba(156, 192, 163, 0.7)', 'Remission': 'rgba(164, 194, 244, 0.7)',
+            'Partial Remission': 'rgba(162, 212, 212, 0.7)', 'Relapse': 'rgba(204, 133, 115, 0.7)',
+            'Hospitalisation': 'rgba(107, 91, 149, 0.7)', 'Loss of Follow-up': 'rgba(158, 158, 158, 0.7)'
+        };
+        const adhColorsSolid = { 'Complete': 'rgba(34, 139, 34, 0.8)', 'Partial': 'rgba(154, 205, 50, 0.8)', 'No Adherence': 'rgba(204, 85, 0, 0.8)' };
+        const adhColorsDim = { 'Complete': 'rgba(34, 139, 34, 0.15)', 'Partial': 'rgba(154, 205, 50, 0.15)', 'No Adherence': 'rgba(204, 85, 0, 0.15)' };
+        let annotations = {};
+        const vDates = Object.keys(rawData.details || {}).sort();
+        for (let i = 0; i < vDates.length; i++) {
+            const d1 = vDates[i];
+            let nextDate = new Date(d1);
+            if (i < vDates.length - 1) nextDate = new Date(vDates[i + 1]);
+            else nextDate.setDate(nextDate.getDate() + 14);
+            const d2 = nextDate.toISOString().split('T')[0];
+            const detail = rawData.details[d1];
+            const state = detail ? detail.clinical_state : '';
+            const adh = detail ? detail.medication_adherence : '';
+            if (key === 'symptoms' && state) {
+                annotations['state_' + i] = {
+                    type: 'box', xMin: d1, xMax: d2, yScaleID: 'y', yMin: maxY * 0.90, yMax: maxY,
+                    backgroundColor: stateColors[state] || 'rgba(158,158,158,0.7)', borderWidth: 0,
+                    label: { display: true, content: state, color: '#333', font: { size: 10 } }
+                };
+            }
+            if (key === 'symptoms' && adh) {
+                annotations['adhDim_' + i] = {
+                    type: 'box', xMin: d1, xMax: d2, yScaleID: 'y', yMin: 0, yMax: maxY * 0.08,
+                    backgroundColor: adhColorsDim[adh] || 'rgba(200,200,200,0.15)', borderWidth: 0
+                };
+            }
+            if (key === 'meds' && adh) {
+                annotations['adhSol_' + i] = {
+                    type: 'box', xMin: d1, xMax: d2, yScaleID: 'y', yMin: maxY * 0.90, yMax: maxY,
+                    backgroundColor: adhColorsSolid[adh] || 'rgba(100,100,100,0.8)', borderWidth: 0,
+                    label: { display: true, content: 'Adherence: ' + adh, color: '#fff', font: { size: 10 } }
+                };
+            }
+        }
+        if (!newChart.options.plugins) newChart.options.plugins = {};
+        newChart.options.plugins.annotation = { annotations: annotations };
+        if (newChart.options.scales && newChart.options.scales.y) newChart.options.scales.y.max = maxY;
+
         // Hide non-unified by default (same as original logic)
         newChart.data.datasets.forEach(ds => { if (!ds.isUnified) ds.hidden = true; });
         newChart.update();
 
         charts[key] = newChart;
+    }
+
+    function handleZoomSelect(val) {
+        const customDiv = document.getElementById('customZoomDiv');
+        if (customDiv) customDiv.style.display = (val === 'custom') ? 'inline-flex' : 'none';
+        if (!val || val === 'custom') return;
+        const end = new Date();
+        let start = new Date();
+        if (val === 'week') start.setDate(end.getDate() - 7);
+        if (val === 'month') start.setMonth(end.getMonth() - 1);
+        if (val === 'year') start.setFullYear(end.getFullYear() - 1);
+        applyZoomRange(start, end);
+    }
+    function applyCustomZoom() {
+        const s = document.getElementById('zoomStart').value;
+        const e = document.getElementById('zoomEnd').value;
+        if (s && e) applyZoomRange(new Date(s), new Date(e));
+    }
+    function applyZoomRange(start, end) {
+        Object.values(charts).forEach(chart => {
+            if (chart && chart.options && chart.options.scales && chart.options.scales.x) {
+                chart.options.scales.x.min = start.toISOString ? start.toISOString().split('T')[0] : start;
+                chart.options.scales.x.max = end.toISOString ? end.toISOString().split('T')[0] : end;
+                chart.update();
+            }
+        });
     }
 
     // --- SIDEBAR TOGGLES (Updated to check chart existence) ---

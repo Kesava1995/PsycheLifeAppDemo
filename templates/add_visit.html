@@ -308,11 +308,33 @@
                             <textarea name="differential_diagnosis" rows="3">{{ last_visit.differential_diagnosis if last_visit else '' }}</textarea>
                         </div>
                     </div>
+
+                    <div style="margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
+                        <h4 style="margin:0 0 10px 0; color:#555;">Current Clinical State</h4>
+                        <select name="clinical_state" class="form-control" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc;">
+                            <option value="" {% if not last_visit or last_visit.clinical_state == '' %}selected{% endif %}>Select State...</option>
+                            <option value="Recovery" {% if last_visit and last_visit.clinical_state == 'Recovery' %}selected{% endif %}>Recovery</option>
+                            <option value="Remission" {% if last_visit and last_visit.clinical_state == 'Remission' %}selected{% endif %}>Remission</option>
+                            <option value="Partial Remission" {% if last_visit and last_visit.clinical_state == 'Partial Remission' %}selected{% endif %}>Partial Remission</option>
+                            <option value="Relapse" {% if last_visit and last_visit.clinical_state == 'Relapse' %}selected{% endif %}>Relapse</option>
+                            <option value="Hospitalisation" {% if last_visit and last_visit.clinical_state == 'Hospitalisation' %}selected{% endif %}>Hospitalisation</option>
+                            <option value="Loss of Follow-up" {% if last_visit and last_visit.clinical_state == 'Loss of Follow-up' %}selected{% endif %}>Loss of Follow-up</option>
+                        </select>
+                    </div>
 					
                     <div class="section-header" style="flex-wrap: wrap;">
                     <span class="section-title">Medications</span>
                     <button type="button" class="add-btn" onclick="addMedication()">+</button>
                     <button type="button" class="btn" onclick="document.getElementById('modalEqDose').style.display='block'" style="padding: 5px 15px; font-size: 12px; margin-left: 10px; background: #666; color: #fff; width: auto; line-height: 1; flex-shrink: 0; white-space: nowrap;">⚖️ Equivalent Dose</button>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="font-size: 13px; font-weight: 600; color: #555; margin-right: 10px;">Medication Adherence:</label>
+                    <select name="medication_adherence" class="form-control" style="width: auto; display: inline-block; padding: 6px; font-size: 13px; border-radius: 4px; border: 1px solid #ccc;">
+                        <option value="" {% if not last_visit or last_visit.medication_adherence == '' %}selected{% endif %}>Select Adherence...</option>
+                        <option value="Complete" {% if last_visit and last_visit.medication_adherence == 'Complete' %}selected{% endif %}>Complete</option>
+                        <option value="Partial" {% if last_visit and last_visit.medication_adherence == 'Partial' %}selected{% endif %}>Partial</option>
+                        <option value="No Adherence" {% if last_visit and last_visit.medication_adherence == 'No Adherence' %}selected{% endif %}>No Adherence</option>
+                    </select>
                 </div>
                     <div id="meds-container">
                         {% if last_visit %}

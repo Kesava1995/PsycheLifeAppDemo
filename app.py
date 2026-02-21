@@ -21,6 +21,7 @@ from werkzeug.utils import secure_filename
 import base64
 import uuid
 import json
+from sqlalchemy import text
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-change-in-production'
@@ -40,6 +41,17 @@ db.init_app(app)
 # Ensure tables are created (especially new Phase 2 tables)
 with app.app_context():
     db.create_all()
+    # Add clinical_state and medication_adherence to visits if missing (existing DBs)
+    try:
+        db.session.execute(text('ALTER TABLE visits ADD COLUMN clinical_state VARCHAR(50)'))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    try:
+        db.session.execute(text('ALTER TABLE visits ADD COLUMN medication_adherence VARCHAR(50)'))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
 # --- Register Helper for Templates ---
 @app.context_processor
@@ -566,6 +578,9 @@ def parse_date(date_str):
 
 def process_visit_form_data(visit, form_data):
     """Helper function to process and save visit form data."""
+    # State and Adherence
+    visit.clinical_state = form_data.get('clinical_state', '')
+    visit.medication_adherence = form_data.get('medication_adherence', '')
     
     # NEW: Next Visit Date
     next_date = form_data.get('next_visit_date')
@@ -921,6 +936,8 @@ def update_clinical(visit_id):
     visit.note = request.form.get('visit_note', '')
     visit.provisional_diagnosis = request.form.get('provisional_diagnosis', '')
     visit.differential_diagnosis = request.form.get('differential_diagnosis', '')
+    visit.clinical_state = request.form.get('clinical_state', '')
+    visit.medication_adherence = request.form.get('medication_adherence', '')
     
     next_date = request.form.get('next_visit_date')
     if next_date:
@@ -1394,6 +1411,8 @@ def life_chart(patient_id):
         # Build Modal Data
         visit_details[v_date_str] = {
             'date': v_date_str,
+            'clinical_state': getattr(v, 'clinical_state', ''),
+            'medication_adherence': getattr(v, 'medication_adherence', ''),
             'symptoms': [{'name': s.symptom_name, 'score': s.score_current, 'note': s.note} for s in v.symptom_entries],
             'meds': [{'name': m.drug_name, 'dose': m.dose_mg, 'freq': m.frequency, 'is_tapering': m.is_tapering, 'taper_plan': m.taper_plan} for m in v.medication_entries],
             'se': [{'name': s.side_effect_name, 'score': s.score_current} for s in v.side_effect_entries],
