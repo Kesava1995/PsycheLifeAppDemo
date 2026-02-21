@@ -1149,14 +1149,37 @@ def prepare_chart_data(patient_id: int) -> dict:
     # --- 2. Process Medications ---
     med_data = {}
     for visit in visits:
-        v_date = datetime.combine(visit.date, datetime.min.time()).isoformat()
+        v_date = datetime.combine(visit.date, datetime.min.time())
         for entry in visit.medication_entries:
             name = entry.drug_name
+            if name not in med_data:
+                med_data[name] = []
+
+            # --- NEW: Tapering Check ---
+            if entry.is_tapering and entry.taper_plan:
+                try:
+                    plan = json.loads(entry.taper_plan)
+                    current_date = v_date
+                    for step in plan:
+                        dose = get_unified_dose(name, step.get('dose_mg', ''))
+                        med_data[name].append({
+                            'x': current_date.isoformat(),
+                            'y': dose,
+                            'visit_id': visit.id
+                        })
+                        # Advance the date by the duration for the next step's starting point
+                        dur_delta = parse_duration(step.get('duration_text', ''))
+                        if dur_delta:
+                            current_date += dur_delta
+                    continue  # Skip standard logic below
+                except Exception:
+                    pass
+
+            # --- Standard Logic ---
             val = get_unified_dose(name, entry.dose_mg)
-            if name not in med_data: med_data[name] = []
-            med_data[name].append({'x': v_date, 'y': val, 'visit_id': visit.id})
-            
-    medication_datasets = [] # RENAMED to match template
+            med_data[name].append({'x': v_date.isoformat(), 'y': val, 'visit_id': visit.id})
+
+    medication_datasets = []
     for name, points in med_data.items():
         medication_datasets.append({
             'label': name,
@@ -1319,7 +1342,31 @@ def life_chart(patient_id):
 
     def build_med_points(entry, v_date):
         pts = []
-        days = get_days(entry.duration_text)
+
+        # --- NEW: Check for Tapering Plan ---
+        if entry.is_tapering and entry.taper_plan:
+            try:
+                plan = json.loads(entry.taper_plan)
+                current_date = v_date
+                for step in plan:
+                    days = get_days(step.get('duration_text', ''))
+                    dose = get_unified_dose(entry.drug_name, step.get('dose_mg', ''))
+                    duration = max(1, days)
+                    # Fill daily points for this taper step
+                    for i in range(duration):
+                        d = current_date + timedelta(days=i)
+                        pts.append({
+                            'x': d.strftime('%Y-%m-%d'),
+                            'y': dose,
+                            'detail': f"Freq: {step.get('frequency', '')} (Tapering)"
+                        })
+                    current_date += timedelta(days=duration)
+                return pts
+            except Exception:
+                pass  # Fallback to standard logic if JSON parsing fails
+
+        # --- STANDARD (Non-Tapering) LOGIC ---
+        days = get_days(getattr(entry, 'duration_text', ''))
         dose = get_unified_dose(entry.drug_name, entry.dose_mg)
         # Daily points from visit date onwards
         duration = max(1, days)
@@ -1522,13 +1569,41 @@ def preview_lifechart(patient_id):
 
     def build_med_points(entry, v_date):
         pts = []
-        days = get_days(entry.duration_text)
-        # Use a simple dose conversion (you may need to adjust this)
+
+        # --- NEW: Check for Tapering Plan ---
+        if getattr(entry, 'is_tapering', False) and getattr(entry, 'taper_plan', None):
+            try:
+                plan = json.loads(entry.taper_plan)
+                current_date = v_date
+                for step in plan:
+                    days = get_days(step.get('duration_text', ''))
+                    try:
+                        dose_str = step.get('dose_mg', '0')
+                        dose_val = float(dose_str.split()[0]) if dose_str.split() else 0
+                    except Exception:
+                        dose_val = 0
+                    duration = max(1, days)
+
+                    for i in range(duration):
+                        d = current_date + timedelta(days=i)
+                        pts.append({
+                            'x': d.strftime('%Y-%m-%d'),
+                            'y': dose_val,
+                            'detail': f"Freq: {step.get('frequency', '')} (Tapering)"
+                        })
+                    current_date += timedelta(days=duration)
+                return pts
+            except Exception:
+                pass  # Fallback
+
+        # --- STANDARD (Non-Tapering) LOGIC ---
+        days = get_days(getattr(entry, 'duration_text', ''))
         try:
             dose_str = entry.dose_mg or '0'
             dose_val = float(dose_str.split()[0]) if dose_str.split() else 0
-        except:
+        except Exception:
             dose_val = 0
+
         duration = max(1, days)
         for i in range(duration):
             d = v_date + timedelta(days=i)
