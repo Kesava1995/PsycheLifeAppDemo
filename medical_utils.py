@@ -123,3 +123,55 @@ def format_frequency(code):
         
     # Join all but the last with commas, and the very last with ' & '
     return ", ".join(output_parts[:-1]) + " & " + output_parts[-1]
+
+
+# --- SCALE ASSESSMENT SCORING (CIWA-Ar, Y-BOCS) ---
+
+def calculate_ciwa_ar(responses):
+    """
+    Calculates CIWA-Ar score and severity.
+    :param responses: Dictionary of integer values for the 10 questions (e.g. {'q1': 7, 'q2': 4, ...})
+    """
+    total_score = sum(int(val) for val in responses.values())
+
+    if total_score <= 9:
+        severity = "Absent or minimal withdrawal"
+    elif 10 <= total_score <= 19:
+        severity = "Mild to moderate withdrawal"
+    else:
+        severity = "Severe withdrawal"
+
+    return total_score, severity
+
+
+def calculate_ybocs(responses):
+    """
+    Calculates Y-BOCS score and severity.
+    :param responses: Dictionary of integer values for the 10 questions
+    """
+    total_score = sum(int(val) for val in responses.values())
+
+    if total_score <= 7:
+        severity = "Subclinical"
+    elif 8 <= total_score <= 15:
+        severity = "Mild OCD"
+    elif 16 <= total_score <= 23:
+        severity = "Moderate OCD"
+    elif 24 <= total_score <= 31:
+        severity = "Severe OCD"
+    else:
+        severity = "Extreme OCD"
+
+    return total_score, severity
+
+
+def process_scale_submission(scale_id, responses):
+    """
+    Main router for scale calculations to be called from your Flask route.
+    """
+    if scale_id == "CIWA-Ar":
+        return calculate_ciwa_ar(responses)
+    elif scale_id == "Y-BOCS":
+        return calculate_ybocs(responses)
+    else:
+        raise ValueError(f"Unknown Scale ID: {scale_id}")

@@ -5,8 +5,8 @@ PsycheLife - Medical web app for psychiatric patient management.
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response, session, abort
 from functools import wraps
 from datetime import datetime, date, timedelta, timezone
-from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry
-from medical_utils import get_unified_dose, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency
+from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry, ScaleAssessment
+from medical_utils import get_unified_dose, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency, process_scale_submission
 import io
 import os
 from reportlab.lib.pagesizes import letter, A4
@@ -564,6 +564,46 @@ def delete_template(name):
     return jsonify({"error": "Template not found"}), 404
 
 
+@app.route('/api/submit_scale', methods=['POST'])
+@doctor_required
+def submit_scale():
+    data = request.get_json() or {}
+    visit_id = data.get('visit_id')
+    scale_id = data.get('scale_id')
+    scale_name = data.get('scale_name')
+    responses = data.get('responses')
+
+    if not visit_id or not scale_id or not scale_name or responses is None:
+        return jsonify({"status": "error", "message": "Missing visit_id, scale_id, scale_name, or responses"}), 400
+
+    try:
+        total_score, severity_label = process_scale_submission(scale_id, responses)
+
+        new_assessment = ScaleAssessment(
+            visit_id=int(visit_id),
+            scale_id=scale_id,
+            scale_name=scale_name,
+            total_score=total_score,
+            severity_label=severity_label,
+            raw_responses=responses
+        )
+        db.session.add(new_assessment)
+        db.session.commit()
+
+        return jsonify({
+            "status": "success",
+            "total_score": total_score,
+            "severity_label": severity_label
+        }), 200
+
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
 @app.route('/guest/lifechart_proxy', methods=['POST'])
 def guest_lifechart_proxy():
     if not session.get('guest'):
@@ -684,6 +724,26 @@ def process_visit_form_data(visit, form_data):
                         end_date=end_d
                     ))
         except (json.JSONDecodeError, TypeError):
+            pass
+
+    # 1e. Scales (Phase 2) - from modal JSON
+    scales_json = form_data.get('scales_data', '')
+    if scales_json:
+        try:
+            for sa in ScaleAssessment.query.filter_by(visit_id=visit.id).all():
+                db.session.delete(sa)
+            for item in json.loads(scales_json):
+                if isinstance(item, dict) and item.get('scale_id'):
+                    db.session.add(ScaleAssessment(
+                        visit_id=visit.id,
+                        scale_id=item['scale_id'],
+                        scale_name=item['scale_name'],
+                        total_score=int(item['total_score']),
+                        severity_label=item['severity_label'],
+                        raw_responses=item.get('raw_responses', {})
+                    ))
+        except (json.JSONDecodeError, TypeError, Exception) as e:
+            print(f"Error parsing Scales Data: {e}")
             pass
 
     # 2. Personality (Phase 2)
@@ -1034,7 +1094,14 @@ def edit_visit(visit_id):
         'end_date': su.end_date.strftime('%Y-%m-%d') if su.end_date else None,
         'note': su.note or ''
     } for su in getattr(visit, 'substance_use_entries', [])])
-    return render_template('edit_visit.html', visit=visit, patient=patient, previous_visit=previous_visit, doctor=doctor, major_events_data=major_events_data, stressors_data=stressors_data, adherence_data=adherence_data, clinical_state_data=clinical_state_data, substances_data=substances_data)
+    scales_data = json.dumps([{
+        'scale_id': sa.scale_id,
+        'scale_name': sa.scale_name,
+        'total_score': sa.total_score,
+        'severity_label': sa.severity_label,
+        'raw_responses': sa.raw_responses or {}
+    } for sa in getattr(visit, 'scale_assessments', [])])
+    return render_template('edit_visit.html', visit=visit, patient=patient, previous_visit=previous_visit, doctor=doctor, major_events_data=major_events_data, stressors_data=stressors_data, adherence_data=adherence_data, clinical_state_data=clinical_state_data, substances_data=substances_data, scales_data=scales_data)
 
 
 @app.route('/visit/<int:visit_id>/update_clinical', methods=['POST'])

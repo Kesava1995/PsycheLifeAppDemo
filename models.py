@@ -76,6 +76,7 @@ class Visit(db.Model):
     adherence_ranges = db.relationship('AdherenceRange', backref='visit', lazy=True, cascade='all, delete-orphan')
     clinical_state_ranges = db.relationship('ClinicalStateRange', backref='visit', lazy=True, cascade='all, delete-orphan')
     substance_use_entries = db.relationship('SubstanceUseEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
+    scale_assessments = db.relationship('ScaleAssessment', backref='visit', lazy=True, cascade='all, delete-orphan')
 
 
 class SymptomEntry(db.Model):
@@ -272,3 +273,16 @@ class SubstanceUseEntry(db.Model):
     start_date = db.Column(db.Date, nullable=True)
     end_date = db.Column(db.Date, nullable=True)
     note = db.Column(db.Text)
+
+
+class ScaleAssessment(db.Model):
+    __tablename__ = 'scale_assessment'
+
+    id = db.Column(db.Integer, primary_key=True)
+    visit_id = db.Column(db.Integer, db.ForeignKey('visits.id'), nullable=False)
+    scale_id = db.Column(db.String(50), nullable=False)   # e.g. 'CIWA-Ar' or 'Y-BOCS'
+    scale_name = db.Column(db.String(100), nullable=False)
+    total_score = db.Column(db.Integer, nullable=False)
+    severity_label = db.Column(db.String(100), nullable=False)
+    raw_responses = db.Column(db.JSON, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

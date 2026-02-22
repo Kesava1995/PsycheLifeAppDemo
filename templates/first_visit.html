@@ -173,6 +173,14 @@
                     <input type="hidden" name="stressors_data" id="stressors_data" value="">
                     <input type="hidden" name="major_events_data" id="major_events_data" value="">
 
+                    <div class="section-header"><span class="section-title">Psychiatric Scales</span></div>
+                    <div class="click-trigger-row" style="margin-bottom: 20px;">
+                        <div class="click-trigger" onclick="openScalesModal()" style="border-color: #9966FF; background: #fdfdfd;">
+                            <span>📋 Select &amp; Mark Scales</span><span id="scales-count-badge" style="background: #9966FF; color: white; border-radius: 10px; padding: 2px 8px; font-size: 12px; display: none;">0 Applied</span><span>▼</span>
+                        </div>
+                    </div>
+                    <input type="hidden" name="scales_data" id="scales_data" value="">
+
                     <div class="section-header">
                     <span class="section-title">Chief Complaints</span>
                     <button type="button" class="add-btn" onclick="addSymptom()" style="margin-left: 10px;">+</button>
@@ -326,6 +334,38 @@
                             <div style="margin-top:15px; padding-top:15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
                                 <button type="button" class="btn" style="margin-top:0; background:#7ab8e0; color:#fff;" onclick="saveMajorEvents()">Save Events</button>
                                 <button type="button" class="btn" style="margin-top:0; background:#888; color:#fff;" onclick="closeModal('majorEventsModal')">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="scalesModal" class="modal" onclick="if(event.target === this) closeModal('scalesModal')">
+                        <div class="modal-content" style="width: 600px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; margin-top: 5vh;">
+                            <div id="scales-list-view" style="display: flex; flex-direction: column; height: 100%;">
+                                <h4 style="margin-top: 0; margin-bottom: 15px;">Psychiatric Scales</h4>
+                                <input type="text" id="scale-search" placeholder="Search scales by name..." class="form-control mb-2" onkeyup="filterScales()">
+                                <select id="scale-recommended" class="form-control mb-2" onchange="filterScales(this.value)">
+                                    <option value="">-- All Recommended Scales --</option>
+                                    <option value="CIWA-Ar">Alcohol Withdrawal (CIWA-Ar)</option>
+                                    <option value="Y-BOCS">OCD (Y-BOCS)</option>
+                                </select>
+                                <div id="available-scales-list" style="overflow-y: auto; max-height: 50vh; border: 1px solid #eee; padding: 10px; border-radius: 6px; margin-top: 10px;"></div>
+                                <div style="margin-top:15px; padding-top:15px; border-top: 1px solid #eee; text-align: right;">
+                                    <button type="button" class="btn" style="margin-top:0; background:#888; color:#fff;" onclick="closeModal('scalesModal')">Done</button>
+                                </div>
+                            </div>
+                            <div id="scale-assessment-view" style="display: none; flex-direction: column; height: 100%;">
+                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                                    <button type="button" class="btn" onclick="showScalesList()" style="background: #eee; color: #333; margin: 0; padding: 5px 10px; font-size: 12px;">⬅ Back</button>
+                                    <h4 id="active-scale-title" style="margin: 0; color: #4facfe;"></h4>
+                                </div>
+                                <div id="active-scale-form" style="overflow-y: auto; max-height: 50vh; padding-right: 10px; font-size: 14px; border-bottom: 1px solid #eee;"></div>
+                                <div style="margin-top:15px; padding:15px; background: #f0f8ff; border-radius: 6px; text-align: center; border: 1px dashed #7ab8e0;">
+                                    <strong style="font-size: 1.2rem; color: #333;">Total Score: <span id="scale-live-score" style="color: #e6194b;">0</span></strong><br>
+                                    <span id="scale-live-severity" style="color: #666; font-weight: bold; font-size: 1.1rem;">-</span>
+                                </div>
+                                <div style="margin-top:15px; padding-top:15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
+                                    <button type="button" class="btn" style="margin-top:0; flex: 1; background:#7BC4F0; color:#000;" onclick="saveActiveScale()">Save &amp; Apply to Patient</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1332,6 +1372,180 @@ function applyTemplates() {
         document.getElementById('eq_past_dose').value = '';
         document.getElementById('eq_result_dose').value = '';
     }
+</script>
+<script>
+// ==========================================
+// PSYCHIATRIC SCALES LOGIC
+// ==========================================
+const scalesLibrary = [
+    {
+        "scaleId": "CIWA-Ar",
+        "scaleName": "Clinical Institute Withdrawal Assessment for Alcohol (CIWA-Ar)",
+        "questions": [
+            {"id": "q1", "text": "Nausea/Vomiting", "options": [{"value": 0, "label": "None"}, {"value": 1, "label": "Mild nausea with no vomiting"}, {"value": 2, "label": "2"}, {"value": 3, "label": "3"}, {"value": 4, "label": "Intermittent nausea"}, {"value": 5, "label": "5"}, {"value": 6, "label": "6"}, {"value": 7, "label": "Constant nausea, frequent dry heaves/vomiting"}]},
+            {"id": "q2", "text": "Tremors - have patient extend arms & spread fingers", "options": [{"value": 0, "label": "No tremor"}, {"value": 1, "label": "Not visible, but can be felt"}, {"value": 2, "label": "2"}, {"value": 3, "label": "3"}, {"value": 4, "label": "Moderate, arms extended"}, {"value": 5, "label": "5"}, {"value": 6, "label": "6"}, {"value": 7, "label": "Severe, even arms not extended"}]},
+            {"id": "q3", "text": "Anxiety", "options": [{"value": 0, "label": "No anxiety"}, {"value": 1, "label": "Mildly anxious"}, {"value": 2, "label": "2"}, {"value": 3, "label": "3"}, {"value": 4, "label": "Moderately anxious"}, {"value": 5, "label": "5"}, {"value": 6, "label": "6"}, {"value": 7, "label": "Equivalent to acute panic states"}]},
+            {"id": "q4", "text": "Agitation", "options": [{"value": 0, "label": "Normal activity"}, {"value": 1, "label": "Somewhat normal"}, {"value": 2, "label": "2"}, {"value": 3, "label": "3"}, {"value": 4, "label": "Moderately fidgety/restless"}, {"value": 5, "label": "5"}, {"value": 6, "label": "6"}, {"value": 7, "label": "Paces back & forth, thrashes about"}]},
+            {"id": "q5", "text": "Paroxysmal Sweats", "options": [{"value": 0, "label": "No sweats"}, {"value": 1, "label": "Barely perceptible, palms moist"}, {"value": 2, "label": "2"}, {"value": 3, "label": "3"}, {"value": 4, "label": "Beads of sweat on forehead"}, {"value": 5, "label": "5"}, {"value": 6, "label": "6"}, {"value": 7, "label": "Drenching sweats"}]},
+            {"id": "q6", "text": "Orientation and clouding of sensorium", "options": [{"value": 0, "label": "Oriented"}, {"value": 1, "label": "Cannot do serial additions or uncertain date"}, {"value": 2, "label": "Disoriented to date by no more than 2 calendar days"}, {"value": 3, "label": "Disoriented to date by > 2 days"}, {"value": 4, "label": "Disoriented to place and/or person"}]},
+            {"id": "q7", "text": "Tactile disturbances", "options": [{"value": 0, "label": "None"}, {"value": 1, "label": "Very mild itching, pins/needles"}, {"value": 2, "label": "Mild"}, {"value": 3, "label": "Moderate"}, {"value": 4, "label": "Moderate hallucinations"}, {"value": 5, "label": "Severe hallucinations"}, {"value": 6, "label": "Extremely severe hallucinations"}, {"value": 7, "label": "Continuous hallucinations"}]},
+            {"id": "q8", "text": "Auditory Disturbances", "options": [{"value": 0, "label": "Not present"}, {"value": 1, "label": "Very mild harshness/startle"}, {"value": 2, "label": "Mild"}, {"value": 3, "label": "Moderate"}, {"value": 4, "label": "Moderate hallucinations"}, {"value": 5, "label": "Severe hallucinations"}, {"value": 6, "label": "Extremely severe hallucinations"}, {"value": 7, "label": "Continuous hallucinations"}]},
+            {"id": "q9", "text": "Visual disturbances", "options": [{"value": 0, "label": "Not present"}, {"value": 1, "label": "Very mild sensitivity"}, {"value": 2, "label": "Mild"}, {"value": 3, "label": "Moderate"}, {"value": 4, "label": "Moderate hallucinations"}, {"value": 5, "label": "Severe hallucinations"}, {"value": 6, "label": "Extremely severe hallucinations"}, {"value": 7, "label": "Continuous hallucinations"}]},
+            {"id": "q10", "text": "Headache", "options": [{"value": 0, "label": "Not present"}, {"value": 1, "label": "Very mild"}, {"value": 2, "label": "Mild"}, {"value": 3, "label": "Moderate"}, {"value": 4, "label": "Moderately severe"}, {"value": 5, "label": "Severe"}, {"value": 6, "label": "Very severe"}, {"value": 7, "label": "Extremely severe"}]}
+        ],
+        "interpretation": [
+            {"min": 0, "max": 9, "label": "Absent or minimal withdrawal"},
+            {"min": 10, "max": 19, "label": "Mild to moderate withdrawal"},
+            {"min": 20, "max": 67, "label": "Severe withdrawal"}
+        ]
+    },
+    {
+        "scaleId": "Y-BOCS",
+        "scaleName": "Yale Brown OCD Scale",
+        "questions": [
+            {"id": "q1", "text": "Time spent on obsessive thoughts?", "options": [{"value": 0, "label": "None"}, {"value": 1, "label": "0-1 hrs/day"}, {"value": 2, "label": "1-3 hrs/day"}, {"value": 3, "label": "3-8 hrs/day"}, {"value": 4, "label": "More than 8 hrs/day"}]},
+            {"id": "q2", "text": "Interference from obsessive thoughts?", "options": [{"value": 0, "label": "None"}, {"value": 1, "label": "Mild"}, {"value": 2, "label": "Definite but manageable"}, {"value": 3, "label": "Substantial interference"}, {"value": 4, "label": "Severe"}]},
+            {"id": "q3", "text": "Distress from obsessive thoughts?", "options": [{"value": 0, "label": "None"}, {"value": 1, "label": "Little"}, {"value": 2, "label": "Moderate but manageable"}, {"value": 3, "label": "Severe"}, {"value": 4, "label": "Nearly constant, Disabling"}]},
+            {"id": "q4", "text": "Resistance to obsessions?", "options": [{"value": 0, "label": "Always try"}, {"value": 1, "label": "Try much of the time"}, {"value": 2, "label": "Try some of the time"}, {"value": 3, "label": "Rarely try. Often yield"}, {"value": 4, "label": "Never try. Completely yield"}]},
+            {"id": "q5", "text": "Control over obsessive thoughts?", "options": [{"value": 0, "label": "Complete control"}, {"value": 1, "label": "Much control"}, {"value": 2, "label": "Some control"}, {"value": 3, "label": "Little control"}, {"value": 4, "label": "No control"}]},
+            {"id": "q6", "text": "Time spent on compulsions?", "options": [{"value": 0, "label": "None"}, {"value": 1, "label": "0-1 hrs/day"}, {"value": 2, "label": "1-3 hrs/day"}, {"value": 3, "label": "3-8 hrs/day"}, {"value": 4, "label": "More than 8 hrs/day"}]},
+            {"id": "q7", "text": "Interference from compulsions?", "options": [{"value": 0, "label": "None"}, {"value": 1, "label": "Mild"}, {"value": 2, "label": "Definite but manageable"}, {"value": 3, "label": "Substantial interference"}, {"value": 4, "label": "Severe"}]},
+            {"id": "q8", "text": "Anxiety if compulsions prevented?", "options": [{"value": 0, "label": "None"}, {"value": 1, "label": "Little"}, {"value": 2, "label": "Moderate but manageable"}, {"value": 3, "label": "Severe"}, {"value": 4, "label": "Nearly constant, Disabling"}]},
+            {"id": "q9", "text": "Resistance to compulsions?", "options": [{"value": 0, "label": "Always try"}, {"value": 1, "label": "Try much of the time"}, {"value": 2, "label": "Try some of the time"}, {"value": 3, "label": "Rarely try. Often yield"}, {"value": 4, "label": "Never try. Completely yield"}]},
+            {"id": "q10", "text": "Control over compulsions?", "options": [{"value": 0, "label": "Complete control"}, {"value": 1, "label": "Much control"}, {"value": 2, "label": "Some control"}, {"value": 3, "label": "Little control"}, {"value": 4, "label": "No control"}]}
+        ],
+        "interpretation": [
+            {"min": 0, "max": 7, "label": "Subclinical"},
+            {"min": 8, "max": 15, "label": "Mild OCD"},
+            {"min": 16, "max": 23, "label": "Moderate OCD"},
+            {"min": 24, "max": 31, "label": "Severe OCD"},
+            {"min": 32, "max": 40, "label": "Extreme OCD"}
+        ]
+    }
+];
+
+let appliedScales = {};
+let currentActiveScale = null;
+
+window.addEventListener('load', () => {
+    const hiddenData = document.getElementById('scales_data');
+    if (hiddenData && hiddenData.value && hiddenData.value !== '[]') {
+        try {
+            const parsed = JSON.parse(hiddenData.value);
+            parsed.forEach(s => appliedScales[s.scale_id] = s);
+            updateScalesBadge();
+        } catch (e) {}
+    }
+});
+
+function openScalesModal() {
+    document.getElementById('scalesModal').style.display = 'block';
+    showScalesList();
+    renderScalesList(scalesLibrary);
+}
+
+function showScalesList() {
+    document.getElementById('scale-assessment-view').style.display = 'none';
+    document.getElementById('scales-list-view').style.display = 'flex';
+}
+
+function renderScalesList(scalesToRender) {
+    const listDiv = document.getElementById('available-scales-list');
+    listDiv.innerHTML = '';
+    scalesToRender.forEach(scale => {
+        const isApplied = appliedScales[scale.scaleId] ? '✅ (Applied)' : '';
+        const html = '<div style="padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;"><div><strong style="color: #444;">' + scale.scaleName + '</strong> <span style="color: green; font-size: 12px;">' + isApplied + '</span></div><button type="button" class="btn" style="margin:0; padding: 6px 12px; font-size: 12px; background: #a5dcfe; color: #333;" onclick="openScaleAssessment(\'' + scale.scaleId + '\')">Assess</button></div>';
+        listDiv.insertAdjacentHTML('beforeend', html);
+    });
+}
+
+function filterScales(recommendedVal = '') {
+    const searchVal = document.getElementById('scale-search').value.toLowerCase();
+    const dropdownVal = recommendedVal || document.getElementById('scale-recommended').value;
+    const filtered = scalesLibrary.filter(s => {
+        const matchesSearch = s.scaleName.toLowerCase().includes(searchVal);
+        const matchesDropdown = dropdownVal === '' || s.scaleId === dropdownVal;
+        return matchesSearch && matchesDropdown;
+    });
+    renderScalesList(filtered);
+}
+
+function openScaleAssessment(scaleId) {
+    currentActiveScale = scalesLibrary.find(s => s.scaleId === scaleId);
+    document.getElementById('scales-list-view').style.display = 'none';
+    document.getElementById('scale-assessment-view').style.display = 'flex';
+    document.getElementById('active-scale-title').innerText = currentActiveScale.scaleName;
+    const form = document.getElementById('active-scale-form');
+    form.innerHTML = '';
+    const prevAnswers = appliedScales[scaleId] ? appliedScales[scaleId].raw_responses : {};
+    currentActiveScale.questions.forEach((q, idx) => {
+        let optionsHtml = '';
+        q.options.forEach(opt => {
+            const isChecked = prevAnswers[q.id] == opt.value ? 'checked' : '';
+            optionsHtml += '<label style="display: block; margin-bottom: 5px; cursor: pointer;"><input type="radio" name="' + q.id + '" value="' + opt.value + '" ' + isChecked + ' onchange="calculateLiveScore()"> <span style="margin-left: 8px;">' + opt.value + ' - ' + opt.label + '</span></label>';
+        });
+        form.insertAdjacentHTML('beforeend', '<div style="background: #fdfdfd; padding: 15px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #e0e0e0;"><strong style="display: block; margin-bottom: 10px;">' + (idx + 1) + '. ' + q.text + '</strong>' + optionsHtml + '</div>');
+    });
+    calculateLiveScore();
+}
+
+function calculateLiveScore() {
+    if (!currentActiveScale) return;
+    const container = document.getElementById('active-scale-form');
+    let totalScore = 0;
+
+    // Find all checked radio buttons inside our div
+    const checkedInputs = container.querySelectorAll('input[type="radio"]:checked');
+    checkedInputs.forEach(input => {
+        totalScore += parseInt(input.value);
+    });
+
+    document.getElementById('scale-live-score').innerText = totalScore;
+    let severity = "Score out of bounds";
+    for (let band of currentActiveScale.interpretation) {
+        if (totalScore >= band.min && totalScore <= band.max) {
+            severity = band.label;
+            break;
+        }
+    }
+    document.getElementById('scale-live-severity').innerText = severity;
+}
+
+function saveActiveScale() {
+    const container = document.getElementById('active-scale-form');
+    let rawResponses = {};
+
+    // Save only the checked values
+    const checkedInputs = container.querySelectorAll('input[type="radio"]:checked');
+    checkedInputs.forEach(input => {
+        rawResponses[input.name] = parseInt(input.value);
+    });
+
+    const totalScore = parseInt(document.getElementById('scale-live-score').innerText);
+    const severityLabel = document.getElementById('scale-live-severity').innerText;
+    appliedScales[currentActiveScale.scaleId] = {
+        scale_id: currentActiveScale.scaleId,
+        scale_name: currentActiveScale.scaleName,
+        total_score: totalScore,
+        severity_label: severityLabel,
+        raw_responses: rawResponses
+    };
+    document.getElementById('scales_data').value = JSON.stringify(Object.values(appliedScales));
+    updateScalesBadge();
+    showScalesList();
+    renderScalesList(scalesLibrary);
+}
+
+function updateScalesBadge() {
+    const badge = document.getElementById('scales-count-badge');
+    const count = Object.keys(appliedScales).length;
+    if (count > 0) {
+        badge.innerText = count + ' Applied';
+        badge.style.display = 'inline-block';
+    } else {
+        badge.style.display = 'none';
+    }
+}
 </script>
 </body>
 </html>
