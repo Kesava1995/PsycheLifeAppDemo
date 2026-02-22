@@ -1242,6 +1242,7 @@ def prepare_chart_data(patient_id: int) -> dict:
             'medication_datasets': [], 'med_unified': None,
             'side_effect_datasets': [], 'se_unified': None,
             'mse_datasets': [], 'mse_unified': None,
+            'scale_datasets': [], 'scale_unified': None, 'scale_names': [],
             'symptom_names': [], 'med_names': [], 'se_names': [], 'mse_categories': [],
             'visit_details': {},
             'stressors': [], 'events': [], 'substances': []
@@ -1466,6 +1467,31 @@ def prepare_chart_data(patient_id: int) -> dict:
         })
     mse_unified = calculate_unified(mse_data, 'Unified MSE (Avg)', 'rgba(0, 0, 0, 1)')
 
+    # --- 4c. Process Scales ---
+    scale_data = {}
+    for visit in visits:
+        v_date = datetime.combine(visit.date, datetime.min.time()).isoformat()
+        for entry in getattr(visit, 'scale_assessments', []):
+            name = entry.scale_name
+            val = entry.total_score
+            if name not in scale_data:
+                scale_data[name] = []
+            scale_data[name].append({
+                'x': v_date,
+                'y': val,
+                'visit_id': visit.id,
+                'detail': entry.severity_label or ''
+            })
+    scale_datasets = []
+    for name, points in scale_data.items():
+        scale_datasets.append({
+            'label': name,
+            'data': sorted(points, key=lambda x: x['x']),
+            'tension': 0.3,
+            'hidden': False if name == 'Unified Scales (Avg)' else True
+        })
+    scale_unified = calculate_unified(scale_data, 'Unified Scales (Avg)', 'rgba(0, 0, 0, 1)')
+
     # --- 4b. Stressors, Major Events, Substance Use (for chart markers/tracks) ---
     stressors_data = []
     events_data = []
@@ -1503,6 +1529,9 @@ def prepare_chart_data(patient_id: int) -> dict:
             'meds': [{'name': m.drug_name, 'dose': m.dose_mg, 'note': m.note} for m in visit.medication_entries],
             'se': [{'name': s.side_effect_name, 'score': s.score, 'note': s.note} for s in visit.side_effect_entries],
             'mse': [{'cat': m.category, 'name': m.finding_name, 'score': m.score, 'note': m.note} for m in visit.mse_entries],
+            'scales': [{'name': sa.scale_name, 'score': sa.total_score, 'label': sa.severity_label} for sa in getattr(visit, 'scale_assessments', [])],
+            'stressors': [{'type': st.stressor_type, 'duration': st.duration, 'note': st.note} for st in getattr(visit, 'stressor_entries', [])],
+            'events': [{'type': me.event_type, 'duration': me.duration, 'note': me.note} for me in getattr(visit, 'major_events', [])],
             'notes': getattr(visit, 'notes', '')
         }
 
@@ -1511,6 +1540,8 @@ def prepare_chart_data(patient_id: int) -> dict:
         'medication_datasets': medication_datasets, 'med_unified': med_unified,
         'side_effect_datasets': side_effect_datasets, 'se_unified': se_unified,
         'mse_datasets': mse_datasets, 'mse_unified': mse_unified,
+        'scale_datasets': scale_datasets, 'scale_unified': scale_unified,
+        'scale_names': list(scale_data.keys()),
         'symptom_names': list(symptom_data.keys()),
         'med_names': list(med_data.keys()),
         'se_names': list(se_data.keys()),
@@ -1645,7 +1676,8 @@ def life_chart(patient_id):
     meds = {}
     se = {}
     mse = {}
-    
+    scales = {}
+
     # Visit Details for Modal
     visit_details = {}
     stressors_data = []
@@ -1682,7 +1714,10 @@ def life_chart(patient_id):
             'symptoms': [{'name': s.symptom_name, 'score': s.score_current, 'note': s.note} for s in v.symptom_entries],
             'meds': [{'name': m.drug_name, 'dose': m.dose_mg, 'freq': m.frequency, 'is_tapering': m.is_tapering, 'taper_plan': m.taper_plan} for m in v.medication_entries],
             'se': [{'name': s.side_effect_name, 'score': s.score_current} for s in v.side_effect_entries],
-            'mse': [{'cat': m.category, 'name': m.finding_name, 'score': m.score_current} for m in v.mse_entries]
+            'mse': [{'cat': m.category, 'name': m.finding_name, 'score': m.score_current} for m in v.mse_entries],
+            'scales': [{'name': sa.scale_name, 'score': sa.total_score, 'label': sa.severity_label} for sa in getattr(v, 'scale_assessments', [])],
+            'stressors': [{'type': st.stressor_type, 'duration': st.duration, 'note': st.note} for st in getattr(v, 'stressor_entries', [])],
+            'events': [{'type': me.event_type, 'duration': me.duration, 'note': me.note} for me in getattr(v, 'major_events', [])]
         }
 
         for s in v.symptom_entries:
@@ -1702,6 +1737,16 @@ def life_chart(patient_id):
             label = m.finding_name if m.finding_name else m.category
             if label not in mse: mse[label] = []
             mse[label].extend(build_clinical_points(m, v.date, f"MSE ({m.category})"))
+
+        for sa in getattr(v, 'scale_assessments', []):
+            if sa.scale_name not in scales:
+                scales[sa.scale_name] = []
+            scales[sa.scale_name].append({
+                'x': v_date_str,
+                'y': sa.total_score,
+                'detail': sa.severity_label,
+                'phase': 'Current'
+            })
 
     # 3. Format Function (Calculates Phase for Unified Lines)
     def calculate_unified(data_map, label, color):
@@ -1801,18 +1846,21 @@ def life_chart(patient_id):
         medication_datasets=build_dataset(meds, "med"),
         side_effect_datasets=build_dataset(se, "se"),
         mse_datasets=build_dataset(mse, "mse"),
-        
+        scale_datasets=build_dataset(scales, "scale"),
+
         # Unified Lines
         symptom_unified=calculate_unified(symptoms, "Unified Symptoms (Avg)", "black"),
         med_unified=calculate_unified(meds, "Unified Meds (Avg)", "black"),
         se_unified=calculate_unified(se, "Unified SE (Avg)", "black"),
         mse_unified=calculate_unified(mse, "Unified MSE (Avg)", "black"),
-        
+        scale_unified=calculate_unified(scales, "Unified Scales (Avg)", "black"),
+
         # Lists for Sidebar Checklists
         symptom_names=list(symptoms.keys()),
         med_names=list(meds.keys()),
         se_names=list(se.keys()),
         mse_categories=list(mse.keys()),
+        scale_names=list(scales.keys()),
         
         visit_details=visit_details,
         clinical_states=clinical_states,
@@ -1926,6 +1974,7 @@ def preview_lifechart(patient_id):
     meds = {}
     se = {}
     mse = {}
+    scales = {}
 
     for visit in visits:
         for s in visit.symptom_entries:
@@ -1949,12 +1998,22 @@ def preview_lifechart(patient_id):
                 mse[label] = []
             mse[label].extend(build_clinical_points(m, visit.date, f"MSE ({m.category})"))
 
+        for sa in getattr(visit, 'scale_assessments', []):
+            if sa.scale_name not in scales:
+                scales[sa.scale_name] = []
+            scales[sa.scale_name].append({
+                'x': visit.date.strftime('%Y-%m-%d'),
+                'y': float(sa.total_score),
+                'phase': 'Current'
+            })
+
     # Initialize Grouping Dictionary (Order determines Chart Order)
     grouped_data = {
         'Symptoms': [],
         'Medications': [],
         'Side Effects': [],
-        'MSE Findings': []
+        'MSE Findings': [],
+        'Scale Assessments': []
     }
 
     # Helper to Populate Groups
@@ -1980,11 +2039,12 @@ def preview_lifechart(patient_id):
             ds['category'] = category
             grouped_data[category].append(ds)
 
-    # Execute Mapping (Recommended Order: Symptoms -> Meds -> Side Effects -> MSE)
+    # Execute Mapping (Recommended Order: Symptoms -> Meds -> Side Effects -> MSE -> Scales)
     add_to_group(symptoms, "symptom", "Symptoms")
     add_to_group(meds, "med", "Medications")      # Moved Meds up
     add_to_group(se, "se", "Side Effects")
     add_to_group(mse, "mse", "MSE Findings")
+    add_to_group(scales, "scale", "Scale Assessments")
 
     # Filter by Label
     if visible_labels_str:

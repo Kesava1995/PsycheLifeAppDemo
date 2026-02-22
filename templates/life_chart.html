@@ -236,16 +236,38 @@
             min-width: 150px;
             padding: 5px;
         }
+
+        /* Toggle Switch Styles */
+        .switch { position: relative; display: inline-block; width: 34px; height: 20px; margin: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; }
+        input:checked + .slider { background-color: var(--dark); }
+        input:checked + .slider:before { transform: translateX(14px); }
+        .slider.round { border-radius: 20px; }
+        .slider.round:before { border-radius: 50%; }
     </style>
 </head>
 <body>
 <div class="sidebar">
     <div class="nav-row" style="flex-wrap: wrap; gap: 8px;">
         {% if not guest %}
-            <a href="{{ url_for('patient_detail', patient_id=patient.id) if patient else '#' }}">← Patient Details</a>
-            
-            <a href="{{ url_for('logout') }}" style="color: red; margin-left: auto;">Logout</a>
-			<a href="{{ url_for('first_visit') }}">← First Visit</a>
+            <div style="display: flex; justify-content: space-between; width: 100%;">
+                <a href="{{ url_for('patient_detail', patient_id=patient.id) if patient else '#' }}">← Patient Details</a>
+                <a href="{{ url_for('logout') }}" style="color: red;">Logout</a>
+            </div>
+            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: 5px;">
+                <a href="{{ url_for('first_visit') }}">← First Visit</a>
+                {% if scale_datasets %}
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <label class="switch">
+                        <input type="checkbox" id="masterScaleToggle" onchange="toggleMasterScales()">
+                        <span class="slider round"></span>
+                    </label>
+                    <span style="font-size: 0.85rem; font-weight: 600; color: #555;">Scales</span>
+                </div>
+                {% endif %}
+            </div>
         {% else %}
             <span style="font-weight: 600; color: #555;">Guest View</span>
             <span style="font-size: 0.8rem; color: #888;">Read Only</span>
@@ -347,6 +369,30 @@
                 {% endfor %}
             </div>
         </div>
+
+        {% if scale_datasets %}
+        <div class="sidebar-group" id="sidebar-group-scale" style="display: none;">
+            <div class="group-header">Scale Assessments</div>
+            <div class="list-container">
+                <label class="sidebar-item unified-item">
+                    <input type="checkbox" id="check-unified-scale" checked onchange="toggleUnified('scale')">
+                    <span class="color-dot" style="background:black;"></span>
+                    <span class="item-text">Unified (Average)</span>
+                </label>
+                <label class="sidebar-item" style="border-bottom:1px solid #eee; margin-bottom:5px;">
+                    <input type="checkbox" onchange="toggleAll('scale', this)">
+                    <span></span> <span class="item-text" style="font-weight:700; color:#555; font-style:italic;">Select All</span>
+                </label>
+                {% for ds in scale_datasets %}
+                <label class="sidebar-item">
+                    <input type="checkbox" class="chk-scale" value="{{ ds.label }}" onchange="toggleDataset('scale', '{{ ds.label }}')">
+                    <span class="color-dot" style="background:{{ ds.borderColor }};"></span>
+                    <span class="item-text">{{ ds.label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -570,6 +616,8 @@
         seUnified: {{ se_unified | tojson }},
         mse: {{ mse_datasets | tojson }},
         mseUnified: {{ mse_unified | tojson }},
+        scale: {{ scale_datasets | default([]) | tojson }},
+        scaleUnified: {{ scale_unified | default('null') | tojson }},
         details: {{ visit_details | tojson }},
         events: {{ events | default([]) | tojson }},
         stressors: {{ stressors | default([]) | tojson }},
@@ -842,15 +890,32 @@
         'se': { title: 'Side Effects', chartId: 'chartSE', createData: () => ({ sets: rawData.se, unified: rawData.seUnified }) },
         'mse': { title: 'MSE Findings', chartId: 'chartMSE', createData: () => ({ sets: rawData.mse, unified: rawData.mseUnified }) }
     };
+    if (rawData.scale && rawData.scale.length > 0) {
+        widgetConfig['scale'] = { title: 'Scale Assessments', chartId: 'chartScale', createData: () => ({ sets: rawData.scale, unified: rawData.scaleUnified }) };
+    }
 
-    // Initial Layout Order as requested
-    // Row 1: Symptoms (Full), Row 2: Meds(Half) SE(Half), Row 3: MSE (Full)
+    // Initial Layout Order (Scale is NOT added here; use master toggle to show/hide)
     const initialLayout = [
         { key: 'symptoms', width: 'span-full' },
         { key: 'meds', width: 'span-half' },
         { key: 'se', width: 'span-half' },
         { key: 'mse', width: 'span-full' }
     ];
+
+    function toggleMasterScales() {
+        const toggle = document.getElementById('masterScaleToggle');
+        const sidebarGroup = document.getElementById('sidebar-group-scale');
+
+        if (toggle.checked) {
+            if (sidebarGroup) sidebarGroup.style.display = 'block';
+            if (rawData.scale && rawData.scale.length > 0) {
+                addWidgetToDOM('scale', 'span-full');
+            }
+        } else {
+            if (sidebarGroup) sidebarGroup.style.display = 'none';
+            removeWidget('scale');
+        }
+    }
 
     let activeWidgets = []; // Tracks currently displayed widgets
 
@@ -1094,14 +1159,15 @@
         ctx.addEventListener('dblclick', (e) => {
             suppressSingleClickUntil = Date.now() + 400;
             if (newChart.clickTimeout) clearTimeout(newChart.clickTimeout);
-            clearStickyTooltips(); 
-            
+            clearStickyTooltips();
+
             const activeEls = newChart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
-            let dateStr = null; let point = null;
+            let dateStr = null;
+
             if (activeEls.length) {
                 const index = activeEls[0].index;
                 const datasetIndex = activeEls[0].datasetIndex;
-                point = newChart.data.datasets[datasetIndex].data[index];
+                const point = newChart.data.datasets[datasetIndex].data[index];
                 dateStr = point.x ? point.x.split('T')[0] : null;
             } else {
                 const xScale = newChart.scales.x;
@@ -1112,12 +1178,10 @@
                     if (dateValue) dateStr = new Date(dateValue).toISOString().split('T')[0];
                 }
             }
-            if (dateStr && !point) { showModalByDate(dateStr); return; }
-            if (!activeEls.length) return;
-            const hasVisit = dateStr && Object.values(rawData.details).some(v => v.date === dateStr);
-            if (hasVisit) { showModalByDate(dateStr); } 
-            else if (point && ['Onset','Progression','History'].includes(point.phase)) { showHistoryModal(point); } 
-            else if (dateStr) { showModalByDate(dateStr); }
+
+            if (dateStr) {
+                showModalByDate(dateStr);
+            }
         });
 
         // 2. Set Min/Max relative to the main 'y' scale
@@ -1448,48 +1512,103 @@
     }
     function closeDailySummary() { document.getElementById('dailySummary').style.display = 'none'; }
     
-    // Existing Modal Logic (Unchanged but ensured references work)
     function showModalByDate(date) {
         const modal = document.getElementById('visitModal');
         const body = document.getElementById('modalBody');
-        document.getElementById('modalDate').innerText = date + " (Full Record)";
+        document.getElementById('modalDate').innerText = date;
         body.innerHTML = '';
+
+        // 1. Fetch available data sources for this date
         const visit = Object.values(rawData.details).find(v => v.date === date);
-        if (!visit) { body.innerHTML = '<p>No full visit record found (Calculated Point).</p>'; modal.style.display='block'; return; }
-        const sections = [['Symptoms', visit.symptoms], ['Medications', visit.meds], ['Side Effects', visit.se], ['MSE Findings', visit.mse]];
+        const plottedStressors = (rawData.stressors || []).filter(s => s.date === date);
+        const plottedEvents = (rawData.events || []).filter(e => e.date === date);
+
+        const sections = [];
+
+        // 2. Aggregate Clinical Data
+        if (visit) {
+            document.getElementById('modalDate').innerText += " (Visit Record)";
+            if(visit.symptoms && visit.symptoms.length) sections.push(['Symptoms', visit.symptoms]);
+            if(visit.meds && visit.meds.length) sections.push(['Medications', visit.meds]);
+            if(visit.se && visit.se.length) sections.push(['Side Effects', visit.se]);
+            if(visit.mse && visit.mse.length) sections.push(['MSE Findings', visit.mse]);
+            if(visit.scales && visit.scales.length) sections.push(['Scale Assessments', visit.scales]);
+        } else {
+            document.getElementById('modalDate').innerText += " (Chart Data)";
+
+            // Build dynamically from chart datasets for interpolated dates (Onset/Progression, etc.)
+            const dynamicData = { symptoms: [], meds: [], se: [], mse: [], scale: [] };
+
+            const extract = (datasetGroup, targetArray) => {
+                if(!datasetGroup) return;
+                datasetGroup.forEach(ds => {
+                    if(ds.isUnified) return;
+                    if(ds.data) {
+                        ds.data.forEach(pt => {
+                            if(pt.x && pt.x.startsWith(date)) {
+                                targetArray.push({ name: ds.label, score: pt.y, detail: pt.detail, phase: pt.phase });
+                            }
+                        });
+                    }
+                });
+            };
+
+            extract(rawData.symptoms, dynamicData.symptoms);
+            extract(rawData.meds, dynamicData.meds);
+            extract(rawData.se, dynamicData.se);
+            extract(rawData.mse, dynamicData.mse);
+            extract(rawData.scale, dynamicData.scale);
+
+            if(dynamicData.symptoms.length) sections.push(['Symptoms', dynamicData.symptoms]);
+            if(dynamicData.meds.length) sections.push(['Medications', dynamicData.meds]);
+            if(dynamicData.se.length) sections.push(['Side Effects', dynamicData.se]);
+            if(dynamicData.mse.length) sections.push(['MSE Findings', dynamicData.mse]);
+            if(dynamicData.scale.length) sections.push(['Scale Assessments', dynamicData.scale]);
+        }
+
+        // 3. ALWAYS attach Stressors & Events occurring on this date
+        if (plottedStressors.length > 0) sections.push(['Stressors', plottedStressors.map(s => ({ type: s.title || s.type, duration: s.duration, note: s.detail || s.note }))]);
+        if (plottedEvents.length > 0) sections.push(['Major Events', plottedEvents.map(e => ({ type: e.title || e.type, duration: e.duration, note: e.detail || e.note }))]);
+
+        // 4. Handle Empty State
+        if (sections.length === 0) {
+            body.innerHTML = '<p>No data points found for this date.</p>';
+            modal.style.display='block';
+            return;
+        }
+
+        // 5. Render Modal Formatting
         sections.forEach(([heading, items]) => {
             if (!items || !items.length) return;
-            body.innerHTML += `<h4>${heading}</h4>`;
+            body.innerHTML += `<h4 style="margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 4px; color: #444;">${heading}</h4>`;
             items.forEach(i => {
                 let line;
-                if (heading==='Medications') {
+                if (heading.includes('Scale Assessments')) {
+                    line = `<strong>${i.name}</strong> — Score: ${i.score} ${i.label ? '('+i.label+')' : (i.detail ? '('+i.detail+')' : '')}`;
+                } else if (heading === 'Medications') {
                     if (i.is_tapering && i.taper_plan) {
                         let plan = [];
                         try { plan = JSON.parse(i.taper_plan); } catch(e) {}
-                        line = `<strong>${i.name}</strong> <span style="font-size:0.85em; color:#e65100;">Tapering</span><div style="font-size:0.85em; padding-left:10px; border-left:2px solid #ccc; margin-top:4px;">${(plan.map(s => `&#8212; ${s.dose_mg || '—'} (${s.frequency || ''}) x ${s.duration_text || ''}`).join('<br>'))}</div>`;
+                        line = `<strong>${i.name}</strong> <span style="font-size:0.85em; color:#e65100; border:1px solid #e65100; border-radius:3px; padding:1px 4px; margin-left:4px;">Tapering</span><div style="font-size:0.85em; padding-left:10px; border-left:2px solid #ccc; margin-top:4px;">${(plan.map(s => `&#8212; ${s.dose_mg || '—'} (${s.frequency || ''}) x ${s.duration_text || ''}`).join('<br>'))}</div>`;
+                    } else if (i.dose) {
+                        line = `<strong>${i.name}</strong> — ${i.dose || ''} (${i.freq})`;
                     } else {
-                        line = `${i.name} — ${i.dose || ''} (${i.freq})`;
+                        line = `<strong>${i.name}</strong> — Equivalent Dose: ${i.score} ${i.detail ? '<span style="color:#666;font-size:0.9em;">('+i.detail+')</span>' : ''}`;
                     }
+                } else if (heading.includes('Stressors') || heading.includes('Major Events')) {
+                    line = `<strong style="color: #d32f2f;">${i.type}</strong>`;
+                    if (i.duration) line += ` <span style="font-size:0.9em; color:#555; background:#f0f0f0; padding:2px 6px; border-radius:4px; margin-left:6px;">Duration: ${i.duration}</span>`;
+                    if (i.note) line += `<div style="font-size:0.85em; color:#666; margin-top: 4px; padding-left:10px; border-left: 2px solid #ffcdd2;">Note: ${i.note}</div>`;
                 } else {
-                    line = `${i.name} — Score ${i.score}`;
+                    line = `<strong>${i.name}</strong> — Score: ${i.score} ${i.phase && i.phase !== 'Current' ? '<span style="color:#888; font-size: 0.85em; background:#eee; padding:2px 4px; border-radius:3px; margin-left:4px;">' + i.phase + '</span>' : ''}`;
+                    if (i.detail && !['Onset','Progression','Current','Symptom Onset','Symptom Progression','Symptom Current'].includes(i.detail.trim()) && !i.detail.includes('MSE (')) {
+                        line += `<div style="font-size:0.85em; color:#666; margin-top: 2px; padding-left:10px; border-left: 2px solid #ddd;">Note: ${i.detail}</div>`;
+                    }
                 }
-                body.innerHTML += `<div class="detail-row">${line}</div>`;
+                body.innerHTML += `<div class="detail-row" style="padding: 6px 0;">${line}</div>`;
             });
         });
         modal.style.display = 'block';
-    }
-    function showHistoryModal(point) {
-        document.getElementById('modalDate').innerText = `${point.x.split('T')[0]} (${point.phase})`;
-        let contentHtml = '';
-        if (point.breakdown && point.breakdown.length > 0) {
-            contentHtml += '<ul>';
-            point.breakdown.forEach(item => { contentHtml += `<li><strong>${item.name}:</strong> ${item.score}</li>`; });
-            contentHtml += '</ul>';
-        } else {
-            contentHtml += `<p><strong>Score:</strong> ${point.y}</p><p>${point.detail || ''}</p>`;
-        }
-        document.getElementById('modalBody').innerHTML = `<div style="background:#e3f2fd; padding:15px; border-radius:8px;">${contentHtml}</div>`;
-        document.getElementById('visitModal').style.display = 'block';
     }
     function closeModal() { document.getElementById('visitModal').style.display = 'none'; }
     window.onclick = function(event) { 
@@ -1734,10 +1853,12 @@
                 ...rawData.meds,
                 ...rawData.se,
                 ...rawData.mse,
+                ...(rawData.scale || []),
                 rawData.symptomsUnified,
                 rawData.medsUnified,
                 rawData.seUnified,
-                rawData.mseUnified
+                rawData.mseUnified,
+                rawData.scaleUnified
             ].filter(ds => ds && ds.data);
 
             allDatasets.forEach(ds => {
@@ -1768,7 +1889,7 @@
         const end = document.getElementById('exportEndDate').value;
         
         // 4. Get Currently Visible Lines (By LABEL Name)
-        const checkboxes = document.querySelectorAll('.chk-symptoms, .chk-mse, .chk-se, .chk-meds');
+        const checkboxes = document.querySelectorAll('.chk-symptoms, .chk-mse, .chk-se, .chk-meds, .chk-scale');
         const visibleLabels = [];
         checkboxes.forEach(cb => {
             if (cb.checked) {
