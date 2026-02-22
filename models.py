@@ -75,6 +75,7 @@ class Visit(db.Model):
     major_events = db.relationship('MajorEvent', backref='visit', lazy=True, cascade='all, delete-orphan')
     adherence_ranges = db.relationship('AdherenceRange', backref='visit', lazy=True, cascade='all, delete-orphan')
     clinical_state_ranges = db.relationship('ClinicalStateRange', backref='visit', lazy=True, cascade='all, delete-orphan')
+    substance_use_entries = db.relationship('SubstanceUseEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
 
 
 class SymptomEntry(db.Model):
@@ -259,3 +260,15 @@ class CustomTemplate(db.Model):
     symptoms = db.Column(db.Text, nullable=False)  # Stored as JSON string
 
     __table_args__ = (db.UniqueConstraint('doctor_id', 'name', name='_doctor_template_uc'),)
+
+
+class SubstanceUseEntry(db.Model):
+    __tablename__ = 'substance_use_entries'
+
+    id = db.Column(db.Integer, primary_key=True)
+    visit_id = db.Column(db.Integer, db.ForeignKey('visits.id'), nullable=False)
+    substance_name = db.Column(db.String(200), nullable=False)
+    pattern = db.Column(db.String(100))
+    start_date = db.Column(db.Date, nullable=True)
+    end_date = db.Column(db.Date, nullable=True)
+    note = db.Column(db.Text)

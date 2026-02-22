@@ -5,7 +5,7 @@ PsycheLife - Medical web app for psychiatric patient management.
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response, session, abort
 from functools import wraps
 from datetime import datetime, date, timedelta, timezone
-from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate
+from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry
 from medical_utils import get_unified_dose, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency
 import io
 import os
@@ -581,6 +581,18 @@ def parse_date(date_str):
     except ValueError:
         return None
 
+
+def calc_event_date(visit_date, duration_text):
+    """Compute event date from visit date and duration text (e.g. '2 weeks' -> date 2 weeks before)."""
+    if not duration_text:
+        return visit_date.strftime('%Y-%m-%d')
+    try:
+        delta = parse_duration(duration_text)
+        return (visit_date - delta).strftime('%Y-%m-%d')
+    except Exception:
+        return visit_date.strftime('%Y-%m-%d')
+
+
 def process_visit_form_data(visit, form_data):
     """Helper function to process and save visit form data."""
     # State and Adherence
@@ -825,6 +837,26 @@ def process_visit_form_data(visit, form_data):
             non_psychiatric_meds=non_psych_meds
         )
         db.session.add(profile)
+
+    # 8. Substance Use History
+    sub_names = form_data.getlist('substance_name[]')
+    sub_patterns = form_data.getlist('substance_pattern[]')
+    sub_starts = form_data.getlist('substance_start[]')
+    sub_ends = form_data.getlist('substance_end[]')
+    sub_notes = form_data.getlist('substance_note[]')
+    SubstanceUseEntry.query.filter_by(visit_id=visit.id).delete()
+    for i, name in enumerate(sub_names):
+        if name.strip():
+            start_d = parse_date(sub_starts[i]) if i < len(sub_starts) and sub_starts[i] else None
+            end_d = parse_date(sub_ends[i]) if i < len(sub_ends) and sub_ends[i] else None
+            db.session.add(SubstanceUseEntry(
+                visit_id=visit.id,
+                substance_name=name,
+                pattern=sub_patterns[i] if i < len(sub_patterns) else 'Occasional',
+                start_date=start_d,
+                end_date=end_d,
+                note=sub_notes[i] if i < len(sub_notes) else ''
+            ))
 
 
 @app.route('/patient/<int:patient_id>')
@@ -1105,7 +1137,8 @@ def prepare_chart_data(patient_id: int) -> dict:
             'side_effect_datasets': [], 'se_unified': None,
             'mse_datasets': [], 'mse_unified': None,
             'symptom_names': [], 'med_names': [], 'se_names': [], 'mse_categories': [],
-            'visit_details': {}
+            'visit_details': {},
+            'stressors': [], 'events': [], 'substances': []
         }
     
     # --- Helper: Calculate Unified (Average) Lines ---
@@ -1327,6 +1360,32 @@ def prepare_chart_data(patient_id: int) -> dict:
         })
     mse_unified = calculate_unified(mse_data, 'Unified MSE (Avg)', 'rgba(0, 0, 0, 1)')
 
+    # --- 4b. Stressors, Major Events, Substance Use (for chart markers/tracks) ---
+    stressors_data = []
+    events_data = []
+    substances_data = []
+    for visit in visits:
+        v_date = datetime.combine(visit.date, datetime.min.time())
+        str_date = visit.date.strftime('%Y-%m-%d')
+        for st in getattr(visit, 'stressor_entries', []):
+            stressors_data.append({
+                'type': st.stressor_type, 'duration': st.duration or '', 'note': st.note or '',
+                'date': calc_event_date(visit.date, st.duration)
+            })
+        for me in getattr(visit, 'major_events', []):
+            events_data.append({
+                'type': me.event_type, 'duration': me.duration or '', 'note': me.note or '',
+                'date': calc_event_date(visit.date, me.duration)
+            })
+        for su in getattr(visit, 'substance_use_entries', []):
+            substances_data.append({
+                'substance': su.substance_name,
+                'pattern': su.pattern or 'Occasional',
+                'start_date': su.start_date.strftime('%Y-%m-%d') if su.start_date else str_date,
+                'end_date': su.end_date.strftime('%Y-%m-%d') if su.end_date else str_date,
+                'note': su.note or ''
+            })
+
     # --- 5. Visit Details for Modal ---
     visit_details_map = {}
     for visit in visits:
@@ -1350,7 +1409,10 @@ def prepare_chart_data(patient_id: int) -> dict:
         'med_names': list(med_data.keys()),
         'se_names': list(se_data.keys()),
         'mse_categories': list(mse_data.keys()),
-        'visit_details': visit_details_map
+        'visit_details': visit_details_map,
+        'stressors': stressors_data,
+        'events': events_data,
+        'substances': substances_data
     }
 
 @app.route('/life_chart_preview')
@@ -1480,10 +1542,32 @@ def life_chart(patient_id):
     
     # Visit Details for Modal
     visit_details = {}
+    stressors_data = []
+    events_data = []
+    substances_data = []
 
     for v in visits:
         v_date_str = v.date.strftime('%Y-%m-%d')
         
+        for st in getattr(v, 'stressor_entries', []):
+            stressors_data.append({
+                'type': st.stressor_type, 'duration': st.duration or '', 'note': st.note or '',
+                'date': calc_event_date(v.date, st.duration)
+            })
+        for me in getattr(v, 'major_events', []):
+            events_data.append({
+                'type': me.event_type, 'duration': me.duration or '', 'note': me.note or '',
+                'date': calc_event_date(v.date, me.duration)
+            })
+        for su in getattr(v, 'substance_use_entries', []):
+            substances_data.append({
+                'substance': su.substance_name,
+                'pattern': su.pattern or 'Occasional',
+                'start_date': su.start_date.strftime('%Y-%m-%d') if su.start_date else v_date_str,
+                'end_date': su.end_date.strftime('%Y-%m-%d') if su.end_date else v_date_str,
+                'note': su.note or ''
+            })
+
         # Build Modal Data
         visit_details[v_date_str] = {
             'date': v_date_str,
@@ -1626,7 +1710,10 @@ def life_chart(patient_id):
         
         visit_details=visit_details,
         clinical_states=clinical_states,
-        adherences=adherences
+        adherences=adherences,
+        stressors=stressors_data,
+        events=events_data,
+        substances=substances_data
     )
 
 

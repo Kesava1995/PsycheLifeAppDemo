@@ -181,6 +181,18 @@
                 </div>
                     <div id="symptoms-container"></div>
 
+                    <div class="section-header">
+                        <span class="section-title">Substance Use History</span>
+                        <button type="button" class="add-btn" onclick="addSubstance()">+</button>
+                    </div>
+                    <div id="substances-container">
+                        {% if visit and visit.substance_use_entries %}
+                            {% for su in visit.substance_use_entries %}
+                                <script>window.addEventListener('load', () => addSubstance("{{ su.substance_name }}", "{{ su.pattern }}", "{{ su.start_date.strftime('%Y-%m-%d') if su.start_date else '' }}", "{{ su.end_date.strftime('%Y-%m-%d') if su.end_date else '' }}", "{{ su.note | e }}");</script>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+
                     <div class="section-header"><span class="section-title">MSE Findings</span></div>
                     <div class="subsection-header"><span class="subsection-title">Thought</span><button type="button" class="add-btn" onclick="addMSE('Thought')">+</button></div>
                     <div id="mse-thought-container"></div>
@@ -336,19 +348,32 @@
                     </div>
 
                     <div id="clinicalStateRangesModal" class="modal" onclick="if(event.target === this) closeClinicalStateRangesModal()">
-                        <div class="modal-content" style="width: 480px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; margin-top: 5vh;">
-                            <h4 style="margin-top: 0;">Clinical State Ranges (with dates)</h4>
-                            <div style="overflow-y: auto; flex-grow: 1; padding-right: 10px;">
-                                <div class="checklist-group">
-                                    <label><input type="checkbox" class="clinical-state-checkbox" value="Recovery"> Recovery</label>
-                                    <label><input type="checkbox" class="clinical-state-checkbox" value="Remission"> Remission</label>
-                                    <label><input type="checkbox" class="clinical-state-checkbox" value="Partial Remission"> Partial Remission</label>
-                                    <label><input type="checkbox" class="clinical-state-checkbox" value="Relapse"> Relapse</label>
-                                    <label><input type="checkbox" class="clinical-state-checkbox" value="Hospitalisation"> Hospitalisation</label>
-                                    <label><input type="checkbox" class="clinical-state-checkbox" value="Loss of Follow-up"> Loss of Follow-up</label>
+                        <div class="modal-content" style="width: 520px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; margin-top: 5vh;">
+                            <h4 style="margin-top: 0; color: #333;">Clinical State Ranges</h4>
+                            
+                            <div style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+                                <strong style="font-size: 13px; color: #555; display:block; margin-bottom: 5px;">Select Diagnoses:</strong>
+                                <div class="checklist-group" style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; font-size:12px;" id="diagnosis-checkboxes">
+                                    <label><input type="checkbox" value="Bipolar Disorder" onchange="renderClinicalStates()"> Bipolar Disorder (I & II)</label>
+                                    <label><input type="checkbox" value="Major Depressive Disorder" onchange="renderClinicalStates()"> Major Depressive Disorder</label>
+                                    <label><input type="checkbox" value="Schizophrenia Spectrum" onchange="renderClinicalStates()"> Schizophrenia Spectrum</label>
+                                    <label><input type="checkbox" value="Obsessive Compulsive Disorder" onchange="renderClinicalStates()"> Obsessive Compulsive Disorder</label>
+                                    <label><input type="checkbox" value="Anxiety Disorders" onchange="renderClinicalStates()"> Anxiety Disorders</label>
                                 </div>
-                                <div id="clinical-state-ranges-container" style="margin-top:12px;"></div>
                             </div>
+
+                            <div style="overflow-y: auto; flex-grow: 1; padding-right: 10px;">
+                                <strong style="font-size: 13px; color: #555; display:block; margin-bottom: 5px;">States:</strong>
+                                <div class="checklist-group" id="dynamic-states-container"></div>
+                                
+                                <div style="margin-top: 10px; display:flex; gap:5px;">
+                                    <input type="text" id="customStateInput" placeholder="Custom state..." style="flex:1; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius:4px;">
+                                    <button type="button" class="btn" style="padding:6px 15px; font-size:12px; margin:0;" onclick="addCustomState()">[+] Add State</button>
+                                </div>
+
+                                <div id="clinical-state-ranges-container" style="margin-top:15px; border-top:1px dashed #ccc; padding-top:10px;"></div>
+                            </div>
+                            
                             <div style="margin-top:15px; padding-top:15px; border-top: 1px solid #eee;">
                                 <button type="button" class="btn" style="margin-top:0; background:#888; color:#fff;" onclick="closeClinicalStateRangesModal()">Done</button>
                             </div>
@@ -415,7 +440,7 @@
                     var html = '<div id="' + safeId + '" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 10px;">' +
                         '<strong style="font-size: 13px; color: #333;">' + this.value.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</strong>' +
                         '<div style="display: flex; gap: 10px; margin-top: 5px;">' +
-                        '<div style="flex: 1;"><input type="text" class="form-control form-control-sm st-duration" placeholder="Duration (e.g. 2 weeks)"></div>' +
+                        '<div style="flex: 1;"><input type="text" class="form-control form-control-sm st-duration" placeholder="Duration" list="duration-options-list" oninput="updateDurationOptions(this)"></div>' +
                         '<div style="flex: 2;"><input type="text" class="form-control form-control-sm st-note" placeholder="Note / Details"></div>' +
                         '</div></div>';
                     container.insertAdjacentHTML('beforeend', html);
@@ -458,7 +483,7 @@
                             var html = '<div id="' + safeId + '" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 10px;">' +
                                 '<strong style="font-size: 13px; color: #333;"></strong>' +
                                 '<div style="display: flex; gap: 10px; margin-top: 5px;">' +
-                                '<div style="flex: 1;"><input type="text" class="form-control form-control-sm st-duration" placeholder="Duration (e.g. 2 weeks)"></div>' +
+                                '<div style="flex: 1;"><input type="text" class="form-control form-control-sm st-duration" placeholder="Duration" list="duration-options-list" oninput="updateDurationOptions(this)"></div>' +
                                 '<div style="flex: 2;"><input type="text" class="form-control form-control-sm st-note" placeholder="Note / Details"></div>' +
                                 '</div></div>';
                             container.insertAdjacentHTML('beforeend', html);
@@ -481,7 +506,7 @@
                     var html = '<div id="' + safeId + '" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 10px;">' +
                         '<strong style="font-size: 13px; color: #333;">' + this.value.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</strong>' +
                         '<div style="display: flex; gap: 10px; margin-top: 5px;">' +
-                        '<div style="flex: 1;"><input type="text" class="form-control form-control-sm evt-duration" placeholder="Duration (e.g. 5 days)"></div>' +
+                        '<div style="flex: 1;"><input type="text" class="form-control form-control-sm evt-duration" placeholder="Duration" list="duration-options-list" oninput="updateDurationOptions(this)"></div>' +
                         '<div style="flex: 2;"><input type="text" class="form-control form-control-sm evt-note" placeholder="Note"></div>' +
                         '</div></div>';
                     container.insertAdjacentHTML('beforeend', html);
@@ -524,7 +549,7 @@
                             var html = '<div id="' + safeId + '" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 10px;">' +
                                 '<strong style="font-size: 13px; color: #333;"></strong>' +
                                 '<div style="display: flex; gap: 10px; margin-top: 5px;">' +
-                                '<div style="flex: 1;"><input type="text" class="form-control form-control-sm evt-duration" placeholder="Duration (e.g. 5 days)"></div>' +
+                                '<div style="flex: 1;"><input type="text" class="form-control form-control-sm evt-duration" placeholder="Duration" list="duration-options-list" oninput="updateDurationOptions(this)"></div>' +
                                 '<div style="flex: 2;"><input type="text" class="form-control form-control-sm evt-note" placeholder="Note"></div>' +
                                 '</div></div>';
                             container.insertAdjacentHTML('beforeend', html);
@@ -541,16 +566,89 @@
         function addExtraRange(btn) { const group = btn.closest('.range-group'); const row = document.createElement('div'); row.className = 'range-row'; row.innerHTML = '<label>Start: <input type="date" class="range-start"></label> <label>End: <input type="date" class="range-end"></label>'; group.insertBefore(row, btn); }
         function closeAdherenceRangesModal() { const data = []; document.querySelectorAll('#adherence-ranges-container .range-group').forEach(group => { const status = group.getAttribute('data-status'); group.querySelectorAll('.range-row').forEach(row => { const s = row.querySelector('.range-start'), e = row.querySelector('.range-end'); if (s && e) data.push({ status: status, start: s.value || null, end: e.value || null }); }); }); document.getElementById('adherence_data').value = JSON.stringify(data); closeModal('adherenceRangesModal'); }
         function openAdherenceRangesModal() { document.getElementById('adherenceRangesModal').style.display = 'block'; }
-        function bindClinicalStateCheckboxes() { document.querySelectorAll('.clinical-state-checkbox').forEach(cb => { cb.addEventListener('change', function() { const c = document.getElementById('clinical-state-ranges-container'); const id = 'clinical-state-range-' + this.value.replace(/\s+/g, '_'); if (this.checked) c.insertAdjacentHTML('beforeend', '<div class="range-group" id="' + id + '" data-state="' + this.value + '"><div class="range-row"><label>Start: <input type="date" class="range-start"></label> <label>End: <input type="date" class="range-end"></label></div><button type="button" class="btn" style="margin-top:6px; padding:4px 10px; font-size:11px; background:#7ab8e0; color:#fff;" onclick="addExtraRange(this)">+ Add another range</button></div>'); else { const g = document.getElementById(id); if (g) g.remove(); } }); }); }
-        function closeClinicalStateRangesModal() { const data = []; document.querySelectorAll('#clinical-state-ranges-container .range-group').forEach(group => { const state = group.getAttribute('data-state'); group.querySelectorAll('.range-row').forEach(row => { const s = row.querySelector('.range-start'), e = row.querySelector('.range-end'); if (s && e) data.push({ state: state, start: s.value || null, end: e.value || null }); }); }); document.getElementById('clinical_state_data').value = JSON.stringify(data); closeModal('clinicalStateRangesModal'); }
-        function openClinicalStateRangesModal() { document.getElementById('clinicalStateRangesModal').style.display = 'block'; }
-        
+        function closeClinicalStateRangesModal() {
+            const data = [];
+            document.querySelectorAll('#clinical-state-ranges-container > div[id^="csr-input-"]').forEach(div => {
+                const strong = div.querySelector('strong');
+                const s = div.querySelector('.range-start');
+                const e = div.querySelector('.range-end');
+                if (strong && s && e) data.push({ state: strong.innerText, start: s.value || null, end: e.value || null });
+            });
+            document.getElementById('clinical_state_data').value = JSON.stringify(data);
+            closeModal('clinicalStateRangesModal');
+        }
+        function openClinicalStateRangesModal() { document.getElementById('clinicalStateRangesModal').style.display = 'block'; renderClinicalStates(); }
+
+        const stateDB = {
+            "Bipolar Disorder": ["Recovery", "Remission", "Partial Remission", "Depressive Episode", "Manic Episode", "Hypomanic Episode", "Mixed Episode", "Relapse", "Loss of Follow-up"],
+            "Major Depressive Disorder": ["Recovery", "Remission", "Partial Remission", "Mild Depressive Episode", "Moderate Depressive Episode", "Severe Depressive Episode", "Relapse", "Loss of Follow-up"],
+            "Schizophrenia Spectrum": ["Recovery", "Remission", "Partial Remission", "Stable Phase", "Acute Psychotic Episode", "Residual Phase", "Relapse", "Loss of Follow-up"],
+            "Obsessive Compulsive Disorder": ["Recovery", "Remission", "Partial Remission", "Active OCD", "Severe OCD", "Treatment Resistant Phase", "Relapse", "Loss of Follow-up"],
+            "Anxiety Disorders": ["Recovery", "Remission", "Partial Remission", "Active Anxiety", "Acute Panic Phase", "Relapse", "Loss of Follow-up"]
+        };
+        let customStates = [];
+        function renderClinicalStates() {
+            const selectedDiags = Array.from(document.querySelectorAll('#diagnosis-checkboxes input:checked')).map(cb => cb.value);
+            let statesToShow = new Set();
+            if (selectedDiags.length === 0) {
+                ["Recovery", "Remission", "Partial Remission", "Relapse", "Loss of Follow-up"].forEach(s => statesToShow.add(s));
+            } else {
+                selectedDiags.forEach(d => { if (stateDB[d]) stateDB[d].forEach(s => statesToShow.add(s)); });
+            }
+            customStates.forEach(s => statesToShow.add(s));
+            const container = document.getElementById('dynamic-states-container');
+            container.innerHTML = '';
+            Array.from(statesToShow).sort().forEach(state => {
+                let isCustom = customStates.includes(state);
+                let remBtn = isCustom ? '<button type="button" onclick="removeCustomState(\'' + state.replace(/'/g, "\\'") + '\')" style="background:none; border:none; color:red; cursor:pointer; font-weight:bold; margin-left:auto;">[-]</button>' : '';
+                let html = '<label style="display:flex; width:100%;"><input type="checkbox" class="clinical-state-checkbox" value="' + state.replace(/"/g, '&quot;') + '" onchange="handleStateCheckboxChange(this)"> <span style="flex:1;">' + state.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span> ' + remBtn + '</label>';
+                container.insertAdjacentHTML('beforeend', html);
+            });
+            let activeStates = Array.from(document.querySelectorAll('#clinical-state-ranges-container div[id^="csr-input-"]')).map(div => { const s = div.querySelector('strong'); return s ? s.innerText : ''; }).filter(Boolean);
+            document.querySelectorAll('.clinical-state-checkbox').forEach(cb => { if (activeStates.includes(cb.value)) cb.checked = true; });
+        }
+        function addCustomState() {
+            let val = document.getElementById('customStateInput').value.trim();
+            if (val && !customStates.includes(val)) { customStates.push(val); document.getElementById('customStateInput').value = ''; renderClinicalStates(); }
+        }
+        function removeCustomState(val) { customStates = customStates.filter(s => s !== val); renderClinicalStates(); }
+        function handleStateCheckboxChange(cb) {
+            var container = document.getElementById('clinical-state-ranges-container');
+            var safeId = 'csr-input-' + cb.value.replace(/[^a-zA-Z0-9]/g, '');
+            if (cb.checked) {
+                var html = '<div id="' + safeId + '" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 10px;"><strong style="font-size: 13px; color: #333;">' + cb.value.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</strong><div style="display: flex; gap: 10px; margin-top: 5px; align-items:center;"><label>Start: <input type="date" class="range-start"></label><label>End: <input type="date" class="range-end"></label></div></div>';
+                container.insertAdjacentHTML('beforeend', html);
+            } else { var el = document.getElementById(safeId); if (el) el.remove(); }
+        }
+        function addSubstance(sub, pat, start, end, note) {
+            sub = sub || ''; pat = pat || 'Occasional'; start = start || ''; end = end || ''; note = note || '';
+            const html = '<div class="entry-wrapper"><div class="row-flex" style="align-items:center; flex-wrap:wrap; gap:10px;">' +
+                '<select name="substance_name[]" style="flex:1; min-width:120px; padding:6px; border-radius:4px; border:1px solid #ccc;">' +
+                '<option value="Alcohol"' + (sub==='Alcohol'?' selected':'') + '>Alcohol</option>' +
+                '<option value="Tobacco (Smoked)"' + (sub==='Tobacco (Smoked)'?' selected':'') + '>Tobacco (Smoked)</option>' +
+                '<option value="Smokeless Tobacco"' + (sub==='Smokeless Tobacco'?' selected':'') + '>Smokeless Tobacco</option>' +
+                '<option value="Cannabis"' + (sub==='Cannabis'?' selected':'') + '>Cannabis</option>' +
+                '<option value="Opioids"' + (sub==='Opioids'?' selected':'') + '>Opioids</option>' +
+                '<option value="Stimulants"' + (sub==='Stimulants'?' selected':'') + '>Stimulants</option></select>' +
+                '<select name="substance_pattern[]" style="flex:1; min-width:120px; padding:6px; border-radius:4px; border:1px solid #ccc;">' +
+                '<option value="Occasional"' + (pat==='Occasional'?' selected':'') + '>Occasional</option>' +
+                '<option value="Weekends"' + (pat==='Weekends'?' selected':'') + '>Weekends</option>' +
+                '<option value="Daily"' + (pat==='Daily'?' selected':'') + '>Daily</option>' +
+                '<option value="Severe/Early morning intake"' + (pat==='Severe/Early morning intake'?' selected':'') + '>Severe/Early morning intake</option></select>' +
+                '<label style="display:flex; align-items:center; gap:5px; font-size:12px;">Start: <input type="date" name="substance_start[]" value="' + start + '" style="width:auto; padding:4px; border:1px solid #ccc;"></label>' +
+                '<label style="display:flex; align-items:center; gap:5px; font-size:12px;">End: <input type="date" name="substance_end[]" value="' + end + '" style="width:auto; padding:4px; border:1px solid #ccc;"></label>' +
+                '<button type="button" class="note-btn" onclick="toggleNote(this)">📝</button>' +
+                '<button type="button" class="remove-btn" onclick="this.closest(\'.entry-wrapper\').remove()">✕</button></div>' +
+                '<input type="text" class="note-input" name="substance_note[]" value="' + (note || '').replace(/"/g, '&quot;') + '" placeholder="Note..."></div>';
+            document.getElementById('substances-container').insertAdjacentHTML('beforeend', html);
+        }
+
         window.addEventListener('load', () => {
             const d = new Date(); d.setDate(d.getDate() + 30);
             document.getElementById('nextVisitDate').value = d.toISOString().split('T')[0];
             addSymptom(); addMedication(); addSideEffect();
             bindAdherenceCheckboxes();
-            bindClinicalStateCheckboxes();
+            renderClinicalStates();
             addMSE('Thought'); addMSE('Perception'); addMSE('Affect');
         });
 
@@ -560,9 +658,8 @@
             const list = document.getElementById('duration-options-list');
             const num = parseFloat(val);
             if (!isNaN(num) && num > 0) {
-                list.innerHTML = ''; 
-                // Removed 'Years' from the array below
-                ['Days', 'Weeks', 'Months'].forEach(unit => {
+                list.innerHTML = '';
+                ['days', 'weeks', 'months', 'years'].forEach(unit => {
                     const opt = document.createElement('option');
                     opt.value = `${num} ${unit}`;
                     list.appendChild(opt);

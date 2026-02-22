@@ -254,6 +254,13 @@
     
     <div class="controls">
         <div class="sidebar-group">
+            <div class="group-header">Events & Stressors</div>
+            <div style="padding: 10px; display: flex; gap: 10px;">
+                <button id="btnStressors" class="btn btn-sm" style="flex:1; padding: 6px; font-size:12px; background:var(--dark); color:white; margin:0;" onclick="toggleDataset('symptoms', 'Stressors')">Stressors</button>
+                <button id="btnEvents" class="btn btn-sm" style="flex:1; padding: 6px; font-size:12px; background:var(--dark); color:white; margin:0;" onclick="toggleDataset('symptoms', 'Major Events')">Major Events</button>
+            </div>
+        </div>
+        <div class="sidebar-group">
             <div class="group-header">Symptom Trajectory</div>
             <div class="list-container">
                 <label class="sidebar-item unified-item">
@@ -573,8 +580,27 @@
         seUnified: {{ se_unified | tojson }},
         mse: {{ mse_datasets | tojson }},
         mseUnified: {{ mse_unified | tojson }},
-        details: {{ visit_details | tojson }}
+        details: {{ visit_details | tojson }},
+        events: {{ events | default([]) | tojson }},
+        stressors: {{ stressors | default([]) | tojson }},
+        substances: {{ substances | default([]) | tojson }}
     };
+    const subColors = {
+        "Alcohol": { base: "#B3742A", light: "#E3B07A", dark: "#8C4F16", medium: "#B3742A" },
+        "Tobacco (Smoked)": { base: "#5E5E5E", light: "#A0A0A0", dark: "#3A3A3A", medium: "#5E5E5E" },
+        "Smokeless Tobacco": { base: "#8B6B4A", light: "#C6A889", dark: "#5F472F", medium: "#8B6B4A" },
+        "Cannabis": { base: "#6C7A3C", light: "#A6B574", dark: "#4A5426", medium: "#6C7A3C" },
+        "Opioids": { base: "#3E4F6A", light: "#7D8DA6", dark: "#2A3649", medium: "#3E4F6A" },
+        "Stimulants": { base: "#A35A2B", light: "#D59B74", dark: "#703B18", medium: "#A35A2B" }
+    };
+    function getSubstanceStyle(sub, pattern) {
+        let c = subColors[sub] || subColors["Alcohol"];
+        if (pattern === "Occasional") return { bg: 'transparent', border: c.base, dash: [4,4] };
+        if (pattern === "Weekends") return { bg: c.light, border: c.base, dash: [] };
+        if (pattern === "Daily") return { bg: c.medium, border: c.base, dash: [] };
+        if (pattern === "Severe/Early morning intake") return { bg: c.dark, border: c.dark, dash: [] };
+        return { bg: c.base, border: c.base, dash: [] };
+    }
     const backendClinicalStates = {{ clinical_states | default([]) | tojson }};
     const backendAdherences = {{ adherences | default([]) | tojson }};
 	
@@ -849,6 +875,21 @@
         }
         if (datasets) finalData.push(...datasets);
         
+        if (key === 'symptoms') {
+            const imgEvent = new Image(); imgEvent.src = "{{ url_for('static', filename='Event.png') }}";
+            const imgStressor = new Image(); imgStressor.src = "{{ url_for('static', filename='Stressor.png') }}";
+            finalData.push({
+                label: 'Major Events',
+                data: (rawData.events || []).map(e => ({ x: e.date, y: 9.5, detail: e.note || '', title: e.type, duration: e.duration || '' })),
+                pointStyle: imgEvent, pointRadius: 10, pointHoverRadius: 12, showLine: false, hidden: false
+            });
+            finalData.push({
+                label: 'Stressors',
+                data: (rawData.stressors || []).map(s => ({ x: s.date, y: 9.0, detail: s.note || '', title: s.type, duration: s.duration || '' })),
+                pointStyle: imgStressor, pointRadius: 10, pointHoverRadius: 12, showLine: false, hidden: false
+            });
+        }
+
         const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
         finalData.forEach((ds, i) => {
             if (ds.isUnified) return;
@@ -979,6 +1020,27 @@
             }
             idx++;
         });
+        if (key === 'symptoms' && (rawData.substances || []).length > 0) {
+            const activeSubs = [...new Set((rawData.substances || []).map(s => s.substance))];
+            (rawData.substances || []).forEach((su, i) => {
+                const tIdx = activeSubs.indexOf(su.substance);
+                const yBase = -1 * (tIdx + 1);
+                const style = getSubstanceStyle(su.substance, su.pattern || 'Occasional');
+                annotations['sub_' + i] = {
+                    type: 'box',
+                    xMin: su.start_date, xMax: su.end_date,
+                    yMin: yBase + 0.1, yMax: yBase + 0.9,
+                    backgroundColor: style.bg, borderColor: style.border, borderWidth: 1, borderDash: style.dash,
+                    label: { display: true, content: su.substance, position: 'center', color: (su.pattern === 'Occasional') ? '#333' : '#fff', font: { size: 10 } }
+                };
+            });
+            if (activeSubs.length > 0) {
+                if (!newChart.options.scales) newChart.options.scales = {};
+                if (!newChart.options.scales.y) newChart.options.scales.y = {};
+                newChart.options.scales.y.min = -1 * activeSubs.length - 0.5;
+                newChart.options.scales.y.ticks = { callback: function(val) { return val < 0 ? '' : val; } };
+            }
+        }
         if (!newChart.options.plugins) newChart.options.plugins = {};
         newChart.options.plugins.annotation = { annotations: annotations };
         if (newChart.options.scales && newChart.options.scales.y) newChart.options.scales.y.max = maxY;
@@ -1145,21 +1207,19 @@
         const div = document.createElement('div');
         div.className = 'sticky-tooltip';
         
-        // Position
         div.style.left = x + 'px';
         div.style.top = y + 'px';
         
-        // Content
-        let valDisplay = point.y;
-        if (chartType === 'meds') valDisplay += ' mg';
-        
-        div.innerHTML = `
-            <span class="tooltip-color-box" style="background:${dataset.borderColor}"></span>
-            <span style="font-weight:600;">${dataset.label}:</span> ${valDisplay}
-        `;
-        
-        if (point.detail) {
-            div.innerHTML += `<div style="margin-top:2px; font-weight:normal; opacity:0.8;">${point.detail}</div>`;
+        if (point.title) {
+            div.innerHTML = '<div style="font-weight:bold; margin-bottom:4px; color:' + (dataset.borderColor || '#A5DCFE') + '">' + dataset.label + '</div>';
+            div.innerHTML += '<div><strong>' + point.title + '</strong></div>';
+            if (point.duration) div.innerHTML += '<div>Duration: ' + point.duration + '</div>';
+            if (point.detail) div.innerHTML += '<div style="color:#ddd; margin-top:4px; font-style:italic; white-space: normal; max-width: 200px;">' + point.detail + '</div>';
+        } else {
+            let valDisplay = point.y;
+            if (chartType === 'meds') valDisplay += ' mg';
+            div.innerHTML = '<span class="tooltip-color-box" style="background:' + dataset.borderColor + '"></span><span style="font-weight:600;">' + dataset.label + ':</span> ' + valDisplay;
+            if (point.detail) div.innerHTML += '<div style="margin-top:2px; font-weight:normal; opacity:0.8;">' + point.detail + '</div>';
         }
         
         document.body.appendChild(div);
