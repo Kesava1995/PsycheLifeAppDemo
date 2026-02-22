@@ -1027,7 +1027,14 @@ def edit_visit(visit_id):
     stressors_data = json.dumps([{'stressor_type': s.stressor_type, 'duration': s.duration or '', 'note': s.note or ''} for s in visit.stressor_entries])
     adherence_data = json.dumps([{'status': a.status, 'start': a.start_date.strftime('%Y-%m-%d') if a.start_date else None, 'end': a.end_date.strftime('%Y-%m-%d') if a.end_date else None} for a in visit.adherence_ranges])
     clinical_state_data = json.dumps([{'state': c.state, 'start': c.start_date.strftime('%Y-%m-%d') if c.start_date else None, 'end': c.end_date.strftime('%Y-%m-%d') if c.end_date else None} for c in visit.clinical_state_ranges])
-    return render_template('edit_visit.html', visit=visit, patient=patient, previous_visit=previous_visit, doctor=doctor, major_events_data=major_events_data, stressors_data=stressors_data, adherence_data=adherence_data, clinical_state_data=clinical_state_data)
+    substances_data = json.dumps([{
+        'substance': su.substance_name,
+        'pattern': su.pattern or 'Occasional',
+        'start_date': su.start_date.strftime('%Y-%m-%d') if su.start_date else None,
+        'end_date': su.end_date.strftime('%Y-%m-%d') if su.end_date else None,
+        'note': su.note or ''
+    } for su in getattr(visit, 'substance_use_entries', [])])
+    return render_template('edit_visit.html', visit=visit, patient=patient, previous_visit=previous_visit, doctor=doctor, major_events_data=major_events_data, stressors_data=stressors_data, adherence_data=adherence_data, clinical_state_data=clinical_state_data, substances_data=substances_data)
 
 
 @app.route('/visit/<int:visit_id>/update_clinical', methods=['POST'])
@@ -1050,6 +1057,38 @@ def update_clinical(visit_id):
     next_date = request.form.get('next_visit_date')
     if next_date:
         visit.next_visit_date = parse_date(next_date)
+
+    # --- RANGES UPDATES (Clinical State & Adherence with dates, same as edit_visit modal) ---
+    adherence_json = request.form.get('adherence_data', '')
+    if adherence_json:
+        try:
+            for ar in AdherenceRange.query.filter_by(visit_id=visit.id).all():
+                db.session.delete(ar)
+            for item in json.loads(adherence_json):
+                if isinstance(item, dict) and item.get('status'):
+                    start_d = parse_date(item.get('start')) if item.get('start') else None
+                    end_d = parse_date(item.get('end')) if item.get('end') else None
+                    db.session.add(AdherenceRange(
+                        visit_id=visit.id, status=item['status'], start_date=start_d, end_date=end_d
+                    ))
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    clinical_state_json = request.form.get('clinical_state_data', '')
+    if clinical_state_json:
+        try:
+            for csr in ClinicalStateRange.query.filter_by(visit_id=visit.id).all():
+                db.session.delete(csr)
+            for item in json.loads(clinical_state_json):
+                if isinstance(item, dict) and item.get('state'):
+                    start_d = parse_date(item.get('start')) if item.get('start') else None
+                    end_d = parse_date(item.get('end')) if item.get('end') else None
+                    db.session.add(ClinicalStateRange(
+                        visit_id=visit.id, state=item['state'], start_date=start_d, end_date=end_d
+                    ))
+        except (json.JSONDecodeError, TypeError):
+            pass
+    # --- END RANGES UPDATES ---
 
     # 2. Update Medications ONLY (Wipe old meds for this visit, write new ones)
     # We do NOT touch SymptomEntry, MSEEntry, SideEffectEntry here.

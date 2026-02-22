@@ -646,7 +646,7 @@
         window.addEventListener('load', () => {
             const d = new Date(); d.setDate(d.getDate() + 30);
             document.getElementById('nextVisitDate').value = d.toISOString().split('T')[0];
-            addSymptom(); addMedication(); addSideEffect();
+            addSymptom(); addMedication(); addSideEffect(); addSubstance();
             bindAdherenceCheckboxes();
             renderClinicalStates();
             addMSE('Thought'); addMSE('Perception'); addMSE('Affect');

@@ -264,13 +264,8 @@
                         <span class="section-title">Substance Use History</span>
                         <button type="button" class="add-btn" onclick="addSubstance()">+</button>
                     </div>
-                    <div id="substances-container">
-                        {% if visit and visit.substance_use_entries %}
-                            {% for su in visit.substance_use_entries %}
-                                <script>window.addEventListener('load', () => addSubstance("{{ su.substance_name }}", "{{ su.pattern }}", "{{ su.start_date.strftime('%Y-%m-%d') if su.start_date else '' }}", "{{ su.end_date.strftime('%Y-%m-%d') if su.end_date else '' }}", "{{ su.note | e }}");</script>
-                            {% endfor %}
-                        {% endif %}
-                    </div>
+                    <div id="substances-container"></div>
+                    <input type="hidden" id="substances_data" value="{{ substances_data|default('[]')|e }}">
 
                     <div class="section-header"><span class="section-title">MSE Findings</span></div>
                     
@@ -598,7 +593,28 @@
         function toggleNote(btn) { btn.closest('.entry-wrapper').querySelector('.note-input').style.display='block'; }
         function updVal(slider) { slider.nextElementSibling.innerText = slider.value; }
         
-        document.addEventListener('DOMContentLoaded', function() { bindAdherenceCheckboxes(); renderClinicalStates(); });
+        document.addEventListener('DOMContentLoaded', function() {
+            bindAdherenceCheckboxes();
+            renderClinicalStates();
+
+            // --- LOAD SUBSTANCES FROM JSON ---
+            const subDataEl = document.getElementById('substances_data');
+            if (subDataEl && subDataEl.value !== '[]' && subDataEl.value !== '') {
+                try {
+                    const subs = JSON.parse(subDataEl.value);
+                    if (subs.length > 0) {
+                        subs.forEach(su => addSubstance(su.substance, su.pattern, su.start_date, su.end_date, su.note));
+                    } else {
+                        addSubstance();
+                    }
+                } catch (e) {
+                    console.error("Error parsing substances:", e);
+                    addSubstance();
+                }
+            } else {
+                addSubstance();
+            }
+        });
 
         // --- Modals (Major Events + Stressors) ---
         function openModal(modalId) {

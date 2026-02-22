@@ -256,8 +256,8 @@
         <div class="sidebar-group">
             <div class="group-header">Events & Stressors</div>
             <div style="padding: 10px; display: flex; gap: 10px;">
-                <button id="btnStressors" class="btn btn-sm" style="flex:1; padding: 6px; font-size:12px; background:var(--dark); color:white; margin:0;" onclick="toggleDataset('symptoms', 'Stressors')">Stressors</button>
-                <button id="btnEvents" class="btn btn-sm" style="flex:1; padding: 6px; font-size:12px; background:var(--dark); color:white; margin:0;" onclick="toggleDataset('symptoms', 'Major Events')">Major Events</button>
+                <button id="btnStressors" class="btn btn-sm" style="flex:1; padding: 6px; font-size:12px; background:var(--dark); color:white; margin:0;" onclick="toggleEventDataset('symptoms', 'Stressors', this)">Stressors</button>
+                <button id="btnEvents" class="btn btn-sm" style="flex:1; padding: 6px; font-size:12px; background:var(--dark); color:white; margin:0;" onclick="toggleEventDataset('symptoms', 'Major Events', this)">Major Events</button>
             </div>
         </div>
         <div class="sidebar-group">
@@ -360,6 +360,7 @@
         <div class="zoom-control" style="display: flex; align-items: center; gap: 10px; margin-right: 15px; border-right: 1px solid #ccc; padding-right: 15px;">
             <select id="zoomSelect" onchange="handleZoomSelect(this.value)" class="btn btn-sm" style="background: white; border: 1px dashed #7ab8e0; color: #333; margin: 0;">
                 <option value="">Zoom View...</option>
+                <option value="all">Show All (Reset)</option>
                 <option value="week">Week-wise</option>
                 <option value="month">Month-wise</option>
                 <option value="year">Year-wise</option>
@@ -400,15 +401,8 @@
 
             <div style="margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
                 <h4 style="margin:0 0 10px 0; color:#555;">Current Clinical State</h4>
-                <select name="clinical_state" style="width: 100%; max-width: 280px; padding: 10px; border-radius: 6px; border: 1px solid #ccc;">
-                    <option value="">Select State...</option>
-                    <option value="Recovery" {% if visit and visit.clinical_state == 'Recovery' %}selected{% endif %}>Recovery</option>
-                    <option value="Remission" {% if visit and visit.clinical_state == 'Remission' %}selected{% endif %}>Remission</option>
-                    <option value="Partial Remission" {% if visit and visit.clinical_state == 'Partial Remission' %}selected{% endif %}>Partial Remission</option>
-                    <option value="Relapse" {% if visit and visit.clinical_state == 'Relapse' %}selected{% endif %}>Relapse</option>
-                    <option value="Hospitalisation" {% if visit and visit.clinical_state == 'Hospitalisation' %}selected{% endif %}>Hospitalisation</option>
-                    <option value="Loss of Follow-up" {% if visit and visit.clinical_state == 'Loss of Follow-up' %}selected{% endif %}>Loss of Follow-up</option>
-                </select>
+                <button type="button" class="btn" style="margin-top:0; padding:8px 14px; font-size:12px; background:#666; color:#fff; width:auto;" onclick="openClinicalStateRangesModal()">Manage Clinical State Ranges (dates)</button>
+                <input type="hidden" name="clinical_state_data" id="clinical_state_data" value="{% if clinical_states is defined and clinical_states %}{{ clinical_states | tojson | e }}{% else %}[]{% endif %}">
             </div>
 
             <div style="margin-bottom: 20px;">
@@ -417,14 +411,10 @@
                     <button type="button" class="add-btn-small" onclick="addMedication()" style="margin-right: 10px;">+</button>
                     <button type="button" class="btn" onclick="document.getElementById('modalEqDose').style.display='block'" style="padding: 5px 15px; font-size: 12px; background: #666; color: #fff; width: auto; line-height: 1; margin: 0; white-space: nowrap;">⚖️ Equivalent Dose</button>
                 </h4>
-                <div style="margin-bottom: 10px;">
-                    <label style="font-weight: 600; color: #555; margin-right: 10px;">Medication Adherence:</label>
-                    <select name="medication_adherence" style="padding: 6px; font-size: 13px; border-radius: 4px; border: 1px solid #ccc;">
-                        <option value="">Select Adherence...</option>
-                        <option value="Complete" {% if visit and visit.medication_adherence == 'Complete' %}selected{% endif %}>Complete</option>
-                        <option value="Partial" {% if visit and visit.medication_adherence == 'Partial' %}selected{% endif %}>Partial</option>
-                        <option value="No Adherence" {% if visit and visit.medication_adherence == 'No Adherence' %}selected{% endif %}>No Adherence</option>
-                    </select>
+                <div style="margin-bottom: 15px; display: flex; align-items: center;">
+                    <label style="font-size: 13px; font-weight: 600; color: #555; margin-right: 10px; margin-bottom: 0;">Medication Adherence:</label>
+                    <button type="button" class="btn" style="margin-left:0; padding:6px 12px; font-size:12px; background:#666; color:#fff; margin-top:0; width:auto;" onclick="openAdherenceRangesModal()">Manage Adherence Ranges (dates)</button>
+                    <input type="hidden" name="adherence_data" id="adherence_data" value="{% if adherences is defined and adherences %}{{ adherences | tojson | e }}{% else %}[]{% endif %}">
                 </div>
                 <div id="meds-container">
                     {% if visit and visit.medication_entries %}
@@ -632,7 +622,39 @@
                     onPan: ({chart}) => { if(activeStickyDate) showStickyTooltips(activeStickyDate); }
                 }
             },
-            tooltip: { enabled: true, mode: 'nearest', intersect: true },
+            // --- UPDATED TOOLTIP LOGIC ---
+            tooltip: {
+                enabled: true,
+                mode: 'nearest',
+                intersect: true,
+                callbacks: {
+                    title: function(context) {
+                        const pt = context[0].raw;
+                        if (pt && pt.x) return pt.x.split('T')[0];
+                        return context[0].label;
+                    },
+                    label: function(context) {
+                        const dsLabel = context.dataset.label;
+                        const pt = context.raw;
+
+                        if (dsLabel === 'Major Events' || dsLabel === 'Stressors') {
+                            let lines = [`${dsLabel}: ${pt.title || ''}`];
+                            if (pt.duration) lines.push(`Duration: ${pt.duration}`);
+                            if (pt.detail) lines.push(`Note: ${pt.detail}`);
+                            return lines;
+                        }
+
+                        let val = pt.y;
+                        if (context.chart.config._configKey === 'meds') val += ' mg';
+                        let lines = [`${dsLabel}: ${val}`];
+                        if (pt.detail && pt.detail !== 'Average') {
+                            lines.push(`Note: ${pt.detail}`);
+                        }
+                        return lines;
+                    }
+                }
+            },
+            // --- END UPDATED TOOLTIP LOGIC ---
             legend: { display: false } 
         },
         // --- UPDATED CLICK HANDLER ---
@@ -676,6 +698,140 @@
                     showStickyTooltips(dateStr);
                 }
             }, 220); 
+        }
+    };
+
+    // --- CLINICAL OVERLAY PLUGIN (labels in ribbons, hover tooltip) ---
+    const clinicalOverlayPlugin = {
+        id: 'clinicalOverlay',
+
+        afterDraw(chart) {
+            const { ctx, chartArea, scales } = chart;
+            if (!chartArea) return;
+
+            const topY = chartArea.top;
+            const bottomY = chartArea.bottom;
+            const xScale = scales.x;
+
+            chart.$ribbons = [];
+
+            ctx.save();
+
+            // Clip to prevent drawing outside the chart area when zooming/panning
+            ctx.beginPath();
+            ctx.rect(chartArea.left, chartArea.top, chartArea.right - chartArea.left, chartArea.bottom - chartArea.top);
+            ctx.clip();
+
+            /* ========================= 1️⃣ CLINICAL STATE ========================== */
+            if (chart.config._configKey === 'symptoms') {
+                (backendClinicalStates || []).forEach(state => {
+                    if (!state.start || !state.end) return;
+
+                    const startMs = new Date(state.start).valueOf();
+                    const endMs = new Date(state.end).valueOf();
+
+                    const xMin = xScale.getPixelForValue(startMs);
+                    const xMax = xScale.getPixelForValue(endMs);
+                    const height = 28;
+
+                    ctx.fillStyle = 'rgba(164,194,244,0.7)';
+                    ctx.fillRect(xMin, topY, xMax - xMin, height);
+
+                    ctx.fillStyle = '#222';
+                    ctx.font = '12px Segoe UI';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(state.state, xMin + 6, topY + height / 2);
+
+                    chart.$ribbons.push({
+                        xMin, xMax,
+                        yMin: topY,
+                        yMax: topY + height,
+                        title: state.state,
+                        duration: `${state.start} → ${state.end}`,
+                        note: state.note || '',
+                        type: 'Clinical State'
+                    });
+                });
+            }
+
+            /* ========================= 2️⃣ ADHERENCE ========================== */
+            (backendAdherences || []).forEach(ad => {
+                if (!ad.start || !ad.end) return;
+
+                const startMs = new Date(ad.start).valueOf();
+                const endMs = new Date(ad.end).valueOf();
+                const xMin = xScale.getPixelForValue(startMs);
+                const xMax = xScale.getPixelForValue(endMs);
+                const height = 22;
+
+                if (chart.config._configKey === 'symptoms') {
+                    ctx.fillStyle = 'rgba(34,139,34,0.15)';
+                    ctx.fillRect(xMin, bottomY - height, xMax - xMin, height);
+
+                    ctx.fillStyle = '#000';
+                    ctx.font = '11px Segoe UI';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(ad.status, xMin + 6, bottomY - height/2);
+                }
+
+                if (chart.config._configKey === 'meds') {
+                    ctx.fillStyle = 'rgba(34,139,34,0.8)';
+                    ctx.fillRect(xMin, topY, xMax - xMin, 28);
+
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '12px Segoe UI';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(ad.status, xMin + 6, topY + 14);
+                }
+
+                chart.$ribbons.push({
+                    xMin, xMax,
+                    yMin: (chart.config._configKey === 'symptoms') ? bottomY - height : topY,
+                    yMax: (chart.config._configKey === 'symptoms') ? bottomY : topY + 28,
+                    title: ad.status,
+                    duration: `${ad.start} → ${ad.end}`,
+                    note: ad.note || '',
+                    type: 'Adherence'
+                });
+            });
+
+            /* ========================= 3️⃣ SUBSTANCES ========================== */
+            if (chart.config._configKey === 'symptoms') {
+                const uniqueSubs = [...new Set((rawData.substances || []).map(s => s.substance))];
+
+                uniqueSubs.forEach((sub, idx) => {
+                    const laneTop = bottomY - 50 - (idx * 22);
+
+                    (rawData.substances || [])
+                        .filter(s => s.substance === sub)
+                        .forEach(su => {
+                            const startMs = new Date(su.start_date).valueOf();
+                            const endMs = new Date(su.end_date).valueOf();
+                            const xMin = xScale.getPixelForValue(startMs);
+                            const xMax = xScale.getPixelForValue(endMs);
+
+                            ctx.fillStyle = '#B3742A';
+                            ctx.fillRect(xMin, laneTop, xMax - xMin, 18);
+
+                            ctx.fillStyle = '#fff';
+                            ctx.font = '11px Segoe UI';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(sub, xMin + 6, laneTop + 9);
+
+                            chart.$ribbons.push({
+                                xMin, xMax,
+                                yMin: laneTop,
+                                yMax: laneTop + 18,
+                                title: sub,
+                                duration: `${su.start_date} → ${su.end_date}`,
+                                note: su.note || '',
+                                type: 'Substance'
+                            });
+                        });
+                });
+            }
+
+            ctx.restore();
         }
     };
 
@@ -865,28 +1021,28 @@
     function initChartInstance(key, ctxId, datasets, unified) {
         const finalData = [];
         if (unified) {
-            // Reduce circle size for Unified Meds specifically
-            if (key === 'meds') {
-                unified.pointRadius = 1; // Hides the static dot
-                unified.pointHoverRadius = 5; // Shows dot on hover
-                unified.pointHitRadius = 10;
-            }
+            if (key === 'meds') { unified.pointRadius = 1; unified.pointHoverRadius = 5; unified.pointHitRadius = 10; }
             finalData.push(unified);
         }
         if (datasets) finalData.push(...datasets);
         
+        // Setup Symbols for Events/Stressors
         if (key === 'symptoms') {
             const imgEvent = new Image(); imgEvent.src = "{{ url_for('static', filename='Event.png') }}";
+            imgEvent.width = 16; imgEvent.height = 16;
+            
             const imgStressor = new Image(); imgStressor.src = "{{ url_for('static', filename='Stressor.png') }}";
+            imgStressor.width = 16; imgStressor.height = 16;
+
             finalData.push({
                 label: 'Major Events',
                 data: (rawData.events || []).map(e => ({ x: e.date, y: 9.5, detail: e.note || '', title: e.type, duration: e.duration || '' })),
-                pointStyle: imgEvent, pointRadius: 10, pointHoverRadius: 12, showLine: false, hidden: false
+                pointStyle: imgEvent, showLine: false, hidden: false
             });
             finalData.push({
                 label: 'Stressors',
                 data: (rawData.stressors || []).map(s => ({ x: s.date, y: 9.0, detail: s.note || '', title: s.type, duration: s.duration || '' })),
-                pointStyle: imgStressor, pointRadius: 10, pointHoverRadius: 12, showLine: false, hidden: false
+                pointStyle: imgStressor, showLine: false, hidden: false
             });
         }
 
@@ -894,31 +1050,54 @@
         finalData.forEach((ds, i) => {
             if (ds.isUnified) return;
             const c = ds.borderColor || colors[i % colors.length];
-            ds.borderColor = c;
-            ds.backgroundColor = c;
-            ds.pointRadius = 2; // Reduced size
-            ds.pointHoverRadius = 5; // Reduced hover size
-            ds.fill = false;
+            ds.borderColor = c; ds.backgroundColor = c;
+            ds.pointRadius = 2; ds.pointHoverRadius = 5; ds.fill = false;
         });
 
         const ctx = document.getElementById(ctxId);
         if (!ctx) return;
-
-        // Destroy existing if re-initializing same canvas ID
         if(Chart.getChart(ctxId)) Chart.getChart(ctxId).destroy();
 
-        const newChart = new Chart(ctx, { type: 'line', data: { datasets: finalData }, options: commonOptions });
+        // 1. Initialize Chart with overlay plugin
+        const newChart = new Chart(ctx, {
+            type: 'line',
+            data: { datasets: finalData },
+            options: commonOptions,
+            plugins: [clinicalOverlayPlugin]
+        });
+        newChart.config._configKey = key;
 
-        // Double Click Handler
+        // Ribbon hover
+        newChart.canvas.addEventListener('mousemove', function(e) {
+            if (!newChart.$ribbons) return;
+
+            const rect = newChart.canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const hit = newChart.$ribbons.find(r =>
+                mouseX >= r.xMin && mouseX <= r.xMax &&
+                mouseY >= r.yMin && mouseY <= r.yMax
+            );
+
+            if (hit) {
+                newChart.canvas.style.cursor = 'pointer';
+                showRibbonTooltip(e.clientX, e.clientY, hit);
+            } else {
+                newChart.canvas.style.cursor = 'default';
+                hideRibbonTooltip();
+            }
+        });
+        newChart.canvas.addEventListener('mouseleave', hideRibbonTooltip);
+
+        // Modal Double Click Handler
         ctx.addEventListener('dblclick', (e) => {
             suppressSingleClickUntil = Date.now() + 400;
             if (newChart.clickTimeout) clearTimeout(newChart.clickTimeout);
-            
             clearStickyTooltips(); 
             
             const activeEls = newChart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
-            let dateStr = null;
-            let point = null;
+            let dateStr = null; let point = null;
             if (activeEls.length) {
                 const index = activeEls[0].index;
                 const datasetIndex = activeEls[0].datasetIndex;
@@ -933,119 +1112,32 @@
                     if (dateValue) dateStr = new Date(dateValue).toISOString().split('T')[0];
                 }
             }
-            if (dateStr && !point) {
-                showModalByDate(dateStr);
-                return;
-            }
+            if (dateStr && !point) { showModalByDate(dateStr); return; }
             if (!activeEls.length) return;
             const hasVisit = dateStr && Object.values(rawData.details).some(v => v.date === dateStr);
-            if (hasVisit) {
-                showModalByDate(dateStr);
-            } else if (point && ['Onset','Progression','History'].includes(point.phase)) {
-                showHistoryModal(point);
-            } else if (dateStr) {
-                showModalByDate(dateStr);
-            }
+            if (hasVisit) { showModalByDate(dateStr); } 
+            else if (point && ['Onset','Progression','History'].includes(point.phase)) { showHistoryModal(point); } 
+            else if (dateStr) { showModalByDate(dateStr); }
         });
 
-        // --- State Bands & Adherence Strips (Annotations) ---
+        // 2. Set Min/Max relative to the main 'y' scale
         let maxY = 10;
         (newChart.data.datasets || []).forEach(d => { (d.data || []).forEach(p => { if (p.y != null && p.y > maxY) maxY = p.y; }); });
         maxY = maxY * 1.15;
-        const stateColors = {
-            'Recovery': 'rgba(156, 192, 163, 0.7)', 'Remission': 'rgba(164, 194, 244, 0.7)',
-            'Partial Remission': 'rgba(162, 212, 212, 0.7)', 'Relapse': 'rgba(204, 133, 115, 0.7)',
-            'Hospitalisation': 'rgba(107, 91, 149, 0.7)', 'Loss of Follow-up': 'rgba(158, 158, 158, 0.7)'
-        };
-        const adhColorsSolid = { 'Complete': 'rgba(34, 139, 34, 0.8)', 'Partial': 'rgba(154, 205, 50, 0.8)', 'No Adherence': 'rgba(204, 85, 0, 0.8)' };
-        const adhColorsDim = { 'Complete': 'rgba(34, 139, 34, 0.15)', 'Partial': 'rgba(154, 205, 50, 0.15)', 'No Adherence': 'rgba(204, 85, 0, 0.15)' };
-        let annotations = {};
-        const vDates = Object.keys(rawData.details || {}).sort();
-        for (let i = 0; i < vDates.length; i++) {
-            const d1 = vDates[i];
-            let nextDate = new Date(d1);
-            if (i < vDates.length - 1) nextDate = new Date(vDates[i + 1]);
-            else nextDate.setDate(nextDate.getDate() + 14);
-            const d2 = nextDate.toISOString().split('T')[0];
-            const detail = rawData.details[d1];
-            const state = detail ? detail.clinical_state : '';
-            const adh = detail ? detail.medication_adherence : '';
-            if (key === 'symptoms' && state) {
-                annotations['state_' + i] = {
-                    type: 'box', xMin: d1, xMax: d2, yScaleID: 'y', yMin: maxY * 0.90, yMax: maxY,
-                    backgroundColor: stateColors[state] || 'rgba(158,158,158,0.7)', borderWidth: 0,
-                    label: { display: true, content: state, color: '#333', font: { size: 10 } }
-                };
-            }
-            if (key === 'symptoms' && adh) {
-                annotations['adhDim_' + i] = {
-                    type: 'box', xMin: d1, xMax: d2, yScaleID: 'y', yMin: 0, yMax: maxY * 0.08,
-                    backgroundColor: adhColorsDim[adh] || 'rgba(200,200,200,0.15)', borderWidth: 0
-                };
-            }
-            if (key === 'meds' && adh) {
-                annotations['adhSol_' + i] = {
-                    type: 'box', xMin: d1, xMax: d2, yScaleID: 'y', yMin: maxY * 0.90, yMax: maxY,
-                    backgroundColor: adhColorsSolid[adh] || 'rgba(100,100,100,0.8)', borderWidth: 0,
-                    label: { display: true, content: 'Adherence: ' + adh, color: '#fff', font: { size: 10 } }
-                };
-            }
-        }
-        let idx = 0;
-        (backendClinicalStates || []).forEach(function(s) {
-            if (!s.start || !s.end) return;
-            if (key === 'symptoms' && s.state) {
-                annotations['backend_state_' + (idx++)] = {
-                    type: 'box', xMin: s.start, xMax: s.end, yScaleID: 'y', yMin: maxY * 0.90, yMax: maxY,
-                    backgroundColor: stateColors[s.state] || 'rgba(158,158,158,0.7)', borderWidth: 0,
-                    label: { display: true, content: s.state, color: '#333', font: { size: 10 } }
-                };
-            }
-        });
-        idx = 0;
-        (backendAdherences || []).forEach(function(a) {
-            if (!a.start || !a.end) return;
-            if (key === 'symptoms') {
-                annotations['backend_adhDim_' + (idx)] = {
-                    type: 'box', xMin: a.start, xMax: a.end, yScaleID: 'y', yMin: 0, yMax: maxY * 0.08,
-                    backgroundColor: adhColorsDim[a.status] || 'rgba(200,200,200,0.15)', borderWidth: 0
-                };
-            }
-            if (key === 'meds') {
-                annotations['backend_adhSol_' + (idx)] = {
-                    type: 'box', xMin: a.start, xMax: a.end, yScaleID: 'y', yMin: maxY * 0.90, yMax: maxY,
-                    backgroundColor: adhColorsSolid[a.status] || 'rgba(100,100,100,0.8)', borderWidth: 0,
-                    label: { display: true, content: 'Adherence: ' + a.status, color: '#fff', font: { size: 10 } }
-                };
-            }
-            idx++;
-        });
-        if (key === 'symptoms' && (rawData.substances || []).length > 0) {
-            const activeSubs = [...new Set((rawData.substances || []).map(s => s.substance))];
-            (rawData.substances || []).forEach((su, i) => {
-                const tIdx = activeSubs.indexOf(su.substance);
-                const yBase = -1 * (tIdx + 1);
-                const style = getSubstanceStyle(su.substance, su.pattern || 'Occasional');
-                annotations['sub_' + i] = {
-                    type: 'box',
-                    xMin: su.start_date, xMax: su.end_date,
-                    yMin: yBase + 0.1, yMax: yBase + 0.9,
-                    backgroundColor: style.bg, borderColor: style.border, borderWidth: 1, borderDash: style.dash,
-                    label: { display: true, content: su.substance, position: 'center', color: (su.pattern === 'Occasional') ? '#333' : '#fff', font: { size: 10 } }
-                };
-            });
-            if (activeSubs.length > 0) {
-                if (!newChart.options.scales) newChart.options.scales = {};
-                if (!newChart.options.scales.y) newChart.options.scales.y = {};
-                newChart.options.scales.y.min = -1 * activeSubs.length - 0.5;
-                newChart.options.scales.y.ticks = { callback: function(val) { return val < 0 ? '' : val; } };
-            }
-        }
-        if (!newChart.options.plugins) newChart.options.plugins = {};
-        newChart.options.plugins.annotation = { annotations: annotations };
-        if (newChart.options.scales && newChart.options.scales.y) newChart.options.scales.y.max = maxY;
 
-        // Hide non-unified by default (same as original logic)
+        let activeSubsCount = 0;
+        if (key === 'symptoms' && (rawData.substances || []).length > 0) {
+            activeSubsCount = [...new Set((rawData.substances || []).map(s => s.substance))].length;
+        }
+        const yBaseMin = activeSubsCount > 0 ? (-1 * activeSubsCount - 0.5) : 0;
+
+        if (newChart.options.scales && newChart.options.scales.y) {
+            newChart.options.scales.y.min = yBaseMin;
+            newChart.options.scales.y.max = maxY;
+        }
+
+        // 3. Ribbons drawn by clinicalOverlayPlugin (labels + hover); no annotation bands
+
         newChart.data.datasets.forEach(ds => { if (!ds.isUnified) ds.hidden = true; });
         newChart.update();
 
@@ -1055,24 +1147,73 @@
     function handleZoomSelect(val) {
         const customDiv = document.getElementById('customZoomDiv');
         if (customDiv) customDiv.style.display = (val === 'custom') ? 'inline-flex' : 'none';
+
         if (!val || val === 'custom') return;
-        const end = new Date();
-        let start = new Date();
-        if (val === 'week') start.setDate(end.getDate() - 7);
-        if (val === 'month') start.setMonth(end.getMonth() - 1);
-        if (val === 'year') start.setFullYear(end.getFullYear() - 1);
+
+        if (val === 'all') {
+            Object.values(charts).forEach(chart => {
+                if (chart) {
+                    chart.resetZoom();
+                    delete chart.options.scales.x.min;
+                    delete chart.options.scales.x.max;
+                    chart.update();
+                }
+            });
+            return;
+        }
+
+        let maxTime = 0;
+        Object.values(charts).forEach(c => {
+            c.data.datasets.forEach(ds => {
+                ds.data.forEach(p => {
+                    if (p.x) {
+                        let t = new Date(p.x).getTime();
+                        if (t > maxTime) maxTime = t;
+                    }
+                });
+            });
+        });
+
+        let end = maxTime > 0 ? new Date(maxTime) : new Date();
+        end.setDate(end.getDate() + 2);
+
+        let start = new Date(end);
+
+        if (val === 'week') {
+            start.setDate(end.getDate() - 7);
+        } else if (val === 'month') {
+            start.setMonth(end.getMonth() - 1);
+        } else if (val === 'year') {
+            start.setFullYear(end.getFullYear() - 1);
+        }
+
         applyZoomRange(start, end);
     }
+
     function applyCustomZoom() {
         const s = document.getElementById('zoomStart').value;
         const e = document.getElementById('zoomEnd').value;
-        if (s && e) applyZoomRange(new Date(s), new Date(e));
+        if (s && e) {
+            let endDate = new Date(e);
+            endDate.setHours(23, 59, 59, 999);
+            applyZoomRange(new Date(s), endDate);
+        } else {
+            alert("Please select both start and end dates.");
+        }
     }
+
     function applyZoomRange(start, end) {
         Object.values(charts).forEach(chart => {
-            if (chart && chart.options && chart.options.scales && chart.options.scales.x) {
-                chart.options.scales.x.min = start.toISOString ? start.toISOString().split('T')[0] : start;
-                chart.options.scales.x.max = end.toISOString ? end.toISOString().split('T')[0] : end;
+            if (chart) {
+                if (typeof chart.resetZoom === 'function') {
+                    chart.resetZoom();
+                }
+
+                if (chart.options.scales && chart.options.scales.x) {
+                    chart.options.scales.x.min = start.valueOf();
+                    chart.options.scales.x.max = end.valueOf();
+                }
+
                 chart.update();
             }
         });
@@ -1206,22 +1347,23 @@
     function createTooltipElement(x, y, dataset, point, chartType) {
         const div = document.createElement('div');
         div.className = 'sticky-tooltip';
-        
+
         div.style.left = x + 'px';
         div.style.top = y + 'px';
-        
+
         if (point.title) {
+            const dateStr = point.x ? point.x.split('T')[0] : '';
             div.innerHTML = '<div style="font-weight:bold; margin-bottom:4px; color:' + (dataset.borderColor || '#A5DCFE') + '">' + dataset.label + '</div>';
-            div.innerHTML += '<div><strong>' + point.title + '</strong></div>';
-            if (point.duration) div.innerHTML += '<div>Duration: ' + point.duration + '</div>';
-            if (point.detail) div.innerHTML += '<div style="color:#ddd; margin-top:4px; font-style:italic; white-space: normal; max-width: 200px;">' + point.detail + '</div>';
+            div.innerHTML += '<div>Date: ' + dateStr + '</div>';
+            div.innerHTML += '<div>Name: <strong>' + point.title + '</strong></div>';
+            if (point.detail) div.innerHTML += '<div style="color:#ddd; margin-top:4px; font-style:italic; white-space: normal; max-width: 200px;">Note: ' + point.detail + '</div>';
         } else {
             let valDisplay = point.y;
             if (chartType === 'meds') valDisplay += ' mg';
             div.innerHTML = '<span class="tooltip-color-box" style="background:' + dataset.borderColor + '"></span><span style="font-weight:600;">' + dataset.label + ':</span> ' + valDisplay;
             if (point.detail) div.innerHTML += '<div style="margin-top:2px; font-weight:normal; opacity:0.8;">' + point.detail + '</div>';
         }
-        
+
         document.body.appendChild(div);
         return div;
     }
@@ -1230,29 +1372,73 @@
         document.querySelectorAll('.sticky-tooltip').forEach(el => el.remove());
     }
 
+    function showRibbonTooltip(x, y, ribbon) {
+        let tip = document.getElementById('ribbonTooltip');
+        if (!tip) {
+            tip = document.createElement('div');
+            tip.id = 'ribbonTooltip';
+            tip.className = 'sticky-tooltip';
+            document.body.appendChild(tip);
+        }
+        tip.innerHTML = `
+            <strong>${ribbon.type}</strong><br>
+            <strong>${ribbon.title}</strong><br>
+            <span>Duration: ${ribbon.duration}</span>
+            ${ribbon.note ? `<br><em>${ribbon.note}</em>` : ''}
+        `;
+        tip.style.left = x + 'px';
+        tip.style.top = (y - 12) + 'px';
+        tip.style.display = 'block';
+    }
+
+    function hideRibbonTooltip() {
+        const tip = document.getElementById('ribbonTooltip');
+        if (tip) tip.style.display = 'none';
+    }
+
     // --- POPUP LOGIC (Generic) ---
     function showDailySummary(dateStr, x, y) {
         const popup = document.getElementById('dailySummary');
         const content = document.getElementById('dsContent');
         document.getElementById('dsDate').innerText = dateStr;
         content.innerHTML = '';
-        
+
         let hasData = false;
-        // Iterate only over active charts
+
         Object.keys(charts).forEach(key => {
             const chartObj = charts[key];
             const groupName = widgetConfig[key].title;
             let groupHtml = '';
+
             chartObj.data.datasets.forEach(ds => {
                 if (ds.hidden) return;
-                const point = ds.data.find(p => p.x && p.x.startsWith(dateStr));
-                if (point) {
-                    let val = point.y; let det = point.detail || '';
-                    if (key === 'meds') val = `${val} mg`;
-                    groupHtml += `<li><span style="color:${ds.borderColor}; font-weight:bold;">● ${ds.label}</span>: ${val} <br><small style="color:#666; margin-left:15px;">${det}</small></li>`;
-                }
+
+                const dayPoints = ds.data.filter(p => p.x && p.x.startsWith(dateStr));
+
+                dayPoints.forEach(point => {
+                    let det = point.detail || '';
+
+                    if (ds.label === 'Stressors' || ds.label === 'Major Events') {
+                        let title = point.title || '';
+                        groupHtml += `<li>
+                            <span style="color:#333; font-weight:bold;">● [${dateStr}] ${ds.label}</span>: ${title}
+                            ${det ? `<br><small style="color:#666; margin-left:15px;">Note: ${det}</small>` : ''}
+                        </li>`;
+                    } else {
+                        let val = point.y;
+                        if (key === 'meds') val = `${val} mg`;
+                        groupHtml += `<li>
+                            <span style="color:${ds.borderColor || '#333'}; font-weight:bold;">● ${ds.label}</span>: ${val}
+                            ${det ? `<br><small style="color:#666; margin-left:15px;">${det}</small>` : ''}
+                        </li>`;
+                    }
+                });
             });
-            if (groupHtml) { content.innerHTML += `<div class="daily-summary-cat">${groupName}</div><ul>${groupHtml}</ul>`; hasData = true; }
+
+            if (groupHtml) {
+                content.innerHTML += `<div class="daily-summary-cat">${groupName}</div><ul>${groupHtml}</ul>`;
+                hasData = true;
+            }
         });
 
         if (!hasData) content.innerHTML = '<em>No visible data points.</em>';
@@ -1529,6 +1715,9 @@
                 }
             }, { passive: true }); // passive improves scroll performance
         }
+
+        bindAdherenceCheckboxes();
+        renderClinicalStates();
     };
 
     // --- EXPORT FUNCTIONS ---
@@ -1763,6 +1952,172 @@
         document.getElementById('eq_past_dose').value = '';
         document.getElementById('eq_result_dose').value = '';
     }
+
+    // --- STRESSOR / EVENTS BUTTON TOGGLE ---
+    function toggleEventDataset(type, label, btn) {
+        const chart = charts[type]; if(!chart) return;
+        const idx = chart.data.datasets.findIndex(ds => ds.label === label);
+        if(idx !== -1) {
+            const currentlyVisible = chart.isDatasetVisible(idx);
+            chart.setDatasetVisibility(idx, !currentlyVisible);
+            chart.update();
+            btn.style.opacity = currentlyVisible ? '0.5' : '1';
+        }
+    }
+
+    // --- MODALS JS FOR CLINICAL STATES AND ADHERENCE ---
+    function bindAdherenceCheckboxes() {
+        const cbs = document.querySelectorAll('.adherence-checkbox');
+        if (!cbs.length) return;
+        cbs.forEach(cb => {
+            cb.addEventListener('change', function() {
+                const container = document.getElementById('adherence-ranges-container');
+                if (!container) return;
+                const id = 'adherence-range-' + this.value.replace(/\s+/g, '_');
+                if (this.checked) {
+                    let html = '<div class="range-group" id="' + id + '" data-status="' + this.value + '"><div class="range-row"><label>Start: <input type="date" class="range-start"></label> <label>End: <input type="date" class="range-end"></label></div><button type="button" class="btn" style="margin-top:6px; padding:4px 10px; font-size:11px; background:#7ab8e0; color:#fff;" onclick="addExtraRange(this)">+ Add another range</button></div>';
+                    container.insertAdjacentHTML('beforeend', html);
+                } else {
+                    const g = document.getElementById(id);
+                    if (g) g.remove();
+                }
+            });
+        });
+    }
+    function addExtraRange(btn) {
+        const group = btn.closest('.range-group');
+        if (!group) return;
+        const row = document.createElement('div');
+        row.className = 'range-row';
+        row.innerHTML = '<label>Start: <input type="date" class="range-start"></label> <label>End: <input type="date" class="range-end"></label>';
+        group.insertBefore(row, btn);
+    }
+    function closeAdherenceRangesModal() {
+        const data = [];
+        const container = document.getElementById('adherence-ranges-container');
+        if (container) {
+            container.querySelectorAll('.range-group').forEach(group => {
+                const status = group.getAttribute('data-status');
+                group.querySelectorAll('.range-row').forEach(row => {
+                    const start = row.querySelector('.range-start');
+                    const end = row.querySelector('.range-end');
+                    if (start && end) data.push({ status: status, start: start.value || null, end: end.value || null });
+                });
+            });
+        }
+        const hid = document.getElementById('adherence_data');
+        if (hid) hid.value = JSON.stringify(data);
+        const modal = document.getElementById('adherenceRangesModal');
+        if (modal) modal.style.display = 'none';
+    }
+    function openAdherenceRangesModal() { const m = document.getElementById('adherenceRangesModal'); if (m) m.style.display = 'block'; }
+
+    function closeClinicalStateRangesModal() {
+        const data = [];
+        document.querySelectorAll('#clinical-state-ranges-container > div[id^="csr-input-"]').forEach(div => {
+            const strong = div.querySelector('strong');
+            const s = div.querySelector('.range-start');
+            const e = div.querySelector('.range-end');
+            if (strong && s && e) data.push({ state: strong.innerText, start: s.value || null, end: e.value || null });
+        });
+        const hid = document.getElementById('clinical_state_data');
+        if (hid) hid.value = JSON.stringify(data);
+        const modal = document.getElementById('clinicalStateRangesModal');
+        if (modal) modal.style.display = 'none';
+    }
+    function openClinicalStateRangesModal() { const m = document.getElementById('clinicalStateRangesModal'); if (m) { m.style.display = 'block'; renderClinicalStates(); } }
+
+    const stateDBLC = {
+        "Bipolar Disorder": ["Recovery", "Remission", "Partial Remission", "Depressive Episode", "Manic Episode", "Hypomanic Episode", "Mixed Episode", "Relapse", "Loss of Follow-up"],
+        "Major Depressive Disorder": ["Recovery", "Remission", "Partial Remission", "Mild Depressive Episode", "Moderate Depressive Episode", "Severe Depressive Episode", "Relapse", "Loss of Follow-up"],
+        "Schizophrenia Spectrum": ["Recovery", "Remission", "Partial Remission", "Stable Phase", "Acute Psychotic Episode", "Residual Phase", "Relapse", "Loss of Follow-up"],
+        "Obsessive Compulsive Disorder": ["Recovery", "Remission", "Partial Remission", "Active OCD", "Severe OCD", "Treatment Resistant Phase", "Relapse", "Loss of Follow-up"],
+        "Anxiety Disorders": ["Recovery", "Remission", "Partial Remission", "Active Anxiety", "Acute Panic Phase", "Relapse", "Loss of Follow-up"]
+    };
+    let customStatesLC = [];
+    function renderClinicalStates() {
+        const container = document.getElementById('dynamic-states-container');
+        if (!container) return;
+        const selectedDiags = Array.from(document.querySelectorAll('#diagnosis-checkboxes input:checked')).map(cb => cb.value);
+        let statesToShow = new Set();
+        if (selectedDiags.length === 0) {
+            ["Recovery", "Remission", "Partial Remission", "Relapse", "Loss of Follow-up"].forEach(s => statesToShow.add(s));
+        } else {
+            selectedDiags.forEach(d => { if (stateDBLC[d]) stateDBLC[d].forEach(s => statesToShow.add(s)); });
+        }
+        customStatesLC.forEach(s => statesToShow.add(s));
+        container.innerHTML = '';
+        Array.from(statesToShow).sort().forEach(state => {
+            let isCustom = customStatesLC.includes(state);
+            let remBtn = isCustom ? '<button type="button" onclick="removeCustomStateLC(\'' + state.replace(/'/g, "\\'") + '\')" style="background:none; border:none; color:red; cursor:pointer; font-weight:bold; margin-left:auto;">[-]</button>' : '';
+            let html = '<label style="display:flex; width:100%;"><input type="checkbox" class="clinical-state-checkbox" value="' + state.replace(/"/g, '&quot;') + '" onchange="handleStateCheckboxChangeLC(this)"> <span style="flex:1;">' + state.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span> ' + remBtn + '</label>';
+            container.insertAdjacentHTML('beforeend', html);
+        });
+        const rangesContainer = document.getElementById('clinical-state-ranges-container');
+        let activeStates = [];
+        if (rangesContainer) activeStates = Array.from(rangesContainer.querySelectorAll('div[id^="csr-input-"]')).map(div => { const s = div.querySelector('strong'); return s ? s.innerText : ''; }).filter(Boolean);
+        document.querySelectorAll('.clinical-state-checkbox').forEach(cb => { if (activeStates.includes(cb.value)) cb.checked = true; });
+    }
+    function addCustomState() {
+        const inp = document.getElementById('customStateInput');
+        if (!inp) return;
+        let val = inp.value.trim();
+        if (val && !customStatesLC.includes(val)) { customStatesLC.push(val); inp.value = ''; renderClinicalStates(); }
+    }
+    function removeCustomStateLC(val) { customStatesLC = customStatesLC.filter(s => s !== val); renderClinicalStates(); }
+    function handleStateCheckboxChangeLC(cb) {
+        var container = document.getElementById('clinical-state-ranges-container');
+        if (!container) return;
+        var safeId = 'csr-input-' + cb.value.replace(/[^a-zA-Z0-9]/g, '');
+        if (cb.checked) {
+            var html = '<div id="' + safeId + '" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 10px;"><strong style="font-size: 13px; color: #333;">' + cb.value.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</strong><div style="display: flex; gap: 10px; margin-top: 5px; align-items:center;"><label>Start: <input type="date" class="range-start"></label><label>End: <input type="date" class="range-end"></label></div></div>';
+            container.insertAdjacentHTML('beforeend', html);
+        } else { var el = document.getElementById(safeId); if (el) el.remove(); }
+    }
 </script>
+<div id="adherenceRangesModal" class="modal" onclick="if(event.target === this) closeAdherenceRangesModal()">
+    <div class="modal-content" style="width: 480px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; margin-top: 5vh;">
+        <h4 style="margin-top: 0;">Adherence Ranges (with dates)</h4>
+        <div style="overflow-y: auto; flex-grow: 1; padding-right: 10px;">
+            <div class="checklist-group">
+                <label><input type="checkbox" class="adherence-checkbox" value="Complete"> Complete</label>
+                <label><input type="checkbox" class="adherence-checkbox" value="Partial"> Partial</label>
+                <label><input type="checkbox" class="adherence-checkbox" value="No Adherence"> No Adherence</label>
+            </div>
+            <div id="adherence-ranges-container" style="margin-top:12px;"></div>
+        </div>
+        <div style="margin-top:15px; padding-top:15px; border-top: 1px solid #eee;">
+            <button type="button" class="btn" style="margin-top:0; background:#888; color:#fff;" onclick="closeAdherenceRangesModal()">Done</button>
+        </div>
+    </div>
+</div>
+
+<div id="clinicalStateRangesModal" class="modal" onclick="if(event.target === this) closeClinicalStateRangesModal()">
+    <div class="modal-content" style="width: 520px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; margin-top: 5vh;">
+        <h4 style="margin-top: 0; color: #333;">Clinical State Ranges</h4>
+        <div style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+            <strong style="font-size: 13px; color: #555; display:block; margin-bottom: 5px;">Select Diagnoses:</strong>
+            <div class="checklist-group" style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; font-size:12px;" id="diagnosis-checkboxes">
+                <label><input type="checkbox" value="Bipolar Disorder" onchange="renderClinicalStates()"> Bipolar Disorder (I & II)</label>
+                <label><input type="checkbox" value="Major Depressive Disorder" onchange="renderClinicalStates()"> Major Depressive Disorder</label>
+                <label><input type="checkbox" value="Schizophrenia Spectrum" onchange="renderClinicalStates()"> Schizophrenia Spectrum</label>
+                <label><input type="checkbox" value="Obsessive Compulsive Disorder" onchange="renderClinicalStates()"> Obsessive Compulsive Disorder</label>
+                <label><input type="checkbox" value="Anxiety Disorders" onchange="renderClinicalStates()"> Anxiety Disorders</label>
+            </div>
+        </div>
+        <div style="overflow-y: auto; flex-grow: 1; padding-right: 10px;">
+            <strong style="font-size: 13px; color: #555; display:block; margin-bottom: 5px;">States:</strong>
+            <div class="checklist-group" id="dynamic-states-container"></div>
+            <div style="margin-top: 10px; display:flex; gap:5px;">
+                <input type="text" id="customStateInput" placeholder="Custom state..." style="flex:1; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius:4px;">
+                <button type="button" class="btn" style="padding:6px 15px; font-size:12px; margin:0;" onclick="addCustomState()">[+] Add State</button>
+            </div>
+            <div id="clinical-state-ranges-container" style="margin-top:15px; border-top:1px dashed #ccc; padding-top:10px;"></div>
+        </div>
+        <div style="margin-top:15px; padding-top:15px; border-top: 1px solid #eee;">
+            <button type="button" class="btn" style="margin-top:0; background:#888; color:#fff;" onclick="closeClinicalStateRangesModal()">Done</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>

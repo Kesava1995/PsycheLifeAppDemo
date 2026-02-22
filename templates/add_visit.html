@@ -239,8 +239,10 @@
                     <div id="substances-container">
                         {% if last_visit and last_visit.substance_use_entries %}
                             {% for su in last_visit.substance_use_entries %}
-                                <script>window.addEventListener('load', () => addSubstance("{{ su.substance_name }}", "{{ su.pattern }}", "{{ su.start_date.strftime('%Y-%m-%d') if su.start_date else '' }}", "{{ su.end_date.strftime('%Y-%m-%d') if su.end_date else '' }}", "{{ su.note | e }}");</script>
+                                <script>window.addEventListener('load', () => addSubstance("{{ su.substance_name }}", "{{ su.pattern }}", "{{ su.start_date.strftime('%Y-%m-%d') if su.start_date else '' }}", "{{ su.end_date.strftime('%Y-%m-%d') if su.end_date else '' }}", `{{ su.note | replace('\n', '\\n') | replace('\r', '') | replace('`', '\\`') if su.note else '' }}`));</script>
                             {% endfor %}
+                        {% else %}
+                            <script>window.addEventListener('load', () => addSubstance());</script>
                         {% endif %}
                     </div>
 
@@ -535,6 +537,9 @@
             document.getElementById('nextVisitDate').value = d.toISOString().split('T')[0];
             bindAdherenceCheckboxes();
             renderClinicalStates();
+            if (document.getElementById('substances-container').children.length === 0) {
+                addSubstance();
+            }
         });
 
         // --- Modals (Major Events + Stressors) ---
