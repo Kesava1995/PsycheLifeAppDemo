@@ -138,7 +138,7 @@
     <div class="app-container">
         <aside class="sidebar">
             <div style="font-weight:bold; margin-bottom:20px;">Dr. {{ doctor.full_name if doctor and doctor.full_name else 'Doctor' }}</div>
-            <a href="{{ url_for('first_visit') }}" style="text-decoration:none; color:#333;">🏠 First Visit</a>
+            <a href="{{ url_for('dashboard') }}" style="text-decoration:none; color:#333;">🏠 Dashboard</a>
             <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" style="display:block; margin-top:10px; text-decoration:none; color:#333;">⬅️ Back</a>
         </aside>
 

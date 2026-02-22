@@ -141,7 +141,7 @@ def init_db():
 def landing():
     """Landing page - Facebook-style login/signup."""
     if 'logged_in' in session and session.get('logged_in'):
-        return redirect(url_for('first_visit'))
+        return redirect(url_for('dashboard'))
     if 'guest' in session:
         return redirect(url_for('first_visit'))
     return render_template('landing.html')
@@ -167,7 +167,7 @@ def login():
             if doc:
                 session['doctor_id'] = doc.id
             flash('Login successful!', 'success')
-            return redirect(url_for('first_visit'))
+            return redirect(url_for('dashboard'))
         
         # Check database for doctor
         doctor = Doctor.query.filter_by(email=email).first()
@@ -179,7 +179,7 @@ def login():
                 session['doctor_id'] = doctor.id
                 session['role'] = 'doctor'
                 flash('Login successful!', 'success')
-                return redirect(url_for('first_visit'))
+                return redirect(url_for('dashboard'))
         
         flash('Invalid credentials. Please try again.', 'error')
         return redirect(url_for('landing'))
@@ -400,9 +400,10 @@ def profile():
 
 
 @app.route('/dashboard')
-def dashboard_redirect():
-    """Redirect old dashboard URL to first_visit."""
-    return redirect(url_for('first_visit'))
+@login_required
+def dashboard():
+    """Renders the main dashboard view."""
+    return render_template('dashboard.html')
 
 
 @app.route('/first_visit', methods=['GET', 'POST'])

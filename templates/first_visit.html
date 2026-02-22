@@ -101,7 +101,10 @@
     <div class="app-container">
         <aside class="sidebar">
             <div style="font-weight:bold; margin-bottom:20px;">Dr. {{ doctor.full_name if doctor and doctor.full_name else 'Doctor' }}</div>
-            <a href="{{ url_for('profile') }}" style="text-decoration:none; color:#333; margin-bottom:20px; display:block;">👤 Profile</a>
+			<div style="display: flex; gap: 15px; margin-bottom: 20px;">
+				<a href="{{ url_for('profile') }}" style="text-decoration:none; color:#333; margin-bottom:8px; margin-right:10px;">👤 Profile</a>
+				<a href="{{ url_for('dashboard') }}" style="text-decoration:none; color:#333; margin-bottom:8px;">🏠 Dashboard</a>
+			</div>
             <input type="text" id="search" placeholder="Search Patients..." onkeyup="filterPatients()" style="width:100%; padding:8px; margin-bottom:10px;">
             <div id="patientList" style="flex:1; overflow-y:auto;">
                 {% for p in patients %}
