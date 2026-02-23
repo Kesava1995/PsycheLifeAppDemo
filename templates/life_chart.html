@@ -6,6 +6,9 @@
     <title>Life Chart - {{ patient.name if patient else 'Guest' }}</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     
@@ -399,11 +402,22 @@
 <div class="main-content">
     
     <div class="widget-toolbar chart-controls-container">
-        <select id="widgetSelector" class="widget-selector">
-            <option value="" disabled selected>Select chart to add...</option>
-            </select>
-        <button onclick="addSelectedWidget()" class="add-widget-btn">Insert Chart</button>
-        <div class="zoom-control" style="display: flex; align-items: center; gap: 10px; margin-right: 15px; border-right: 1px solid #ccc; padding-right: 15px;">
+        <div style="display: flex; gap: 10px; flex-wrap: nowrap; align-items: center;">
+            <div style="display: flex; gap: 5px;">
+                <select id="widgetSelector" class="widget-selector" style="min-width: 150px;">
+                    <option value="" disabled selected>Insert chart...</option>
+                </select>
+                <button onclick="addSelectedWidget()" class="add-widget-btn">Add</button>
+            </div>
+            <div style="display: flex; gap: 5px; padding-left: 10px;">
+                <select id="removeWidgetSelector" class="widget-selector" style="min-width: 150px;">
+                    <option value="" disabled selected>Remove chart...</option>
+                </select>
+                <button onclick="removeSelectedWidget()" class="add-widget-btn" style="background: #f5576c;">Remove</button>
+            </div>
+        </div>
+
+        <div class="zoom-control" style="display: flex; align-items: center; gap: 10px; margin-left: auto; margin-right: 10px;">
             <select id="zoomSelect" onchange="handleZoomSelect(this.value)" class="btn btn-sm" style="background: white; border: 1px dashed #7ab8e0; color: #333; margin: 0;">
                 <option value="">Zoom View...</option>
                 <option value="all">Show All (Reset)</option>
@@ -418,7 +432,7 @@
                 <button class="btn btn-sm" onclick="applyCustomZoom()" style="background:#7ab8e0; color:white; margin:0;">Go</button>
             </div>
         </div>
-        <button onclick="openDownloadModal()" class="btn" style="padding: 5px 10px; font-size: 13px; height: 30px; background: #555; color: white; margin-left: auto;">Download</button>
+        <button onclick="openDownloadModal()" class="btn" style="padding: 5px 10px; font-size: 13px; height: 30px; background: #555; color: white;">Download</button>
     </div>
 
     <div id="dashboardArea" class="widget-grid">
@@ -645,109 +659,100 @@
 	let suppressSingleClickUntil = 0;
     let charts = {}; // Global chart instance storage
     let activeStickyDate = null; // Remember active date for zoom/pan sync
+    let isPanning = false;
 
-    // --- CHART OPTIONS ---
-    const commonOptions = {
-        responsive: true, maintainAspectRatio: false, 
-        layout: { padding: { top: 20 } }, // Prevents top-edge clipping during PDF export
-        scales: {
-            x: { type: 'time', time: { unit: 'day' }, title: { display: true, text: 'Date' } },
-            y: { beginAtZero: true, title: { display: true, text: 'Score' }, grace: '10%' } // Grace adds 10% breathing room above the highest point
-        },
-        plugins: {
-            zoom: {
-                zoom: {
-                    wheel: { enabled: true },
-                    pinch: { enabled: true },
-                    drag: { enabled: true },
-                    mode: 'xy',
-                    overScaleMode: 'xy',
-                    onZoom: ({chart}) => { if(activeStickyDate) showStickyTooltips(activeStickyDate); }
-                },
-                pan: {
-                    enabled: true,
-                    mode: 'xy',
-                    onPan: ({chart}) => { if(activeStickyDate) showStickyTooltips(activeStickyDate); }
-                }
+    // --- CHART OPTIONS (Now a function to prevent infinite loop object merging) ---
+    function getCommonOptions() {
+        return {
+            responsive: true, maintainAspectRatio: false, 
+            layout: { padding: { top: 45 } }, 
+            scales: {
+                x: { type: 'time', time: { unit: 'day' }, title: { display: true, text: 'Date' } },
+                y: { beginAtZero: true, min: 0, title: { display: true, text: 'Score' }, grace: '10%' } 
             },
-            // --- UPDATED TOOLTIP LOGIC ---
-            tooltip: {
-                enabled: true,
-                mode: 'nearest',
-                intersect: true,
-                callbacks: {
-                    title: function(context) {
-                        const pt = context[0].raw;
-                        if (pt && pt.x) return pt.x.split('T')[0];
-                        return context[0].label;
+            plugins: {
+                zoom: {
+                    limits: {
+                        y: { min: 0 }
                     },
-                    label: function(context) {
-                        const dsLabel = context.dataset.label;
-                        const pt = context.raw;
+                    zoom: {
+                        wheel: { enabled: true },
+                        pinch: { enabled: true },
+                        mode: 'x',
+                        scaleMode: 'y',
+                        onZoomStart: () => { clearStickyTooltips(); },
+                        onZoomComplete: ({chart}) => { if(activeStickyDate) showStickyTooltips(activeStickyDate); }
+                    },
+                    pan: {
+                        enabled: true, 
+                        mode: 'xy',
+                        onPanStart: () => { 
+                            isPanning = true; 
+                            clearStickyTooltips(); 
+                        },
+                        onPanComplete: ({chart}) => { 
+                            if(activeStickyDate) showStickyTooltips(activeStickyDate);
+                            setTimeout(() => { isPanning = false; }, 100); 
+                        }
+                    }
+                },
+                tooltip: {
+                    enabled: true,
+                    mode: 'nearest',
+                    intersect: true,
+                    callbacks: {
+                        title: function(context) {
+                            const pt = context[0].raw;
+                            if (pt && pt.x) return pt.x.split('T')[0];
+                            return context[0].label;
+                        },
+                        label: function(context) {
+                            const dsLabel = context.dataset.label;
+                            const pt = context.raw;
 
-                        if (dsLabel === 'Major Events' || dsLabel === 'Stressors') {
-                            let lines = [`${dsLabel}: ${pt.title || ''}`];
-                            if (pt.duration) lines.push(`Duration: ${pt.duration}`);
-                            if (pt.detail) lines.push(`Note: ${pt.detail}`);
+                            if (dsLabel === 'Major Events' || dsLabel === 'Stressors') {
+                                let lines = [`${dsLabel}: ${pt.title || ''}`];
+                                if (pt.duration) lines.push(`Duration: ${pt.duration}`);
+                                if (pt.detail) lines.push(`Note: ${pt.detail}`);
+                                return lines;
+                            }
+
+                            let val = pt.y;
+                            if (context.chart.config._configKey === 'meds') val += ' mg';
+                            let lines = [`${dsLabel}: ${val}`];
+                            if (pt.detail && pt.detail !== 'Average') {
+                                lines.push(`Note: ${pt.detail}`);
+                            }
                             return lines;
                         }
-
-                        let val = pt.y;
-                        if (context.chart.config._configKey === 'meds') val += ' mg';
-                        let lines = [`${dsLabel}: ${val}`];
-                        if (pt.detail && pt.detail !== 'Average') {
-                            lines.push(`Note: ${pt.detail}`);
-                        }
-                        return lines;
                     }
-                }
+                },
+                legend: { display: false } 
             },
-            // --- END UPDATED TOOLTIP LOGIC ---
-            legend: { display: false } 
-        },
-        // --- UPDATED CLICK HANDLER ---
-        onClick: (e, activeEls, chart) => {
-            if (Date.now() < suppressSingleClickUntil) return;
-            if (chart.clickTimeout) clearTimeout(chart.clickTimeout);
+            onClick: (e, activeEls, chart) => {
+                if (isPanning) return; // Abort if we just finished dragging
+                if (Date.now() < suppressSingleClickUntil) return;
+                if (chart.clickTimeout) clearTimeout(chart.clickTimeout);
 
-            chart.clickTimeout = setTimeout(() => {
-                const xScale = chart.scales.x;
-                if (!xScale) return;
+                chart.clickTimeout = setTimeout(() => {
+                    // FIX: Changed intersect to TRUE so it ONLY triggers on actual data points
+                    const points = chart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
 
-                let dateStr = "";
-                const points = chart.getElementsAtEventForMode(e, 'nearest', { intersect: false, axis: 'x' }, true);
-
-                if (points.length > 0) {
-                    const firstPoint = points[0];
-                    const dataItem = chart.data.datasets[firstPoint.datasetIndex].data[firstPoint.index];
-                    if (dataItem && dataItem.x) dateStr = dataItem.x.split('T')[0];
-                } 
-                
-                if (!dateStr) {
-                    // Fallback Logic
-                    const nativeEvent = e.native != null ? e.native : e;
-                    const canvasPos = Chart.helpers.getRelativePosition(nativeEvent, chart);
-                    const chartArea = chart.chartArea;
-                    const canvasX = Math.max(chartArea.left, Math.min(chartArea.right, canvasPos.x));
-                    const dateValue = xScale.getValueForPixel(canvasX);
-                    
-                    if (dateValue) {
-                        const dateObj = new Date(dateValue);
-                        if (dateObj.getHours() >= 12) dateObj.setDate(dateObj.getDate() + 1);
-                        const year = dateObj.getFullYear();
-                        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-                        const day = String(dateObj.getDate()).padStart(2, '0');
-                        dateStr = `${year}-${month}-${day}`;
-                    }
-                }
-
-                if (dateStr) {
-                    activeStickyDate = dateStr; // Save the date for zoom/pan sync
-                    showStickyTooltips(dateStr);
-                }
-            }, 220); 
-        }
-    };
+                    if (points.length > 0) {
+                        const firstPoint = points[0];
+                        const dataItem = chart.data.datasets[firstPoint.datasetIndex].data[firstPoint.index];
+                        
+                        if (dataItem && dataItem.x) {
+                            const dateStr = dataItem.x.split('T')[0];
+                            activeStickyDate = dateStr; 
+                            showStickyTooltips(dateStr);
+                        }
+                    } 
+                    // NOTE: Removed the entire fallback block that triggered clicks on empty space
+                }, 220); 
+            }
+        };
+    }
 
     // --- CLINICAL OVERLAY PLUGIN (labels in ribbons, hover tooltip) ---
     const clinicalOverlayPlugin = {
@@ -760,14 +765,13 @@
             const topY = chartArea.top;
             const bottomY = chartArea.bottom;
             const xScale = scales.x;
+            const bottomPadding = chart.options.scales?.x?.ticks?.padding || 0;
 
             chart.$ribbons = [];
-
             ctx.save();
 
-            // Clip to prevent drawing outside the chart area when zooming/panning
             ctx.beginPath();
-            ctx.rect(chartArea.left, chartArea.top, chartArea.right - chartArea.left, chartArea.bottom - chartArea.top);
+            ctx.rect(chartArea.left, 0, chartArea.right - chartArea.left, chartArea.bottom + bottomPadding);
             ctx.clip();
 
             /* ========================= 1️⃣ CLINICAL STATE ========================== */
@@ -777,23 +781,23 @@
 
                     const startMs = new Date(state.start).valueOf();
                     const endMs = new Date(state.end).valueOf();
-
                     const xMin = xScale.getPixelForValue(startMs);
                     const xMax = xScale.getPixelForValue(endMs);
                     const height = 28;
+                    const laneTop = topY - height - 5;
 
                     ctx.fillStyle = 'rgba(164,194,244,0.7)';
-                    ctx.fillRect(xMin, topY, xMax - xMin, height);
+                    ctx.fillRect(xMin, laneTop, xMax - xMin, height);
 
                     ctx.fillStyle = '#222';
                     ctx.font = '12px Segoe UI';
                     ctx.textBaseline = 'middle';
-                    ctx.fillText(state.state, xMin + 6, topY + height / 2);
+                    ctx.fillText(state.state, xMin + 6, laneTop + height / 2);
 
                     chart.$ribbons.push({
                         xMin, xMax,
-                        yMin: topY,
-                        yMax: topY + height,
+                        yMin: laneTop,
+                        yMax: laneTop + height,
                         title: state.state,
                         duration: `${state.start} → ${state.end}`,
                         note: state.note || '',
@@ -813,34 +817,48 @@
                 const height = 22;
 
                 if (chart.config._configKey === 'symptoms') {
+                    const laneTop = bottomY + 5;
                     ctx.fillStyle = 'rgba(34,139,34,0.15)';
-                    ctx.fillRect(xMin, bottomY - height, xMax - xMin, height);
+                    ctx.fillRect(xMin, laneTop, xMax - xMin, height);
 
                     ctx.fillStyle = '#000';
                     ctx.font = '11px Segoe UI';
                     ctx.textBaseline = 'middle';
-                    ctx.fillText(ad.status, xMin + 6, bottomY - height/2);
+                    ctx.fillText(ad.status, xMin + 6, laneTop + height/2);
+
+                    chart.$ribbons.push({
+                        xMin, xMax,
+                        yMin: laneTop,
+                        yMax: laneTop + height,
+                        title: ad.status,
+                        duration: `${ad.start} → ${ad.end}`,
+                        note: ad.note || '',
+                        type: 'Adherence'
+                    });
                 }
 
                 if (chart.config._configKey === 'meds') {
+                    const medHeight = 28;
+                    const laneTop = topY - medHeight - 5;
+
                     ctx.fillStyle = 'rgba(34,139,34,0.8)';
-                    ctx.fillRect(xMin, topY, xMax - xMin, 28);
+                    ctx.fillRect(xMin, laneTop, xMax - xMin, medHeight);
 
                     ctx.fillStyle = '#fff';
                     ctx.font = '12px Segoe UI';
                     ctx.textBaseline = 'middle';
-                    ctx.fillText(ad.status, xMin + 6, topY + 14);
-                }
+                    ctx.fillText(ad.status, xMin + 6, laneTop + 14);
 
-                chart.$ribbons.push({
-                    xMin, xMax,
-                    yMin: (chart.config._configKey === 'symptoms') ? bottomY - height : topY,
-                    yMax: (chart.config._configKey === 'symptoms') ? bottomY : topY + 28,
-                    title: ad.status,
-                    duration: `${ad.start} → ${ad.end}`,
-                    note: ad.note || '',
-                    type: 'Adherence'
-                });
+                    chart.$ribbons.push({
+                        xMin, xMax,
+                        yMin: laneTop,
+                        yMax: laneTop + medHeight,
+                        title: ad.status,
+                        duration: `${ad.start} → ${ad.end}`,
+                        note: ad.note || '',
+                        type: 'Adherence'
+                    });
+                }
             });
 
             /* ========================= 3️⃣ SUBSTANCES ========================== */
@@ -848,7 +866,8 @@
                 const uniqueSubs = [...new Set((rawData.substances || []).map(s => s.substance))];
 
                 uniqueSubs.forEach((sub, idx) => {
-                    const laneTop = bottomY - 50 - (idx * 22);
+                    // REQUIREMENT 3: Draw progressively below Adherence lane in the Free Zone
+                    const laneTop = bottomY + 30 + (idx * 22);
 
                     (rawData.substances || [])
                         .filter(s => s.substance === sub)
@@ -943,7 +962,8 @@
         const div = document.createElement('div');
         div.className = `widget-card ${widthClass}`;
         div.id = `widget-${key}`;
-        div.setAttribute('draggable', 'true'); // Enable dragging
+        // Note: We DO NOT set draggable='true' here anymore. It blocks the canvas.
+
         div.innerHTML = `
             <div class="widget-header">
                 <span class="widget-title">${config.title}</span>
@@ -956,6 +976,13 @@
                 <canvas id="${config.chartId}"></canvas>
             </div>
         `;
+
+        // --- NEW DRAG HANDLE LOGIC ---
+        // Only allow the HTML5 drag API to activate when grabbing the header
+        const header = div.querySelector('.widget-header');
+        header.addEventListener('mousedown', () => div.setAttribute('draggable', 'true'));
+        header.addEventListener('mouseup', () => div.setAttribute('draggable', 'false'));
+        header.addEventListener('mouseleave', () => div.setAttribute('draggable', 'false'));
 
         // Add Drag and Drop Event Listeners
         div.addEventListener('dragstart', handleDragStart);
@@ -978,11 +1005,6 @@
     let draggedWidget = null;
 
     function handleDragStart(e) {
-        // Prevent dragging if interacting with the chart canvas or resize handle
-        if (e.target.tagName.toLowerCase() === 'canvas') {
-            e.preventDefault();
-            return;
-        }
         draggedWidget = this;
         e.dataTransfer.effectAllowed = 'move';
         setTimeout(() => this.classList.add('dragging'), 0);
@@ -1027,6 +1049,7 @@
 
     function handleDragEnd(e) {
         this.classList.remove('dragging');
+        this.setAttribute('draggable', 'false'); // Reset the state after drop
         document.querySelectorAll('.widget-card').forEach(c => c.classList.remove('drag-over'));
     }
 
@@ -1066,19 +1089,46 @@
     }
 
     function updateWidgetDropdown() {
-        const sel = document.getElementById('widgetSelector');
-        sel.innerHTML = '<option value="" disabled selected>Select chart to add...</option>';
+        const addSel = document.getElementById('widgetSelector');
+        const remSel = document.getElementById('removeWidgetSelector');
+        
+        addSel.innerHTML = '<option value="" disabled selected>Insert chart...</option>';
+        remSel.innerHTML = '<option value="" disabled selected>Remove chart...</option>';
+        
         Object.keys(widgetConfig).forEach(key => {
+            const title = widgetConfig[key].title;
             if(!activeWidgets.includes(key)) {
-                const opt = document.createElement('option');
-                opt.value = key;
-                opt.innerText = widgetConfig[key].title;
-                sel.appendChild(opt);
+                addSel.innerHTML += `<option value="${key}">${title}</option>`;
+            } else {
+                remSel.innerHTML += `<option value="${key}">${title}</option>`;
             }
         });
-        // Disable button if no options
-        const btn = document.querySelector('.add-widget-btn');
-        btn.disabled = (sel.options.length === 1);
+
+        const addBtn = document.querySelector('button[onclick="addSelectedWidget()"]');
+        const remBtn = document.querySelector('button[onclick="removeSelectedWidget()"]');
+        
+        if(addBtn) {
+            const noMoreToAdd = (addSel.options.length === 1);
+            addBtn.disabled = noMoreToAdd;
+            addBtn.style.background = noMoreToAdd ? '#ccc' : '';
+            addBtn.style.cursor = noMoreToAdd ? 'not-allowed' : 'pointer';
+        }
+        
+        if(remBtn) {
+            const noMoreToRemove = (remSel.options.length === 1);
+            remBtn.disabled = noMoreToRemove;
+            remBtn.style.background = noMoreToRemove ? '#ccc' : '#f5576c';
+            remBtn.style.cursor = noMoreToRemove ? 'not-allowed' : 'pointer';
+        }
+    }
+
+    function removeSelectedWidget() {
+        const sel = document.getElementById('removeWidgetSelector');
+        const key = sel.value;
+        if(key) {
+            removeWidget(key);
+            sel.value = "";
+        }
     }
 
     // --- CHART GENERATION LOGIC ---
@@ -1119,15 +1169,35 @@
             ds.pointRadius = 2; ds.pointHoverRadius = 5; ds.fill = false;
         });
 
+        // 2. Set Min/Max relative to the main 'y' scale
+        let maxY = 10;
+        finalData.forEach(d => { (d.data || []).forEach(p => { if (p.y != null && p.y > maxY) maxY = p.y; }); });
+        maxY = maxY * 1.15;
+
+        if (key === 'meds') maxY = Math.max(maxY, 12);
+
+        let activeSubsCount = 0;
+        if (key === 'symptoms' && (rawData.substances || []).length > 0) {
+            activeSubsCount = [...new Set((rawData.substances || []).map(s => s.substance))].length;
+        }
+        
+        // Calculate required pixel padding to fit all active strips below the graph
+        const freeZoneHeight = (key === 'symptoms') ? (35 + (activeSubsCount * 22)) : 5;
+
+        // Fetch a fresh, isolated copy of the options and safely apply custom limits
+        const chartOptions = getCommonOptions();
+        chartOptions.scales.y.max = maxY;
+        chartOptions.scales.x.ticks = { padding: freeZoneHeight };
+
         const ctx = document.getElementById(ctxId);
         if (!ctx) return;
         if(Chart.getChart(ctxId)) Chart.getChart(ctxId).destroy();
 
-        // 1. Initialize Chart with overlay plugin
+        // 1. Initialize Chart with our isolated options and overlay plugin
         const newChart = new Chart(ctx, {
             type: 'line',
             data: { datasets: finalData },
-            options: commonOptions,
+            options: chartOptions,
             plugins: [clinicalOverlayPlugin]
         });
         newChart.config._configKey = key;
@@ -1184,24 +1254,7 @@
             }
         });
 
-        // 2. Set Min/Max relative to the main 'y' scale
-        let maxY = 10;
-        (newChart.data.datasets || []).forEach(d => { (d.data || []).forEach(p => { if (p.y != null && p.y > maxY) maxY = p.y; }); });
-        maxY = maxY * 1.15;
-
-        let activeSubsCount = 0;
-        if (key === 'symptoms' && (rawData.substances || []).length > 0) {
-            activeSubsCount = [...new Set((rawData.substances || []).map(s => s.substance))].length;
-        }
-        const yBaseMin = activeSubsCount > 0 ? (-1 * activeSubsCount - 0.5) : 0;
-
-        if (newChart.options.scales && newChart.options.scales.y) {
-            newChart.options.scales.y.min = yBaseMin;
-            newChart.options.scales.y.max = maxY;
-        }
-
-        // 3. Ribbons drawn by clinicalOverlayPlugin (labels + hover); no annotation bands
-
+        // 3. Hide non-unified datasets initially
         newChart.data.datasets.forEach(ds => { if (!ds.isUnified) ds.hidden = true; });
         newChart.update();
 
@@ -1811,17 +1864,16 @@
     window.onload = function() {
         initDashboard(); // LOAD DASHBOARD WIDGETS
         
-        // DATE LOGIC: Only set default Next Visit Date if the input is empty (Add Mode)
+        // DATE LOGIC: Check if the element exists first (it won't in view_only mode)
         const nextVisitInput = document.getElementById('nextVisitDate');
-        if (!nextVisitInput.value) {
+        if (nextVisitInput && !nextVisitInput.value) {
             const d = new Date(); d.setDate(d.getDate() + 30);
             nextVisitInput.value = d.toISOString().split('T')[0];
         }
 
-        // MEDICATION LOGIC: Only add a blank row if container is empty (Add Mode)
-        // In Edit Mode, Jinja has already populated the div.
+        // MEDICATION LOGIC: Check if the container exists first
         const medContainer = document.getElementById('meds-container');
-        if (medContainer.children.length === 0) {
+        if (medContainer && medContainer.children.length === 0) {
             addMedication();
         }
 

@@ -142,9 +142,9 @@
     <script>
         const commonOptions = {
             responsive: true,
-            maintainAspectRatio: false, // Allows stretching/shrinking
+            maintainAspectRatio: false,
             animation: false,
-            layout: { padding: { left: 5, right: 10, top: 5, bottom: 5 } },
+            layout: { padding: { left: 5, right: 10, top: 45, bottom: 5 } },
             scales: {
                 x: {
                     type: 'time',
@@ -167,19 +167,19 @@
 
         const allData = {{ grouped_datasets|tojson }};
 
-        // FIX: Loop through keys and find the matching ID explicitly
         for (const [category, datasets] of Object.entries(allData)) {
             if (datasets && datasets.length > 0) {
-                // Generate the ID exactly how Jinja did (replace spaces with underscores)
                 const safeId = 'chart-' + category.replace(/ /g, '_');
                 const canvas = document.getElementById(safeId);
                 
                 if (canvas) {
+                    const opts = { ...commonOptions, layout: { ...commonOptions.layout }, scales: { x: { ...commonOptions.scales.x }, y: { ...commonOptions.scales.y } }, plugins: { ...commonOptions.plugins }, elements: { ...commonOptions.elements } };
+                    if (category === 'Medications') opts.scales.y.max = Math.max(12, opts.scales.y.max);
                     const ctx = canvas.getContext('2d');
                     new Chart(ctx, {
                         type: 'line',
                         data: { datasets: datasets },
-                        options: commonOptions
+                        options: opts
                     });
                 }
             }
