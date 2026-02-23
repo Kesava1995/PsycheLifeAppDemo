@@ -229,28 +229,27 @@
             background: white;
             width: 100%;
             border-radius: 20px;
-            padding: 30px 40px;
+            padding: 20px 30px;
             box-shadow: 0 20px 50px rgba(0,0,0,0.15);
             text-align: center;
-            min-height: auto;
             display: flex;
             flex-direction: column;
             justify-content: center;
         }
 
-        .auth-header h2 { font-size: 1.8rem; color: #222; margin-bottom: 10px; }
-        .auth-header p { color: #0066cc; font-weight: 600; margin-bottom: 30px; cursor: pointer; }
-        .form-group { text-align: left; margin-bottom: 15px; }
+        .auth-header h2 { font-size: 1.5rem; color: #222; margin-bottom: 5px; }
+        .auth-header p { font-size: 0.85rem; color: #0066cc; font-weight: 600; margin-bottom: 15px; cursor: pointer; }
+        .form-group { text-align: left; margin-bottom: 10px; }
         .row-group { display: flex; gap: 15px; }
-        .row-group .form-group { flex: 1; margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #333; font-size: 0.9rem; }
-        .form-input { width: 100%; padding: 12px 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
+        .row-group .form-group { flex: 1; margin-bottom: 10px; }
+        .form-group label { display: block; margin-bottom: 3px; font-weight: 600; color: #333; font-size: 0.8rem; }
+        .form-input { width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 0.9rem; }
         .form-options { display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; color: #666; margin-bottom: 30px; }
         .form-options a { color: #666; text-decoration: none; }
-        .btn-main { width: 100%; padding: 15px; background: #2D5BFF; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; }
-        .auth-footer { margin-top: 30px; font-size: 0.9rem; }
+        .btn-main { width: 100%; padding: 12px; margin-top: 5px; background: #2D5BFF; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; }
+        .auth-footer { margin-top: 15px; font-size: 0.8rem; }
         .toggle-link { color: #2D5BFF; font-weight: bold; cursor: pointer; }
-        .badges { margin-top: 30px; display: flex; justify-content: center; gap: 20px; opacity: 0.7; }
+        .badges { margin-top: 15px; display: flex; justify-content: center; gap: 15px; opacity: 0.7; }
         .badge-item { display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; color: #333; }
         .badge-icon { font-size: 1.5rem; margin-bottom: 5px; }
         .hidden { display: none; }
@@ -435,6 +434,11 @@
                     <a href="#">Forgot password?</a>
                 </div>
                 <button type="submit" class="btn-main">Login</button>
+                
+                <button type="button" class="btn-main" style="background: #e0e0e0; color: #333; margin-top: 10px; padding: 10px;" onclick="window.location.href='{{ url_for('start_guest') }}'">
+                    Try as Guest
+                </button>
+                
                 <div class="auth-footer">
                     Don't have an Account? <span class="toggle-link" onclick="toggleForm()">Signup</span>
                 </div>
@@ -464,6 +468,11 @@
                     <input type="password" name="password" class="form-input" placeholder="Strong Password" required>
                 </div>
                 <button type="submit" class="btn-main">Create Account</button>
+                
+                <button type="button" class="btn-main" style="background: #e0e0e0; color: #333; margin-top: 10px; padding: 10px;" onclick="window.location.href='{{ url_for('start_guest') }}'">
+                    Try as Guest
+                </button>
+                
                 <div class="auth-footer">
                     Already have an account? <span class="toggle-link" onclick="toggleForm()">Sign In</span>
                 </div>

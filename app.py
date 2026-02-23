@@ -410,11 +410,12 @@ def dashboard():
 @login_required
 def first_visit():
     """First Visit - New Patient & First Visit creation."""
-    # No fallback to admin: if there's no doctor_id, the user shouldn't be here.
+    is_guest = session.get('role') == 'guest'
+
     doc_id = session.get('doctor_id')
     doctor = Doctor.query.get(doc_id) if doc_id is not None else None
 
-    if not doctor:
+    if not doctor and not is_guest:
         session.clear()
         flash('Session expired. Please log in.', 'error')
         return redirect(url_for('landing'))
@@ -491,7 +492,6 @@ def first_visit():
             return redirect(url_for('patient_detail', patient_id=patient.id))
     
     # GET request - show first visit (patients scoped to logged-in doctor only)
-    is_guest = session.get('role') == 'guest'
     patients = []
     if not is_guest and doctor:
         patients = Patient.query.filter_by(doctor_id=doctor.id).all()
