@@ -1639,5 +1639,32 @@ function updateScalesBadge() {
     }
 }
 </script>
+
+{% if is_guest %}
+<div id="guestDevModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center;" onclick="if(event.target === this) closeGuestDevModal()">
+    <div style="background:white; padding:30px; border-radius:12px; max-width:400px; text-align:center; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+        <div style="font-size: 40px; margin-bottom: 10px;">🚧</div>
+        <h3 style="margin-top:0; color:#333;">Guest Mode</h3>
+        <p style="color:#666; font-size:15px; margin-bottom:20px; line-height: 1.5;">
+            Guest Mode is still in development. Features like <strong>Stressors, Major Events, and Adherence</strong> aren't yet available in Life Chart.
+        </p>
+        <button type="button" class="btn" style="background:#7ab8e0; color:white; width:100%; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="closeGuestDevModal()">I Understand</button>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        if (!sessionStorage.getItem('guestDevPopupShown')) {
+            document.getElementById('guestDevModal').style.display = 'flex';
+            sessionStorage.setItem('guestDevPopupShown', 'true');
+        }
+    });
+
+    function closeGuestDevModal() {
+        document.getElementById('guestDevModal').style.display = 'none';
+    }
+</script>
+{% endif %}
+
 </body>
 </html>
