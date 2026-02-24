@@ -205,12 +205,10 @@ def login():
     return redirect(url_for('landing'))
 
 @app.route('/guest/lifechart', methods=['GET', 'POST'])
-@app.route('/guest/lifechart', methods=['GET', 'POST'])
 def guest_lifechart():
     """
     Generate Life Chart for Guest Mode.
-    Now uses the DB + Shared View (same as QR code) for a consis@app.route('/guest/lifechart', methods=['GET', 'POST'])
-tent experience.
+    Now uses the DB + Shared View (same as QR code) for a consistent experience.
     """
     if not session.get('guest'):
         abort(403)
@@ -915,9 +913,15 @@ def guest_lifechart_proxy():
         abort(403)
 
     token = session.get('guest_token')
-    if request.form.get('is_chart_update') == 'true' and token:
-        return update_guest_share(token, redirect_to_prescription=False)
+    submit_action = request.form.get('submit_action')
 
+    # If a token exists, the user is actively updating an existing chart from the sidebar
+    if token:
+        # Route to prescription view if they clicked 'Prescription' or 'Both'
+        redirect_to_rx = submit_action in ['prescription', 'both']
+        return update_guest_share(token, redirect_to_prescription=redirect_to_rx)
+
+    # Fallback for brand new creations
     return guest_lifechart()
 
 
@@ -2627,75 +2631,88 @@ def guest_first_visit():
 def guest_prescription():
     if not session.get('guest'):
         abort(403)
-    
-    # 1. Capture Doctor Details
+
+    # 1. Capture Doctor Details (same modal fields as guest_both)
     guest_doctor = {
-        "name": request.form.get("doctor_name", "Doctor"),
-        "clinic": request.form.get("clinic_name", ""),
-        "qualification": request.form.get("doctor_qualification", ""), 
-        "registration": request.form.get("doctor_registration", ""),
-        "address": request.form.get("clinic_address", ""),
-        "social": request.form.get("social_handle", "")
+        "name": request.form.get("doc_name", "Doctor"),
+        "qualification": request.form.get("doc_qual", ""),
+        "registration": request.form.get("doc_reg", ""),
+        "clinic": request.form.get("doc_clinic", ""),
+        "address": request.form.get("doc_address", ""),
+        "phone": request.form.get("doc_phone", ""),
+        "email": request.form.get("doc_email", ""),
+        "social": request.form.get("doc_social", "")
     }
 
-    # Handle Ephemeral Signature (Base64)
-    signature_b64 = None
-    if 'signature_upload' in request.files:
-        file = request.files['signature_upload']
-        if file and file.filename:
-            img_data = file.read()
-            signature_b64 = base64.b64encode(img_data).decode('utf-8')
+    signature_b64 = session.get('guest_signature_b64', '')
+    sig_file = request.files.get('doc_signature')
+    if sig_file and sig_file.filename != '':
+        signature_b64 = base64.b64encode(sig_file.read()).decode('utf-8')
+        session['guest_signature_b64'] = signature_b64
 
     # 2. Capture Patient Details
     guest_patient = {
         "name": request.form.get("patient_name", "Guest Patient"),
-        "age": request.form.get("age", ""),
-        "sex": request.form.get("sex", ""),
-        "address": request.form.get("address", "")
+        "age": request.form.get("patient_age") or request.form.get("age", ""),
+        "sex": request.form.get("patient_sex") or request.form.get("sex", ""),
+        "address": request.form.get("patient_address") or request.form.get("address", "")
     }
 
-    # 3. Build Temp Visit (Using a simple Dictionary structure)
+    # Safely convert follow-up string to Date object
+    fu_date_str = request.form.get('follow_up_date')
+    fu_date = None
+    if fu_date_str:
+        try:
+            fu_date = datetime.strptime(fu_date_str, '%Y-%m-%d').date()
+        except Exception:
+            pass
+
+    # 3. Build Temp Visit (native date objects + keys matching preview_prescription.html)
     visit = {
-        "date": date.today().strftime('%Y-%m-%d'),
+        "id": "Guest",
+        "date": get_ist_now().date(),
         "chief_complaints": request.form.get('chief_complaints', ''),
         "provisional_diagnosis": request.form.get('provisional_diagnosis', ''),
         "differential_diagnosis": request.form.get('differential_diagnosis', ''),
-        "follow_up_date": request.form.get('follow_up_date', ''),
-        "notes": request.form.get('note', ''),
+        "next_visit_date": fu_date,
+        "note": request.form.get('note', ''),
+        "symptom_entries": [],
+        "side_effect_entries": [],
+        "mse_entries": [],
         "medication_entries": []
     }
 
     drug_names = request.form.getlist('drug_name[]')
-    dose_mgs = request.form.getlist('dose_mg[]')
+    dose_mgs = request.form.getlist('dose_full[]') or request.form.getlist('dose_mg[]')
     d_freqs = request.form.getlist('frequency[]')
     durations = request.form.getlist('med_duration_text[]') or request.form.getlist('med_duration[]')
-    notes = request.form.getlist('med_note[]')
+    med_notes = request.form.getlist('med_note[]')
     d_forms = request.form.getlist('med_form[]')
 
     for i, name in enumerate(drug_names):
         if name.strip():
             visit["medication_entries"].append({
                 'drug_name': name,
+                'drug_type': 'Generic',
                 'dose_mg': dose_mgs[i] if i < len(dose_mgs) else '',
                 'frequency': d_freqs[i] if i < len(d_freqs) else '',
                 'duration_text': durations[i] if i < len(durations) else '',
-                'note': notes[i] if i < len(notes) else '',
-                'drug_type': None,
+                'note': med_notes[i] if i < len(med_notes) else '',
                 'form_type': d_forms[i] if i < len(d_forms) else 'Tablet',
                 'is_tapering': False,
-                'taper_plan': []
+                'taper_plan': None
             })
 
     session.pop('guest_first_visit', None)
-    
+
     return render_template(
         "preview_prescription.html",
         guest=True,
         patient=None,
         guest_patient=guest_patient,
-        visit=visit, # Passing the dictionary
+        visit=visit,
         guest_doctor=guest_doctor,
-        guest_signature_b64=signature_b64 
+        guest_signature_b64=signature_b64
     )
 
 @app.route('/guest/both', methods=['POST'])
