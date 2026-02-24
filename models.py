@@ -1,5 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 db = SQLAlchemy()
 
@@ -173,15 +173,9 @@ class GuestShare(db.Model):
     expires_at = db.Column(db.DateTime, nullable=False)
 
     def is_expired(self):
-        # 1. Get current UTC time
-        now = datetime.now(timezone.utc)
-        
-        # 2. Check if the DB time has timezone info
-        if self.expires_at.tzinfo is None:
-            # If DB is Naive (SQLite default), make 'now' Naive too
-            now = now.replace(tzinfo=None)
-            
-        return now > self.expires_at
+        """Compare expiry to current IST (naive) so 30-minute links match Indian time."""
+        ist_now = datetime.utcnow() + timedelta(hours=5, minutes=30)
+        return self.expires_at < ist_now
 
 
 # --- Phase 2: New Models ---

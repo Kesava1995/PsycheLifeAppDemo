@@ -442,7 +442,11 @@
     <div class="form-section-separator"></div>
 
     <div class="workflow-card">
-        <form method="POST" action="{{ url_for('update_clinical', visit_id=visit.id) if visit else url_for('add_visit', patient_id=patient.id) }}">
+        <form method="POST" enctype="multipart/form-data" action="{% if guest %}{{ url_for('guest_lifechart_proxy') }}{% elif visit %}{{ url_for('update_clinical', visit_id=visit.id) }}{% else %}{{ url_for('add_visit', patient_id=patient.id) }}{% endif %}">
+            
+            {% if guest %}
+            <input type="hidden" name="is_chart_update" value="true">
+            {% endif %}
             
             <h3 style="margin-top:0; color:#333; border-bottom:1px solid #eee; padding-bottom:10px;">
                 {{ 'Edit Visit Details' if visit else 'Save New Visit from Chart' }}
@@ -580,13 +584,80 @@
             </div>
 
             <div style="margin-top:20px; display:flex; gap:10px;">
-                <button type="submit" name="submit_action" value="lifechart" class="btn" style="background:#f5576c;">
-                    {{ 'Update & Refresh Chart' if visit else 'Save & Refresh Chart' }}
-                </button>
-                <button type="submit" name="submit_action" value="prescription" class="btn" style="background:#7BC4F0; color:#000;">
-                    {{ 'Update & Gen Prescription' if visit else 'Save & Gen Prescription' }}
-                </button>
+                {% if guest %}
+                <button type="submit" formaction="{{ url_for('guest_lifechart_proxy') }}" class="btn" style="background:#f5576c;">Refresh Chart (Guest)</button>
+                <button type="button" onclick="openGuestDoctorModal('{{ url_for('guest_both') }}')" class="btn" style="background:#7BC4F0; color:#000;">Gen Prescription (Guest)</button>
+                {% else %}
+                <button type="submit" name="submit_action" value="lifechart" class="btn" style="background:#f5576c;">{{ 'Update & Refresh Chart' if visit else 'Save & Refresh Chart' }}</button>
+                <button type="submit" name="submit_action" value="prescription" class="btn" style="background:#7BC4F0; color:#000;">{{ 'Update & Gen Prescription' if visit else 'Save & Gen Prescription' }}</button>
+                {% endif %}
             </div>
+
+            <div id="guestDoctorModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+                <div style="background:white; padding:30px; border-radius:12px; width:500px; max-height:90vh; overflow-y:auto; text-align:left; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+                    <h3 style="margin-top:0; color:#7ab8e0; border-bottom:1px solid #eee; padding-bottom:10px;">Doctor Profile Details</h3>
+                    <p style="font-size:12px; color:#666; margin-bottom:20px;">These details are required to generate your prescription header.</p>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <div>
+                            <label style="font-size: 12px; font-weight: bold;">Full Name (as on Prescription) *</label>
+                            <input type="text" name="doc_name" required value="{% if guest_doctor %}{{ guest_doctor.name }}{% endif %}" class="form-input" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <div style="flex: 1;">
+                                <label style="font-size: 12px; font-weight: bold;">Qualification *</label>
+                                <input type="text" name="doc_qual" required value="{% if guest_doctor %}{{ guest_doctor.qualification }}{% endif %}" class="form-input" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                            </div>
+                            <div style="flex: 1;">
+                                <label style="font-size: 12px; font-weight: bold;">Registration Number *</label>
+                                <input type="text" name="doc_reg" required value="{% if guest_doctor %}{{ guest_doctor.registration }}{% endif %}" class="form-input" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; font-weight: bold;">Clinic / Hospital Name</label>
+                            <input type="text" name="doc_clinic" value="{% if guest_doctor %}{{ guest_doctor.clinic }}{% endif %}" class="form-input" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; font-weight: bold;">Full Clinic Address</label>
+                            <textarea name="doc_address" class="form-input" rows="2" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">{% if guest_doctor %}{{ guest_doctor.address }}{% endif %}</textarea>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <div style="flex: 1;">
+                                <label style="font-size: 12px; font-weight: bold;">Phone Number (For Patients)</label>
+                                <input type="text" name="doc_phone" value="{% if guest_doctor %}{{ guest_doctor.phone }}{% endif %}" class="form-input" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                            </div>
+                            <div style="flex: 1;">
+                                <label style="font-size: 12px; font-weight: bold;">Email Address</label>
+                                <input type="email" name="doc_email" value="{% if guest_doctor %}{{ guest_doctor.email }}{% endif %}" class="form-input" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; font-weight: bold;">Social Media Handle (Optional)</label>
+                            <input type="text" name="doc_social" value="{% if guest_doctor %}{{ guest_doctor.social }}{% endif %}" class="form-input" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                        </div>
+                        <div style="margin-top:5px;">
+                            <label style="font-size: 12px; font-weight: bold; color:#d9534f;">Digital Signature (Image) *</label>
+                            {% if guest_signature_b64 %}
+                                <p style="font-size: 11px; color: #2ecc71; margin-bottom: 5px; font-weight: bold;">✓ Signature already uploaded</p>
+                                <input type="file" name="doc_signature" accept="image/*" style="display:block; font-size:12px;">
+                            {% else %}
+                                <input type="file" name="doc_signature" accept="image/*" required style="display:block; margin-top:5px; font-size:12px;">
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div style="display:flex; gap:10px; margin-top:25px;">
+                        <button type="button" onclick="document.getElementById('guestDoctorModal').style.display='none'" class="btn" style="flex:1; background:#eee; color:#333; font-weight:bold;">Cancel</button>
+                        <button type="submit" id="guestModalSubmitBtn" class="btn" style="flex:1; background:#7ab8e0; color:#fff; font-weight:bold;">Proceed</button>
+                    </div>
+                </div>
+            </div>
+            <script>
+                function openGuestDoctorModal(actionUrl) {
+                    document.getElementById('guestModalSubmitBtn').setAttribute('formaction', actionUrl);
+                    document.getElementById('guestDoctorModal').style.display = 'flex';
+                }
+            </script>
         </form>
     </div>
     {% endif %}
@@ -1958,8 +2029,15 @@
         // 5. Open Preview (Sending 'visible' as names now)
         // EncodeURIComponent ensures special characters in drug names don't break the URL
         const namesParam = visibleLabels.map(s => encodeURIComponent(s)).join(',');
-        const url = `{{ url_for('preview_lifechart', patient_id=patient.id) }}?start=${start}&end=${end}&visible=${namesParam}`;
-        window.open(url, '_blank');
+        
+        {% if guest %}
+            const url = `{{ url_for('guest_preview_lifechart') }}?token={{ guest_token }}&start=${start}&end=${end}&visible=${namesParam}`;
+            window.open(url, '_blank');
+        {% else %}
+            const url = `{{ url_for('preview_lifechart', patient_id=patient.id) }}?start=${start}&end=${end}&visible=${namesParam}`;
+            window.open(url, '_blank');
+        {% endif %}
+        
         document.getElementById('downloadModal').style.display = 'none';
     }
 </script>

@@ -5,6 +5,16 @@ PsycheLife - Medical web app for psychiatric patient management.
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response, session, abort
 from functools import wraps
 from datetime import datetime, date, timedelta, timezone
+import re
+
+IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def get_ist_now():
+    """Returns the exact current time in IST as a naive datetime (safe for SQLite)."""
+    return datetime.utcnow() + timedelta(hours=5, minutes=30)
+
+
 from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry, ScaleAssessment
 from medical_utils import get_unified_dose, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency, process_scale_submission
 import io
@@ -30,6 +40,13 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 # Use absolute path for DB
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'psychelife.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Prevent 'database is locked' errors by adding a 15-second timeout
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    "connect_args": {
+        "timeout": 15
+    }
+}
 
 # Use absolute path for Uploads
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'signatures')
@@ -202,14 +219,16 @@ tent experience.
     if request.method == 'POST':
         # --- A. CLEANUP (Keep DB healthy) ---
         try:
-            GuestShare.query.filter(GuestShare.expires_at < datetime.now(timezone.utc)).delete()
+            GuestShare.query.filter(GuestShare.expires_at < get_ist_now()).delete()
             db.session.commit()
         except Exception:
             db.session.rollback()
 
         # --- B. CAPTURE DATA (Exact logic from guest_both) ---
-        today = date.today()
-        
+        now_ist = get_ist_now()
+        today = now_ist.date()
+        today_iso = now_ist.isoformat()
+
         # 1. Symptoms
         symptoms = []
         names = request.form.getlist('symptom_name[]')
@@ -246,61 +265,189 @@ tent experience.
             # Add points with specific dates
             symptoms.append({"name": name, "score": onset, "phase": "Onset", "note": note, "date": d_onset.isoformat()})
             symptoms.append({"name": name, "score": prog, "phase": "Progression", "note": note, "date": d_prog.isoformat()})
-            symptoms.append({"name": name, "score": curr, "phase": "Current", "note": note, "date": today.isoformat()})
+            symptoms.append({"name": name, "score": curr, "phase": "Current", "note": note, "date": today_iso})
 
-        # 2. MSE Findings
+        # 2. MSE Findings (Onset & Progression)
+        def safe_float(val_list, idx, default=None):
+            try:
+                v = val_list[idx] if idx < len(val_list) else None
+                return float(v) if v not in (None, '') else default
+            except (ValueError, TypeError):
+                return default
+
         mse = []
         mse_cats = request.form.getlist('mse_category[]')
-        mse_scores = request.form.getlist('mse_score[]')
+        mse_findings = request.form.getlist('mse_finding_name[]')
+        mse_onsets = request.form.getlist('mse_onset[]')
+        mse_progs = request.form.getlist('mse_progression[]')
+        mse_currs = request.form.getlist('mse_current[]') or request.form.getlist('mse_score[]')
         mse_notes = request.form.getlist('mse_note[]')
-        for i, (cat, score) in enumerate(zip(mse_cats, mse_scores)):
-            try: val = int(score)
-            except: val = 0
-            note = mse_notes[i] if i < len(mse_notes) else ""
-            mse.append({"cat": cat, "score": val, "note": note, "date": today.isoformat()})
+        mse_durs = request.form.getlist('mse_duration[]')
 
-        # 3. Medications
+        for i, cat in enumerate(mse_cats):
+            if cat:
+                onset = safe_float(mse_onsets, i)
+                prog = safe_float(mse_progs, i)
+                curr = safe_float(mse_currs, i, 0.0)
+                finding_name = mse_findings[i] if i < len(mse_findings) else ""
+                note = mse_notes[i] if i < len(mse_notes) else ""
+                dur_text = mse_durs[i] if i < len(mse_durs) else ""
+                try:
+                    delta = parse_duration(dur_text) if dur_text else timedelta(days=14)
+                except Exception:
+                    delta = timedelta(days=14)
+                d_onset = now_ist - delta
+                d_prog = d_onset + timedelta(days=(now_ist - d_onset).days // 2)
+                if onset is not None:
+                    mse.append({"cat": cat, "name": finding_name, "score": onset, "phase": "Onset", "note": note, "date": d_onset.isoformat()})
+                if prog is not None:
+                    mse.append({"cat": cat, "name": finding_name, "score": prog, "phase": "Progression", "note": note, "date": d_prog.isoformat()})
+                mse.append({"cat": cat, "name": finding_name, "score": curr, "phase": "Current", "note": note, "date": today_iso})
+
+        # 3. Medications (Upgraded for Tapering & Duration support)
         meds_chart = []
         drug_names = request.form.getlist('drug_name[]')
         dose_mgs = request.form.getlist('dose_full[]') or request.form.getlist('dose_mg[]')
+        d_freqs = request.form.getlist('frequency[]')
+        d_durs = request.form.getlist('med_duration[]') or request.form.getlist('med_duration_text[]')
         med_notes = request.form.getlist('med_note[]')
+        d_forms = request.form.getlist('med_form[]')
+
+        last_med = None
         for i, name in enumerate(drug_names):
             if name.strip():
-                score_val = 0.0
                 dose_str = dose_mgs[i] if i < len(dose_mgs) else ""
-                if dose_str:
-                    import re
-                    nums = re.findall(r"[-+]?\d*\.\d+|\d+", dose_str)
-                    if nums: score_val = float(nums[0])
+                freq = d_freqs[i] if i < len(d_freqs) else ""
+                dur = d_durs[i] if i < len(d_durs) else ""
                 note = med_notes[i] if i < len(med_notes) else ""
-                meds_chart.append({"name": name, "score": score_val, "phase": "Current", "dose": dose_str, "note": note, "date": today.isoformat()})
+                score_val = 0.0
+                if dose_str:
+                    nums = re.findall(r"[-+]?\d*\.\d+|\d+", dose_str)
+                    if nums:
+                        score_val = float(nums[0])
+                if last_med and last_med["name"].strip().lower() == name.strip().lower():
+                    last_med["is_tapering"] = True
+                    if not last_med.get("taper_plan"):
+                        last_med["taper_plan"] = [{
+                            "dose_mg": last_med["dose"],
+                            "frequency": last_med.get("frequency", ""),
+                            "duration_text": last_med.get("duration", ""),
+                            "note": last_med.get("note", "")
+                        }]
+                    last_med["taper_plan"].append({
+                        "dose_mg": dose_str,
+                        "frequency": freq,
+                        "duration_text": dur,
+                        "note": note
+                    })
+                else:
+                    new_med = {
+                        "name": name, "score": score_val, "phase": "Current",
+                        "dose": dose_str, "frequency": freq, "duration": dur,
+                        "note": note, "date": today_iso,
+                        "is_tapering": False, "taper_plan": None,
+                        "form_type": d_forms[i] if i < len(d_forms) else 'Tablet'
+                    }
+                    meds_chart.append(new_med)
+                    last_med = new_med
 
-        # 4. Side Effects
+        # 4. Side Effects (Onset & Progression)
         se_chart = []
         se_names = request.form.getlist('side_effect_name[]')
-        se_scores = request.form.getlist('side_effect_score[]')
+        se_onsets = request.form.getlist('side_effect_onset[]')
+        se_progs = request.form.getlist('side_effect_progression[]')
+        se_currs = request.form.getlist('side_effect_current[]') or request.form.getlist('side_effect_score[]')
         se_notes = request.form.getlist('side_effect_note[]')
+        se_durs = request.form.getlist('side_effect_duration[]')
+
         for i, name in enumerate(se_names):
             if name.strip():
-                try: val = int(se_scores[i]) if i < len(se_scores) else 0
-                except: val = 0
+                onset = safe_float(se_onsets, i)
+                prog = safe_float(se_progs, i)
+                curr = safe_float(se_currs, i, 0.0)
                 note = se_notes[i] if i < len(se_notes) else ""
-                se_chart.append({"name": name, "score": val, "phase": "Current", "note": note, "date": today.isoformat()})
+                dur_text = se_durs[i] if i < len(se_durs) else ""
+                try:
+                    delta = parse_duration(dur_text) if dur_text else timedelta(days=14)
+                except Exception:
+                    delta = timedelta(days=14)
+                d_onset = now_ist - delta
+                d_prog = d_onset + timedelta(days=(now_ist - d_onset).days // 2)
+                if onset is not None:
+                    se_chart.append({"name": name, "score": onset, "phase": "Onset", "note": note, "date": d_onset.isoformat()})
+                if prog is not None:
+                    se_chart.append({"name": name, "score": prog, "phase": "Progression", "note": note, "date": d_prog.isoformat()})
+                se_chart.append({"name": name, "score": curr, "phase": "Current", "note": note, "date": today_iso, "duration": dur_text})
 
-        # --- C. SAVE TO DB ---
-        chart_data = {
-            'symptoms': symptoms, 'mse': mse, 'meds': meds_chart, 'se': se_chart
+        # --- C. SAVE TO DB (session-aware token reuse) ---
+        patient_details = {
+            "name": request.form.get('patient_name', 'Guest Patient'),
+            "age": request.form.get('patient_age', ''),
+            "sex": request.form.get('patient_sex', ''),
+            "address": request.form.get('patient_address', ''),
+            "date": today_iso
         }
-        
-        token = str(uuid.uuid4())
-        expiry = datetime.now(timezone.utc) + timedelta(minutes=30)
-        
-        share_entry = GuestShare(
-            token=token,
-            data_json=json.dumps(chart_data),
-            expires_at=expiry
-        )
-        db.session.add(share_entry)
+        doctor_details = {
+            "name": request.form.get('doc_name', 'Doctor'),
+            "qual": request.form.get('doc_qual', ''),
+            "reg": request.form.get('doc_reg', ''),
+            "clinic": request.form.get('doc_clinic', ''),
+            "address": request.form.get('doc_address', ''),
+            "phone": request.form.get('doc_phone', ''),
+            "email": request.form.get('doc_email', ''),
+            "social": request.form.get('doc_social', '')
+        }
+        sig_b64 = session.get('guest_signature_b64', '')
+        sig_file = request.files.get('doc_signature')
+        if sig_file and sig_file.filename != '':
+            sig_b64 = base64.b64encode(sig_file.read()).decode('utf-8')
+            session['guest_signature_b64'] = sig_b64
+
+        chart_data = {
+            "patient": patient_details,
+            "doctor": doctor_details,
+            "signature_b64": sig_b64,
+            "chief_complaints": request.form.get('chief_complaints', ''),
+            "stressors": request.form.get('stressors_data', ''),
+            "personality": request.form.get('personality_data', ''),
+            "major_events": request.form.get('major_events_data', ''),
+            "scales": request.form.get('scales_data', ''),
+            "substance_use": request.form.get('substance_use_data', ''),
+            "adherence": request.form.get('adherence_data', ''),
+            "provisional_diagnosis": request.form.get('provisional_diagnosis', ''),
+            "differential_diagnosis": request.form.get('differential_diagnosis', ''),
+            "follow_up_date": request.form.get('follow_up_date', ''),
+            "note": request.form.get('note', ''),
+            "symptoms": symptoms,
+            "mse": mse,
+            "meds": meds_chart,
+            "se": se_chart
+        }
+
+        token = session.get('guest_token')
+        share_entry = None
+
+        if token:
+            share_entry = GuestShare.query.filter_by(token=token).first()
+            if share_entry and share_entry.is_expired():
+                share_entry = None
+
+        expiry = get_ist_now() + timedelta(minutes=30)
+
+        if share_entry:
+            share_entry.data_json = json.dumps(chart_data)
+            share_entry.expires_at = expiry
+        else:
+            token = str(uuid.uuid4())
+            session['guest_token'] = token
+            share_entry = GuestShare(
+                token=token,
+                data_json=json.dumps(chart_data),
+                expires_at=expiry,
+                created_at=get_ist_now()
+            )
+            db.session.add(share_entry)
+
         db.session.commit()
 
         # --- D. REDIRECT TO SHARED VIEW ---
@@ -498,7 +645,8 @@ def first_visit():
     
     today = date.today()
     
-    return render_template('first_visit.html', patients=patients, today=today, is_guest=is_guest, doctor=doctor)
+    templates = DefaultTemplate.query.all() if is_guest else []
+    return render_template('first_visit.html', patients=patients, today=today, is_guest=is_guest, doctor=doctor, templates=templates)
 
 
 @app.route('/api/templates', methods=['GET'])
@@ -605,10 +753,171 @@ def submit_scale():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
+def update_guest_share(token, redirect_to_prescription=False):
+    """Update existing GuestShare with meds from life_chart form; preserve symptoms."""
+    entry = GuestShare.query.filter_by(token=token).first()
+    if not entry or entry.is_expired():
+        flash("Link expired. Please start a new session.", "error")
+        return redirect(url_for('first_visit'))
+
+    data = json.loads(entry.data_json)
+
+    # Update ONLY meds from the life_chart form (Upgraded for Tapering & Duration)
+    meds_chart = []
+    drug_names = request.form.getlist('drug_name[]')
+    dose_mgs = request.form.getlist('dose_full[]') or request.form.getlist('dose_mg[]')
+    d_freqs = request.form.getlist('frequency[]')
+    d_durs = request.form.getlist('med_duration[]') or request.form.getlist('med_duration_text[]')
+    med_notes = request.form.getlist('med_note[]')
+    d_forms = request.form.getlist('med_form[]')
+
+    now_ist = get_ist_now()
+    today_iso = now_ist.isoformat()
+
+    last_med = None
+    for i, name in enumerate(drug_names):
+        if name.strip():
+            dose_str = dose_mgs[i] if i < len(dose_mgs) else ""
+            freq = d_freqs[i] if i < len(d_freqs) else ""
+            dur = d_durs[i] if i < len(d_durs) else ""
+            note = med_notes[i] if i < len(med_notes) else ""
+            score_val = 0.0
+            if dose_str:
+                nums = re.findall(r"[-+]?\d*\.\d+|\d+", dose_str)
+                if nums:
+                    score_val = float(nums[0])
+            if last_med and last_med["name"].strip().lower() == name.strip().lower():
+                last_med["is_tapering"] = True
+                if not last_med.get("taper_plan"):
+                    last_med["taper_plan"] = [{
+                        "dose_mg": last_med["dose"],
+                        "frequency": last_med.get("frequency", ""),
+                        "duration_text": last_med.get("duration", ""),
+                        "note": last_med.get("note", "")
+                    }]
+                last_med["taper_plan"].append({
+                    "dose_mg": dose_str,
+                    "frequency": freq,
+                    "duration_text": dur,
+                    "note": note
+                })
+            else:
+                new_med = {
+                    "name": name, "score": score_val, "phase": "Current",
+                    "dose": dose_str, "frequency": freq, "duration": dur,
+                    "note": note, "date": today_iso,
+                    "is_tapering": False, "taper_plan": None,
+                    "form_type": d_forms[i] if i < len(d_forms) else 'Tablet'
+                }
+                meds_chart.append(new_med)
+                last_med = new_med
+
+    data['meds'] = meds_chart
+
+    # 1. Update text fields securely
+    data['provisional_diagnosis'] = request.form.get('provisional_diagnosis', data.get('provisional_diagnosis', ''))
+    data['differential_diagnosis'] = request.form.get('differential_diagnosis', data.get('differential_diagnosis', ''))
+    data['follow_up_date'] = request.form.get('follow_up_date', data.get('follow_up_date', ''))
+    data['note'] = request.form.get('note', data.get('note', ''))
+
+    # 2. Update Doctor modal details (if provided)
+    if request.form.get('doc_name'):
+        data['doctor'] = {
+            "name": request.form.get('doc_name', ''),
+            "qualification": request.form.get('doc_qual', ''),
+            "registration": request.form.get('doc_reg', ''),
+            "clinic": request.form.get('doc_clinic', ''),
+            "address": request.form.get('doc_address', ''),
+            "phone": request.form.get('doc_phone', ''),
+            "email": request.form.get('doc_email', ''),
+            "social": request.form.get('doc_social', '')
+        }
+
+    sig_file = request.files.get('doc_signature')
+    if sig_file and sig_file.filename != '':
+        sig_b64 = base64.b64encode(sig_file.read()).decode('utf-8')
+        data['signature_b64'] = sig_b64
+        session['guest_signature_b64'] = sig_b64
+
+    entry.data_json = json.dumps(data)
+    entry.expires_at = entry.expires_at + timedelta(minutes=15)
+
+    try:
+        db.session.flush()
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"Guest DB Commit Error: {e}")
+
+    if redirect_to_prescription:
+        guest_doctor = data.get('doctor', {})
+        # Normalize keys for template (template expects qualification/registration)
+        guest_doctor = {
+            **guest_doctor,
+            "qualification": guest_doctor.get("qualification") or guest_doctor.get("qual", ""),
+            "registration": guest_doctor.get("registration") or guest_doctor.get("reg", ""),
+        }
+        guest_patient = data.get('patient', {"name": "Guest Patient"})
+
+        # Mimic SQLAlchemy Objects that preview_prescription.html expects
+        current_symps = [{"symptom_name": s.get("name", ""), "duration_text": s.get("duration", "")} for s in data.get("symptoms", []) if s.get("phase") == "Current"]
+        current_ses = [{"side_effect_name": s.get("name", ""), "duration_text": s.get("duration", "")} for s in data.get("se", []) if s.get("phase") == "Current"]
+        current_mses = [{"category": m.get("cat", ""), "finding_name": m.get("name", "")} for m in data.get("mse", []) if m.get("phase") == "Current"]
+
+        # Safely convert Follow-Up string to Date object
+        fu_date_str = data.get('follow_up_date')
+        fu_date = None
+        if fu_date_str:
+            try:
+                fu_date = datetime.strptime(fu_date_str, '%Y-%m-%d').date()
+            except Exception:
+                pass
+
+        visit_obj = {
+            "id": "Guest",
+            "date": get_ist_now().date(),
+            "provisional_diagnosis": data.get('provisional_diagnosis', ''),
+            "differential_diagnosis": data.get('differential_diagnosis', ''),
+            "next_visit_date": fu_date,
+            "note": data.get('note', ''),
+            "symptom_entries": current_symps,
+            "side_effect_entries": current_ses,
+            "mse_entries": current_mses,
+            "medication_entries": []
+        }
+
+        for med in data.get('meds', []):
+            visit_obj['medication_entries'].append({
+                'drug_name': med.get('name', ''),
+                'drug_type': 'Generic',
+                'dose_mg': med.get('dose', ''),
+                'frequency': med.get('frequency', ''),
+                'duration_text': med.get('duration', ''),
+                'note': med.get('note', ''),
+                'form_type': med.get('form_type', 'Tablet'),
+                'is_tapering': med.get('is_tapering', False),
+                'taper_plan': json.dumps(med.get('taper_plan', [])) if med.get('taper_plan') else None
+            })
+
+        lifchart_url = f"{request.url_root.rstrip('/')}/guest/share/{token}"
+        return render_template(
+            "preview_prescription.html",
+            visit=visit_obj, patient=None, guest=True,
+            guest_patient=guest_patient, lifchart_url=lifchart_url,
+            guest_doctor=guest_doctor, guest_signature_b64=data.get('signature_b64')
+        )
+    return redirect(url_for('guest_share_view', token=token))
+
+
 @app.route('/guest/lifechart_proxy', methods=['POST'])
 def guest_lifechart_proxy():
     if not session.get('guest'):
         abort(403)
+
+    token = session.get('guest_token')
+    if request.form.get('is_chart_update') == 'true' and token:
+        return update_guest_share(token, redirect_to_prescription=False)
+
     return guest_lifechart()
 
 
@@ -2067,6 +2376,106 @@ def preview_lifechart(patient_id):
     )
 
 
+@app.route('/guest/preview_lifechart')
+def guest_preview_lifechart():
+    token = request.args.get('token')
+    if not token:
+        abort(404)
+    entry = GuestShare.query.filter_by(token=token).first()
+    if not entry or entry.is_expired():
+        abort(404)
+
+    data = json.loads(entry.data_json)
+    start_str = request.args.get('start')
+    end_str = request.args.get('end')
+    try:
+        start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        start_date = date.today() - timedelta(days=365)
+        end_date = date.today()
+
+    guest_patient = {
+        "name": data.get('patient', {}).get('name', 'Guest Patient'),
+        "age": data.get('patient', {}).get('age', ''),
+        "sex": data.get('patient', {}).get('sex', '')
+    }
+    guest_doctor = data.get('doctor', {"name": "Doctor"})
+
+    # Build grouped_datasets from stored JSON (same shape as preview_lifechart)
+    def to_map(items, name_key='name'):
+        m = {}
+        for item in items:
+            label = item.get(name_key) or item.get('cat', '')
+            if not label:
+                continue
+            if label not in m:
+                m[label] = []
+            pt = {'x': item.get('date', ''), 'y': item.get('score', 0), 'phase': item.get('phase', 'Current')}
+            if pt['x']:
+                m[label].append(pt)
+        return m
+
+    symptoms = to_map(data.get('symptoms', []))
+    mse = to_map(data.get('mse', []), 'cat')
+    se = to_map(data.get('se', []))
+    meds_raw = data.get('meds', [])
+    meds = {}
+    for item in meds_raw:
+        label = item.get('name', '')
+        if not label:
+            continue
+        if label not in meds:
+            meds[label] = []
+        d = item.get('date', '')
+        try:
+            y = float(item.get('dose', '0').split()[0]) if item.get('dose') else 0
+        except Exception:
+            y = 0
+        if d:
+            meds[label].append({'x': d[:10], 'y': y, 'phase': 'Current'})
+
+    colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#e6194b', '#3cb44b', '#ffe119', '#4363d8']
+
+    def build_dataset_list(data_map):
+        out = []
+        for i, (label, points) in enumerate(data_map.items()):
+            out.append({
+                'label': label,
+                'data': sorted([p for p in points if p.get('x')], key=lambda x: x['x']),
+                'borderColor': colors[i % len(colors)],
+                'backgroundColor': colors[i % len(colors)],
+                'fill': False,
+                'tension': 0.2,
+                'hidden': False
+            })
+        return out
+
+    grouped_data = {
+        'Symptoms': build_dataset_list(symptoms),
+        'Medications': build_dataset_list(meds),
+        'Side Effects': build_dataset_list(se),
+        'MSE Findings': build_dataset_list(mse),
+        'Scale Assessments': []
+    }
+    visible_labels_str = unquote(request.args.get('visible', ''))
+    if visible_labels_str:
+        visible_labels = set(x.strip() for x in visible_labels_str.split(','))
+        for cat in grouped_data:
+            grouped_data[cat] = [d for d in grouped_data[cat] if d['label'] in visible_labels]
+
+    return render_template(
+        'preview_lifechart.html',
+        patient=guest_patient,
+        doctor=guest_doctor,
+        guest=True,
+        guest_token=token,
+        grouped_datasets=grouped_data,
+        start_date=start_date,
+        end_date=end_date
+    )
+
+
 @app.route('/preview_prescription/<int:visit_id>')
 @login_required
 def preview_prescription(visit_id):
@@ -2201,6 +2610,7 @@ def generate_prescription_pdf(visit_id, include_qr=False):
 @app.route('/guest/start')
 def start_guest():
     session.clear()
+    session.pop('guest_token', None)
     session['guest'] = True
     session['role'] = 'guest'
     session['guest_first_visit'] = True
@@ -2245,16 +2655,20 @@ def guest_prescription():
     }
 
     # 3. Build Temp Visit (Using a simple Dictionary structure)
-    # This prevents the issue where class attributes were being used incorrectly
     visit = {
-        "date": date.today(),
+        "date": date.today().strftime('%Y-%m-%d'),
+        "chief_complaints": request.form.get('chief_complaints', ''),
         "provisional_diagnosis": request.form.get('provisional_diagnosis', ''),
-        "medication_entries": [] # Initialize empty list directly on the object
+        "differential_diagnosis": request.form.get('differential_diagnosis', ''),
+        "follow_up_date": request.form.get('follow_up_date', ''),
+        "notes": request.form.get('note', ''),
+        "medication_entries": []
     }
 
     drug_names = request.form.getlist('drug_name[]')
     dose_mgs = request.form.getlist('dose_mg[]')
-    durations = request.form.getlist('med_duration_text[]')
+    d_freqs = request.form.getlist('frequency[]')
+    durations = request.form.getlist('med_duration_text[]') or request.form.getlist('med_duration[]')
     notes = request.form.getlist('med_note[]')
     d_forms = request.form.getlist('med_form[]')
 
@@ -2263,10 +2677,13 @@ def guest_prescription():
             visit["medication_entries"].append({
                 'drug_name': name,
                 'dose_mg': dose_mgs[i] if i < len(dose_mgs) else '',
+                'frequency': d_freqs[i] if i < len(d_freqs) else '',
                 'duration_text': durations[i] if i < len(durations) else '',
                 'note': notes[i] if i < len(notes) else '',
                 'drug_type': None,
-                'form_type': d_forms[i] if i < len(d_forms) else 'Tablet'
+                'form_type': d_forms[i] if i < len(d_forms) else 'Tablet',
+                'is_tapering': False,
+                'taper_plan': []
             })
 
     session.pop('guest_first_visit', None)
@@ -2285,41 +2702,48 @@ def guest_prescription():
 def guest_both():
     if not session.get('guest'):
         abort(403)
-        
+
+    token = session.get('guest_token')
+    if request.form.get('is_chart_update') == 'true' and token:
+        return update_guest_share(token, redirect_to_prescription=True)
+
     # 1. Cleanup Old Links
     try:
-        GuestShare.query.filter(GuestShare.expires_at < datetime.now(timezone.utc)).delete()
+        GuestShare.query.filter(GuestShare.expires_at < get_ist_now()).delete()
         db.session.commit()
     except Exception:
         db.session.rollback()
 
     # 2. Capture Basic Info
     guest_doctor = {
-        "name": request.form.get("doctor_name", "Doctor"),
-        "clinic": request.form.get("clinic_name", ""),
-        "qualification": request.form.get("doctor_qualification", ""), 
-        "registration": request.form.get("doctor_registration", ""),
-        "address": request.form.get("clinic_address", ""),
-        "social": request.form.get("social_handle", "")
+        "name": request.form.get("doc_name", "Doctor"),
+        "qualification": request.form.get("doc_qual", ""),
+        "registration": request.form.get("doc_reg", ""),
+        "clinic": request.form.get("doc_clinic", ""),
+        "address": request.form.get("doc_address", ""),
+        "phone": request.form.get("doc_phone", ""),
+        "email": request.form.get("doc_email", ""),
+        "social": request.form.get("doc_social", "")
     }
-    
-    signature_b64 = None
-    if 'signature_upload' in request.files:
-        file = request.files['signature_upload']
-        if file and file.filename:
-            img_data = file.read()
-            signature_b64 = base64.b64encode(img_data).decode('utf-8')
-            
+
+    signature_b64 = session.get('guest_signature_b64', '')
+    sig_file = request.files.get('doc_signature')
+    if sig_file and sig_file.filename != '':
+        signature_b64 = base64.b64encode(sig_file.read()).decode('utf-8')
+        session['guest_signature_b64'] = signature_b64
+
     guest_patient = {
         "name": request.form.get("patient_name", "Guest Patient"),
-        "age": request.form.get("age", ""),
-        "sex": request.form.get("sex", ""),
-        "address": request.form.get("address", "")
+        "age": request.form.get("patient_age") or request.form.get("age", ""),
+        "sex": request.form.get("patient_sex") or request.form.get("sex", ""),
+        "address": request.form.get("patient_address") or request.form.get("address", "")
     }
 
     # --- 3. ROBUST DATA CAPTURE (With DATES & NOTES) ---
-    today = date.today() # Base anchor date
-    
+    now_ist = get_ist_now()
+    today = now_ist.date()
+    today_iso = now_ist.isoformat()
+
     # A. Symptoms (Now with Duration Calc)
     symptoms = []
     names = request.form.getlist('symptom_name[]')
@@ -2327,7 +2751,7 @@ def guest_both():
     progressions = request.form.getlist('symptom_progression[]')
     currents = request.form.getlist('symptom_current[]')
     sym_notes = request.form.getlist('symptom_note[]')
-    durations = request.form.getlist('duration_text[]') # <--- NEW Capture
+    durations = request.form.getlist('duration_text[]') or request.form.getlist('symptom_duration[]')
 
     for i, name in enumerate(names):
         if not name.strip(): continue
@@ -2365,102 +2789,239 @@ def guest_both():
             "note": note, "date": d_prog.isoformat()
         })
         symptoms.append({
-            "name": name, "score": curr, "phase": "Current", 
-            "note": note, "date": today.isoformat()
+            "name": name, "score": curr, "phase": "Current",
+            "note": note, "date": today_iso, "duration": dur_text
         })
 
-    # B. MSE Findings
+    def safe_float(val_list, idx, default=None):
+        try:
+            v = val_list[idx] if idx < len(val_list) else None
+            return float(v) if v not in (None, '') else default
+        except (ValueError, TypeError):
+            return default
+
+    # B. MSE Findings (Onset & Progression)
     mse = []
     mse_cats = request.form.getlist('mse_category[]')
-    mse_scores = request.form.getlist('mse_score[]')
+    mse_findings = request.form.getlist('mse_finding_name[]')
+    mse_onsets = request.form.getlist('mse_onset[]')
+    mse_progs = request.form.getlist('mse_progression[]')
+    mse_currs = request.form.getlist('mse_current[]') or request.form.getlist('mse_score[]')
     mse_notes = request.form.getlist('mse_note[]')
-    
-    for i, (cat, score) in enumerate(zip(mse_cats, mse_scores)):
-        try: val = int(score)
-        except: val = 0
-        note = mse_notes[i] if i < len(mse_notes) else ""
-        mse.append({"cat": cat, "score": val, "note": note, "date": today.isoformat()})
+    mse_durs = request.form.getlist('mse_duration[]')
 
-    # C. Medications
+    for i, cat in enumerate(mse_cats):
+        if cat:
+            onset = safe_float(mse_onsets, i)
+            prog = safe_float(mse_progs, i)
+            curr = safe_float(mse_currs, i, 0.0)
+            finding_name = mse_findings[i] if i < len(mse_findings) else ""
+            note = mse_notes[i] if i < len(mse_notes) else ""
+            dur_text = mse_durs[i] if i < len(mse_durs) else ""
+            try:
+                delta = parse_duration(dur_text) if dur_text else timedelta(days=14)
+            except Exception:
+                delta = timedelta(days=14)
+            d_onset = now_ist - delta
+            d_prog = d_onset + timedelta(days=(now_ist - d_onset).days // 2)
+            if onset is not None:
+                mse.append({"cat": cat, "name": finding_name, "score": onset, "phase": "Onset", "note": note, "date": d_onset.isoformat()})
+            if prog is not None:
+                mse.append({"cat": cat, "name": finding_name, "score": prog, "phase": "Progression", "note": note, "date": d_prog.isoformat()})
+            mse.append({"cat": cat, "name": finding_name, "score": curr, "phase": "Current", "note": note, "date": today_iso})
+
+    # C. Medications (Upgraded for Tapering & Duration support)
     meds_chart = []
     drug_names = request.form.getlist('drug_name[]')
     dose_mgs = request.form.getlist('dose_full[]') or request.form.getlist('dose_mg[]')
+    d_freqs = request.form.getlist('frequency[]')
+    d_durs = request.form.getlist('med_duration[]') or request.form.getlist('med_duration_text[]')
     med_notes = request.form.getlist('med_note[]')
     d_forms = request.form.getlist('med_form[]')
 
+    last_med = None
     for i, name in enumerate(drug_names):
         if name.strip():
-            score_val = 0.0
             dose_str = dose_mgs[i] if i < len(dose_mgs) else ""
-            if dose_str:
-                import re
-                nums = re.findall(r"[-+]?\d*\.\d+|\d+", dose_str)
-                if nums: score_val = float(nums[0])
-            
+            freq = d_freqs[i] if i < len(d_freqs) else ""
+            dur = d_durs[i] if i < len(d_durs) else ""
             note = med_notes[i] if i < len(med_notes) else ""
-            meds_chart.append({
-                "name": name, "score": score_val, "phase": "Current", 
-                "dose": dose_str, "note": note, "date": today.isoformat()
-            })
+            score_val = 0.0
+            if dose_str:
+                nums = re.findall(r"[-+]?\d*\.\d+|\d+", dose_str)
+                if nums:
+                    score_val = float(nums[0])
+            if last_med and last_med["name"].strip().lower() == name.strip().lower():
+                last_med["is_tapering"] = True
+                if not last_med.get("taper_plan"):
+                    last_med["taper_plan"] = [{
+                        "dose_mg": last_med["dose"],
+                        "frequency": last_med.get("frequency", ""),
+                        "duration_text": last_med.get("duration", ""),
+                        "note": last_med.get("note", "")
+                    }]
+                last_med["taper_plan"].append({
+                    "dose_mg": dose_str,
+                    "frequency": freq,
+                    "duration_text": dur,
+                    "note": note
+                })
+            else:
+                new_med = {
+                    "name": name, "score": score_val, "phase": "Current",
+                    "dose": dose_str, "frequency": freq, "duration": dur,
+                    "note": note, "date": today_iso,
+                    "is_tapering": False, "taper_plan": None,
+                    "form_type": d_forms[i] if i < len(d_forms) else 'Tablet'
+                }
+                meds_chart.append(new_med)
+                last_med = new_med
 
-    # D. Side Effects
+    # D. Side Effects (Onset & Progression)
     se_chart = []
     se_names = request.form.getlist('side_effect_name[]')
-    se_scores = request.form.getlist('side_effect_score[]')
+    se_onsets = request.form.getlist('side_effect_onset[]')
+    se_progs = request.form.getlist('side_effect_progression[]')
+    se_currs = request.form.getlist('side_effect_current[]') or request.form.getlist('side_effect_score[]')
     se_notes = request.form.getlist('side_effect_note[]')
-    
+    se_durs = request.form.getlist('side_effect_duration[]')
+
     for i, name in enumerate(se_names):
         if name.strip():
-            try: val = int(se_scores[i]) if i < len(se_scores) else 0
-            except: val = 0
+            onset = safe_float(se_onsets, i)
+            prog = safe_float(se_progs, i)
+            curr = safe_float(se_currs, i, 0.0)
             note = se_notes[i] if i < len(se_notes) else ""
-            se_chart.append({
-                "name": name, "score": val, "phase": "Current", 
-                "note": note, "date": today.isoformat()
-            })
+            dur_text = se_durs[i] if i < len(se_durs) else ""
+            try:
+                delta = parse_duration(dur_text) if dur_text else timedelta(days=14)
+            except Exception:
+                delta = timedelta(days=14)
+            d_onset = now_ist - delta
+            d_prog = d_onset + timedelta(days=(now_ist - d_onset).days // 2)
+            if onset is not None:
+                se_chart.append({"name": name, "score": onset, "phase": "Onset", "note": note, "date": d_onset.isoformat()})
+            if prog is not None:
+                se_chart.append({"name": name, "score": prog, "phase": "Progression", "note": note, "date": d_prog.isoformat()})
+            se_chart.append({"name": name, "score": curr, "phase": "Current", "note": note, "date": today_iso, "duration": dur_text})
 
-    # 4. Save to DB
-    chart_data = {
-        'symptoms': symptoms, 'mse': mse, 'meds': meds_chart, 'se': se_chart
+    # 4. Save to DB (session-aware token reuse)
+    patient_details = {
+        "name": request.form.get('patient_name', 'Guest Patient'),
+        "age": request.form.get('patient_age', ''),
+        "sex": request.form.get('patient_sex', ''),
+        "address": request.form.get('patient_address', ''),
+        "date": today_iso
     }
-    
-    token = str(uuid.uuid4())
-    expiry = datetime.now(timezone.utc) + timedelta(minutes=30)
-    
-    share_entry = GuestShare(
-        token=token,
-        data_json=json.dumps(chart_data),
-        expires_at=expiry
-    )
-    db.session.add(share_entry)
+    doctor_details = {
+        "name": request.form.get('doc_name', 'Doctor'),
+        "qualification": request.form.get('doc_qual', ''),
+        "registration": request.form.get('doc_reg', ''),
+        "clinic": request.form.get('doc_clinic', ''),
+        "address": request.form.get('doc_address', ''),
+        "phone": request.form.get('doc_phone', ''),
+        "email": request.form.get('doc_email', ''),
+        "social": request.form.get('doc_social', '')
+    }
+    sig_b64 = session.get('guest_signature_b64', '')
+    sig_file = request.files.get('doc_signature')
+    if sig_file and sig_file.filename != '':
+        sig_b64 = base64.b64encode(sig_file.read()).decode('utf-8')
+        session['guest_signature_b64'] = sig_b64
+
+    chart_data = {
+        "patient": patient_details,
+        "doctor": doctor_details,
+        "signature_b64": sig_b64,
+        "chief_complaints": request.form.get('chief_complaints', ''),
+        "stressors": request.form.get('stressors_data', ''),
+        "personality": request.form.get('personality_data', ''),
+        "major_events": request.form.get('major_events_data', ''),
+        "scales": request.form.get('scales_data', ''),
+        "substance_use": request.form.get('substance_use_data', ''),
+        "adherence": request.form.get('adherence_data', ''),
+        "provisional_diagnosis": request.form.get('provisional_diagnosis', ''),
+        "differential_diagnosis": request.form.get('differential_diagnosis', ''),
+        "follow_up_date": request.form.get('follow_up_date', ''),
+        "note": request.form.get('note', ''),
+        "symptoms": symptoms,
+        "mse": mse,
+        "meds": meds_chart,
+        "se": se_chart
+    }
+
+    token = session.get('guest_token')
+    share_entry = None
+
+    if token:
+        share_entry = GuestShare.query.filter_by(token=token).first()
+        if share_entry and share_entry.is_expired():
+            share_entry = None
+
+    expiry = get_ist_now() + timedelta(minutes=30)
+
+    if share_entry:
+        share_entry.data_json = json.dumps(chart_data)
+        share_entry.expires_at = expiry
+    else:
+        token = str(uuid.uuid4())
+        session['guest_token'] = token
+        share_entry = GuestShare(
+            token=token,
+            data_json=json.dumps(chart_data),
+            expires_at=expiry,
+            created_at=get_ist_now()
+        )
+        db.session.add(share_entry)
+
     db.session.commit()
 
     lifchart_url = f"{request.url_root.rstrip('/')}/guest/share/{token}"
 
     # 5. Build Visit for Prescription PDF
-    visit = {
-        "date": date.today(),
+    current_symps = [{"symptom_name": s.get("name", ""), "duration_text": s.get("duration", "")} for s in symptoms if s.get("phase") == "Current"]
+    current_ses = [{"side_effect_name": s.get("name", ""), "duration_text": s.get("duration", "")} for s in se_chart if s.get("phase") == "Current"]
+    current_mses = [{"category": m.get("cat", ""), "finding_name": m.get("name", "")} for m in mse if m.get("phase") == "Current"]
+
+    fu_date_str = request.form.get('follow_up_date')
+    fu_date = None
+    if fu_date_str:
+        try:
+            fu_date = datetime.strptime(fu_date_str, '%Y-%m-%d').date()
+        except Exception:
+            pass
+
+    visit_obj = {
+        "id": "Guest",
+        "date": get_ist_now().date(),
         "provisional_diagnosis": request.form.get('provisional_diagnosis', ''),
+        "differential_diagnosis": request.form.get('differential_diagnosis', ''),
+        "next_visit_date": fu_date,
+        "note": request.form.get('note', ''),
+        "symptom_entries": current_symps,
+        "side_effect_entries": current_ses,
+        "mse_entries": current_mses,
         "medication_entries": []
     }
-    durations = request.form.getlist('med_duration[]') or request.form.getlist('med_duration_text[]')
 
-    for i, name in enumerate(drug_names):
-        if name.strip():
-            visit['medication_entries'].append({
-                'drug_name': name,
-                'dose_mg': dose_mgs[i] if i < len(dose_mgs) else '',
-                'duration_text': durations[i] if i < len(durations) else '',
-                'note': med_notes[i] if i < len(med_notes) else '',
-                'drug_type': None,
-                'form_type': d_forms[i] if i < len(d_forms) else 'Tablet'
-            })
+    for med in meds_chart:
+        visit_obj['medication_entries'].append({
+            'drug_name': med.get('name', ''),
+            'drug_type': 'Generic',
+            'dose_mg': med.get('dose', ''),
+            'frequency': med.get('frequency', ''),
+            'duration_text': med.get('duration', ''),
+            'note': med.get('note', ''),
+            'form_type': med.get('form_type', 'Tablet'),
+            'is_tapering': med.get('is_tapering', False),
+            'taper_plan': json.dumps(med.get('taper_plan', [])) if med.get('taper_plan') else None
+        })
 
     session.pop('guest_first_visit', None)
-            
+
     return render_template(
         "preview_prescription.html",
-        visit=visit,
+        visit=visit_obj,
         patient=None,
         guest=True,
         guest_patient=guest_patient,
@@ -2494,20 +3055,25 @@ def guest_share_view(token):
     mse_categories = sorted(list(set(m['cat'] for m in mse if 'cat' in m)))
 
     # 4. Visit Details & Modal Logic
-    visit_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    visit_date = get_ist_now().date().isoformat()
     visit_id_str = "999"
 
     current_symptoms = [s for s in symptoms if s.get('phase') == 'Current']
     
     dummy_visit = {
+        "id": "guest",
         "date": visit_date,
-        "type": "Shared View",
-        "diagnosis": "Guest Mode",
+        "type": "First Visit (Guest)",
         "symptoms": current_symptoms,
+        "mse": mse,
+        "medication_entries": [],
         "meds": meds,
         "se": se,
-        "mse": mse,
-        "notes": "Shared via temporary link"
+        "chief_complaints": data.get('chief_complaints', ''),
+        "provisional_diagnosis": data.get('provisional_diagnosis', ''),
+        "differential_diagnosis": data.get('differential_diagnosis', ''),
+        "follow_up_date": data.get('follow_up_date', ''),
+        "notes": data.get('note', '')
     }
 
     # 5. Helper: Build Datasets (Using Explicit Dates)
@@ -2600,28 +3166,111 @@ def guest_share_view(token):
             "isUnified": True
         }
 
+    # 5b. Helper: Build Medication Lines (Day-by-Day Expansion)
+    def build_med_dataset(meds_list):
+        datasets = {}
+        for item in meds_list:
+            label = item.get("name")
+            if not label:
+                continue
+            if label not in datasets:
+                datasets[label] = {"label": label, "data": [], "fill": False, "tension": 0.1, "hidden": True}
+            base_date = item.get("date", visit_date)
+            v_date = datetime.strptime(base_date[:10], "%Y-%m-%d")
+            if item.get("is_tapering") and item.get("taper_plan"):
+                current_date = v_date
+                for step in item["taper_plan"]:
+                    dur_text = step.get("duration_text", "")
+                    try:
+                        days = parse_duration(dur_text).days if parse_duration(dur_text) else 0
+                    except Exception:
+                        days = 0
+                    duration = max(1, days)
+                    dose_val = 0.0
+                    dose_str = step.get("dose_mg", "")
+                    if dose_str:
+                        nums = re.findall(r"[-+]?\d*\.\d+|\d+", dose_str)
+                        if nums:
+                            dose_val = float(nums[0])
+                    for j in range(duration):
+                        d = current_date + timedelta(days=j)
+                        datasets[label]["data"].append({
+                            "x": d.strftime("%Y-%m-%d"),
+                            "y": dose_val,
+                            "detail": f"Freq: {step.get('frequency', '')} (Tapering)",
+                            "phase": "Current"
+                        })
+                    current_date += timedelta(days=duration)
+            else:
+                dur_text = item.get("duration", "")
+                try:
+                    days = parse_duration(dur_text).days if parse_duration(dur_text) else 0
+                except Exception:
+                    days = 0
+                duration = max(1, days)
+                score_val = item.get("score", 0.0)
+                for j in range(duration):
+                    d = v_date + timedelta(days=j)
+                    datasets[label]["data"].append({
+                        "x": d.strftime("%Y-%m-%d"),
+                        "y": score_val,
+                        "detail": f"Freq: {item.get('frequency', '')}",
+                        "phase": "Current"
+                    })
+        return list(datasets.values())
+
+    # 6b. Helper: Calculate Unified Meds from the Expanded Lines
+    def calculate_unified_meds(meds_datasets, label, color):
+        if not meds_datasets:
+            return None
+        daily_sums = {}
+        daily_counts = {}
+        for ds in meds_datasets:
+            for p in ds["data"]:
+                dk = p["x"]
+                daily_sums[dk] = daily_sums.get(dk, 0) + p["y"]
+                daily_counts[dk] = daily_counts.get(dk, 0) + 1
+        unified_points = []
+        for k, v in daily_sums.items():
+            unified_points.append({
+                "x": k, "y": round(v / daily_counts[k], 2),
+                "phase": "Current", "detail": "Average", "breakdown": []
+            })
+        unified_points.sort(key=lambda p: p['x'])
+        return {
+            "label": label, "data": unified_points, "borderColor": color,
+            "backgroundColor": "white", "pointBorderColor": color,
+            "borderWidth": 4, "fill": False, "pointRadius": 2, "isUnified": True
+        }
+
+    med_datasets_ready = build_med_dataset(meds)
+
     # 7. Render
     return render_template(
         'life_chart.html',
         guest=True,
+        guest_token=token,
         patient=None,
-        
+        guest_doctor=data.get('doctor', {}),
+        guest_signature_b64=data.get('signature_b64', ''),
+        adherence_ranges=AdherenceRange.query.all(),
+        clinical_state_ranges=ClinicalStateRange.query.all(),
+
         symptom_datasets=build_dataset(symptoms, "symptom"),
-        medication_datasets=build_dataset(meds, "med"),
+        medication_datasets=med_datasets_ready,
         side_effect_datasets=build_dataset(se, "se"),
         mse_datasets=build_dataset(mse, "mse"),
-        
-        # Unified Lines
+
         symptom_unified=calculate_unified(symptoms, "Unified Symptoms (Avg)", "rgba(0, 0, 0, 1)"),
-        med_unified=calculate_unified(meds, "Unified Meds (Avg)", "rgba(0, 0, 0, 1)"),
+        med_unified=calculate_unified_meds(med_datasets_ready, "Unified Meds (Avg)", "rgba(0, 0, 0, 1)"),
         se_unified=calculate_unified(se, "Unified SE (Avg)", "rgba(0, 0, 0, 1)"),
         mse_unified=calculate_unified(mse, "Unified MSE (Avg)", "rgba(0, 0, 0, 1)"),
-        
+
         symptom_names=symptom_names,
         med_names=med_names,
         se_names=se_names,
         mse_categories=mse_categories,
-        
+
         visit_details={visit_id_str: dummy_visit}
     )
 

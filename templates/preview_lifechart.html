@@ -105,7 +105,10 @@
     <div class="a4-container" id="captureArea">
         <div class="sidebar">
             <div class="header-info">
-                <h2>{{ patient.name }}</h2>
+                <div style="font-size: 14px; color: #555;">
+                    <strong>Doctor:</strong> Dr. {{ doctor.name if guest and doctor else (patient.doctor.name if patient and getattr(patient, 'doctor', None) else '') }}<br>
+                    <strong>Patient:</strong> {{ patient.name }}
+                </div>
                 <p>DOB: {{ patient.age }} / {{ patient.sex }}</p>
                 <p>{{ start_date.strftime('%d %b %Y') }} - {{ end_date.strftime('%d %b %Y') }}</p>
             </div>
