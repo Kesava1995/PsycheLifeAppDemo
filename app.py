@@ -380,9 +380,9 @@ def guest_lifechart():
         # --- C. SAVE TO DB (session-aware token reuse) ---
         patient_details = {
             "name": request.form.get('patient_name', 'Guest Patient'),
-            "age": request.form.get('patient_age', ''),
-            "sex": request.form.get('patient_sex', ''),
-            "address": request.form.get('patient_address', ''),
+            "age": request.form.get('age', '') or request.form.get('patient_age', ''),
+            "sex": request.form.get('sex', '') or request.form.get('patient_sex', ''),
+            "address": request.form.get('address', '') or request.form.get('patient_address', ''),
             "date": today_iso
         }
         doctor_details = {
@@ -415,7 +415,7 @@ def guest_lifechart():
             "provisional_diagnosis": request.form.get('provisional_diagnosis', ''),
             "differential_diagnosis": request.form.get('differential_diagnosis', ''),
             "follow_up_date": request.form.get('follow_up_date', ''),
-            "note": request.form.get('note', ''),
+            "note": request.form.get('visit_note') or request.form.get('note', ''),
             "symptoms": symptoms,
             "mse": mse,
             "meds": meds_chart,
@@ -566,6 +566,17 @@ def first_visit():
         return redirect(url_for('landing'))
 
     if request.method == 'POST':
+        # --- CRITICAL FIX: Intercept Guest submissions immediately ---
+        if is_guest:
+            submit_action = request.form.get('submit_action')
+            if submit_action == 'prescription':
+                return guest_prescription()
+            elif submit_action == 'both':
+                return guest_both()
+            else:
+                return guest_lifechart()
+
+        # --- DOCTOR FLOW CONTINUES BELOW ---
         # Get patient info
         patient_name = request.form.get('patient_name')
         age = request.form.get('age')
@@ -579,11 +590,9 @@ def first_visit():
         
         visit_date = parse_date(visit_date_str) or date.today()
         
-        # --- CRITICAL FIX: Don't re-fetch "admin". Use the doctor we found above. ---
         if not doctor:
-             flash('Error: No doctor account identified. Please log in.', 'error')
-             return redirect(url_for('logout'))
-        # --------------------------------------------------------------------------
+            flash('Error: No doctor account identified. Please log in.', 'error')
+            return redirect(url_for('logout'))
 
         # Capture Relation Logic: "Others" -> use custom text
         relation = request.form.get('attender_relation')
@@ -816,7 +825,7 @@ def update_guest_share(token, redirect_to_prescription=False):
     data['provisional_diagnosis'] = request.form.get('provisional_diagnosis', data.get('provisional_diagnosis', ''))
     data['differential_diagnosis'] = request.form.get('differential_diagnosis', data.get('differential_diagnosis', ''))
     data['follow_up_date'] = request.form.get('follow_up_date', data.get('follow_up_date', ''))
-    data['note'] = request.form.get('note', data.get('note', ''))
+    data['note'] = request.form.get('visit_note') or request.form.get('note', data.get('note', ''))
 
     # 2. Update Doctor modal details (if provided)
     if request.form.get('doc_name'):
@@ -2675,7 +2684,7 @@ def guest_prescription():
         "provisional_diagnosis": request.form.get('provisional_diagnosis', ''),
         "differential_diagnosis": request.form.get('differential_diagnosis', ''),
         "next_visit_date": fu_date,
-        "note": request.form.get('note', ''),
+        "note": request.form.get('visit_note') or request.form.get('note', ''),
         "symptom_entries": [],
         "side_effect_entries": [],
         "mse_entries": [],
@@ -2925,9 +2934,9 @@ def guest_both():
     # 4. Save to DB (session-aware token reuse)
     patient_details = {
         "name": request.form.get('patient_name', 'Guest Patient'),
-        "age": request.form.get('patient_age', ''),
-        "sex": request.form.get('patient_sex', ''),
-        "address": request.form.get('patient_address', ''),
+        "age": request.form.get('age', '') or request.form.get('patient_age', ''),
+        "sex": request.form.get('sex', '') or request.form.get('patient_sex', ''),
+        "address": request.form.get('address', '') or request.form.get('patient_address', ''),
         "date": today_iso
     }
     doctor_details = {
@@ -2960,7 +2969,7 @@ def guest_both():
         "provisional_diagnosis": request.form.get('provisional_diagnosis', ''),
         "differential_diagnosis": request.form.get('differential_diagnosis', ''),
         "follow_up_date": request.form.get('follow_up_date', ''),
-        "note": request.form.get('note', ''),
+        "note": request.form.get('visit_note') or request.form.get('note', ''),
         "symptoms": symptoms,
         "mse": mse,
         "meds": meds_chart,
@@ -3014,7 +3023,7 @@ def guest_both():
         "provisional_diagnosis": request.form.get('provisional_diagnosis', ''),
         "differential_diagnosis": request.form.get('differential_diagnosis', ''),
         "next_visit_date": fu_date,
-        "note": request.form.get('note', ''),
+        "note": request.form.get('visit_note') or request.form.get('note', ''),
         "symptom_entries": current_symps,
         "side_effect_entries": current_ses,
         "mse_entries": current_mses,
@@ -3072,14 +3081,16 @@ def guest_share_view(token):
     mse_categories = sorted(list(set(m['cat'] for m in mse if 'cat' in m)))
 
     # 4. Visit Details & Modal Logic
-    visit_date = get_ist_now().date().isoformat()
+    visit_date_obj = get_ist_now().date()
+    visit_date_str = visit_date_obj.isoformat()
     visit_id_str = "999"
 
     current_symptoms = [s for s in symptoms if s.get('phase') == 'Current']
-    
-    dummy_visit = {
+
+    # JS expects string dates and dicts
+    dummy_visit_js = {
         "id": "guest",
-        "date": visit_date,
+        "date": visit_date_str,
         "type": "First Visit (Guest)",
         "symptoms": current_symptoms,
         "mse": mse,
@@ -3093,21 +3104,55 @@ def guest_share_view(token):
         "notes": data.get('note', '')
     }
 
+    # Jinja form expects Python date objects and 'medication_entries' mapping
+    fu_date_str = data.get('follow_up_date')
+    fu_date = None
+    if fu_date_str:
+        try:
+            fu_date = datetime.strptime(fu_date_str, '%Y-%m-%d').date()
+        except Exception:
+            pass
+
+    medication_entries = []
+    for m in meds:
+        taper_plan_json = None
+        if m.get('is_tapering') and m.get('taper_plan'):
+            taper_plan_json = json.dumps(m['taper_plan'])
+        medication_entries.append({
+            'drug_name': m.get('name', ''),
+            'drug_type': m.get('drug_type', 'Generic'),
+            'dose_mg': m.get('dose', ''),
+            'frequency': m.get('frequency', ''),
+            'duration_text': m.get('duration', ''),
+            'note': m.get('note', ''),
+            'form_type': m.get('form_type', 'Tablet'),
+            'is_tapering': m.get('is_tapering', False),
+            'taper_plan': taper_plan_json
+        })
+
+    form_visit = {
+        "id": "guest",
+        "date": visit_date_obj,
+        "provisional_diagnosis": data.get('provisional_diagnosis', ''),
+        "differential_diagnosis": data.get('differential_diagnosis', ''),
+        "next_visit_date": fu_date,
+        "note": data.get('note', ''),
+        "medication_entries": medication_entries
+    }
+
     # 5. Helper: Build Datasets (Using Explicit Dates)
     def build_dataset(items, label_prefix):
         datasets = {}
-        # Fallback if 'date' is missing (old data)
         offset_days = {"Onset": -14, "Progression": -7, "Current": 0}
 
         for item in items:
             label = item.get("name") or item.get("cat")
             phase = item.get("phase", "Current")
-            
-            # USE SAVED DATE IF AVAILABLE
+
             if "date" in item:
-                point_date = item["date"]
+                point_date = item["date"][:10]
             else:
-                dt = datetime.strptime(visit_date, "%Y-%m-%d") + timedelta(days=offset_days.get(phase, 0))
+                dt = datetime.strptime(visit_date_str, "%Y-%m-%d") + timedelta(days=offset_days.get(phase, 0))
                 point_date = dt.strftime("%Y-%m-%d")
 
             if label not in datasets:
@@ -3118,41 +3163,35 @@ def guest_share_view(token):
                 "y": item["score"],
                 "phase": phase,
                 "symptom_name": label,
-                "visit_id": visit_id_str, 
+                "visit_id": visit_id_str,
                 "detail": item.get("note", ""),
-                "reported_on": visit_date
+                "reported_on": visit_date_str
             })
-            
+
         return list(datasets.values())
 
     # 6. Helper: Calculate Unified Lines (GROUP BY DATE)
     def calculate_unified(items, label, color):
         if not items: return None
-        
+
         offset_days = {"Onset": -14, "Progression": -7, "Current": 0}
-        
-        # GROUP BY EXACT DATE (Not Phase!)
-        date_groups = {} 
+        date_groups = {}
 
         for item in items:
-            # Determine Date
             if "date" in item:
-                d_key = item["date"]
+                d_key = item["date"][:10]
             else:
                 phase = item.get("phase", "Current")
-                dt = datetime.strptime(visit_date, "%Y-%m-%d") + timedelta(days=offset_days.get(phase, 0))
+                dt = datetime.strptime(visit_date_str, "%Y-%m-%d") + timedelta(days=offset_days.get(phase, 0))
                 d_key = dt.strftime("%Y-%m-%d")
-                
+
             if d_key not in date_groups: date_groups[d_key] = []
             date_groups[d_key].append(item)
-            
+
         unified_points = []
         for d_key, group_items in date_groups.items():
             avg = sum(i["score"] for i in group_items) / len(group_items)
-            
             breakdown = [{"name": i.get("name") or i.get("cat"), "score": i["score"]} for i in group_items]
-            
-            # Determine phase for tooltip (Mix if multiple phases on same day)
             phases = list(set(i.get("phase", "Current") for i in group_items))
             phase_label = phases[0] if len(phases) == 1 else "Mixed"
 
@@ -3162,10 +3201,10 @@ def guest_share_view(token):
                 "phase": phase_label,
                 "symptom_name": label,
                 "visit_id": visit_id_str,
-                "reported_on": visit_date,
+                "reported_on": visit_date_str,
                 "breakdown": breakdown
             })
-            
+
         unified_points.sort(key=lambda p: p['x'])
 
         return {
@@ -3192,7 +3231,7 @@ def guest_share_view(token):
                 continue
             if label not in datasets:
                 datasets[label] = {"label": label, "data": [], "fill": False, "tension": 0.1, "hidden": True}
-            base_date = item.get("date", visit_date)
+            base_date = item.get("date", visit_date_str)
             v_date = datetime.strptime(base_date[:10], "%Y-%m-%d")
             if item.get("is_tapering") and item.get("taper_plan"):
                 current_date = v_date
@@ -3262,12 +3301,22 @@ def guest_share_view(token):
 
     med_datasets_ready = build_med_dataset(meds)
 
-    # 7. Render
+    # 7. Render – pass stored patient so template can show name, age, sex, address
+    saved_patient_data = data.get('patient', {})
+    class DummyPatient:
+        def __init__(self, d):
+            self.name = d.get('name', 'Guest Patient')
+            self.age = d.get('age', '')
+            self.sex = d.get('sex', '')
+            self.address = d.get('address', '')
+    dummy_patient = DummyPatient(saved_patient_data)
+
     return render_template(
         'life_chart.html',
         guest=True,
         guest_token=token,
-        patient=None,
+        patient=dummy_patient,
+        visit=form_visit,
         guest_doctor=data.get('doctor', {}),
         guest_signature_b64=data.get('signature_b64', ''),
         adherence_ranges=AdherenceRange.query.all(),
@@ -3288,7 +3337,7 @@ def guest_share_view(token):
         se_names=se_names,
         mse_categories=mse_categories,
 
-        visit_details={visit_id_str: dummy_visit}
+        visit_details={visit_id_str: dummy_visit_js}
     )
 
 

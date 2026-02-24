@@ -310,16 +310,16 @@
                             <div style="display: flex; flex-direction: column; gap: 12px;">
                                 <div>
                                     <label style="font-size: 12px; font-weight: bold;">Full Name (as on Prescription) *</label>
-                                    <input type="text" name="doc_name" required value="{% if guest_doctor %}{{ guest_doctor.name }}{% endif %}" class="form-input" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                                    <input type="text" name="doc_name" value="{% if guest_doctor %}{{ guest_doctor.name }}{% endif %}" class="form-input" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
                                 </div>
                                 <div style="display: flex; gap: 10px;">
                                     <div style="flex: 1;">
                                         <label style="font-size: 12px; font-weight: bold;">Qualification *</label>
-                                        <input type="text" name="doc_qual" required value="{% if guest_doctor %}{{ guest_doctor.qualification }}{% endif %}" class="form-input" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                                        <input type="text" name="doc_qual" value="{% if guest_doctor %}{{ guest_doctor.qualification }}{% endif %}" class="form-input" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
                                     </div>
                                     <div style="flex: 1;">
                                         <label style="font-size: 12px; font-weight: bold;">Registration Number *</label>
-                                        <input type="text" name="doc_reg" required value="{% if guest_doctor %}{{ guest_doctor.registration }}{% endif %}" class="form-input" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                                        <input type="text" name="doc_reg" value="{% if guest_doctor %}{{ guest_doctor.registration }}{% endif %}" class="form-input" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
                                     </div>
                                 </div>
                                 <div>
@@ -350,13 +350,13 @@
                                         <p style="font-size: 11px; color: #2ecc71; margin-bottom: 5px; font-weight: bold;">✓ Signature already uploaded</p>
                                         <input type="file" name="doc_signature" accept="image/*" style="display:block; font-size:12px;">
                                     {% else %}
-                                        <input type="file" name="doc_signature" accept="image/*" required style="display:block; margin-top:5px; font-size:12px;">
+                                        <input type="file" name="doc_signature" accept="image/*" style="display:block; margin-top:5px; font-size:12px;">
                                     {% endif %}
                                 </div>
                             </div>
                             
                             <div style="display:flex; gap:10px; margin-top:25px;">
-                                <button type="button" onclick="document.getElementById('guestDoctorModal').style.display='none'" class="btn" style="flex:1; background:#eee; color:#333; font-weight:bold;">Cancel</button>
+                                <button type="button" onclick="closeGuestDoctorModal()" class="btn" style="flex:1; background:#eee; color:#333; font-weight:bold;">Cancel</button>
                                 <button type="submit" id="guestModalSubmitBtn" class="btn" style="flex:1; background:#7ab8e0; color:#fff; font-weight:bold;">Proceed</button>
                             </div>
                         </div>
@@ -365,7 +365,21 @@
                     <script>
                         function openGuestDoctorModal(actionUrl) {
                             document.getElementById('guestModalSubmitBtn').setAttribute('formaction', actionUrl);
+                            document.querySelector('input[name="doc_name"]').required = true;
+                            document.querySelector('input[name="doc_qual"]').required = true;
+                            document.querySelector('input[name="doc_reg"]').required = true;
+                            var sigInput = document.querySelector('input[name="doc_signature"]');
+                            var isUploaded = document.querySelector('p[style*="#2ecc71"]');
+                            if (sigInput && !isUploaded) sigInput.required = true;
                             document.getElementById('guestDoctorModal').style.display = 'flex';
+                        }
+                        function closeGuestDoctorModal() {
+                            document.querySelector('input[name="doc_name"]').required = false;
+                            document.querySelector('input[name="doc_qual"]').required = false;
+                            document.querySelector('input[name="doc_reg"]').required = false;
+                            var sigInput = document.querySelector('input[name="doc_signature"]');
+                            if (sigInput) sigInput.required = false;
+                            document.getElementById('guestDoctorModal').style.display = 'none';
                         }
                     </script>
 
