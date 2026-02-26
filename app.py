@@ -15,7 +15,7 @@ def get_ist_now():
     return datetime.utcnow() + timedelta(hours=5, minutes=30)
 
 
-from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry, ScaleAssessment
+from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry, ScaleAssessment, Appointment, DashboardNote
 from medical_utils import get_unified_dose, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency, process_scale_submission
 import io
 import os
@@ -545,10 +545,102 @@ def profile():
 
 
 @app.route('/dashboard')
-@login_required
+@doctor_required
 def dashboard():
-    """Renders the main dashboard view."""
-    return render_template('dashboard.html')
+    """Renders the main dashboard view with dynamic data."""
+    doctor_id = session.get('doctor_id')
+    today = get_ist_now().date()
+
+    # Get Patients
+    patients = Patient.query.filter_by(doctor_id=doctor_id).order_by(Patient.name).all()
+    num_patients = len(patients)
+
+    # Get Today's Notes
+    notes = DashboardNote.query.filter_by(doctor_id=doctor_id, date=today).all()
+
+    # Get Appointments for the current date
+    target_date_str = request.args.get('date')
+    if target_date_str:
+        try:
+            target_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            target_date = today
+    else:
+        target_date = today
+
+    appointments = Appointment.query.filter_by(doctor_id=doctor_id, date=target_date).order_by(Appointment.start_time).all()
+
+    # Prepare patient data for the table (including latest diagnosis)
+    patient_data = []
+    for p in patients:
+        latest_visit = Visit.query.filter_by(patient_id=p.id).order_by(Visit.date.desc()).first()
+        diagnosis = latest_visit.provisional_diagnosis if latest_visit else "N/A"
+        patient_data.append({
+            'id': p.id,
+            'name': p.name,
+            'age': p.age,
+            'sex': p.sex,
+            'diagnosis': diagnosis,
+            'note': p.personal_notes or "None"
+        })
+
+    return render_template('dashboard.html',
+                           patients=patient_data,
+                           num_patients=num_patients,
+                           today=today,
+                           target_date=target_date,
+                           notes=notes,
+                           appointments=appointments,
+                           top_5_patients=patients[:5])
+
+
+@app.route('/api/add_note', methods=['POST'])
+@doctor_required
+def add_note():
+    doctor_id = session.get('doctor_id')
+    content = request.form.get('note_content')
+    if content:
+        note = DashboardNote(doctor_id=doctor_id, date=get_ist_now().date(), content=content)
+        db.session.add(note)
+        db.session.commit()
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/api/add_appointment', methods=['POST'])
+@doctor_required
+def add_appointment():
+    doctor_id = session.get('doctor_id')
+    date_str = request.form.get('appt_date')
+    start_time = request.form.get('appt_time')
+    duration = int(request.form.get('appt_duration', 15))
+
+    appt_date = parse_date(date_str)
+    if not appt_date:
+        flash("Invalid date.", "error")
+        return redirect(url_for('dashboard'))
+
+    # Basic overlap check
+    existing = Appointment.query.filter_by(doctor_id=doctor_id, date=appt_date, start_time=start_time).first()
+    if existing:
+        flash("Time slot already booked!", "error")
+        return redirect(url_for('dashboard'))
+
+    appt = Appointment(
+        doctor_id=doctor_id,
+        date=appt_date,
+        name=request.form.get('appt_name'),
+        age=request.form.get('appt_age'),
+        sex=request.form.get('appt_sex'),
+        start_time=start_time,
+        slot_duration=duration,
+        type=request.form.get('appt_type'),
+        status=request.form.get('appt_status', 'Confirmed'),
+        view_details=request.form.get('appt_details', '')
+    )
+    db.session.add(appt)
+    db.session.commit()
+    flash("Appointment added successfully!", "success")
+    return redirect(url_for('dashboard', date=date_str))
 
 
 @app.route('/first_visit', methods=['GET', 'POST'])

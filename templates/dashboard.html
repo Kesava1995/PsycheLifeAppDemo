@@ -6,317 +6,112 @@
 <title>Clinic Dashboard</title>
 
 <style>
-    * {
-        box-sizing: border-box;
+    /* Add this CSS rule for dark mode */
+    body.dark-mode {
+        background-color: #121212;
+        color: #ffffff;
     }
-
-    body {
-        margin: 0;
-        font-family: Arial, sans-serif;
-        background-color: #f4f6f9;
-        overflow-x: hidden;
+    body.dark-mode .topbar, body.dark-mode .card, body.dark-mode .box, body.dark-mode table, body.dark-mode .side-menu, body.dark-mode .modal-content {
+        background-color: #1e1e1e;
+        color: #ffffff;
+        border-color: #333;
     }
-
-    /* ===== UPDATED TOP BAR ===== */
-    .topbar {
-        position: fixed;
-        width: 100%;
-        top: 0;
-        left: 0;
-        z-index: 3000;
-        height: 60px;
-        background: white;
-        padding: 0 20px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    body.dark-mode th {
+        background-color: #2c2c2c;
     }
-
-    .top-left {
-        display: flex;
-        align-items: center;
-        gap: 15px;
+    body.dark-mode td {
+        border-bottom: 1px solid #333;
     }
-
-    .logo {
-        height: 40px;
-    }
-
-    .hamburger {
-        font-size: 24px;
-        cursor: pointer;
-        padding: 5px;
-    }
-
-    .top-right {
-        display: flex;
-        align-items: center;
-        gap: 25px;
-    }
-
-    .top-search {
-        padding: 8px 12px;
-        width: 220px;
-        border-radius: 6px;
-        border: 1px solid #ccc;
-    }
-
-    .top-link {
-        cursor: pointer;
-        font-weight: 600;
-        color: #2c3e50;
-        display: flex;
-        align-items: center;
-    }
-
-    .bell-icon {
-        font-size: 20px;
-        cursor: pointer;
-    }
-
-    /* ===== MAIN LAYOUT ===== */
-    .container {
-        display: flex;
-        padding: 20px;
-        margin-top: 60px; /* Exact height of topbar */
-        gap: 20px; /* Proper gap between main content and right sidebar */
-    }
-
-    .main-content {
-        flex: 3;
-    }
-
-    .sidebar {
-        flex: 1;
-        min-width: 250px;
-    }
-
-    /* ===== DASHBOARD BOXES ===== */
-    .dashboard-boxes {
-        display: flex;
-        gap: 15px;
-        margin-bottom: 20px;
-        flex-wrap: wrap; /* Helps on smaller screens */
-    }
-
-    .box {
-        flex: 1;
-        min-width: 150px;
-        background: white;
-        padding: 20px;
-        text-align: center;
-        border-radius: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        cursor: pointer;
-        transition: 0.3s;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-    }
-
-    .box:hover {
-        background: #e8f0fe;
-        transform: translateY(-2px);
-    }
-
-    .highlight {
-        background: #2c7be5;
+    body.dark-mode .top-search, body.dark-mode .side-search input, body.dark-mode .form-control {
+        background-color: #333;
         color: white;
-    }
-    
-    .highlight:hover {
-        background: #1a5dc9;
+        border: 1px solid #555;
     }
 
-    .small-text {
-        font-size: 12px;
-        margin-top: 5px;
-        opacity: 0.9;
-    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, sans-serif; background-color: #f4f6f9; overflow-x: hidden; transition: 0.3s; }
 
-    /* ===== TABLE ===== */
-    table {
-        width: 100%;
-        background: white;
-        border-collapse: collapse;
-        border-radius: 10px;
-        overflow: hidden;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
+    .topbar { position: fixed; width: 100%; top: 0; left: 0; z-index: 3000; height: 60px; background: white; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .top-left { display: flex; align-items: center; gap: 15px; }
+    .logo { height: 40px; }
+    .hamburger { font-size: 24px; cursor: pointer; padding: 5px; }
+    .top-right { display: flex; align-items: center; gap: 25px; }
+    .top-search { padding: 8px 12px; width: 220px; border-radius: 6px; border: 1px solid #ccc; }
+    .top-link { cursor: pointer; font-weight: 600; color: #2c3e50; display: flex; align-items: center; }
+    .bell-icon { font-size: 20px; cursor: pointer; }
 
-    th, td {
-        padding: 12px;
-        border-bottom: 1px solid #eee;
-        text-align: center;
-    }
+    .container { display: flex; padding: 20px; margin-top: 60px; gap: 20px; }
+    .main-content { flex: 3; }
+    .sidebar { flex: 1; min-width: 250px; }
 
-    th {
-        background: #f1f1f1;
-    }
+    .dashboard-boxes { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+    .box { flex: 1; min-width: 150px; background: white; padding: 20px; text-align: center; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; transition: 0.3s; display: flex; flex-direction: column; justify-content: center; }
+    .box:hover { background: #e8f0fe; transform: translateY(-2px); }
+    .highlight { background: #2c7be5; color: white; }
+    .highlight:hover { background: #1a5dc9; }
+    .small-text { font-size: 12px; margin-top: 5px; opacity: 0.9; }
 
+    table { width: 100%; background: white; border-collapse: collapse; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: center; }
+    th { background: #f1f1f1; }
     .status-confirmed { background: #28a745; color: white; padding: 5px 10px; border-radius: 5px; }
-    .status-pending { background: #ffc107; padding: 5px 10px; border-radius: 5px; }
+    .status-pending { background: #ffc107; padding: 5px 10px; border-radius: 5px; color: black; }
     .status-postponed { background: #6c757d; color: white; padding: 5px 10px; border-radius: 5px; }
     .available-slot { background: #e6f7ff; font-weight: 600; }
 
-    /* ===== SLIDING SIDEBAR ===== */
-    .side-menu {
-        position: fixed;
-        left: -260px;
-        top: 60px; /* Sits exactly below the topbar */
-        width: 260px;
-        height: calc(100vh - 60px); /* Full height minus topbar */
-        background: white;
-        border-right: 1px solid #eaeaea; /* Clean junction line */
-        box-shadow: 2px 0 10px rgba(0,0,0,0.05); /* Softer shadow */
-        padding: 20px;
-        transition: left 0.3s ease;
-        z-index: 2900; /* Just below topbar's 3000 */
-        display: flex;
-        flex-direction: column;
-        overflow-y: auto; /* Fixes logout button visibility on small screens */
-    }
+    .side-menu { position: fixed; left: -260px; top: 60px; width: 260px; height: calc(100vh - 60px); background: white; border-right: 1px solid #eaeaea; box-shadow: 2px 0 10px rgba(0,0,0,0.05); padding: 20px; transition: left 0.3s ease; z-index: 2900; display: flex; flex-direction: column; overflow-y: auto; }
+    .side-menu.active { left: 0; }
+    .side-search input { width: 100%; padding: 10px; margin-bottom: 20px; border-radius: 6px; border: 1px solid #ccc; }
+    .menu-item { padding: 12px 10px; cursor: pointer; font-weight: 500; border-radius: 5px; margin-bottom: 5px; }
+    .menu-item:hover { background: #f4f6f9; color: #2c7be5; }
+    .menu-bottom { margin-top: auto; padding-top: 20px; border-top: 1px solid #eee; }
+    .logout { color: #c0392b; font-weight: bold; }
+    .logout:hover { background: #fdeaea; color: #a93226; }
 
-    .side-menu.active {
-        left: 0;
-    }
+    .overlay { position: fixed; top: 60px; left: 0; width: 100vw; height: calc(100vh - 60px); background: rgba(0,0,0,0.4); opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 2800; }
+    .overlay.active { opacity: 1; pointer-events: auto; }
 
-    .side-search input {
-        width: 100%;
-        padding: 10px;
-        margin-bottom: 20px;
-        border-radius: 6px;
-        border: 1px solid #ccc;
-    }
+    .card { background: white; padding: 15px; margin-bottom: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .button { display: block; width: 100%; padding: 10px; margin-bottom: 10px; background: #2c7be5; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+    .button:hover { background: #1a5dc9; }
 
-    .menu-item {
-        padding: 12px 10px;
-        cursor: pointer;
-        font-weight: 500;
-        border-radius: 5px;
-        margin-bottom: 5px;
-    }
-
-    .menu-item:hover {
-        background: #f4f6f9;
-        color: #2c7be5;
-    }
-
-    .menu-bottom {
-        margin-top: auto;
-        padding-top: 20px;
-        border-top: 1px solid #eee;
-    }
-
-    .logout {
-        color: #c0392b;
-        font-weight: bold;
-    }
-
-    .logout:hover {
-        background: #fdeaea;
-        color: #a93226;
-    }
-
-    .overlay {
-        position: fixed;
-        top: 60px; /* Don't cover topbar */
-        left: 0;
-        width: 100vw;
-        height: calc(100vh - 60px);
-        background: rgba(0,0,0,0.4);
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s ease;
-        z-index: 2800; /* Just below side-menu */
-    }
-
-    .overlay.active {
-        opacity: 1;
-        pointer-events: auto;
-    }
-
-    /* ===== RIGHT SIDEBAR CARDS ===== */
-    .card {
-        background: white;
-        padding: 15px;
-        margin-bottom: 15px;
-        border-radius: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-
-    .button {
-        display: block;
-        width: 100%;
-        padding: 10px;
-        margin-bottom: 10px;
-        background: #2c7be5;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: bold;
-    }
-
-    .button:hover {
-        background: #1a5dc9;
-    }
-
-    /* ===== CALENDAR STYLE ===== */
     .calendar-header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; margin-bottom: 10px; }
     .calendar-month { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 14px; }
+    .calendar-month span { cursor: pointer; padding: 0 10px; font-weight: bold; }
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; font-size: 13px; text-align: center; }
     .calendar-grid div { padding: 6px 0; border-radius: 5px; cursor: pointer; }
-    .calendar-grid div:hover { background: #e8f0fe; }
-    .active-date { background: #2c7be5; color: white; }
+    .calendar-grid div.day-header { font-weight: bold; pointer-events: none; background: transparent !important; }
+    .calendar-grid div:not(.day-header):not(.empty):hover { background: #e8f0fe; }
+    .active-date { background: #2c7be5; color: white !important; }
 
-    /* ===== MODAL STYLES (for Scales) ===== */
-    .modal {
-        display: none;
-        position: fixed;
-        top: 0; left: 0;
-        width: 100vw; height: 100vh;
-        background: rgba(0,0,0,0.5);
-        z-index: 5000;
-    }
-    .modal-content {
-        background: white;
-        margin: 5vh auto;
-        padding: 20px;
-        width: 600px;
-        max-width: 90%;
-        max-height: 90vh;
-        border-radius: 8px;
-        display: flex;
-        flex-direction: column;
-    }
-    .form-control {
-        width: 100%;
-        padding: 8px;
-        border: 1px solid #e0e0e0;
-        border-radius: 4px;
-        box-sizing: border-box;
-    }
-    .mb-2 { margin-bottom: 10px; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 5000; }
+    .modal-content { background: white; margin: 5vh auto; padding: 20px; width: 600px; max-width: 90%; max-height: 90vh; border-radius: 8px; display: flex; flex-direction: column; }
+    .form-control { width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 4px; box-sizing: border-box; margin-bottom: 10px; }
 
+    .hidden { display: none; }
 </style>
 </head>
 <body>
 
+<datalist id="patient-list">
+    {% for p in top_5_patients %}
+        <option value="{{ p.name }}" data-id="{{ p.id }}"></option>
+    {% endfor %}
+</datalist>
+
 <div id="sideMenu" class="side-menu">
     <div class="side-search">
-        <input type="text" placeholder="Search">
+        <input type="text" placeholder="Search Patients" list="patient-list" onchange="handlePatientSearch(this.value)">
     </div>
 
-    <div class="menu-item" onclick="window.location.href='{{ url_for('dashboard') }}'">Dashboard</div>
-    <div class="menu-item">My Patients</div>
-    <div class="menu-item">Appointments</div>
-    <div class="menu-item">Scales</div>
+    <div class="menu-item" onclick="switchView('appointments')">Dashboard</div>
+    <div class="menu-item" onclick="switchView('patients')">My Patients</div>
+    <div class="menu-item" onclick="switchView('appointments')">Appointments</div>
+    <div class="menu-item" onclick="openScalesModal()">Scales</div>
 
     <div class="menu-bottom">
-        <div class="menu-item">My Profile</div>
-        <div class="menu-item">Settings</div>
+        <div class="menu-item" onclick="window.location.href='{{ url_for('profile') }}'">My Profile</div>
+        <div class="menu-item" onclick="document.getElementById('settingsModal').style.display='block'">Settings</div>
         <div class="menu-item">Help</div>
         <div class="menu-item logout" onclick="window.location.href='{{ url_for('logout') }}'">Logout</div>
     </div>
@@ -331,30 +126,28 @@
     </div>
 
     <div class="top-right">
-        <input type="text" class="top-search" placeholder="Search Patients">
-        <span class="top-link">My Patients</span>
+        <input type="text" class="top-search" placeholder="Search Patients" list="patient-list" onchange="handlePatientSearch(this.value)">
+        <span class="top-link" onclick="switchView('patients')">My Patients</span>
         <span class="bell-icon" title="Notifications">🔔</span>
     </div>
 </div>
 
 <div class="container">
-
     <div class="main-content">
-
         <div class="dashboard-boxes">
             <div class="box" onclick="window.location.href='{{ url_for('first_visit') }}'">
                 <strong>New Patient Registration</strong>
             </div>
-            <div class="box highlight">
+            <div class="box highlight" onclick="switchView('appointments')">
                 <strong>Today's Appointments</strong>
-                <div class="small-text">3 Scheduled / 6 Remaining</div>
+                <div class="small-text">{{ appointments|length }} Scheduled</div>
             </div>
-            <div class="box"><strong>My Patients (20)</strong></div>
+            <div class="box" onclick="switchView('patients')"><strong>My Patients ({{ num_patients }})</strong></div>
             <div class="box" onclick="openScalesModal()"><strong>Scales</strong></div>
         </div>
 
-        <div class="card">
-            <h3 style="margin-top:0;">Today's Appointments</h3>
+        <div class="card" id="appointments-view">
+            <h3 style="margin-top:0;">Appointments for <span id="display-date">{{ target_date.strftime('%d-%b-%Y') }}</span></h3>
             <table>
                 <tr>
                     <th>Time</th>
@@ -364,58 +157,75 @@
                     <th>Status</th>
                     <th>View</th>
                 </tr>
-                <tr>
-                    <td>9:00 – 9:30 AM</td>
-                    <td>Abhiram Hegde</td>
-                    <td>45 / M</td>
-                    <td>Follow-up</td>
-                    <td><span class="status-confirmed">Confirmed</span></td>
-                    <td><a href="#">View Details</a></td>
-                </tr>
-                <tr>
-                    <td>9:30 – 10:00 AM</td>
-                    <td>Pema Yang</td>
-                    <td>30 / F</td>
-                    <td>New Case</td>
-                    <td><span class="status-pending">Pending</span></td>
-                    <td><a href="#">View Details</a></td>
-                </tr>
+                {% if appointments %}
+                    {% for appt in appointments %}
+                    <tr>
+                        <td>{{ appt.start_time }}</td>
+                        <td>{{ appt.name }}</td>
+                        <td>{{ appt.age }} / {{ appt.sex }}</td>
+                        <td>{{ appt.type }}</td>
+                        <td>
+                            {% if appt.status == 'Confirmed' %}
+                                <span class="status-confirmed">{{ appt.status }}</span>
+                            {% elif appt.status == 'Pending' %}
+                                <span class="status-pending">{{ appt.status }}</span>
+                            {% else %}
+                                <span class="status-postponed">{{ appt.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td><a href="#">View Details</a></td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="6">No appointments scheduled for this date.</td></tr>
+                {% endif %}
                 <tr class="available-slot">
-                    <td>10:00 – 10:45 AM</td>
-                    <td colspan="5">Available Slot</td>
-                </tr>
-                <tr>
-                    <td>10:30 AM - 11:00 AM</td>
-                    <td>Sarah Collins</td>
-                    <td>55 / F</td>
-                    <td>Follow-up</td>
-                    <td><span class="status-postponed">Postponed</span></td>
-                    <td><a href="#">View Details</a></td>
+                    <td>End of scheduled</td>
+                    <td colspan="5">Available Slots Remaining</td>
                 </tr>
             </table>
         </div>
 
+        <div class="card hidden" id="patients-view">
+            <h3 style="margin-top:0;">My Patients Directory</h3>
+            <table>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Age/Sex</th>
+                    <th>Diagnosis</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
+                </tr>
+                {% for p in patients %}
+                <tr>
+                    <td>{{ p.id }}</td>
+                    <td><a href="{{ url_for('patient_detail', patient_id=p.id) }}">{{ p.name }}</a></td>
+                    <td>{{ p.age }} / {{ p.sex }}</td>
+                    <td>{{ p.diagnosis }}</td>
+                    <td>{{ p.note }}</td>
+                    <td>
+                        <a href="{{ url_for('life_chart', patient_id=p.id) }}" style="margin-right: 10px;">Life Chart</a>
+                        <a href="{{ url_for('add_visit', patient_id=p.id) }}">Add Follow-up</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
     </div>
 
     <div class="sidebar">
-
         <div class="card calendar-card">
             <div class="calendar-header">
                 <span>Calendar</span>
                 <span class="calendar-icon">📅</span>
             </div>
             <div class="calendar-month">
-                <span>‹</span>
-                <strong>April 2024</strong>
-                <span>›</span>
+                <span onclick="changeMonth(-1)">‹</span>
+                <strong id="calendar-month-year">...</strong>
+                <span onclick="changeMonth(1)">›</span>
             </div>
-            <div class="calendar-grid">
-                <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
-                <div></div><div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div>
-                <div>7</div><div class="active-date">8</div><div>9</div><div>10</div><div>11</div><div>12</div><div>13</div>
-                <div>14</div><div>15</div><div>16</div><div>17</div><div>18</div><div>19</div><div>20</div>
-                <div>21</div><div>22</div><div>23</div><div>24</div><div>25</div><div>26</div><div>27</div>
-                <div>28</div><div>29</div><div>30</div>
+            <div class="calendar-grid" id="calendar-grid">
             </div>
             <div class="small-text" style="margin-top:10px;">
                 Appointment Timings:<br>
@@ -425,21 +235,71 @@
         </div>
 
         <div class="card">
-            <button class="button">Change Appointment Timings</button>
-            <button class="button">Add New Appointment</button>
-            <button class="button">Add Note</button>
+            <button class="button" onclick="alert('Timing configuration coming soon!')">Change Appointment Timings</button>
+            <button class="button" onclick="document.getElementById('appointmentModal').style.display='block'">Add New Appointment</button>
+            <button class="button" onclick="document.getElementById('noteModal').style.display='block'">Add Note</button>
         </div>
 
         <div class="card">
             <h4 style="margin-top:0;">Today's Notes</h4>
             <ul style="padding-left: 20px; margin-bottom: 0;">
-                <li>Follow up with Mr. Devashish</li>
-                <li>Review test results</li>
+                {% for note in notes %}
+                    <li>{{ note.content }}</li>
+                {% else %}
+                    <li style="color: gray; list-style-type: none; margin-left: -20px;">No notes for today.</li>
+                {% endfor %}
             </ul>
         </div>
-
     </div>
+</div>
 
+<div id="noteModal" class="modal" onclick="if(event.target === this) closeModal('noteModal')">
+    <div class="modal-content">
+        <h3>Add Note for Today</h3>
+        <form action="{{ url_for('add_note') }}" method="POST">
+            <textarea name="note_content" class="form-control" rows="4" placeholder="Enter note..."></textarea>
+            <button type="submit" class="button">Save Note</button>
+            <button type="button" class="button" style="background: #888;" onclick="closeModal('noteModal')">Cancel</button>
+        </form>
+    </div>
+</div>
+
+<div id="appointmentModal" class="modal" onclick="if(event.target === this) closeModal('appointmentModal')">
+    <div class="modal-content">
+        <h3>Add New Appointment</h3>
+        <form action="{{ url_for('add_appointment') }}" method="POST">
+            <input type="date" name="appt_date" class="form-control" required value="{{ target_date.strftime('%Y-%m-%d') }}">
+            <input type="time" name="appt_time" class="form-control" required>
+            <input type="text" name="appt_name" class="form-control" placeholder="Patient Name" required>
+            <input type="number" name="appt_age" class="form-control" placeholder="Age" required>
+            <select name="appt_sex" class="form-control">
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+                <option value="Other">Other</option>
+            </select>
+            <select name="appt_type" class="form-control">
+                <option value="New Case">New Case</option>
+                <option value="Follow-up">Follow-up</option>
+            </select>
+            <select name="appt_duration" class="form-control">
+                <option value="30">30 Mins (New Case)</option>
+                <option value="15">15 Mins (Follow-up)</option>
+            </select>
+            <button type="submit" class="button">Schedule</button>
+            <button type="button" class="button" style="background: #888;" onclick="closeModal('appointmentModal')">Cancel</button>
+        </form>
+    </div>
+</div>
+
+<div id="settingsModal" class="modal" onclick="if(event.target === this) closeModal('settingsModal')">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <h3>Settings</h3>
+        <div style="margin: 20px 0;">
+            <label><strong>Dark Mode</strong></label>
+            <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode(this.checked)" style="transform: scale(1.5); margin-left: 10px;">
+        </div>
+        <button class="button" style="background:#888; width: auto; margin: 0 auto;" onclick="closeModal('settingsModal')">Close</button>
+    </div>
 </div>
 
 <div id="scalesModal" class="modal" onclick="if(event.target === this) closeModal('scalesModal')">
@@ -454,13 +314,13 @@
             </select>
             <div id="available-scales-list" style="overflow-y: auto; flex-grow: 1; border: 1px solid #eee; padding: 10px; border-radius: 6px; margin-top: 10px; max-height: 50vh;"></div>
             <div style="margin-top:15px; padding-top:15px; border-top: 1px solid #eee; text-align: right;">
-                <button class="button" style="margin-bottom:0; background:#888; display:inline-block; width:auto;" onclick="closeModal('scalesModal')">Close</button>
+                <button type="button" class="button" style="margin-bottom:0; background:#888; display:inline-block; width:auto;" onclick="closeModal('scalesModal')">Close</button>
             </div>
         </div>
 
         <div id="scale-assessment-view" style="display: none; flex-direction: column; height: 100%;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
-                <button class="button" onclick="showScalesList()" style="background: #eee; color: #333; margin: 0; padding: 5px 10px; width:auto; font-size: 12px;">⬅ Back</button>
+                <button type="button" class="button" onclick="showScalesList()" style="background: #eee; color: #333; margin: 0; padding: 5px 10px; width:auto; font-size: 12px;">⬅ Back</button>
                 <h4 id="active-scale-title" style="margin: 0; color: #2c7be5;"></h4>
             </div>
             <div id="active-scale-form" style="overflow-y: auto; flex-grow: 1; padding-right: 10px; font-size: 14px; border-bottom: 1px solid #eee; max-height: 50vh;"></div>
@@ -472,41 +332,35 @@
     </div>
 </div>
 
-<div id="welcomeModal" class="modal" onclick="if(event.target === this) closeModal('welcomeModal')">
-    <div class="modal-content" style="text-align: center; max-width: 450px; padding: 30px;">
-        <h3 style="margin-top: 0; color: #2c7be5; margin-bottom: 20px;">Welcome to the Dashboard</h3>
-        <p style="font-size: 16px; color: #333; margin-bottom: 15px;">
-            To Register new patient - Press <strong>'New Patient Registration'</strong>
-        </p>
-        <p style="font-size: 16px; color: #333; margin-bottom: 25px;">
-            To see how scales work, Press on <strong>'Scales'</strong>
-        </p>
-        <button class="button" style="width: auto; padding: 10px 40px; margin: 0 auto; background: #2c7be5; color: white; border: none; border-radius: 5px; cursor: pointer;" onclick="closeModal('welcomeModal')">Got it!</button>
-    </div>
-</div>
-
 <script>
-// Show the welcome modal automatically ONLY after a successful login
-window.addEventListener('DOMContentLoaded', () => {
-    {% with messages = get_flashed_messages(category_filter=['success']) %}
-        {% if messages %}
-            document.getElementById('welcomeModal').style.display = 'block';
-        {% endif %}
-    {% endwith %}
-});
+// View Switching Logic
+function switchView(viewName) {
+    document.getElementById('appointments-view').classList.add('hidden');
+    document.getElementById('patients-view').classList.add('hidden');
 
-function toggleSidebar() {
-    const menu = document.getElementById("sideMenu");
-    const overlay = document.getElementById("overlay");
+    if(viewName === 'appointments') {
+        document.getElementById('appointments-view').classList.remove('hidden');
+    } else if (viewName === 'patients') {
+        document.getElementById('patients-view').classList.remove('hidden');
+    }
 
-    menu.classList.toggle("active");
-    overlay.classList.toggle("active");
+    // Auto-close sidebar if open
+    if(document.getElementById('sideMenu').classList.contains('active')) {
+        toggleSidebar();
+    }
+}
+
+// Patient Search Datalist handling
+function handlePatientSearch(val) {
+    if(val.trim() !== "") {
+        switchView('patients');
+    }
 }
 
 // ==========================================
 // SCALES LOGIC (Display Only)
 // ==========================================
-const scalesLibrary = [
+var scalesLibrary = [
     {
         "scaleId": "CIWA-Ar",
         "scaleName": "Clinical Institute Withdrawal Assessment for Alcohol (CIWA-Ar)",
@@ -553,16 +407,12 @@ const scalesLibrary = [
     }
 ];
 
-let currentActiveScale = null;
+var currentActiveScale = null;
 
 function openScalesModal() {
     document.getElementById('scalesModal').style.display = 'block';
     showScalesList();
     renderScalesList(scalesLibrary);
-}
-
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
 }
 
 function showScalesList() {
@@ -571,69 +421,69 @@ function showScalesList() {
 }
 
 function renderScalesList(scalesToRender) {
-    const listDiv = document.getElementById('available-scales-list');
+    var listDiv = document.getElementById('available-scales-list');
     listDiv.innerHTML = '';
-    scalesToRender.forEach(scale => {
-        const html = `<div style="padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
-            <div><strong style="color: #444;">${scale.scaleName}</strong></div>
-            <button type="button" class="button" style="margin:0; padding: 6px 12px; font-size: 12px; background: #2c7be5; color: #fff; width: auto;" onclick="openScaleAssessment('${scale.scaleId}')">Assess</button>
-        </div>`;
+    scalesToRender.forEach(function(scale) {
+        var html = '<div style="padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">' +
+            '<div><strong style="color: #444;">' + scale.scaleName + '</strong></div>' +
+            '<button type="button" class="button" style="margin:0; padding: 6px 12px; font-size: 12px; background: #2c7be5; color: #fff; width: auto;" onclick="openScaleAssessment(\'' + scale.scaleId + '\')">Assess</button>' +
+            '</div>';
         listDiv.insertAdjacentHTML('beforeend', html);
     });
 }
 
 function filterScales() {
-    const searchVal = document.getElementById('scale-search').value.toLowerCase();
-    const dropdownVal = document.getElementById('scale-recommended').value;
-    const filtered = scalesLibrary.filter(s => {
-        const matchesSearch = s.scaleName.toLowerCase().includes(searchVal);
-        const matchesDropdown = dropdownVal === '' || s.scaleId === dropdownVal;
+    var searchVal = document.getElementById('scale-search').value.toLowerCase();
+    var dropdownVal = document.getElementById('scale-recommended').value;
+    var filtered = scalesLibrary.filter(function(s) {
+        var matchesSearch = s.scaleName.toLowerCase().indexOf(searchVal) !== -1;
+        var matchesDropdown = dropdownVal === '' || s.scaleId === dropdownVal;
         return matchesSearch && matchesDropdown;
     });
     renderScalesList(filtered);
 }
 
 function openScaleAssessment(scaleId) {
-    currentActiveScale = scalesLibrary.find(s => s.scaleId === scaleId);
+    currentActiveScale = scalesLibrary.filter(function(s) { return s.scaleId === scaleId; })[0];
     document.getElementById('scales-list-view').style.display = 'none';
     document.getElementById('scale-assessment-view').style.display = 'flex';
     document.getElementById('active-scale-title').innerText = currentActiveScale.scaleName;
 
-    const form = document.getElementById('active-scale-form');
+    var form = document.getElementById('active-scale-form');
     form.innerHTML = '';
 
-    currentActiveScale.questions.forEach((q, idx) => {
-        let optionsHtml = '';
-        q.options.forEach(opt => {
-            optionsHtml += `<label style="display: block; margin-bottom: 5px; cursor: pointer;">
-                <input type="radio" name="${q.id}" value="${opt.value}" onchange="calculateLiveScore()">
-                <span style="margin-left: 8px;">${opt.value} - ${opt.label}</span>
-            </label>`;
+    currentActiveScale.questions.forEach(function(q, idx) {
+        var optionsHtml = '';
+        q.options.forEach(function(opt) {
+            optionsHtml += '<label style="display: block; margin-bottom: 5px; cursor: pointer;">' +
+                '<input type="radio" name="' + q.id + '" value="' + opt.value + '" onchange="calculateLiveScore()">' +
+                '<span style="margin-left: 8px;">' + opt.value + ' - ' + opt.label + '</span>' +
+                '</label>';
         });
-        form.insertAdjacentHTML('beforeend', `<div style="background: #fdfdfd; padding: 15px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #e0e0e0;">
-            <strong style="display: block; margin-bottom: 10px;">${idx + 1}. ${q.text}</strong>${optionsHtml}
-        </div>`);
+        form.insertAdjacentHTML('beforeend', '<div style="background: #fdfdfd; padding: 15px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #e0e0e0;">' +
+            '<strong style="display: block; margin-bottom: 10px;">' + (idx + 1) + '. ' + q.text + '</strong>' + optionsHtml +
+            '</div>');
     });
 
-    // Reset Live Score UI when opening a new test
     document.getElementById('scale-live-score').innerText = '0';
     document.getElementById('scale-live-severity').innerText = '-';
 }
 
 function calculateLiveScore() {
     if (!currentActiveScale) return;
-    const container = document.getElementById('active-scale-form');
-    let totalScore = 0;
+    var container = document.getElementById('active-scale-form');
+    var totalScore = 0;
 
-    const checkedInputs = container.querySelectorAll('input[type="radio"]:checked');
-    checkedInputs.forEach(input => {
-        totalScore += parseInt(input.value);
-    });
+    var checkedInputs = container.querySelectorAll('input[type="radio"]:checked');
+    for (var i = 0; i < checkedInputs.length; i++) {
+        totalScore += parseInt(checkedInputs[i].value, 10);
+    }
 
     document.getElementById('scale-live-score').innerText = totalScore;
 
-    let severity = "Score out of bounds";
-    for (let band of currentActiveScale.interpretation) {
+    var severity = "Score out of bounds";
+    for (var b = 0; b < currentActiveScale.interpretation.length; b++) {
+        var band = currentActiveScale.interpretation[b];
         if (totalScore >= band.min && totalScore <= band.max) {
             severity = band.label;
             break;
@@ -641,7 +491,69 @@ function calculateLiveScore() {
     }
     document.getElementById('scale-live-severity').innerText = severity;
 }
-</script>
 
+function toggleSidebar() {
+    document.getElementById("sideMenu").classList.toggle("active");
+    document.getElementById("overlay").classList.toggle("active");
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+// Dark Mode Toggle Logic
+function toggleDarkMode(isDark) {
+    if(isDark) {
+        document.body.classList.add('dark-mode');
+        localStorage.setItem('theme', 'dark');
+    } else {
+        document.body.classList.remove('dark-mode');
+        localStorage.setItem('theme', 'light');
+    }
+}
+window.onload = function() {
+    if(localStorage.getItem('theme') === 'dark') {
+        document.body.classList.add('dark-mode');
+        var toggle = document.getElementById('darkModeToggle');
+        if(toggle) toggle.checked = true;
+    }
+    renderCalendar();
+};
+
+// Simple Calendar Logic
+var targetDateStr = '{{ target_date.strftime("%Y-%m-%d") }}';
+var currentDate = new Date(targetDateStr + 'T00:00:00');
+
+function renderCalendar() {
+    var monthYear = document.getElementById("calendar-month-year");
+    var grid = document.getElementById("calendar-grid");
+
+    var year = currentDate.getFullYear();
+    var month = currentDate.getMonth();
+
+    var monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    monthYear.innerText = monthNames[month] + " " + year;
+
+    grid.innerHTML = '<div class="day-header">S</div><div class="day-header">M</div><div class="day-header">T</div><div class="day-header">W</div><div class="day-header">T</div><div class="day-header">F</div><div class="day-header">S</div>';
+
+    var firstDayIndex = new Date(year, month, 1).getDay();
+    var daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    for(var i = 0; i < firstDayIndex; i++) {
+        grid.innerHTML += '<div class="empty"></div>';
+    }
+
+    for(var i = 1; i <= daysInMonth; i++) {
+        var loopDate = year + '-' + String(month+1).padStart(2,'0') + '-' + String(i).padStart(2,'0');
+        var activeClass = (loopDate === targetDateStr) ? "active-date" : "";
+        grid.innerHTML += '<div class="' + activeClass + '" onclick="window.location.href=\'?date=' + loopDate + '\'">' + i + '</div>';
+    }
+}
+
+function changeMonth(offset) {
+    currentDate.setMonth(currentDate.getMonth() + offset);
+    renderCalendar();
+}
+</script>
 </body>
 </html>

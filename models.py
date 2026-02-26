@@ -280,3 +280,28 @@ class ScaleAssessment(db.Model):
     severity_label = db.Column(db.String(100), nullable=False)
     raw_responses = db.Column(db.JSON, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class Appointment(db.Model):
+    __tablename__ = 'appointments'
+
+    id = db.Column(db.Integer, primary_key=True)
+    doctor_id = db.Column(db.Integer, db.ForeignKey('doctors.id'), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    age = db.Column(db.Integer)
+    sex = db.Column(db.String(10))
+    start_time = db.Column(db.String(20))  # e.g. "09:00"
+    slot_duration = db.Column(db.Integer)  # 15 or 30
+    type = db.Column(db.String(50))  # 'New Case' or 'Follow-up'
+    status = db.Column(db.String(50), default='Confirmed')  # 'Confirmed', 'Pending', 'Postponed'
+    view_details = db.Column(db.Text)
+
+
+class DashboardNote(db.Model):
+    __tablename__ = 'dashboard_notes'
+
+    id = db.Column(db.Integer, primary_key=True)
+    doctor_id = db.Column(db.Integer, db.ForeignKey('doctors.id'), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    content = db.Column(db.Text, nullable=False)
