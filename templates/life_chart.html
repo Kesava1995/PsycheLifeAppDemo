@@ -262,6 +262,25 @@
         input:checked + .slider:before { transform: translateX(14px); }
         .slider.round { border-radius: 20px; }
         .slider.round:before { border-radius: 50%; }
+
+        /* Dark Mode */
+        body.dark-mode { background-color: #121212; color: #ffffff; }
+        body.dark-mode .sidebar, body.dark-mode .nav-row, body.dark-mode .sidebar-group, body.dark-mode .group-header, body.dark-mode .widget-card, body.dark-mode .widget-header, body.dark-mode .workflow-card, body.dark-mode .entry-wrapper, body.dark-mode .modal-content, body.dark-mode .daily-summary-popup, body.dark-mode .freq-container, body.dark-mode .main-content { background-color: #1e1e1e; color: #ffffff; border-color: #333; }
+        body.dark-mode .nav-row a, body.dark-mode .item-text, body.dark-mode .widget-title, body.dark-mode label, body.dark-mode h3, body.dark-mode h4, body.dark-mode span, body.dark-mode div { color: #ddd; }
+        body.dark-mode input, body.dark-mode select, body.dark-mode textarea { background-color: #333; color: white; border: 1px solid #555; }
+        body.dark-mode .sidebar-item:hover { background-color: #333; border-left-color: #555; }
+        body.dark-mode .sidebar-item.unified-item { background-color: #2a2a2a; border-bottom: 1px dashed #444; }
+        body.dark-mode .nav-row { border-bottom: 1px solid #333; background-color: #1e1e1e; }
+        body.dark-mode .daily-summary-cat { color: #ccc; }
+        body.dark-mode .chart-controls-container select, body.dark-mode .chart-controls-container input { background-color: #333; color: white; border: 1px solid #555; }
+        body.dark-mode .group-header { background-color: #2a2a2a; border-bottom-color: #444; color: #ddd; }
+        body.dark-mode .daily-summary-popup { border-color: #444; }
+        body.dark-mode .daily-summary-header { border-bottom-color: #444; color: #ddd; }
+        body.dark-mode .widget-icon-btn { color: #bbb; }
+        body.dark-mode .form-section-separator { border-top-color: #444; }
+        body.dark-mode .widget-header { background-color: #2a2a2a; border-bottom-color: #444; }
+        body.dark-mode .unified-item .color-dot { background: white !important; }
+        body.dark-mode #darkModeToggleBtn { background: white !important; color: black !important; }
     </style>
 </head>
 <body>
@@ -270,11 +289,7 @@
         {% if not guest %}
             <div style="display: flex; justify-content: space-between; width: 100%;">
                 <a href="{{ url_for('patient_detail', patient_id=patient.id) if patient else '#' }}">← Patient Details</a>
-                <a href="{{ url_for('logout') }}" style="color: red;">Logout</a>
-            </div>
-            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: 5px;">
-                <a href="{{ url_for('dashboard') }}">← Dashboard</a>
-                {% if scale_datasets %}
+				{% if scale_datasets %}
                 <div style="display: flex; align-items: center; gap: 6px;">
                     <label class="switch">
                         <input type="checkbox" id="masterScaleToggle" onchange="toggleMasterScales()">
@@ -282,7 +297,16 @@
                     </label>
                     <span style="font-size: 0.85rem; font-weight: 600; color: #555;">Scales</span>
                 </div>
-                {% endif %}
+                {% else %}
+                <div style="width: 60px;"></div> 
+				{% endif %}
+            </div>
+            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: 5px;">
+                <a href="{{ url_for('dashboard') }}">← Dashboard</a>
+                
+                <button type="button" id="darkModeToggleBtn" onclick="toggleDarkMode()" style="background: black; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: background 0.3s, color 0.3s;">Dark Mode</button>
+				<a href="{{ url_for('logout') }}" style="color: red;">Logout</a>
+                
             </div>
         {% else %}
             <span style="font-weight: 600; color: #555;">Guest View</span>
@@ -1019,6 +1043,27 @@
         { key: 'mse', width: 'span-full' }
     ];
 
+    function toggleDarkMode() {
+        const isDark = document.body.classList.toggle('dark-mode');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        
+        // Update unified lines dynamically without page refresh
+        const unifiedColor = isDark ? '#ffffff' : '#000000';
+        Object.values(charts).forEach(chart => {
+            if (chart && chart.data && chart.data.datasets) {
+                chart.data.datasets.forEach(ds => {
+                    if (ds.isUnified) {
+                        ds.borderColor = unifiedColor;
+                        ds.backgroundColor = unifiedColor;
+                        ds.pointBackgroundColor = unifiedColor;
+                        ds.pointBorderColor = unifiedColor;
+                    }
+                });
+                chart.update();
+            }
+        });
+    }
+
     function toggleMasterScales() {
         const toggle = document.getElementById('masterScaleToggle');
         const sidebarGroup = document.getElementById('sidebar-group-scale');
@@ -1232,9 +1277,16 @@
     // --- CHART GENERATION LOGIC ---
 
     function initChartInstance(key, ctxId, datasets, unified) {
+        const isDarkMode = document.body.classList.contains('dark-mode');
+        const unifiedColor = isDarkMode ? '#ffffff' : '#000000';
+
         const finalData = [];
         if (unified) {
             if (key === 'meds') { unified.pointRadius = 1; unified.pointHoverRadius = 5; unified.pointHitRadius = 10; }
+            unified.borderColor = unifiedColor;
+            unified.backgroundColor = unifiedColor;
+            unified.pointBackgroundColor = unifiedColor;
+            unified.pointBorderColor = unifiedColor;
             finalData.push(unified);
         }
         if (datasets) finalData.push(...datasets);
@@ -2397,5 +2449,12 @@
         </div>
     </div>
 </div>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            if(localStorage.getItem('theme') === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+        });
+    </script>
 </body>
 </html>

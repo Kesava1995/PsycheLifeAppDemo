@@ -95,6 +95,16 @@
         .form-check-input { margin-top: 0; }
         .form-check-label.ml-2 { margin-left: 8px; cursor: pointer; margin-bottom: 0; }
         .form-control, .form-control-sm { width: 100%; padding: 6px 8px; border: 1px solid #e0e0e0; border-radius: 4px; box-sizing: border-box; }
+        
+        /* Dark Mode */
+        body.dark-mode { background-color: #121212; color: #ffffff; }
+        body.dark-mode .sidebar, body.dark-mode .visit-card, body.dark-mode .entry-wrapper, body.dark-mode .patient-grid, body.dark-mode .modal-content, body.dark-mode .click-trigger, body.dark-mode .diagnosis-grid, body.dark-mode .patient-edit-grid { background-color: #1e1e1e; color: #ffffff; border-color: #333; }
+        body.dark-mode .section-title, body.dark-mode .subsection-title, body.dark-mode label, body.dark-mode h2, body.dark-mode h3, body.dark-mode h4, body.dark-mode span, body.dark-mode div, body.dark-mode b { color: #ddd; }
+        body.dark-mode input, body.dark-mode select, body.dark-mode textarea { background-color: #333; color: white; border: 1px solid #555; }
+        body.dark-mode .patient-item b, body.dark-mode a { color: #ddd !important; }
+        body.dark-mode .click-trigger { border-color: #555; background-color: #2a2a2a; }
+        body.dark-mode .click-trigger:hover { background-color: #333; border-color: #777; }
+        body.dark-mode .slider-val { color: #ddd; }
     </style>
 </head>
 <body>
@@ -1675,5 +1685,12 @@ function updateScalesBadge() {
 </script>
 {% endif %}
 
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            if(localStorage.getItem('theme') === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+        });
+    </script>
 </body>
 </html>

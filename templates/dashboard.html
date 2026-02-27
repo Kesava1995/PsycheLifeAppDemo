@@ -302,7 +302,7 @@
                     <td>{{ p.diagnosis }}</td>
                     <td>{{ p.note }}</td>
                     <td>
-                        <a href="{{ url_for('life_chart', patient_id=p.id) }}" style="margin-right: 10px;">Life Chart</a>
+                        <a href="{{ url_for('life_chart', patient_id=p.id, view_only=1) }}" style="margin-right: 10px;">Life Chart</a>
                         <a href="{{ url_for('add_visit', patient_id=p.id) }}">Add Follow-up</a>
                     </td>
                 </tr>

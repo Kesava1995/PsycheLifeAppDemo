@@ -15,6 +15,11 @@
         .visits-list { margin-top: 30px; }
         .visit-item { background: #fafafa; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #A5DCFE; }
         .visit-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        
+        /* Add this CSS rule for dark mode */
+        body.dark-mode { background-color: #121212; color: #ffffff; }
+        body.dark-mode .container, body.dark-mode .patient-info, body.dark-mode .visit-item { background-color: #1e1e1e; color: #ffffff; border-color: #333; }
+        body.dark-mode h1, body.dark-mode h2, body.dark-mode h3, body.dark-mode p, body.dark-mode .visit-item strong, body.dark-mode li { color: #ddd; }
     </style>
 </head>
 <body>
@@ -52,6 +57,13 @@
             {% endif %}
         </div>
     </div>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            if(localStorage.getItem('theme') === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+        });
+    </script>
 </body>
 </html>
 
