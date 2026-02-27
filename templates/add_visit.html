@@ -547,6 +547,10 @@
 								<label><input type="checkbox" name="personality[]" value="High Extraversion" {% if 'High Extraversion' in last_traits %}checked{% endif %}> High Extraversion</label>
 								<label><input type="checkbox" name="personality[]" value="Low Openness" {% if 'Low Openness' in last_traits %}checked{% endif %}> Low Openness</label>
 								<label><input type="checkbox" name="personality[]" value="High Introversion" {% if 'High Introversion' in last_traits %}checked{% endif %}> High Introversion</label>
+								<label><input type="checkbox" name="personality[]" value="Negative affectivity" {% if 'Negative affectivity' in last_traits %}checked{% endif %}> Negative affectivity</label>
+								<label><input type="checkbox" name="personality[]" value="Detachment" {% if 'Detachment' in last_traits %}checked{% endif %}> Detachment</label>
+								<label><input type="checkbox" name="personality[]" value="Dissociality" {% if 'Dissociality' in last_traits %}checked{% endif %}> Dissociality</label>
+								<label><input type="checkbox" name="personality[]" value="Schizoid" {% if 'Schizoid' in last_traits %}checked{% endif %}> Schizoid</label>
 								<label><input type="checkbox" name="personality[]" value="Others" {% if 'Others' in last_traits %}checked{% endif %}> Others</label>
                             </div>
                             <textarea name="personality_note" placeholder="Notes on personality..." rows="2" style="margin-top:10px;">{{ last_pers_note }}</textarea>

@@ -15,7 +15,7 @@ def get_ist_now():
     return datetime.utcnow() + timedelta(hours=5, minutes=30)
 
 
-from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry, ScaleAssessment, Appointment, DashboardNote
+from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry, ScaleAssessment, Appointment, DashboardNote, Notification
 from medical_utils import get_unified_dose, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency, process_scale_submission
 import io
 import os
@@ -570,6 +570,9 @@ def dashboard():
 
     appointments = Appointment.query.filter_by(doctor_id=doctor_id, date=target_date).order_by(Appointment.start_time).all()
 
+    # JSON-serializable list for JS slot calculation (id, start_time, slot_duration, name)
+    appointments_for_day = [{"id": a.id, "start_time": a.start_time or "", "slot_duration": a.slot_duration or 15, "name": a.name or ""} for a in appointments]
+
     # Prepare patient data for the table (including latest diagnosis)
     patient_data = []
     for p in patients:
@@ -591,6 +594,7 @@ def dashboard():
                            target_date=target_date,
                            notes=notes,
                            appointments=appointments,
+                           appointments_for_day=appointments_for_day,
                            top_5_patients=patients[:5])
 
 
@@ -641,6 +645,96 @@ def add_appointment():
     db.session.commit()
     flash("Appointment added successfully!", "success")
     return redirect(url_for('dashboard', date=date_str))
+
+
+@app.route('/api/appointment/<int:appt_id>', methods=['DELETE'])
+@doctor_required
+def delete_appointment(appt_id):
+    """Delete an appointment. Only the owning doctor can delete."""
+    doctor_id = session.get('doctor_id')
+    appt = Appointment.query.filter_by(id=appt_id, doctor_id=doctor_id).first()
+    if not appt:
+        return jsonify({"error": "Appointment not found"}), 404
+    db.session.delete(appt)
+    db.session.commit()
+    return jsonify({"status": "success"})
+
+
+@app.route('/api/update_appointment_time', methods=['POST'])
+@doctor_required
+def update_appointment_time():
+    """Updates an existing appointment's date and time."""
+    data = request.get_json()
+    appt_id = data.get('id')
+    new_date_str = data.get('date')
+    new_time = data.get('time')
+
+    doctor_id = session.get('doctor_id')
+    appt = Appointment.query.filter_by(id=appt_id, doctor_id=doctor_id).first()
+    if not appt:
+        return jsonify({"error": "Appointment not found"}), 404
+
+    try:
+        appt.date = datetime.strptime(new_date_str, '%Y-%m-%d').date()
+        appt.start_time = new_time
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Appointment rescheduled"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/notifications', methods=['GET'])
+@doctor_required
+def get_notifications():
+    """Return past 7 days of notifications and unread count for the current doctor."""
+    doctor_id = session.get('doctor_id')
+    seven_days_ago = get_ist_now() - timedelta(days=7)
+    notifications = Notification.query.filter(
+        Notification.doctor_id == doctor_id,
+        Notification.trigger_time >= seven_days_ago
+    ).order_by(Notification.trigger_time.desc()).all()
+    unread_count = sum(1 for n in notifications if not n.is_read)
+    notif_list = [{
+        "id": n.id,
+        "appointment_id": n.appointment_id,
+        "message": n.message,
+        "trigger_time": n.trigger_time.isoformat() if n.trigger_time else None,
+        "is_read": n.is_read
+    } for n in notifications]
+    return jsonify({"unread_count": unread_count, "notifications": notif_list})
+
+
+@app.route('/api/notifications', methods=['POST'])
+@doctor_required
+def save_notification():
+    """Save a new notification (e.g. when an appointment starts)."""
+    doctor_id = session.get('doctor_id')
+    data = request.get_json() or {}
+    message = data.get('message', '').strip()
+    if not message:
+        return jsonify({"error": "Message required"}), 400
+    appointment_id = data.get('appointment_id')
+    trigger_time = get_ist_now()
+    n = Notification(
+        doctor_id=doctor_id,
+        appointment_id=appointment_id,
+        message=message[:255],
+        trigger_time=trigger_time
+    )
+    db.session.add(n)
+    db.session.commit()
+    return jsonify({"status": "success", "id": n.id}), 201
+
+
+@app.route('/api/notifications/read', methods=['PUT'])
+@doctor_required
+def mark_notifications_read():
+    """Mark all notifications as read for the current doctor."""
+    doctor_id = session.get('doctor_id')
+    Notification.query.filter_by(doctor_id=doctor_id, is_read=False).update({"is_read": True})
+    db.session.commit()
+    return jsonify({"status": "success"})
 
 
 @app.route('/first_visit', methods=['GET', 'POST'])

@@ -87,8 +87,48 @@
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 5000; }
     .modal-content { background: white; margin: 5vh auto; padding: 20px; width: 600px; max-width: 90%; max-height: 90vh; border-radius: 8px; display: flex; flex-direction: column; }
     .form-control { width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 4px; box-sizing: border-box; margin-bottom: 10px; }
+    .mb-2 { margin-bottom: 10px; }
 
     .hidden { display: none; }
+    .calendar-card.highlight-mode { border: 2px solid #a5dcfe; }
+    .error-text { color: #d32f2f; font-size: 14px; margin-left: 10px; font-weight: bold; }
+    .disabled-form { opacity: 0.6; pointer-events: none; }
+
+    .delete-appt-btn { background: transparent; border: none; cursor: pointer; margin-left: 8px; padding: 4px; vertical-align: middle; }
+    .delete-appt-btn:hover svg { fill: #c0392b; }
+    .view-details-btn { background: transparent; border: none; cursor: pointer; color: #2c7be5; padding: 0; text-decoration: underline; }
+
+    .notification-wrapper { position: relative; display: inline-block; }
+    .bell-btn { background: transparent; border: none; font-size: 24px; cursor: pointer; position: relative; }
+    .power-badge { display: inline-flex; align-items: center; justify-content: center; background-color: #a5dcfe; color: #000; border-radius: 50%; min-width: 18px; height: 18px; font-size: 12px; font-weight: bold; vertical-align: super; margin-left: 2px; }
+    .dropdown-content { position: absolute; top: 40px; right: 0; background: white; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); min-width: 280px; max-height: 70vh; overflow-y: auto; z-index: 3100; }
+    #notif-table { width: 100%; border-collapse: collapse; }
+    #notif-table th, #notif-table td { padding: 8px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
+
+    /* Spinner & loading */
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .button.loading { opacity: 0.8; pointer-events: none; }
+    .delete-appt-btn .spinner { border: 2px solid rgba(192,57,43,0.2); border-top-color: #c0392b; width: 12px; height: 12px; margin: 0; }
+
+    /* Calendar reschedule highlight */
+    @keyframes calendar-glow {
+        0% { box-shadow: 0 0 5px #a5dcfe; border-color: #a5dcfe; }
+        50% { box-shadow: 0 0 20px #a5dcfe; border-color: #7ab8e0; }
+        100% { box-shadow: 0 0 5px #a5dcfe; border-color: #a5dcfe; }
+    }
+    .calendar-card.highlight-mode { border: 2px solid #a5dcfe !important; animation: calendar-glow 1.5s infinite ease-in-out; transition: all 0.3s ease; }
+
+    /* Toasts */
+    #toast-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 9999; }
+    .toast { background-color: #28a745; color: white; padding: 12px 24px; border-radius: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 10px; font-weight: 500; opacity: 0; transform: translateY(20px); transition: all 0.4s ease; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.error { background-color: #d32f2f; }
+    .toast-icon { font-size: 18px; }
+
+    /* Reschedule time picker */
+    .custom-time-picker { display: inline-flex; align-items: center; gap: 4px; font-family: inherit; }
+    .custom-time-picker select.time-scroll { -webkit-appearance: none; -moz-appearance: none; appearance: none; background: transparent; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; padding: 4px 8px; cursor: ns-resize; }
 </style>
 </head>
 <body>
@@ -128,7 +168,15 @@
     <div class="top-right">
         <input type="text" class="top-search" placeholder="Search Patients" list="patient-list" onchange="handlePatientSearch(this.value)">
         <span class="top-link" onclick="switchView('patients')">My Patients</span>
-        <span class="bell-icon" title="Notifications">🔔</span>
+        <div class="notification-wrapper">
+            <button type="button" id="bell-btn" class="bell-btn" title="Notifications">🔔<sup id="notif-power" class="hidden power-badge">0</sup></button>
+            <div id="notif-dropdown" class="dropdown-content hidden">
+                <table id="notif-table">
+                    <thead><tr><th>Past 7 Days Notifications</th></tr></thead>
+                    <tbody id="notif-tbody"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -148,19 +196,35 @@
 
         <div class="card" id="appointments-view">
             <h3 style="margin-top:0;">Appointments for <span id="display-date">{{ target_date.strftime('%d-%b-%Y') }}</span></h3>
-            <table>
+            <table id="appointments-table">
+                <thead>
                 <tr>
+                    <th>Select</th>
                     <th>Time</th>
                     <th>Name</th>
                     <th>Age/Sex</th>
                     <th>Type</th>
                     <th>Status</th>
-                    <th>View</th>
+                    <th>Actions</th>
                 </tr>
+                </thead>
+                <tbody>
                 {% if appointments %}
                     {% for appt in appointments %}
-                    <tr>
-                        <td>{{ appt.start_time }}</td>
+                    <tr data-appt-id="{{ appt.id }}">
+                        <td><input type="radio" name="selected_appointment" value="{{ appt.id }}"></td>
+                        <td>
+                        {{ appt.start_time[:5] if appt.start_time else '--' }} -
+                        {% if appt.start_time %}
+                        {% set h = appt.start_time[:2] | int %}
+                        {% set m = appt.start_time[3:5] | int %}
+                        {% set dur = appt.slot_duration | int %}
+                        {% set total_m = m + dur %}
+                        {% set new_h = (h + (total_m // 60)) % 24 %}
+                        {% set new_m = total_m % 60 %}
+                        {{ "%02d:%02d" | format(new_h, new_m) }}
+                        {% else %}--{% endif %}
+                        </td>
                         <td>{{ appt.name }}</td>
                         <td>{{ appt.age }} / {{ appt.sex }}</td>
                         <td>{{ appt.type }}</td>
@@ -173,16 +237,22 @@
                                 <span class="status-postponed">{{ appt.status }}</span>
                             {% endif %}
                         </td>
-                        <td><a href="#">View Details</a></td>
+                        <td>
+                            <a href="#" class="view-details-btn">View Details</a>
+                            <button type="button" class="delete-appt-btn" data-id="{{ appt.id }}" title="Delete Appointment">
+                                <span class="spinner hidden delete-spinner"></span>
+                                <svg class="trash-icon" width="16" height="16" viewBox="0 0 24 24" fill="grey"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                            </button>
+                        </td>
                     </tr>
                     {% endfor %}
                 {% else %}
-                    <tr><td colspan="6">No appointments scheduled for this date.</td></tr>
+                    <tr><td colspan="7">No appointments scheduled for this date.</td></tr>
                 {% endif %}
                 <tr class="available-slot">
-                    <td>End of scheduled</td>
-                    <td colspan="5">Available Slots Remaining</td>
+                    <td colspan="7">End of scheduled – Available Slots Remaining</td>
                 </tr>
+                </tbody>
             </table>
         </div>
 
@@ -235,7 +305,25 @@
         </div>
 
         <div class="card">
-            <button class="button" onclick="alert('Timing configuration coming soon!')">Change Appointment Timings</button>
+            <button class="button" id="change-timing-main-btn" onclick="toggleRescheduleMode()">Change Appointment Timings</button>
+            <button class="button hidden" id="confirm-reschedule-btn" style="background: #28a745;" onclick="confirmReschedule()">
+                <span id="btn-spinner" class="hidden spinner"></span>
+                <span id="btn-text">Confirm Reschedule</span>
+            </button>
+            <div id="reschedule-time-picker" class="card hidden" style="border: 1px solid #a5dcfe; margin-top: 10px;">
+                <h4 style="margin: 0 0 10px 0; font-size: 14px;">Select New Time</h4>
+                <div class="custom-time-picker">
+                    <select class="time-scroll hour-select" id="reschedule-hour-select" size="1"></select>
+                    <span>:</span>
+                    <select class="time-scroll minute-select" id="reschedule-minute-select" size="1">
+                        <option value="00">00</option>
+                        <option value="15">15</option>
+                        <option value="30">30</option>
+                        <option value="45">45</option>
+                    </select>
+                    <!--<span id="reschedule-ampm" class="ampm-label" style="margin-left:4px; font-weight:bold;">AM</span>-->
+                </div>
+            </div>
             <button class="button" onclick="document.getElementById('appointmentModal').style.display='block'">Add New Appointment</button>
             <button class="button" onclick="document.getElementById('noteModal').style.display='block'">Add Note</button>
         </div>
@@ -267,27 +355,33 @@
 <div id="appointmentModal" class="modal" onclick="if(event.target === this) closeModal('appointmentModal')">
     <div class="modal-content">
         <h3>Add New Appointment</h3>
-        <form action="{{ url_for('add_appointment') }}" method="POST">
-            <input type="date" name="appt_date" class="form-control" required value="{{ target_date.strftime('%Y-%m-%d') }}">
-            <input type="time" name="appt_time" class="form-control" required>
-            <input type="text" name="appt_name" class="form-control" placeholder="Patient Name" required>
-            <input type="number" name="appt_age" class="form-control" placeholder="Age" required>
-            <select name="appt_sex" class="form-control">
-                <option value="M">Male</option>
-                <option value="F">Female</option>
-                <option value="Other">Other</option>
-            </select>
-            <select name="appt_type" class="form-control">
-                <option value="New Case">New Case</option>
-                <option value="Follow-up">Follow-up</option>
-            </select>
-            <select name="appt_duration" class="form-control">
-                <option value="30">30 Mins (New Case)</option>
-                <option value="15">15 Mins (Follow-up)</option>
-            </select>
-            <button type="submit" class="button">Schedule</button>
-            <button type="button" class="button" style="background: #888;" onclick="closeModal('appointmentModal')">Cancel</button>
-        </form>
+        <div id="appointment-form-wrapper">
+            <form action="{{ url_for('add_appointment') }}" method="POST" id="add-appointment-form">
+                <input type="date" name="appt_date" id="appt-date-input" class="form-control" required value="{{ target_date.strftime('%Y-%m-%d') }}">
+                <input type="time" name="appt_time" class="form-control" required>
+                <input type="text" name="appt_name" class="form-control" placeholder="Patient Name" required>
+                <input type="number" name="appt_age" class="form-control" placeholder="Age" required>
+                <select name="appt_sex" class="form-control">
+                    <option value="M">Male</option>
+                    <option value="F">Female</option>
+                    <option value="Other">Other</option>
+                </select>
+                <select name="appt_type" class="form-control">
+                    <option value="New Case">New Case</option>
+                    <option value="Follow-up">Follow-up</option>
+                </select>
+                <select name="appt_duration" class="form-control">
+                    <option value="30">30 Mins (New Case)</option>
+                    <option value="15">15 Mins (Follow-up)</option>
+                </select>
+                <button type="submit" class="button" id="add-appointment-btn">
+                    <span id="add-btn-spinner" class="hidden spinner"></span>
+                    <span id="add-btn-text">Schedule</span>
+                </button>
+                <span id="no-slots-msg" class="hidden error-text">No slots available for this date.</span>
+            </form>
+        </div>
+        <button type="button" class="button" style="background: #888; margin-top: 10px;" onclick="closeModal('appointmentModal')">Cancel</button>
     </div>
 </div>
 
@@ -333,6 +427,261 @@
 </div>
 
 <script>
+// Data from server for slot calculation (target date's appointments)
+var targetDateForSlots = '{{ target_date.strftime("%Y-%m-%d") }}';
+var appointmentsForDay = {{ appointments_for_day | default([]) | tojson }};
+
+// Convert server list to { startTime, endTime } for a given date string (YYYY-MM-DD)
+function parsedAppointmentsForDate(dateStr) {
+    var parts = dateStr.split('-');
+    var y = parseInt(parts[0], 10), m = parseInt(parts[1], 10) - 1, d = parseInt(parts[2], 10);
+    return appointmentsForDay.map(function(a) {
+        var startTime = new Date(y, m, d, 9, 0, 0);
+        if (a.start_time) {
+            var hm = a.start_time.match(/^(\d{1,2}):(\d{2})/);
+            if (hm) startTime = new Date(y, m, d, parseInt(hm[1], 10), parseInt(hm[2], 10), 0);
+        }
+        var dur = (a.slot_duration || 15);
+        var endTime = new Date(startTime.getTime() + dur * 60000);
+        return { id: a.id, name: a.name, startTime: startTime, endTime: endTime };
+    });
+}
+
+function getAvailableSlots(appointments, startHour, endHour, endMinute, dateStr) {
+    startHour = startHour !== undefined ? startHour : 9;
+    endHour = endHour !== undefined ? endHour : 21;
+    endMinute = endMinute !== undefined ? endMinute : 45;
+    dateStr = dateStr || targetDateForSlots;
+    var parts = dateStr.split('-');
+    var y = parseInt(parts[0], 10), m = parseInt(parts[1], 10) - 1, d = parseInt(parts[2], 10);
+    var availableSlots = [];
+    var currentSlotStart = new Date(y, m, d, startHour, 0, 0);
+    var endTime = new Date(y, m, d, endHour, endMinute, 0);
+    var currentAvailableStart = null;
+    while (currentSlotStart < endTime) {
+        var slotEnd = new Date(currentSlotStart.getTime() + 15 * 60000);
+        var isBooked = appointments.some(function(appt) {
+            return currentSlotStart >= appt.startTime && currentSlotStart < appt.endTime;
+        });
+        if (!isBooked) {
+            if (!currentAvailableStart) currentAvailableStart = new Date(currentSlotStart.getTime());
+        } else {
+            if (currentAvailableStart) {
+                availableSlots.push({ start: currentAvailableStart, end: new Date(currentSlotStart.getTime()) });
+                currentAvailableStart = null;
+            }
+        }
+        currentSlotStart = slotEnd;
+    }
+    if (currentAvailableStart) availableSlots.push({ start: currentAvailableStart, end: endTime });
+    return availableSlots;
+}
+
+function updateAppointmentFormState(availableSlots) {
+    var formWrapper = document.getElementById('appointment-form-wrapper');
+    var confirmBtn = document.getElementById('add-appointment-btn');
+    var noSlotsMsg = document.getElementById('no-slots-msg');
+    if (!formWrapper || !confirmBtn) return;
+    if (!availableSlots || availableSlots.length === 0) {
+        formWrapper.classList.add('disabled-form');
+        confirmBtn.disabled = true;
+        if (noSlotsMsg) noSlotsMsg.classList.remove('hidden');
+    } else {
+        formWrapper.classList.remove('disabled-form');
+        confirmBtn.disabled = false;
+        if (noSlotsMsg) noSlotsMsg.classList.add('hidden');
+    }
+}
+
+function refreshSlotsForModal() {
+    var dateInput = document.getElementById('appt-date-input');
+    var dateStr = dateInput ? dateInput.value : targetDateForSlots;
+    if (dateStr !== targetDateForSlots) {
+        updateAppointmentFormState([{ start: true }]);
+        return;
+    }
+    var parsed = parsedAppointmentsForDate(dateStr);
+    var slots = getAvailableSlots(parsed, 9, 21, 45, dateStr);
+    updateAppointmentFormState(slots);
+}
+
+// Notifications
+var unreadPower = 0;
+var powerBadge = document.getElementById('notif-power');
+var notifTbody = document.getElementById('notif-tbody');
+var bellBtn = document.getElementById('bell-btn');
+var notifDropdown = document.getElementById('notif-dropdown');
+
+function addNotification(message) {
+    unreadPower++;
+    if (powerBadge) {
+        powerBadge.textContent = unreadPower;
+        powerBadge.classList.remove('hidden');
+    }
+    if (notifTbody) {
+        var row = document.createElement('tr');
+        var cell = document.createElement('td');
+        cell.textContent = message;
+        row.appendChild(cell);
+        notifTbody.insertBefore(row, notifTbody.firstChild);
+    }
+}
+
+async function loadPastNotifications() {
+    if (!notifTbody) return;
+    notifTbody.innerHTML = '<tr><td style="text-align:center; color:gray;">Loading...</td></tr>';
+    try {
+        var response = await fetch('/api/notifications');
+        if (!response.ok) throw new Error('Network error');
+        var data = await response.json();
+        unreadPower = data.unread_count || 0;
+        if (powerBadge) {
+            if (unreadPower > 0) {
+                powerBadge.textContent = unreadPower;
+                powerBadge.classList.remove('hidden');
+            } else powerBadge.classList.add('hidden');
+        }
+        notifTbody.innerHTML = '';
+        if (!data.notifications || data.notifications.length === 0) {
+            notifTbody.innerHTML = '<tr><td style="text-align:center; color:gray;">No recent notifications.</td></tr>';
+            return;
+        }
+        data.notifications.forEach(function(notif) {
+            var row = document.createElement('tr');
+            var cell = document.createElement('td');
+            var fontWeight = notif.is_read ? 'normal' : 'bold';
+            var timeStr = '';
+            if (notif.trigger_time) {
+                var timeObj = new Date(notif.trigger_time);
+                timeStr = timeObj.toLocaleDateString() + ' ' + timeObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            cell.innerHTML = '<div style="font-size:12px; color:#888; font-weight:normal;">' + timeStr + '</div><div style="font-weight:' + fontWeight + ';">' + (notif.message || '') + '</div>';
+            row.appendChild(cell);
+            notifTbody.appendChild(row);
+        });
+    } catch (e) {
+        console.error(e);
+        notifTbody.innerHTML = '<tr><td style="color:#d32f2f;">Failed to load notifications.</td></tr>';
+    }
+}
+
+async function saveNotificationToDB(message, appointmentId) {
+    try {
+        var response = await fetch('/api/notifications', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: message, appointment_id: appointmentId || null })
+        });
+        if (!response.ok) throw new Error('Failed to save');
+    } catch (e) { console.error(e); }
+}
+
+async function markNotificationsAsReadInDB() {
+    try {
+        var response = await fetch('/api/notifications/read', { method: 'PUT', headers: { 'Content-Type': 'application/json' } });
+        if (!response.ok) throw new Error('Failed');
+    } catch (e) { console.error(e); }
+}
+
+if (bellBtn && notifDropdown) {
+    bellBtn.addEventListener('click', function() {
+        notifDropdown.classList.toggle('hidden');
+        if (!notifDropdown.classList.contains('hidden')) {
+            if (unreadPower > 0) markNotificationsAsReadInDB();
+            unreadPower = 0;
+            if (powerBadge) { powerBadge.classList.add('hidden'); powerBadge.textContent = '0'; }
+        }
+    });
+}
+
+var notifiedAppointmentKeys = {};
+function checkIfAppointmentsAreStartingNow() {
+    var now = new Date();
+    var ch = now.getHours(), cm = now.getMinutes();
+    var todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    var parsed = parsedAppointmentsForDate(todayStr);
+    parsed.forEach(function(appt) {
+        var key = appt.id + '_' + todayStr + '_' + appt.startTime.getHours() + '_' + appt.startTime.getMinutes();
+        if (notifiedAppointmentKeys[key]) return;
+        var ah = appt.startTime.getHours(), am = appt.startTime.getMinutes();
+        if (ah === ch && am === cm) {
+            var timeString = appt.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            var message = 'Appointment starting now: ' + appt.name + ' at ' + timeString;
+            addNotification(message);
+            saveNotificationToDB(message, appt.id);
+            notifiedAppointmentKeys[key] = true;
+        }
+    });
+}
+
+// Delete appointment (event delegation)
+var appointmentsTable = document.getElementById('appointments-table');
+if (appointmentsTable) {
+    var tbody = appointmentsTable.querySelector('tbody');
+    if (tbody) {
+        tbody.addEventListener('click', function(e) {
+            var btn = e.target.closest('.delete-appt-btn');
+            if (!btn) return;
+            var id = parseInt(btn.getAttribute('data-id'), 10);
+            if (!id) return;
+            if (!confirm('Delete this appointment?')) return;
+            var spinnerEl = btn.querySelector('.delete-spinner');
+            var iconEl = btn.querySelector('.trash-icon');
+            btn.style.pointerEvents = 'none';
+            if (spinnerEl) spinnerEl.classList.remove('hidden');
+            if (iconEl) iconEl.classList.add('hidden');
+            fetch('/api/appointment/' + id, { method: 'DELETE' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.status === 'success') {
+                        var row = btn.closest('tr');
+                        if (row) row.remove();
+                        var dayData = appointmentsForDay.filter(function(a) { return a.id !== id; });
+                        appointmentsForDay = dayData;
+                        var parsed = parsedAppointmentsForDate(targetDateForSlots);
+                        updateAppointmentFormState(getAvailableSlots(parsed));
+                        showToast('Appointment deleted.');
+                    } else {
+                        showToast('Could not delete appointment', 'error');
+                        btn.style.pointerEvents = 'auto';
+                        if (spinnerEl) spinnerEl.classList.add('hidden');
+                        if (iconEl) iconEl.classList.remove('hidden');
+                    }
+                })
+                .catch(function() {
+                    showToast('Server error. Try again.', 'error');
+                    btn.style.pointerEvents = 'auto';
+                    if (spinnerEl) spinnerEl.classList.add('hidden');
+                    if (iconEl) iconEl.classList.remove('hidden');
+                });
+        });
+    }
+}
+
+// Add Appointment form: show spinner on submit
+var addAppointmentForm = document.getElementById('add-appointment-form');
+if (addAppointmentForm) {
+    addAppointmentForm.addEventListener('submit', function() {
+        var btn = document.getElementById('add-appointment-btn');
+        var spinner = document.getElementById('add-btn-spinner');
+        var btnText = document.getElementById('add-btn-text');
+        if (btn) btn.classList.add('loading');
+        if (spinner) spinner.classList.remove('hidden');
+        if (btnText) btnText.textContent = 'Scheduling...';
+    });
+}
+
+// Open Add Appointment modal: recalc slots for current date
+var addApptBtnTop = document.querySelector('.button[onclick*="appointmentModal"]');
+if (addApptBtnTop) {
+    addApptBtnTop.addEventListener('click', function() {
+        setTimeout(refreshSlotsForModal, 50);
+    });
+}
+
+var apptDateInput = document.getElementById('appt-date-input');
+if (apptDateInput) apptDateInput.addEventListener('change', refreshSlotsForModal);
+
 // View Switching Logic
 function switchView(viewName) {
     document.getElementById('appointments-view').classList.add('hidden');
@@ -518,6 +867,9 @@ window.onload = function() {
         if(toggle) toggle.checked = true;
     }
     renderCalendar();
+    if (typeof loadPastNotifications === 'function') loadPastNotifications();
+    setInterval(checkIfAppointmentsAreStartingNow, 60000);
+    checkIfAppointmentsAreStartingNow();
 };
 
 // Simple Calendar Logic
@@ -546,7 +898,7 @@ function renderCalendar() {
     for(var i = 1; i <= daysInMonth; i++) {
         var loopDate = year + '-' + String(month+1).padStart(2,'0') + '-' + String(i).padStart(2,'0');
         var activeClass = (loopDate === targetDateStr) ? "active-date" : "";
-        grid.innerHTML += '<div class="' + activeClass + '" onclick="window.location.href=\'?date=' + loopDate + '\'">' + i + '</div>';
+        grid.innerHTML += '<div class="' + activeClass + '" data-date="' + loopDate + '" onclick="handleCalendarClick(\'' + loopDate + '\', this)">' + i + '</div>';
     }
 }
 
@@ -554,6 +906,136 @@ function changeMonth(offset) {
     currentDate.setMonth(currentDate.getMonth() + offset);
     renderCalendar();
 }
+// --- Toast notifications ---
+function showToast(message, type) {
+    type = type || 'success';
+    var container = document.getElementById('toast-container');
+    if (!container) return;
+    var toast = document.createElement('div');
+    toast.className = 'toast' + (type === 'error' ? ' error' : '');
+    toast.innerHTML = '<span class="toast-icon">' + (type === 'error' ? '✕' : '✓') + '</span><span>' + message + '</span>';
+    container.appendChild(toast);
+    setTimeout(function() { toast.classList.add('show'); }, 10);
+    setTimeout(function() {
+        toast.classList.remove('show');
+        setTimeout(function() { toast.remove(); }, 400);
+    }, 3000);
+}
+
+// --- Change Appointment Timings (reschedule) ---
+var isRescheduleMode = false;
+var selectedApptId = null;
+var stagedRescheduleDate = targetDateStr;
+
+function handleCalendarClick(clickedDate, element) {
+    if (isRescheduleMode) {
+        var grid = document.getElementById('calendar-grid');
+        if (grid) {
+            var divs = grid.querySelectorAll('div[data-date]');
+            for (var i = 0; i < divs.length; i++) divs[i].classList.remove('active-date');
+        }
+        if (element) element.classList.add('active-date');
+        stagedRescheduleDate = clickedDate;
+    } else {
+        window.location.href = '?date=' + clickedDate;
+    }
+}
+
+function populateRescheduleHours() {
+    var hourSelect = document.getElementById('reschedule-hour-select');
+    if (!hourSelect || hourSelect.options.length > 0) return;
+    for (var h = 9; h <= 21; h++) {
+        var opt = document.createElement('option');
+        opt.value = String(h).padStart(2, '0');
+        opt.textContent = String(h).padStart(2, '0');
+        hourSelect.appendChild(opt);
+    }
+}
+
+function updateRescheduleAmPm() {
+    var hourSelect = document.getElementById('reschedule-hour-select');
+    var ampm = document.getElementById('reschedule-ampm');
+    if (!hourSelect || !ampm) return;
+    var h = parseInt(hourSelect.value, 10);
+    ampm.textContent = (h >= 12) ? 'PM' : 'AM';
+}
+
+function toggleRescheduleMode() {
+    var selectedRadio = document.querySelector('input[name="selected_appointment"]:checked');
+    if (!selectedRadio) {
+        showToast('Select an appointment from the table first.', 'error');
+        return;
+    }
+    selectedApptId = selectedRadio.value;
+    isRescheduleMode = true;
+    var calCard = document.querySelector('.calendar-card');
+    if (calCard) calCard.classList.add('highlight-mode');
+    document.getElementById('change-timing-main-btn').classList.add('hidden');
+    document.getElementById('confirm-reschedule-btn').classList.remove('hidden');
+    document.getElementById('reschedule-time-picker').classList.remove('hidden');
+    populateRescheduleHours();
+    showToast('Select a new date on the calendar, then choose time and click Confirm Reschedule.');
+}
+
+function resetRescheduleBtn() {
+    var btn = document.getElementById('confirm-reschedule-btn');
+    var spinner = document.getElementById('btn-spinner');
+    var btnText = document.getElementById('btn-text');
+    if (btn) btn.classList.remove('loading');
+    if (spinner) spinner.classList.add('hidden');
+    if (btnText) btnText.textContent = 'Confirm Reschedule';
+}
+
+async function confirmReschedule() {
+    var btn = document.getElementById('confirm-reschedule-btn');
+    var spinner = document.getElementById('btn-spinner');
+    var btnText = document.getElementById('btn-text');
+    var hourSelect = document.getElementById('reschedule-hour-select');
+    var minuteSelect = document.getElementById('reschedule-minute-select');
+    if (!hourSelect || !minuteSelect) return;
+    var newTime = hourSelect.value + ':' + minuteSelect.value;
+
+    btn.classList.add('loading');
+    spinner.classList.remove('hidden');
+    btnText.textContent = 'Updating...';
+
+    try {
+        var response = await fetch('/api/update_appointment_time', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: selectedApptId, date: stagedRescheduleDate, time: newTime })
+        });
+        var result = await response.json();
+        if (response.ok) {
+            showToast('Rescheduled successfully!');
+            setTimeout(function() { window.location.reload(); }, 1000);
+        } else {
+            showToast(result.error || 'Failed to reschedule', 'error');
+            resetRescheduleBtn();
+        }
+    } catch (e) {
+        console.error(e);
+        showToast('Server error. Try again.', 'error');
+        resetRescheduleBtn();
+    }
+}
+
+// Reschedule time picker wheel scroll
+var rescheduleHourSelect = document.getElementById('reschedule-hour-select');
+var rescheduleMinuteSelect = document.getElementById('reschedule-minute-select');
+if (rescheduleHourSelect) {
+    rescheduleHourSelect.addEventListener('wheel', function(e) {
+        e.preventDefault();
+        if (e.deltaY > 0 && this.selectedIndex < this.options.length - 1) this.selectedIndex++;
+        else if (e.deltaY < 0 && this.selectedIndex > 0) this.selectedIndex--;
+        updateRescheduleAmPm();
+    });
+}
+if (rescheduleMinuteSelect) {
+    rescheduleMinuteSelect.addEventListener('wheel', function(e) { e.preventDefault(); });
+}
+
 </script>
+<div id="toast-container"></div>
 </body>
 </html>
