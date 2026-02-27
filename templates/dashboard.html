@@ -124,11 +124,18 @@
     .toast { background-color: #28a745; color: white; padding: 12px 24px; border-radius: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 10px; font-weight: 500; opacity: 0; transform: translateY(20px); transition: all 0.4s ease; }
     .toast.show { opacity: 1; transform: translateY(0); }
     .toast.error { background-color: #d32f2f; }
+    .toast.info { background-color: #1976d2; }
     .toast-icon { font-size: 18px; }
 
     /* Reschedule time picker */
     .custom-time-picker { display: inline-flex; align-items: center; gap: 4px; font-family: inherit; }
     .custom-time-picker select.time-scroll { -webkit-appearance: none; -moz-appearance: none; appearance: none; background: transparent; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; padding: 4px 8px; cursor: ns-resize; }
+
+    .appointment-row { cursor: pointer; transition: background-color 0.2s; }
+    .appointment-row:hover { background-color: #f8f9fa; }
+
+    #appointments-table.selecting-mode .appointment-row { cursor: pointer; transition: background-color 0.2s; }
+    #appointments-table.selecting-mode .appointment-row:hover { background-color: #f0f4ff; outline: 1px solid #a5dcfe; }
 </style>
 </head>
 <body>
@@ -199,7 +206,6 @@
             <table id="appointments-table">
                 <thead>
                 <tr>
-                    <th>Select</th>
                     <th>Time</th>
                     <th>Name</th>
                     <th>Age/Sex</th>
@@ -211,8 +217,7 @@
                 <tbody>
                 {% if appointments %}
                     {% for appt in appointments %}
-                    <tr data-appt-id="{{ appt.id }}">
-                        <td><input type="radio" name="selected_appointment" value="{{ appt.id }}"></td>
+                    <tr data-appt-id="{{ appt.id }}" class="appointment-row">
                         <td>
                         {{ appt.start_time[:5] if appt.start_time else '--' }} -
                         {% if appt.start_time %}
@@ -238,7 +243,7 @@
                             {% endif %}
                         </td>
                         <td>
-                            <a href="#" class="view-details-btn">View Details</a>
+                            <a href="{{ url_for('appt_details', appt_id=appt.id) }}" class="view-details-btn">View Details</a>
                             <button type="button" class="delete-appt-btn" data-id="{{ appt.id }}" title="Delete Appointment">
                                 <span class="spinner hidden delete-spinner"></span>
                                 <svg class="trash-icon" width="16" height="16" viewBox="0 0 24 24" fill="grey"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
@@ -247,10 +252,10 @@
                     </tr>
                     {% endfor %}
                 {% else %}
-                    <tr><td colspan="7">No appointments scheduled for this date.</td></tr>
+                    <tr><td colspan="6">No appointments scheduled for this date.</td></tr>
                 {% endif %}
                 <tr class="available-slot">
-                    <td colspan="7">End of scheduled – Available Slots Remaining</td>
+                    <td colspan="6">End of scheduled – Available Slots Remaining</td>
                 </tr>
                 </tbody>
             </table>
@@ -358,8 +363,38 @@
         <div id="appointment-form-wrapper">
             <form action="{{ url_for('add_appointment') }}" method="POST" id="add-appointment-form">
                 <input type="date" name="appt_date" id="appt-date-input" class="form-control" required value="{{ target_date.strftime('%Y-%m-%d') }}">
-                <input type="time" name="appt_time" class="form-control" required>
-                <input type="text" name="appt_name" class="form-control" placeholder="Patient Name" required>
+                <div class="form-control custom-time-picker" style="display: flex; align-items: center; gap: 5px; padding: 6px 10px;">
+                    <select id="add-hour-select" class="time-scroll hour-select" size="1" style="border: none; outline: none; background: transparent; cursor: pointer; font-size: 15px;">
+                        <option value="09">09</option>
+                        <option value="10">10</option>
+                        <option value="11">11</option>
+                        <option value="12">12</option>
+                        <option value="13">13</option>
+                        <option value="14">14</option>
+                        <option value="15">15</option>
+                        <option value="16">16</option>
+                        <option value="17">17</option>
+                        <option value="18">18</option>
+                        <option value="19">19</option>
+                        <option value="20">20</option>
+                        <option value="21">21</option>
+                    </select>
+                    <span style="font-weight: bold;">:</span>
+                    <select id="add-minute-select" class="time-scroll minute-select" size="1" style="border: none; outline: none; background: transparent; cursor: pointer; font-size: 15px;">
+                        <option value="00">00</option>
+                        <option value="15">15</option>
+                        <option value="30">30</option>
+                        <option value="45">45</option>
+                    </select>
+                    <span id="add-ampm" style="margin-left: auto; font-size: 12px; font-weight: bold; color: #666;">AM</span>
+                </div>
+                <input type="hidden" name="appt_time" id="add-appt-time-hidden" value="09:00" required>
+                <input type="text" name="appt_name" class="form-control" placeholder="Patient Name" list="existing-patients-list" autocomplete="off" required>
+                <datalist id="existing-patients-list">
+                    {% for p in patients %}
+                        <option value="{{ p.name }}"></option>
+                    {% endfor %}
+                </datalist>
                 <input type="number" name="appt_age" class="form-control" placeholder="Age" required>
                 <select name="appt_sex" class="form-control">
                     <option value="M">Male</option>
@@ -671,6 +706,39 @@ if (addAppointmentForm) {
     });
 }
 
+// Add Appointment time sync: keep hidden input and AM/PM in sync with hour/minute selects
+var addHourSelect = document.getElementById('add-hour-select');
+var addMinuteSelect = document.getElementById('add-minute-select');
+var addTimeHidden = document.getElementById('add-appt-time-hidden');
+var addAmPm = document.getElementById('add-ampm');
+
+function syncAddApptTime() {
+    if (!addHourSelect || !addMinuteSelect || !addTimeHidden) return;
+    addTimeHidden.value = addHourSelect.value + ':' + addMinuteSelect.value;
+    var hr = parseInt(addHourSelect.value, 10);
+    if (addAmPm) addAmPm.textContent = hr >= 12 ? 'PM' : 'AM';
+}
+
+if (addHourSelect && addMinuteSelect) {
+    addHourSelect.addEventListener('change', syncAddApptTime);
+    addMinuteSelect.addEventListener('change', syncAddApptTime);
+}
+
+// Auto-select Follow-up when patient name matches an existing patient
+var apptNameInput = document.querySelector('input[name="appt_name"]');
+var apptTypeSelect = document.querySelector('select[name="appt_type"]');
+if (apptNameInput && apptTypeSelect) {
+    apptNameInput.addEventListener('input', function() {
+        var val = this.value.trim().toLowerCase();
+        var options = document.querySelectorAll('#existing-patients-list option');
+        var isExisting = false;
+        for (var i = 0; i < options.length; i++) {
+            if (options[i].value.toLowerCase() === val) { isExisting = true; break; }
+        }
+        if (isExisting) apptTypeSelect.value = 'Follow-up';
+    });
+}
+
 // Open Add Appointment modal: recalc slots for current date
 var addApptBtnTop = document.querySelector('.button[onclick*="appointmentModal"]');
 if (addApptBtnTop) {
@@ -912,8 +980,10 @@ function showToast(message, type) {
     var container = document.getElementById('toast-container');
     if (!container) return;
     var toast = document.createElement('div');
-    toast.className = 'toast' + (type === 'error' ? ' error' : '');
-    toast.innerHTML = '<span class="toast-icon">' + (type === 'error' ? '✕' : '✓') + '</span><span>' + message + '</span>';
+    var extraClass = type === 'error' ? ' error' : (type === 'info' ? ' info' : '');
+    toast.className = 'toast' + extraClass;
+    var icon = type === 'error' ? '✕' : (type === 'info' ? 'ℹ' : '✓');
+    toast.innerHTML = '<span class="toast-icon">' + icon + '</span><span>' + message + '</span>';
     container.appendChild(toast);
     setTimeout(function() { toast.classList.add('show'); }, 10);
     setTimeout(function() {
@@ -924,6 +994,7 @@ function showToast(message, type) {
 
 // --- Change Appointment Timings (reschedule) ---
 var isRescheduleMode = false;
+var isSelectingRow = false;
 var selectedApptId = null;
 var stagedRescheduleDate = targetDateStr;
 
@@ -961,20 +1032,30 @@ function updateRescheduleAmPm() {
 }
 
 function toggleRescheduleMode() {
-    var selectedRadio = document.querySelector('input[name="selected_appointment"]:checked');
-    if (!selectedRadio) {
-        showToast('Select an appointment from the table first.', 'error');
-        return;
+    isSelectingRow = true;
+    var table = document.getElementById('appointments-table');
+    if (table) table.classList.add('selecting-mode');
+    if (typeof showToast === 'function') {
+        showToast('Please click an appointment in the table to change its timings.', 'info');
+    } else {
+        alert('Please click an appointment in the table to change its timings.');
     }
-    selectedApptId = selectedRadio.value;
+}
+
+function startRescheduleFlow() {
     isRescheduleMode = true;
     var calCard = document.querySelector('.calendar-card');
     if (calCard) calCard.classList.add('highlight-mode');
-    document.getElementById('change-timing-main-btn').classList.add('hidden');
-    document.getElementById('confirm-reschedule-btn').classList.remove('hidden');
-    document.getElementById('reschedule-time-picker').classList.remove('hidden');
-    populateRescheduleHours();
-    showToast('Select a new date on the calendar, then choose time and click Confirm Reschedule.');
+    var timePicker = document.getElementById('reschedule-time-picker');
+    if (timePicker) timePicker.classList.remove('hidden');
+    var mainBtn = document.getElementById('change-timing-main-btn');
+    if (mainBtn) mainBtn.classList.add('hidden');
+    var confirmBtn = document.getElementById('confirm-reschedule-btn');
+    if (confirmBtn) confirmBtn.classList.remove('hidden');
+    if (typeof populateRescheduleHours === 'function') populateRescheduleHours();
+    if (typeof showToast === 'function') {
+        showToast('Date selection mode active. Click a new date on the calendar.', 'info');
+    }
 }
 
 function resetRescheduleBtn() {
@@ -1020,20 +1101,73 @@ async function confirmReschedule() {
     }
 }
 
-// Reschedule time picker wheel scroll
-var rescheduleHourSelect = document.getElementById('reschedule-hour-select');
-var rescheduleMinuteSelect = document.getElementById('reschedule-minute-select');
-if (rescheduleHourSelect) {
-    rescheduleHourSelect.addEventListener('wheel', function(e) {
+// Time picker scroll fix: wrap-around and prevent page scroll (all .time-scroll)
+document.querySelectorAll('.time-scroll').forEach(function(select) {
+    select.addEventListener('wheel', function(e) {
         e.preventDefault();
-        if (e.deltaY > 0 && this.selectedIndex < this.options.length - 1) this.selectedIndex++;
-        else if (e.deltaY < 0 && this.selectedIndex > 0) this.selectedIndex--;
-        updateRescheduleAmPm();
+        if (e.deltaY > 0) {
+            if (this.selectedIndex < this.options.length - 1) this.selectedIndex++;
+            else this.selectedIndex = 0;
+        } else {
+            if (this.selectedIndex > 0) this.selectedIndex--;
+            else this.selectedIndex = this.options.length - 1;
+        }
+        this.dispatchEvent(new Event('change'));
+    }, { passive: false });
+});
+
+// Reschedule hour select: update AM/PM on change
+var rescheduleHourSelect = document.getElementById('reschedule-hour-select');
+if (rescheduleHourSelect) rescheduleHourSelect.addEventListener('change', updateRescheduleAmPm);
+
+// Single-click appointment row when in selection mode (after clicking "Change Appointment Timings")
+var appointmentsTableBody = document.querySelector('#appointments-table tbody');
+if (appointmentsTableBody) {
+    appointmentsTableBody.addEventListener('click', function(e) {
+        if (!isSelectingRow) return;
+        if (e.target.closest('button') || e.target.closest('a')) return;
+        var row = e.target.closest('tr[data-appt-id]');
+        if (!row) return;
+        document.querySelectorAll('#appointments-table tbody tr').forEach(function(r) { r.style.backgroundColor = ''; });
+        row.style.backgroundColor = '#e8f0fe';
+        selectedApptId = row.getAttribute('data-appt-id');
+        isSelectingRow = false;
+        var table = document.getElementById('appointments-table');
+        if (table) table.classList.remove('selecting-mode');
+        startRescheduleFlow();
     });
 }
-if (rescheduleMinuteSelect) {
-    rescheduleMinuteSelect.addEventListener('wheel', function(e) { e.preventDefault(); });
+
+// Cancel reschedule flow when clicking outside table, calendar, time picker, or buttons
+function cancelRescheduleFlow() {
+    isSelectingRow = false;
+    isRescheduleMode = false;
+    selectedApptId = null;
+    var table = document.getElementById('appointments-table');
+    if (table) table.classList.remove('selecting-mode');
+    document.querySelectorAll('#appointments-table tbody tr').forEach(function(r) { r.style.backgroundColor = ''; });
+    var calendar = document.querySelector('.calendar-card');
+    if (calendar) calendar.classList.remove('highlight-mode');
+    var timePicker = document.getElementById('reschedule-time-picker');
+    if (timePicker) timePicker.classList.add('hidden');
+    var confirmBtn = document.getElementById('confirm-reschedule-btn');
+    if (confirmBtn) confirmBtn.classList.add('hidden');
+    var mainBtn = document.getElementById('change-timing-main-btn');
+    if (mainBtn) mainBtn.classList.remove('hidden');
+    if (typeof showToast === 'function') showToast('Reschedule canceled.', 'info');
 }
+
+document.addEventListener('click', function(e) {
+    if (!isSelectingRow && !isRescheduleMode) return;
+    var clickedInTable = e.target.closest('#appointments-table');
+    var clickedInCalendar = e.target.closest('.calendar-card');
+    var clickedInTimePicker = e.target.closest('#reschedule-time-picker');
+    var clickedMainBtn = e.target.closest('#change-timing-main-btn');
+    var clickedConfirmBtn = e.target.closest('#confirm-reschedule-btn');
+    if (!clickedInTable && !clickedInCalendar && !clickedInTimePicker && !clickedMainBtn && !clickedConfirmBtn) {
+        cancelRescheduleFlow();
+    }
+});
 
 </script>
 <div id="toast-container"></div>

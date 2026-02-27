@@ -124,12 +124,17 @@
                     
                     <div class="patient-grid">
                         <div class="row-2-col">
-                            <div><label>Patient Name *</label><input type="text" name="patient_name" required></div>
+                            <div><label>Patient Name *</label><input type="text" name="patient_name" class="form-control" value="{{ appt.name if appt else '' }}" required></div>
                             <div><label>Phone</label><input type="text" name="phone"></div>
                         </div>
                         <div class="row-2-col">
-                            <div><label>Age *</label><input type="number" name="age" required></div>
-                            <div><label>Sex *</label><select name="sex"><option>Male</option><option>Female</option><option>Other</option></select></div>
+                            <div><label>Age *</label><input type="number" name="age" class="form-control" value="{{ appt.age if appt else '' }}" required></div>
+                            <div><label>Sex *</label><select name="sex" class="form-control" required>
+                                <option value="">Select</option>
+                                <option value="M" {% if appt and appt.sex == 'M' %}selected{% endif %}>Male</option>
+                                <option value="F" {% if appt and appt.sex == 'F' %}selected{% endif %}>Female</option>
+                                <option value="Other" {% if appt and appt.sex == 'Other' %}selected{% endif %}>Other</option>
+                            </select></div>
                         </div>
                         <div><label>Address</label><textarea name="address" rows="1" style="resize: none;"></textarea></div>
                         

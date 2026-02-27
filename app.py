@@ -684,6 +684,32 @@ def update_appointment_time():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/appointment/<int:appt_id>/details')
+@doctor_required
+def appt_details(appt_id):
+    """View appointment details: redirect to patient if Follow-up and patient exists, else show dummy patient with registration prompt."""
+    doctor_id = session.get('doctor_id')
+    appt = Appointment.query.filter_by(id=appt_id, doctor_id=doctor_id).first()
+    if not appt:
+        abort(404)
+
+    if appt.type == 'Follow-up':
+        patient = Patient.query.filter_by(name=appt.name, doctor_id=doctor_id).first()
+        if patient:
+            return redirect(url_for('patient_detail', patient_id=patient.id))
+
+    class DummyPatient:
+        def __init__(self, name, age, sex):
+            self.id = None
+            self.name = name
+            self.age = age or 0
+            self.sex = sex or ''
+            self.address = ''
+
+    dummy_patient = DummyPatient(appt.name or '', appt.age, appt.sex or '')
+    return render_template('patient_detail.html', patient=dummy_patient, visits=[], is_new_case=True, appt_id=appt.id)
+
+
 @app.route('/api/notifications', methods=['GET'])
 @doctor_required
 def get_notifications():
@@ -835,11 +861,15 @@ def first_visit():
     patients = []
     if not is_guest and doctor:
         patients = Patient.query.filter_by(doctor_id=doctor.id).all()
-    
+
     today = date.today()
-    
+    appt = None
+    appt_id = request.args.get('appt_id')
+    if appt_id:
+        appt = Appointment.query.get(appt_id)
+
     templates = DefaultTemplate.query.all() if is_guest else []
-    return render_template('first_visit.html', patients=patients, today=today, is_guest=is_guest, doctor=doctor, templates=templates)
+    return render_template('first_visit.html', patients=patients, today=today, is_guest=is_guest, doctor=doctor, templates=templates, appt=appt)
 
 
 @app.route('/api/templates', methods=['GET'])

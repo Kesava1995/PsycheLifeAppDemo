@@ -24,25 +24,32 @@
             <p><strong>Age:</strong> {{ patient.age }} | <strong>Sex:</strong> {{ patient.sex }}</p>
             <p><strong>Address:</strong> {{ patient.address or 'Not provided' }}</p>
         </div>
-        <div>
-            <a href="{{ url_for('add_visit', patient_id=patient.id) }}" class="btn btn-primary">+ Add Follow-up Visit</a>
-            <a href="{{ url_for('life_chart', patient_id=patient.id, view_only=1) }}" class="btn btn-primary">View Life Chart</a>
-            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Dashboard</a>
-			<a href="{{ url_for('first_visit') }}" class="btn btn-secondary">← First Visit</a>
+        <div class="actions" style="margin-bottom: 20px;">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-primary">← Dashboard</a>
+            {% if is_new_case %}
+                <a href="{{ url_for('first_visit', appt_id=appt_id) }}" class="btn btn-primary" style="background-color: #28a745;">← New Patient Registration</a>
+            {% else %}
+                <a href="{{ url_for('life_chart', patient_id=patient.id, view_only=1) }}" class="btn btn-primary">View Life Chart</a>
+                <a href="{{ url_for('add_visit', patient_id=patient.id) }}" class="btn btn-primary">+ Add Follow-up Visit</a>
+            {% endif %}
         </div>
         <div class="visits-list">
             <h2>Visit History</h2>
-            {% for visit in visits %}
-            <div class="visit-item">
-                <div class="visit-header">
-                    <h3>{{ visit.date.strftime('%d-%b-%Y') }} - {{ visit.visit_type }} Visit</h3>
-                    <a href="{{ url_for('edit_visit', visit_id=visit.id) }}" class="btn btn-secondary">Edit</a>
+            {% if is_new_case %}
+                <p style="color: gray;">No visits yet. Please register the patient first.</p>
+            {% else %}
+                {% for visit in visits %}
+                <div class="visit-item">
+                    <div class="visit-header">
+                        <h3>{{ visit.date.strftime('%d-%b-%Y') }} - {{ visit.visit_type }} Visit</h3>
+                        <a href="{{ url_for('edit_visit', visit_id=visit.id) }}" class="btn btn-secondary">Edit</a>
+                    </div>
+                    {% if visit.provisional_diagnosis %}
+                    <p><strong>Provisional Diagnosis:</strong> {{ visit.provisional_diagnosis }}</p>
+                    {% endif %}
                 </div>
-                {% if visit.provisional_diagnosis %}
-                <p><strong>Provisional Diagnosis:</strong> {{ visit.provisional_diagnosis }}</p>
-                {% endif %}
-            </div>
-            {% endfor %}
+                {% endfor %}
+            {% endif %}
         </div>
     </div>
 </body>
