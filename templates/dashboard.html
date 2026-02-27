@@ -89,7 +89,7 @@
     .form-control { width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 4px; box-sizing: border-box; margin-bottom: 10px; }
     .mb-2 { margin-bottom: 10px; }
 
-    .hidden { display: none; }
+    .hidden { display: none !important; }
     .calendar-card.highlight-mode { border: 2px solid #a5dcfe; }
     .error-text { color: #d32f2f; font-size: 14px; margin-left: 10px; font-weight: bold; }
     .disabled-form { opacity: 0.6; pointer-events: none; }
@@ -99,8 +99,25 @@
     .view-details-btn { background: transparent; border: none; cursor: pointer; color: #2c7be5; padding: 0; text-decoration: underline; }
 
     .notification-wrapper { position: relative; display: inline-block; }
-    .bell-btn { background: transparent; border: none; font-size: 24px; cursor: pointer; position: relative; }
-    .power-badge { display: inline-flex; align-items: center; justify-content: center; background-color: #a5dcfe; color: #000; border-radius: 50%; min-width: 18px; height: 18px; font-size: 12px; font-weight: bold; vertical-align: super; margin-left: 2px; }
+    .bell-btn { background: transparent; border: none; font-size: 24px; cursor: pointer; position: relative; color: #7ebacc; }
+    .power-badge {
+        background-color: #ff3b30;
+        color: white;
+        border-radius: 50%;
+        font-family: Arial, sans-serif;
+        font-size: 10px;
+        font-weight: bold;
+        min-width: 14px;
+        height: 14px;
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        line-height: 1;
+    }
     .dropdown-content { position: absolute; top: 40px; right: 0; background: white; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); min-width: 280px; max-height: 70vh; overflow-y: auto; z-index: 3100; }
     #notif-table { width: 100%; border-collapse: collapse; }
     #notif-table th, #notif-table td { padding: 8px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
@@ -175,9 +192,14 @@
     <div class="top-right">
         <input type="text" class="top-search" placeholder="Search Patients" list="patient-list" onchange="handlePatientSearch(this.value)">
         <span class="top-link" onclick="switchView('patients')">My Patients</span>
-        <div class="notification-wrapper">
-            <button type="button" id="bell-btn" class="bell-btn" title="Notifications">🔔<sup id="notif-power" class="hidden power-badge">0</sup></button>
-            <div id="notif-dropdown" class="dropdown-content hidden">
+        <div id="bell-btn" class="notification-wrapper notif-icon-wrapper" style="position: relative; cursor: pointer; margin-right: 20px; display: flex; align-items: center;" title="Notifications">
+            <button type="button" class="bell-btn" style="padding: 0; border: none; background: none; cursor: pointer; display: flex;">
+                <svg id="notif-bell" width="22" height="22" viewBox="0 0 448 512" fill="#7ebacc" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v118.8c0 47-17.3 92-48.4 127.6l-7.4 8.3c-8.4 9.4-10.4 22.9-5.3 34.4S19.4 512 32 512H416c12.6 0 24-7.4 29.1-18.9s3.1-25-5.3-34.4l-7.4-8.3C401.3 418.8 384 373.8 384 326.8V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm45.3 493.3c12-12 18.7-28.3 18.7-45.3H160c0 17 6.7 33.3 18.7 45.3s28.3 18.7 45.3 18.7s33.3-6.7 45.3-18.7z"/>
+                </svg>
+            </button>
+            <span id="notif-power" class="hidden power-badge">0</span>
+            <div id="notif-dropdown" class="dropdown-content hidden" onclick="event.stopPropagation()">
                 <table id="notif-table">
                     <thead><tr><th>Past 7 Days Notifications</th></tr></thead>
                     <tbody id="notif-tbody"></tbody>
@@ -392,7 +414,7 @@
                 <input type="text" name="appt_name" class="form-control" placeholder="Patient Name" list="existing-patients-list" autocomplete="off" required>
                 <datalist id="existing-patients-list">
                     {% for p in patients %}
-                        <option value="{{ p.name }}"></option>
+                        <option value="{{ p.name }}" data-age="{{ p.age }}" data-sex="{{ p.sex }}"></option>
                     {% endfor %}
                 </datalist>
                 <input type="number" name="appt_age" class="form-control" placeholder="Age" required>
@@ -619,13 +641,17 @@ async function markNotificationsAsReadInDB() {
 }
 
 if (bellBtn && notifDropdown) {
-    bellBtn.addEventListener('click', function() {
+    bellBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
         notifDropdown.classList.toggle('hidden');
         if (!notifDropdown.classList.contains('hidden')) {
             if (unreadPower > 0) markNotificationsAsReadInDB();
             unreadPower = 0;
             if (powerBadge) { powerBadge.classList.add('hidden'); powerBadge.textContent = '0'; }
         }
+    });
+    document.addEventListener('click', function() {
+        notifDropdown.classList.add('hidden');
     });
 }
 
@@ -724,18 +750,39 @@ if (addHourSelect && addMinuteSelect) {
     addMinuteSelect.addEventListener('change', syncAddApptTime);
 }
 
-// Auto-select Follow-up when patient name matches an existing patient
+// Auto-fill existing patient details (type, age, sex) when name matches datalist
 var apptNameInput = document.querySelector('input[name="appt_name"]');
 var apptTypeSelect = document.querySelector('select[name="appt_type"]');
-if (apptNameInput && apptTypeSelect) {
+var apptAgeInput = document.querySelector('input[name="appt_age"]');
+var apptSexSelect = document.querySelector('select[name="appt_sex"]');
+
+if (apptNameInput) {
     apptNameInput.addEventListener('input', function() {
         var val = this.value.trim().toLowerCase();
         var options = document.querySelectorAll('#existing-patients-list option');
-        var isExisting = false;
         for (var i = 0; i < options.length; i++) {
-            if (options[i].value.toLowerCase() === val) { isExisting = true; break; }
+            var opt = options[i];
+            if (opt.value.toLowerCase() === val) {
+                if (apptTypeSelect) apptTypeSelect.value = 'Follow-up';
+                if (apptAgeInput && opt.getAttribute('data-age')) apptAgeInput.value = opt.getAttribute('data-age');
+                if (apptSexSelect && opt.getAttribute('data-sex')) {
+                    var dbSex = (opt.getAttribute('data-sex') || '').trim();
+                    apptSexSelect.value = dbSex;
+                    if (apptSexSelect.value === '') {
+                        if (dbSex.toUpperCase() === 'M' || dbSex.toUpperCase() === 'MALE') {
+                            apptSexSelect.value = 'M';
+                            if (apptSexSelect.value === '') apptSexSelect.value = 'Male';
+                        } else if (dbSex.toUpperCase() === 'F' || dbSex.toUpperCase() === 'FEMALE') {
+                            apptSexSelect.value = 'F';
+                            if (apptSexSelect.value === '') apptSexSelect.value = 'Female';
+                        } else if (dbSex.toUpperCase() === 'OTHER') {
+                            apptSexSelect.value = 'Other';
+                        }
+                    }
+                }
+                break;
+            }
         }
-        if (isExisting) apptTypeSelect.value = 'Follow-up';
     });
 }
 

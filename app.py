@@ -863,13 +863,22 @@ def first_visit():
         patients = Patient.query.filter_by(doctor_id=doctor.id).all()
 
     today = date.today()
+    templates = DefaultTemplate.query.all() if is_guest else []
+
+    # --- NEW: Fetch Appointment Data if present in URL ---
     appt = None
     appt_id = request.args.get('appt_id')
     if appt_id:
         appt = Appointment.query.get(appt_id)
 
-    templates = DefaultTemplate.query.all() if is_guest else []
-    return render_template('first_visit.html', patients=patients, today=today, is_guest=is_guest, doctor=doctor, templates=templates, appt=appt)
+    # --- NEW: Added appt=appt to the render_template ---
+    return render_template('first_visit.html',
+                           patients=patients,
+                           today=today,
+                           is_guest=is_guest,
+                           doctor=doctor,
+                           templates=templates,
+                           appt=appt)
 
 
 @app.route('/api/templates', methods=['GET'])
