@@ -317,3 +317,18 @@ class Notification(db.Model):
     trigger_time = db.Column(db.DateTime, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_read = db.Column(db.Boolean, default=False)
+
+
+class ScheduleTemplate(db.Model):
+    __tablename__ = 'schedule_templates'
+
+    id = db.Column(db.Integer, primary_key=True)
+    doctor_id = db.Column(db.Integer, db.ForeignKey('doctors.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    is_default = db.Column(db.Boolean, default=False)
+
+    # Stored as JSON list of dicts: [{"start": "09:00", "end": "17:00"}, {"start": "17:00", "end": "22:00"}]
+    working_hours = db.Column(db.JSON, nullable=False)
+
+    # Stored as JSON dict: {"New Registration": 45, "Extended Follow-up": 30, "Follow-up": 15, ...}
+    slot_durations = db.Column(db.JSON, nullable=False)

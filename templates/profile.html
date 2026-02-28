@@ -20,8 +20,11 @@
         textarea { resize: vertical; min-height: 80px; }
         .btn { background-color: var(--primary-dark); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: background 0.2s; font-weight: 600; }
         .btn:hover { background-color: #5fa4d6; }
+        .btn-primary { background-color: var(--primary-dark); color: white; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 1rem; }
+        .btn-primary:hover { background-color: #5fa4d6; }
         .btn-secondary { background-color: #e0e0e0; color: #333; margin-right: 10px; }
         .btn-secondary:hover { background-color: #d0d0d0; }
+        .btn-sm { padding: 6px 12px; font-size: 0.9rem; }
         .file-info { font-size: 0.85rem; color: #777; margin-top: 5px; }
         .signature-preview { margin-top: 10px; border: 1px dashed #ccc; padding: 10px; text-align: center; border-radius: 8px; }
         .signature-preview img { max-height: 80px; }
@@ -90,6 +93,86 @@
                 <div class="file-info">No signature uploaded yet</div>
                 {% endif %}
             </div>
+
+            <div class="form-group" style="margin-top: 40px; border-top: 1px solid #e0e0e0; padding-top: 20px;">
+                <h3 style="margin-bottom: 5px;">Appointment Schedule Templates</h3>
+                <p class="subtitle" style="margin-bottom: 20px;">Manage your working hours and slot durations.</p>
+                
+                <div id="schedule-templates-container">
+                    <div class="card" style="border: 1px solid #A5DCFE; padding: 20px; margin-bottom: 20px; border-radius: 8px; background: #fafcff;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <input type="text" name="template_name[]" value="Default Template" class="form-control" style="width: 50%; font-weight: bold; border: none; background: transparent; font-size: 1.1em;" readonly>
+                            <div class="template-actions">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="cloneTemplate(this)">[+] Copy</button>
+                            </div>
+                        </div>
+                        
+                        <h4 style="margin-bottom: 10px; font-size: 0.95em; color: #555;">Usual Appointment Timings</h4>
+                        <div class="working-hours-container" style="margin-bottom: 25px;">
+                            <div class="timing-row" style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                                <input type="time" name="time_from[]" value="09:00" class="form-control" style="width: auto;">
+                                <span style="font-weight: 500;">to</span>
+                                <input type="time" name="time_to[]" value="17:00" class="form-control" style="width: auto;">
+                                <button type="button" class="btn btn-primary" onclick="addTimingRow(this)">+</button>
+                            </div>
+                            <div class="timing-row" style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                                <input type="time" name="time_from[]" value="17:00" class="form-control" style="width: auto;">
+                                <span style="font-weight: 500;">to</span>
+                                <input type="time" name="time_to[]" value="22:00" class="form-control" style="width: auto;">
+                                <button type="button" class="btn btn-secondary" onclick="this.parentElement.remove()">-</button>
+                            </div>
+                        </div>
+
+                        <h4 style="margin-bottom: 10px; font-size: 0.95em; color: #555;">Default Slot Durations (Mins)</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div><label>New Registration</label><input type="number" name="dur_new[]" value="45" class="form-control"></div>
+                            <div><label>Extended Follow-up</label><input type="number" name="dur_ext_follow[]" value="30" class="form-control"></div>
+                            <div><label>Follow-up</label><input type="number" name="dur_follow[]" value="15" class="form-control"></div>
+                            <div><label>Therapy Session</label><input type="number" name="dur_therapy[]" value="45" class="form-control"></div>
+                            <div><label>Review/Report Discussion</label><input type="number" name="dur_review[]" value="10" class="form-control"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="button" class="btn btn-primary" onclick="addNewTemplate()" style="margin-top: 10px;">[+] Add Custom Template</button>
+            </div>
+            <script>
+            function addTimingRow(btn) {
+                var container = btn.closest('.working-hours-container');
+                var row = document.createElement('div');
+                row.className = 'timing-row';
+                row.style.cssText = 'display: flex; gap: 10px; align-items: center; margin-bottom: 10px;';
+                row.innerHTML = '<input type="time" name="time_from[]" class="form-control" style="width: auto;"> <span style="font-weight: 500;">to</span> <input type="time" name="time_to[]" class="form-control" style="width: auto;"> <button type="button" class="btn btn-secondary" onclick="this.parentElement.remove()">-</button>';
+                container.appendChild(row);
+            }
+            
+            function cloneTemplate(btn) {
+                var card = btn.closest('.card');
+                var clone = card.cloneNode(true);
+                var nameInput = clone.querySelector('input[name="template_name[]"]');
+                nameInput.value = nameInput.value + " (Copy)";
+                nameInput.readOnly = false;
+                nameInput.style.border = "1px solid #ccc";
+                nameInput.style.background = "white";
+                
+                var actionDiv = clone.querySelector('.template-actions');
+                actionDiv.innerHTML = '<button type="button" class="btn btn-secondary btn-sm" onclick="cloneTemplate(this)">[+] Copy</button> <button type="button" class="btn btn-secondary btn-sm" onclick="this.closest(\'.card\').remove()" style="background: #ff4d4d; color: white;">Delete</button>';
+                document.getElementById('schedule-templates-container').appendChild(clone);
+            }
+            
+            function addNewTemplate() {
+                var clone = document.querySelector('#schedule-templates-container .card').cloneNode(true);
+                var nameInput = clone.querySelector('input[name="template_name[]"]');
+                nameInput.value = "Custom Template";
+                nameInput.readOnly = false;
+                nameInput.style.border = "1px solid #ccc";
+                nameInput.style.background = "white";
+                
+                var actionDiv = clone.querySelector('.template-actions');
+                actionDiv.innerHTML = '<button type="button" class="btn btn-secondary btn-sm" onclick="cloneTemplate(this)">[+] Copy</button> <button type="button" class="btn btn-secondary btn-sm" onclick="this.closest(\'.card\').remove()" style="background: #ff4d4d; color: white;">Delete</button>';
+                document.getElementById('schedule-templates-container').appendChild(clone);
+            }
+            </script>
             
             <div style="margin-top: 30px; display: flex; gap: 10px;">
                 <a href="{{ url_for('first_visit') }}" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">Cancel</a>

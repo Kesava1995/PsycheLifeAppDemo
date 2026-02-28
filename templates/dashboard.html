@@ -40,7 +40,7 @@
     .top-link { cursor: pointer; font-weight: 600; color: #2c3e50; display: flex; align-items: center; }
     .bell-icon { font-size: 20px; cursor: pointer; }
 
-    .container { display: flex; padding: 20px; margin-top: 60px; gap: 20px; }
+    .container { display: flex; padding: 20px; margin-top: 75px; gap: 20px; }
     .main-content { flex: 3; }
     .sidebar { flex: 1; min-width: 250px; }
 
@@ -93,6 +93,69 @@
     .calendar-card.highlight-mode { border: 2px solid #a5dcfe; }
     .error-text { color: #d32f2f; font-size: 14px; margin-left: 10px; font-weight: bold; }
     .disabled-form { opacity: 0.6; pointer-events: none; }
+
+    /* --- UI Updates --- */
+    /* Topbar sizing and centering */
+    .topbar { height: 75px; }
+    .container { margin-top: 75px; }
+    .top-center { position: absolute; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: bold; color: #2c3e50; white-space: nowrap; }
+    body.dark-mode .top-center { color: #ffffff; }
+
+    /* Invisible scrollbar by default, visible on hover (Req 6 & 7) */
+    .scrollable-card {
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: transparent transparent;
+        transition: scrollbar-color 0.3s ease;
+    }
+    .scrollable-card:hover {
+        scrollbar-color: #c1c1c1 transparent;
+    }
+    .scrollable-card::-webkit-scrollbar {
+        width: 6px;
+    }
+    .scrollable-card::-webkit-scrollbar-thumb {
+        background-color: transparent;
+        border-radius: 4px;
+    }
+    .scrollable-card:hover::-webkit-scrollbar-thumb {
+        background-color: #c1c1c1;
+    }
+
+    /* --- Bottom Alignment Updates --- */
+    .sidebar {
+        flex: 1;
+        min-width: 220px;
+        max-width: 260px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    #appointments-view, #patients-view {
+        height: 450px;
+        margin-bottom: 0; /* Removes bottom spacing so it rests exactly on the line */
+    }
+
+    #notes-card {
+        flex-grow: 1; /* Automatically stretches/shrinks to fill the exact remaining space */
+        height: 0; /* Lets flex-grow handle the exact height calculation */
+        min-height: 120px; /* Prevents it from getting completely crushed */
+        margin-bottom: 0; /* Aligns the bottom perfectly with the left-side cards */
+    }
+
+    /* Reduce Sidebar / Calendar / Buttons size (Req 3) */
+    .calendar-card { padding: 10px; }
+    .calendar-header { font-size: 14px; margin-bottom: 5px; }
+    .calendar-month { font-size: 12px; margin-bottom: 5px; }
+    .calendar-grid { gap: 2px; font-size: 11px; }
+    .calendar-grid div { padding: 4px 0; }
+    .sidebar .card .button {
+        width: 100%; /* Changed from 66% so the text has room */
+        white-space: nowrap; /* Forces text to stay on one line each */
+        padding: 8px 4px;
+        font-size: 13px;
+        margin-bottom: 8px; /* Slightly tighter spacing to reduce card height */
+    }
 
     .delete-appt-btn { background: transparent; border: none; cursor: pointer; margin-left: 8px; padding: 4px; vertical-align: middle; }
     .delete-appt-btn:hover svg { fill: #c0392b; }
@@ -186,12 +249,30 @@
 <div class="topbar">
     <div class="top-left">
         <div class="hamburger" onclick="toggleSidebar()">☰</div>
-        <img src="{{ url_for('static', filename='logo.png') }}" class="logo" alt="Logo">
+        <div style="display:flex; align-items:center; cursor:pointer;" onclick="window.location.href='/'">
+            <img src="{{ url_for('static', filename='logo.png') }}" class="logo" alt="Logo" style="height:45px;">
+            <div style="margin-left: 10px; line-height: 1.1;">
+                <div style="font-size: 22px; font-weight: bold; color: #2c7be5; margin-bottom: 2px;">Continuum</div>
+                <div style="font-size: 13px; color: #7ab8e0; letter-spacing: 1px; text-transform: lowercase;">psychiatry</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="top-center">
+        {% if current_user is defined and current_user.clinic_name %}
+            {{ current_user.clinic_name }}
+        {% elif clinic_name is defined and clinic_name %}
+            {{ clinic_name }}
+        {% endif %}
     </div>
 
     <div class="top-right">
-        <input type="text" class="top-search" placeholder="Search Patients" list="patient-list" onchange="handlePatientSearch(this.value)">
-        <span class="top-link" onclick="switchView('patients')">My Patients</span>
+        <!-- <input type="text" class="top-search" placeholder="Search Patients" list="patient-list" onchange="handlePatientSearch(this.value)"> -->
+        
+        <button onclick="toggleDarkMode(!document.body.classList.contains('dark-mode'))" title="Toggle Dark Mode" style="background:none; border:none; font-size: 22px; cursor:pointer; margin-right: 15px;">
+            🌓
+        </button>
+
         <div id="bell-btn" class="notification-wrapper notif-icon-wrapper" style="position: relative; cursor: pointer; margin-right: 20px; display: flex; align-items: center;" title="Notifications">
             <button type="button" class="bell-btn" style="padding: 0; border: none; background: none; cursor: pointer; display: flex;">
                 <svg id="notif-bell" width="22" height="22" viewBox="0 0 448 512" fill="#7ebacc" xmlns="http://www.w3.org/2000/svg">
@@ -223,7 +304,7 @@
             <div class="box" onclick="openScalesModal()"><strong>Scales</strong></div>
         </div>
 
-        <div class="card" id="appointments-view">
+        <div class="card scrollable-card" id="appointments-view">
             <h3 style="margin-top:0;">Appointments for <span id="display-date">{{ target_date.strftime('%d-%b-%Y') }}</span></h3>
             <table id="appointments-table">
                 <thead>
@@ -231,7 +312,7 @@
                     <th>Time</th>
                     <th>Name</th>
                     <th>Age/Sex</th>
-                    <th>Type</th>
+                    <th>DID</th> <th>Dx</th>  <th>Type</th>
                     <th>Status</th>
                     <th>Actions</th>
                 </tr>
@@ -243,17 +324,22 @@
                         <td>
                         {{ appt.start_time[:5] if appt.start_time else '--' }} -
                         {% if appt.start_time %}
-                        {% set h = appt.start_time[:2] | int %}
-                        {% set m = appt.start_time[3:5] | int %}
-                        {% set dur = appt.slot_duration | int %}
-                        {% set total_m = m + dur %}
-                        {% set new_h = (h + (total_m // 60)) % 24 %}
-                        {% set new_m = total_m % 60 %}
-                        {{ "%02d:%02d" | format(new_h, new_m) }}
+                            {% set h = appt.start_time[:2] | int %}
+                            {% set m = appt.start_time[3:5] | int %}
+                            {% set dur = appt.slot_duration | int %}
+                            {% set total_m = (h * 60) + m + dur %}
+                            {% set new_h = (total_m // 60) % 24 %}
+                            {% set new_m = total_m % 60 %}
+                            {{ "%02d:%02d" | format(new_h, new_m) }}
                         {% else %}--{% endif %}
                         </td>
                         <td>{{ appt.name }}</td>
                         <td>{{ appt.age }} / {{ appt.sex }}</td>
+                        
+                        <td title="{{ appt.did }}">{{ (appt.did[:10] ~ '...') if appt.did and appt.did|length > 10 else (appt.did or '--') }}</td>
+                        
+                        <td>{{ appt.dx or '--' }}</td>
+                        
                         <td>{{ appt.type }}</td>
                         <td>
                             {% if appt.status == 'Confirmed' %}
@@ -274,16 +360,16 @@
                     </tr>
                     {% endfor %}
                 {% else %}
-                    <tr><td colspan="6">No appointments scheduled for this date.</td></tr>
+                    <tr><td colspan="8">No appointments scheduled for this date.</td></tr>
                 {% endif %}
                 <tr class="available-slot">
-                    <td colspan="6">End of scheduled – Available Slots Remaining</td>
+                    <td colspan="8">End of scheduled – Available Slots Remaining</td>
                 </tr>
                 </tbody>
             </table>
         </div>
 
-        <div class="card hidden" id="patients-view">
+        <div class="card hidden scrollable-card" id="patients-view">
             <h3 style="margin-top:0;">My Patients Directory</h3>
             <table>
                 <tr>
@@ -355,7 +441,7 @@
             <button class="button" onclick="document.getElementById('noteModal').style.display='block'">Add Note</button>
         </div>
 
-        <div class="card">
+        <div class="card scrollable-card" id="notes-card">
             <h4 style="margin-top:0;">Today's Notes</h4>
             <ul style="padding-left: 20px; margin-bottom: 0;">
                 {% for note in notes %}
@@ -423,14 +509,14 @@
                     <option value="F">Female</option>
                     <option value="Other">Other</option>
                 </select>
-                <select name="appt_type" class="form-control">
-                    <option value="New Case">New Case</option>
-                    <option value="Follow-up">Follow-up</option>
+                <select name="appt_type" class="form-control" onchange="document.getElementById('add-appt-duration-hidden').value = this.options[this.selectedIndex].getAttribute('data-duration'); refreshSlotsForModal();">
+                    <option value="New Registration" data-duration="45">New Registration (45 Mins)</option>
+                    <option value="Extended Follow-up" data-duration="30">Extended Follow-up (30 Mins)</option>
+                    <option value="Follow-up" data-duration="15" selected>Follow-up (15 Mins)</option>
+                    <option value="Therapy Session" data-duration="45">Therapy Session (45 Mins)</option>
+                    <option value="Review/Report Discussion" data-duration="10">Review/Report Discussion (10 Mins)</option>
                 </select>
-                <select name="appt_duration" class="form-control">
-                    <option value="30">30 Mins (New Case)</option>
-                    <option value="15">15 Mins (Follow-up)</option>
-                </select>
+                <input type="hidden" name="appt_duration" id="add-appt-duration-hidden" value="15">
                 <button type="submit" class="button" id="add-appointment-btn">
                     <span id="add-btn-spinner" class="hidden spinner"></span>
                     <span id="add-btn-text">Schedule</span>
@@ -504,33 +590,42 @@ function parsedAppointmentsForDate(dateStr) {
     });
 }
 
-function getAvailableSlots(appointments, startHour, endHour, endMinute, dateStr) {
-    startHour = startHour !== undefined ? startHour : 9;
-    endHour = endHour !== undefined ? endHour : 21;
-    endMinute = endMinute !== undefined ? endMinute : 45;
+function getAvailableSlots(appointments, workingHours, reqDuration, dateStr) {
     dateStr = dateStr || targetDateForSlots;
     var parts = dateStr.split('-');
     var y = parseInt(parts[0], 10), m = parseInt(parts[1], 10) - 1, d = parseInt(parts[2], 10);
-    var availableSlots = [];
-    var currentSlotStart = new Date(y, m, d, startHour, 0, 0);
-    var endTime = new Date(y, m, d, endHour, endMinute, 0);
-    var currentAvailableStart = null;
-    while (currentSlotStart < endTime) {
-        var slotEnd = new Date(currentSlotStart.getTime() + 15 * 60000);
-        var isBooked = appointments.some(function(appt) {
-            return currentSlotStart >= appt.startTime && currentSlotStart < appt.endTime;
-        });
-        if (!isBooked) {
-            if (!currentAvailableStart) currentAvailableStart = new Date(currentSlotStart.getTime());
-        } else {
-            if (currentAvailableStart) {
-                availableSlots.push({ start: currentAvailableStart, end: new Date(currentSlotStart.getTime()) });
-                currentAvailableStart = null;
-            }
-        }
-        currentSlotStart = slotEnd;
+
+    if (!workingHours || workingHours.length === 0) {
+        workingHours = [{start: "09:00", end: "17:00"}, {start: "17:00", end: "22:00"}];
     }
-    if (currentAvailableStart) availableSlots.push({ start: currentAvailableStart, end: endTime });
+    reqDuration = parseInt(reqDuration, 10) || 15;
+
+    var availableSlots = [];
+
+    workingHours.forEach(function(block) {
+        var startParts = block.start.split(':');
+        var endParts = block.end.split(':');
+        var blockStart = new Date(y, m, d, parseInt(startParts[0], 10), parseInt(startParts[1], 10), 0);
+        var blockEnd = new Date(y, m, d, parseInt(endParts[0], 10), parseInt(endParts[1], 10), 0);
+
+        var currentSlotStart = new Date(blockStart);
+
+        while (currentSlotStart < blockEnd) {
+            var slotEnd = new Date(currentSlotStart.getTime() + reqDuration * 60000);
+            if (slotEnd > blockEnd) break;
+
+            var isBooked = appointments.some(function(appt) {
+                return (currentSlotStart < appt.endTime && slotEnd > appt.startTime);
+            });
+
+            if (!isBooked) {
+                availableSlots.push({ start: new Date(currentSlotStart), end: new Date(slotEnd) });
+            }
+
+            currentSlotStart = new Date(currentSlotStart.getTime() + 15 * 60000);
+        }
+    });
+
     return availableSlots;
 }
 
@@ -538,7 +633,9 @@ function updateAppointmentFormState(availableSlots) {
     var formWrapper = document.getElementById('appointment-form-wrapper');
     var confirmBtn = document.getElementById('add-appointment-btn');
     var noSlotsMsg = document.getElementById('no-slots-msg');
+
     if (!formWrapper || !confirmBtn) return;
+
     if (!availableSlots || availableSlots.length === 0) {
         formWrapper.classList.add('disabled-form');
         confirmBtn.disabled = true;
@@ -552,13 +649,24 @@ function updateAppointmentFormState(availableSlots) {
 
 function refreshSlotsForModal() {
     var dateInput = document.getElementById('appt-date-input');
+    var durationInput = document.getElementById('add-appt-duration-hidden');
+
     var dateStr = dateInput ? dateInput.value : targetDateForSlots;
+    var duration = durationInput ? parseInt(durationInput.value, 10) : 15;
+
     if (dateStr !== targetDateForSlots) {
         updateAppointmentFormState([{ start: true }]);
         return;
     }
+
     var parsed = parsedAppointmentsForDate(dateStr);
-    var slots = getAvailableSlots(parsed, 9, 21, 45, dateStr);
+
+    var activeWorkingHours = [
+        {start: "09:00", end: "17:00"},
+        {start: "17:00", end: "22:00"}
+    ];
+
+    var slots = getAvailableSlots(parsed, activeWorkingHours, duration, dateStr);
     updateAppointmentFormState(slots);
 }
 
@@ -700,7 +808,10 @@ if (appointmentsTable) {
                         var dayData = appointmentsForDay.filter(function(a) { return a.id !== id; });
                         appointmentsForDay = dayData;
                         var parsed = parsedAppointmentsForDate(targetDateForSlots);
-                        updateAppointmentFormState(getAvailableSlots(parsed));
+                        var dur = 15;
+                        var durationHidden = document.getElementById('add-appt-duration-hidden');
+                        if (durationHidden && durationHidden.value) dur = parseInt(durationHidden.value, 10);
+                        updateAppointmentFormState(getAvailableSlots(parsed, [{start: "09:00", end: "17:00"}, {start: "17:00", end: "22:00"}], dur, targetDateForSlots));
                         showToast('Appointment deleted.');
                     } else {
                         showToast('Could not delete appointment', 'error');

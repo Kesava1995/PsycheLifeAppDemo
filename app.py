@@ -587,6 +587,9 @@ def dashboard():
             'note': p.personal_notes or "None"
         })
 
+    # Clinic name for topbar; replace with DB/session lookup if needed (e.g. Doctor.clinic_name)
+    clinic_name = ""
+
     return render_template('dashboard.html',
                            patients=patient_data,
                            num_patients=num_patients,
@@ -595,7 +598,8 @@ def dashboard():
                            notes=notes,
                            appointments=appointments,
                            appointments_for_day=appointments_for_day,
-                           top_5_patients=patients[:5])
+                           top_5_patients=patients[:5],
+                           clinic_name=clinic_name)
 
 
 @app.route('/api/add_note', methods=['POST'])
@@ -2766,8 +2770,8 @@ def generate_prescription_pdf(visit_id, include_qr=False):
         alignment=TA_CENTER,
         spaceAfter=12
     )
-    header_text = doctor.clinic_name if doctor and doctor.clinic_name else "ElevenEleven Health"
-    sub_text = doctor.address_text if doctor and doctor.address_text else "Psychiatry & Wellness Center"
+    header_text = doctor.clinic_name if doctor and doctor.clinic_name else ""
+    sub_text = doctor.address_text if doctor and doctor.address_text else ""
     story.append(Paragraph(header_text, header_style))
     story.append(Paragraph(sub_text, styles['Normal']))
     story.append(Spacer(1, 12))
