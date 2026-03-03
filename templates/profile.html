@@ -41,7 +41,7 @@
         <h2>Doctor Profile & Settings</h2>
         <p class="subtitle">Manage your details for prescriptions and patient records.</p>
         
-        <form method="POST" enctype="multipart/form-data">
+        <form method="POST" enctype="multipart/form-data" action="{{ request.path }}?next={{ request.args.get('next') or request.referrer or url_for('dashboard') }}">
             <div class="form-group">
                 <label for="full_name">Full Name (as on Prescription)</label>
                 <input type="text" id="full_name" name="full_name" value="{{ doctor.full_name or '' }}" placeholder="Dr. First Last">
@@ -79,6 +79,19 @@
             <div class="form-group">
                 <label for="social_handle">Social Media Handle (Optional)</label>
                 <input type="text" id="social_handle" name="social_handle" value="{{ doctor.social_handle or '' }}" placeholder="@username">
+            </div>
+
+            <div class="form-group" style="padding: 15px; background-color: #f0f8ff; border-radius: 8px; border: 1px solid var(--primary-blue);">
+                <label for="active_template" style="color: var(--primary-dark);">Active Appointment Template</label>
+                <select id="active_template" name="active_template" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; background-color: white;">
+                    <option value="default">Default Template</option>
+                    {% if schedule_templates %}
+                        {% for template in schedule_templates %}
+                            <option value="{{ template.id }}" {% if doctor.active_template_id == template.id %}selected{% endif %}>{{ template.name }}</option>
+                        {% endfor %}
+                    {% endif %}
+                </select>
+                <div class="file-info" style="margin-top: 5px;">Select which schedule template is currently active for calculating your appointment slots.</div>
             </div>
             
             <div class="form-group">
@@ -175,7 +188,7 @@
             </script>
             
             <div style="margin-top: 30px; display: flex; gap: 10px;">
-                <a href="{{ url_for('first_visit') }}" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">Cancel</a>
+                <a href="{{ request.args.get('next') or request.referrer or url_for('dashboard') }}" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">Cancel</a>
                 <button type="submit" class="btn">Save Settings</button>
             </div>
         </form>

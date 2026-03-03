@@ -22,6 +22,9 @@ class Doctor(db.Model):
     # Phase 1: New Contact Details
     phone = db.Column(db.String(20))
     email = db.Column(db.String(120))
+
+    # Active schedule template for appointment slot calculation
+    active_template_id = db.Column(db.Integer, db.ForeignKey('schedule_templates.id'), nullable=True)
     
     patients = db.relationship('Patient', backref='doctor', lazy=True)
 

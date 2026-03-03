@@ -16,8 +16,34 @@
         :root { --primary: #A5DCFE; --dark: #7ab8e0; --bg: #f4f8fb; --text-main: #333; }
         body { margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); height: 100vh; display: flex; overflow: hidden; }
         
-        /* SIDEBAR STYLES (Unchanged) */
-        .sidebar { width: 280px; background: white; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column; flex-shrink: 0; z-index: 2; }
+        /* SIDEBAR STYLES - resizable via divider */
+        .sidebar { width: 280px; min-width: 200px; max-width: 480px; background: white; border-right: none; display: flex; flex-direction: column; flex-shrink: 0; z-index: 2; }
+        .sidebar-resize-handle {
+            width: 10px;
+            flex-shrink: 0;
+            cursor: col-resize;
+            background: #f4f8fb;
+            border-left: 2px dashed #c0c8d0;
+            border-right: 1px solid #e8ecef;
+            position: relative;
+            user-select: none;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .sidebar-resize-handle:hover,
+        .sidebar-resize-handle:active {
+            background: #e8eef5;
+            border-left-color: var(--dark);
+        }
+        .sidebar-resize-handle::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 2px;
+            height: 24px;
+            background: repeating-linear-gradient(to bottom, #aaa 0, #aaa 3px, transparent 3px, transparent 6px);
+        }
         .nav-row { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fafafa; }
         .nav-row a { text-decoration: none; color: #555; font-weight: 600; font-size: 0.9rem; }
         .controls { padding: 15px; overflow-y: auto; flex: 1; }
@@ -33,18 +59,67 @@
         .item-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
         .sidebar-item.unified-item { background: #fcfcfc; border-bottom: 1px dashed #eee; font-weight: 600; }
 
-        /* MAIN CONTENT AREA */
+        /* MAIN CONTENT AREA - Dashboard is scroll-free; page can scroll for form below */
         .main-content { 
             flex: 1; 
             padding: 15px; 
             overflow-y: auto; 
+            overflow-x: hidden;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 10px;
             background: #f8f9fa;
+            min-height: 0;
         }
 
-        /* --- NEW WIDGET SYSTEM STYLES --- */
+        /* Dashboard wrapper: min height must fit 3 rows of panels (symptoms, meds, se, mse, scale) */
+        .dashboard-wrapper {
+            flex: 1 1 auto;
+            min-height: 680px;
+            min-height: max(680px, min(80vh, 800px));
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+            background: #f0f4f8;
+        }
+        #dashboardCanvas {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transform-origin: 0 0;
+            transition: transform 0.1s ease;
+            will-change: transform;
+        }
+        #dashboardArea {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* Zoom toast */
+        #zoom-toast {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(8,12,20,0.95);
+            border: 1px solid rgba(123,97,255,0.7);
+            color: #7b61ff;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-size: 12px;
+            letter-spacing: 2px;
+            padding: 6px 20px;
+            border-radius: 20px;
+            z-index: 9000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.25s;
+            box-shadow: 0 0 24px rgba(123,97,255,0.25);
+        }
+        #zoom-toast.visible { opacity: 1; }
+
+        /* --- NEW WIDGET SYSTEM STYLES (Absolute floating panels) --- */
         
         /* Widget Toolbar */
         .widget-toolbar {
@@ -52,6 +127,7 @@
             gap: 10px;
             align-items: center;
             margin-bottom: 5px;
+            flex-shrink: 0;
         }
         .widget-selector {
             padding: 8px;
@@ -72,31 +148,49 @@
         .add-widget-btn:hover { background: #5a9bc4; }
         .add-widget-btn:disabled { background: #ccc; cursor: not-allowed; }
 
-        /* Grid Container */
+        /* Dashboard area - no grid, panels are absolute */
         .widget-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr; /* 2 Column Grid */
-            gap: 15px;
-            align-items: start; /* Prevents stretching height automatically */
+            position: relative;
+            width: 100%;
+            height: 100%;
         }
 
-        /* Individual Widget Card */
+        /* Individual Widget Card - absolute floating panel */
         .widget-card {
+            position: absolute;
             background: white;
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             display: flex;
             flex-direction: column;
-            position: relative;
-            /* Enable Both Vertical and Horizontal Resizing */
-            resize: both; 
             overflow: hidden; 
-            min-height: 250px;
-            height: 400px; /* Default Height */
+            min-height: 200px;
+            min-width: 280px;
             border: 1px solid #e0e0e0;
-            transition: box-shadow 0.2s;
+            transition: box-shadow 0.2s, left 0.3s cubic-bezier(0.34,1.2,0.64,1), top 0.3s cubic-bezier(0.34,1.2,0.64,1), width 0.3s cubic-bezier(0.34,1.2,0.64,1), height 0.3s cubic-bezier(0.34,1.2,0.64,1);
+            z-index: 10;
         }
-        
+        .widget-card.dragging,
+        .widget-card.resizing {
+            transition: box-shadow 0.2s ease !important;
+        }
+        .widget-card.dragging {
+            box-shadow: 0 24px 64px rgba(0,0,0,0.25), 0 0 0 2px var(--dark);
+            z-index: 200;
+            opacity: 0.96;
+        }
+        .widget-card.resizing {
+            box-shadow: 0 24px 64px rgba(0,0,0,0.25), 0 0 0 2px #7b61ff;
+            z-index: 200;
+        }
+        .widget-card.bumped {
+            border: 2px solid #7b61ff;
+            box-shadow: 0 0 0 2px rgba(123,97,255,0.35);
+        }
+        .widget-card.live {
+            transition: box-shadow 0.2s ease !important;
+        }
+
         /* New Sticky Tooltip Style (matches standard Chart.js hover look) */
         .sticky-tooltip {
             position: fixed; 
@@ -138,19 +232,8 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             border-color: #ccc;
         }
-        .widget-card.dragging {
-            opacity: 0.5;
-            border: 2px dashed var(--dark);
-        }
-        .widget-card.drag-over {
-            border: 2px dashed #ff6b6b;
-        }
 
-        /* Sizing Classes for Grid */
-        .span-full { grid-column: span 2; }
-        .span-half { grid-column: span 1; }
-
-        /* Widget Header */
+        /* Widget Header - draggable */
         .widget-header {
             padding: 8px 12px;
             background: #fdfdfd;
@@ -158,7 +241,12 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            cursor: move; /* Implies dragging conceptually */
+            cursor: grab;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        .widget-header:active {
+            cursor: grabbing;
         }
         .widget-title {
             font-weight: bold;
@@ -182,6 +270,71 @@
         .widget-icon-btn:hover { color: #555; }
         .widget-icon-btn.remove:hover { color: red; }
 
+        /* Per-widget series menu (☰) */
+        .widget-menu-btn {
+            width: 22px; height: 22px;
+            border: 1px solid #ddd; border-radius: 4px;
+            background: transparent; color: #666;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 14px; flex-shrink: 0;
+        }
+        .widget-menu-btn:hover { border-color: var(--dark); color: var(--dark); background: rgba(122,184,224,0.1); }
+        .widget-series-menu {
+            position: absolute; top: 42px; right: 10px;
+            background: #fff; border: 1px solid #e0e0e0;
+            border-radius: 8px; padding: 10px; z-index: 500;
+            min-width: 160px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            display: none;
+        }
+        .widget-series-menu.open { display: block; }
+        .widget-series-menu-title {
+            font-size: 10px; letter-spacing: 1px; color: #666;
+            text-transform: uppercase; margin-bottom: 8px;
+            padding-bottom: 6px; border-bottom: 1px solid #eee;
+        }
+        .widget-series-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 5px 4px; cursor: pointer; border-radius: 4px;
+        }
+        .widget-series-item:hover { background: #f5f5f5; }
+        .widget-series-item input[type="checkbox"] {
+            width: 14px; height: 14px; margin: 0; accent-color: var(--dark);
+        }
+
+        /* Edge resize handles */
+        .rh { position: absolute; z-index: 20; }
+        .rh-n { top: -6px; left: 10px; right: 10px; height: 14px; cursor: n-resize; }
+        .rh-s { bottom: -6px; left: 10px; right: 10px; height: 14px; cursor: s-resize; }
+        .rh-e { right: -4px; top: 14px; bottom: 14px; width: 8px; cursor: e-resize; }
+        .rh-w { left: -4px; top: 14px; bottom: 14px; width: 8px; cursor: w-resize; }
+        .rh:hover::after, .rh:active::after {
+            content: ''; position: absolute; inset: 2px;
+            background: rgba(123,97,255,0.4); border-radius: 4px;
+        }
+
+        /* Chart scrollbar (horizontal range when zoomed) */
+        .chart-scrollbar-wrap {
+            padding: 2px 12px 6px;
+            flex-shrink: 0;
+            display: none;
+        }
+        .chart-scrollbar-wrap.visible { display: block; }
+        .chart-scrollbar-wrap input[type="range"] {
+            width: 100%; height: 4px;
+            -webkit-appearance: none; appearance: none;
+            background: rgba(0,0,0,0.08); border-radius: 2px;
+            outline: none; cursor: pointer;
+        }
+        .chart-scrollbar-wrap input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 36px; height: 8px; border-radius: 4px;
+            background: var(--dark); cursor: grab;
+        }
+        .chart-scrollbar-wrap input[type="range"]::-moz-range-thumb {
+            width: 36px; height: 8px; border-radius: 4px;
+            border: none; background: var(--dark); cursor: grab;
+        }
+
         .canvas-container { 
             flex: 1; 
             position: relative; 
@@ -192,6 +345,37 @@
             box-sizing: border-box;
         }
 
+
+        /* Horizontal resize handle between chart area and Edit Visit Details - easy to grab */
+        .chart-area-resize-handle {
+            height: 18px;
+            flex-shrink: 0;
+            cursor: row-resize;
+            background: #f4f8fb;
+            border-top: 2px dashed #c0c8d0;
+            border-bottom: 1px solid #e8ecef;
+            margin-top: 6px;
+            position: relative;
+            user-select: none;
+            transition: background 0.15s, border-color 0.15s;
+            z-index: 150;
+            pointer-events: auto;
+        }
+        .chart-area-resize-handle:hover,
+        .chart-area-resize-handle:active {
+            background: #e8eef5;
+            border-top-color: var(--dark);
+        }
+        .chart-area-resize-handle::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            height: 2px;
+            width: 40px;
+            background: repeating-linear-gradient(to right, #aaa 0, #aaa 3px, transparent 3px, transparent 6px);
+        }
 
         /* WORKFLOW INPUTS (Separate Section) */
         .form-section-separator {
@@ -240,17 +424,43 @@
         .pop-close { cursor: pointer; font-size: 16px; color: #999; }
         .pop-close:hover { color: red; }
 
-        /* Chart top bar: avoid squished controls */
+        /* Chart top bar: layout as per design - two rows, grouped */
         .chart-controls-container {
             display: flex;
-            justify-content: space-between;
+            flex-wrap: wrap;
             align-items: center;
-            padding: 10px;
-            margin-bottom: 20px;
+            gap: 12px 20px;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+            background: #fff;
+            border: 1px solid #e8ecef;
+            border-radius: 8px;
         }
-        .zoom-control select {
+        .chart-controls-container .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .chart-controls-container .toolbar-group.toolbar-group-zoom {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .chart-controls-container .toolbar-group-spacer {
+            margin-left: auto;
+        }
+        .chart-controls-container select.zoom-control,
+        .chart-controls-container .widget-selector {
             min-width: 150px;
-            padding: 5px;
+            padding: 6px 8px;
+            border-radius: 4px;
+        }
+        .chart-controls-container select.zoom-control {
+            border: 1px dashed #7ab8e0;
+            background: #fff;
+        }
+        .chart-controls-container .btn-download {
+            margin-left: auto;
         }
 
         /* Toggle Switch Styles */
@@ -279,6 +489,18 @@
         body.dark-mode .widget-icon-btn { color: #bbb; }
         body.dark-mode .form-section-separator { border-top-color: #444; }
         body.dark-mode .widget-header { background-color: #2a2a2a; border-bottom-color: #444; }
+        body.dark-mode .dashboard-wrapper { background-color: #1a1a1a; }
+        body.dark-mode .sidebar-resize-handle { background: #1e1e1e; border-left-color: #444; border-right-color: #333; }
+        body.dark-mode .sidebar-resize-handle:hover,
+        body.dark-mode .sidebar-resize-handle:active { background: #2a2a2a; border-left-color: var(--dark); }
+        body.dark-mode .sidebar-resize-handle::after { background: repeating-linear-gradient(to bottom, #555 0, #555 3px, transparent 3px, transparent 6px); }
+        body.dark-mode .chart-area-resize-handle { background: #1e1e1e; border-top-color: #444; border-bottom-color: #333; }
+        body.dark-mode .chart-area-resize-handle:hover,
+        body.dark-mode .chart-area-resize-handle:active { background: #2a2a2a; border-top-color: var(--dark); }
+        body.dark-mode .chart-area-resize-handle::after { background: repeating-linear-gradient(to right, #555 0, #555 3px, transparent 3px, transparent 6px); }
+        body.dark-mode .widget-series-menu { background-color: #2a2a2a; border-color: #444; }
+        body.dark-mode .widget-series-item:hover { background-color: #333; }
+        body.dark-mode .widget-menu-btn { border-color: #555; color: #bbb; }
         body.dark-mode .unified-item .color-dot { background: white !important; }
         body.dark-mode #darkModeToggleBtn { background: white !important; color: black !important; }
     </style>
@@ -435,27 +657,24 @@
         {% endif %}
     </div>
 </div>
-
+<div id="sidebarResizeHandle" class="sidebar-resize-handle" title="Drag to resize sidebar"></div>
 <div class="main-content">
     
     <div class="widget-toolbar chart-controls-container">
-        <div style="display: flex; gap: 10px; flex-wrap: nowrap; align-items: center;">
-            <div style="display: flex; gap: 5px;">
-                <select id="widgetSelector" class="widget-selector" style="min-width: 150px;">
-                    <option value="" disabled selected>Insert chart...</option>
-                </select>
-                <button onclick="addSelectedWidget()" class="add-widget-btn">Add</button>
-            </div>
-            <div style="display: flex; gap: 5px; padding-left: 10px;">
-                <select id="removeWidgetSelector" class="widget-selector" style="min-width: 150px;">
-                    <option value="" disabled selected>Remove chart...</option>
-                </select>
-                <button onclick="removeSelectedWidget()" class="add-widget-btn" style="background: #f5576c;">Remove</button>
-            </div>
+        <div class="toolbar-group">
+            <select id="widgetSelector" class="widget-selector" style="min-width: 150px;">
+                <option value="" disabled selected>Insert chart...</option>
+            </select>
+            <button onclick="addSelectedWidget()" class="add-widget-btn">Add</button>
         </div>
-
-        <div class="zoom-control" style="display: flex; align-items: center; gap: 10px; margin-left: auto; margin-right: 10px;">
-            <select id="zoomSelect" onchange="handleZoomSelect(this.value)" class="btn btn-sm" style="background: white; border: 1px dashed #7ab8e0; color: #333; margin: 0;">
+        <div class="toolbar-group">
+            <select id="removeWidgetSelector" class="widget-selector" style="min-width: 150px;">
+                <option value="" disabled selected>Remove chart...</option>
+            </select>
+            <button onclick="removeSelectedWidget()" class="add-widget-btn" style="background: #f5576c;">Remove</button>
+        </div>
+        <div class="toolbar-group toolbar-group-zoom">
+            <select id="zoomSelect" onchange="handleZoomSelect(this.value)" class="btn btn-sm zoom-control" style="background: white; color: #333; margin: 0;">
                 <option value="">Zoom View...</option>
                 <option value="all">Show All (Reset)</option>
                 <option value="week">Week-wise</option>
@@ -468,14 +687,29 @@
                 <input type="date" id="zoomEnd" class="btn btn-sm" style="background:white; border:1px solid #ccc; padding:4px; margin:0;">
                 <button class="btn btn-sm" onclick="applyCustomZoom()" style="background:#7ab8e0; color:white; margin:0;">Go</button>
             </div>
+            <label class="scrollbar-toggle-lc" style="display:flex; align-items:center; gap:6px; font-size:12px; color:#555; cursor:pointer; user-select:none;">
+                <input type="checkbox" id="scrollbarToggleLC" onchange="toggleChartScrollbars(this.checked)">
+                <span>Scrollbar</span>
+            </label>
         </div>
-        <button onclick="openDownloadModal()" class="btn" style="padding: 5px 10px; font-size: 13px; height: 30px; background: #555; color: white;">Download</button>
+        <div class="toolbar-group">
+            <button type="button" onclick="resetLayout()" class="add-widget-btn" style="background: #555;">⊞ Layout</button>
+        </div>
+        <div class="toolbar-group toolbar-group-spacer"></div>
+        <div class="toolbar-group">
+            <button onclick="openDownloadModal()" class="btn btn-download" style="padding: 6px 14px; font-size: 13px; height: 32px; background: #555; color: white;">Download</button>
+        </div>
     </div>
 
-    <div id="dashboardArea" class="widget-grid">
+    <div class="dashboard-wrapper" id="dashboardWrapperEl">
+        <div id="dashboardCanvas">
+            <div id="dashboardArea" class="widget-grid"></div>
         </div>
+    </div>
+    <div id="zoom-toast">ZOOM 100%</div>
 
     {% if request.args.get('view_only') != '1' %}
+    <div id="chartAreaResizeHandle" class="chart-area-resize-handle" title="Drag to resize chart area"></div>
     <div class="form-section-separator"></div>
 
     <div class="workflow-card">
@@ -789,8 +1023,13 @@
             responsive: true, maintainAspectRatio: false, 
             layout: { padding: { top: 45 } }, 
             scales: {
-                x: { type: 'time', time: { unit: 'day' }, title: { display: true, text: 'Date' } },
-                y: { beginAtZero: true, min: 0, title: { display: true, text: 'Score' }, grace: '10%' } 
+                x: {
+                    type: 'time',
+                    time: { unit: 'day' },
+                    title: { display: true, text: 'Date', padding: { top: 4, bottom: 2 } },
+                    ticks: { maxTicksLimit: 10, autoSkip: true }
+                },
+                y: { beginAtZero: true, min: 0, title: { display: true, text: 'Score' }, grace: '10%' }
             },
             plugins: {
                 zoom: {
@@ -1035,13 +1274,120 @@
         widgetConfig['scale'] = { title: 'Scale Assessments', chartId: 'chartScale', createData: () => ({ sets: rawData.scale, unified: rawData.scaleUnified }) };
     }
 
-    // Initial Layout Order (Scale is NOT added here; use master toggle to show/hide)
+    // Initial Layout Order (positions set by buildGrid; scale added when toggled)
     const initialLayout = [
-        { key: 'symptoms', width: 'span-full' },
-        { key: 'meds', width: 'span-half' },
-        { key: 'se', width: 'span-half' },
-        { key: 'mse', width: 'span-full' }
+        { key: 'symptoms' },
+        { key: 'meds' },
+        { key: 'se' },
+        { key: 'mse' }
     ];
+
+    // Layout map: key -> { x, y, w, h } for absolute positioning
+    let layoutMap = {};
+    const LAYOUT_PAD = 14;
+    const MIN_PANEL_W = 280;
+    const MIN_PANEL_H = 200;
+
+    function buildGrid() {
+        const wrapper = document.querySelector('.dashboard-wrapper');
+        const w = wrapper ? wrapper.clientWidth : window.innerWidth - 310;
+        const h = wrapper ? wrapper.clientHeight : window.innerHeight - 120;
+        const keys = [...initialLayout.map(i => i.key)];
+        if (typeof rawData !== 'undefined' && rawData.scale && rawData.scale.length > 0) keys.push('scale');
+        const cols = 2;
+        const rows = Math.ceil(keys.length / cols) || 1;
+        const cellW = Math.max(MIN_PANEL_W, Math.floor((w - LAYOUT_PAD * (cols + 1)) / cols));
+        const totalPad = LAYOUT_PAD * (rows + 1);
+        const availableH = h - totalPad;
+        var rowHeights = [];
+        if (rows >= 2 && keys.length >= 2) {
+            var firstRowH = Math.max(320, Math.floor(availableH * 0.52));
+            var restH = availableH - firstRowH;
+            var restRows = rows - 1;
+            var otherRowH = Math.max(MIN_PANEL_H, Math.floor(restH / restRows));
+            rowHeights = [firstRowH].concat(Array(restRows).fill(otherRowH));
+        } else {
+            var cellH = Math.max(MIN_PANEL_H, Math.floor(availableH / rows));
+            rowHeights = Array(rows).fill(cellH);
+        }
+        keys.forEach((key, i) => {
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            const cellH = rowHeights[row] || MIN_PANEL_H;
+            const y = LAYOUT_PAD + rowHeights.slice(0, row).reduce(function(a, b) { return a + b; }, 0) + row * LAYOUT_PAD;
+            layoutMap[key] = {
+                x: LAYOUT_PAD + col * (cellW + LAYOUT_PAD),
+                y: y,
+                w: cellW,
+                h: cellH
+            };
+        });
+    }
+
+    // Collision helpers (DataLab-style)
+    const GAP = 10;
+    function getRect(el) {
+        return { l: el.offsetLeft, t: el.offsetTop, r: el.offsetLeft + el.offsetWidth, b: el.offsetTop + el.offsetHeight, w: el.offsetWidth, h: el.offsetHeight };
+    }
+    function overlaps(a, b) {
+        return !(a.r + GAP <= b.l || b.r + GAP <= a.l || a.b + GAP <= b.t || b.b + GAP <= a.t);
+    }
+    function bump(el) {
+        el.classList.add('bumped');
+        setTimeout(() => el.classList.remove('bumped'), 700);
+    }
+    function resolveCollisions(mover) {
+        const area = document.getElementById('dashboardArea');
+        if (!area) return;
+        const vw = area.offsetWidth;
+        const vh = area.offsetHeight;
+        const allPanels = Array.from(area.querySelectorAll('.widget-card'));
+        for (let pass = 0; pass < 10; pass++) {
+            let anyMoved = false;
+            const mRect = getRect(mover);
+            allPanels.forEach(other => {
+                if (other === mover) return;
+                const oRect = getRect(other);
+                if (!overlaps(mRect, oRect)) return;
+                bump(other);
+                const pushR = mRect.r - oRect.l + GAP, pushL = oRect.r - mRect.l + GAP;
+                const pushD = mRect.b - oRect.t + GAP, pushU = oRect.b - mRect.t + GAP;
+                const min = Math.min(pushR, pushL, pushD, pushU);
+                let nl = oRect.l, nt = oRect.t;
+                if (min === pushR) nl = mRect.r + GAP; else if (min === pushL) nl = mRect.l - oRect.w - GAP;
+                else if (min === pushD) nt = mRect.b + GAP; else nt = mRect.t - oRect.h - GAP;
+                nl = Math.max(0, Math.min(vw - oRect.w, nl));
+                nt = Math.max(0, Math.min(vh - oRect.h, nt));
+                other.style.left = nl + 'px'; other.style.top = nt + 'px';
+                anyMoved = true;
+            });
+            if (!anyMoved) break;
+        }
+        setTimeout(() => Object.keys(charts).forEach(k => { if (charts[k]) charts[k].resize(); }), 350);
+    }
+
+    // Canvas zoom state
+    let currentZoom = 1;
+    const ZOOM_MIN = 0.3, ZOOM_MAX = 2.5, ZOOM_STEP = 0.08;
+    let zoomToastTimer = null;
+    function applyCanvasZoom(zoom, animate) {
+        currentZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom));
+        const canvas = document.getElementById('dashboardCanvas');
+        if (canvas) {
+            if (!animate) canvas.style.transition = 'none';
+            canvas.style.transform = 'scale(' + currentZoom + ')';
+            if (!animate) requestAnimationFrame(() => { canvas.style.transition = 'transform 0.1s ease'; });
+        }
+        const pct = Math.round(currentZoom * 100);
+        const toast = document.getElementById('zoom-toast');
+        if (toast) {
+            toast.textContent = 'ZOOM  ' + pct + '%';
+            toast.classList.add('visible');
+            clearTimeout(zoomToastTimer);
+            zoomToastTimer = setTimeout(() => toast.classList.remove('visible'), 1200);
+        }
+        setTimeout(() => Object.keys(charts).forEach(k => { if (charts[k]) charts[k].resize(); }), 150);
+    }
 
     function toggleDarkMode() {
         const isDark = document.body.classList.toggle('dark-mode');
@@ -1071,7 +1417,27 @@
         if (toggle.checked) {
             if (sidebarGroup) sidebarGroup.style.display = 'block';
             if (rawData.scale && rawData.scale.length > 0) {
-                addWidgetToDOM('scale', 'span-full');
+                addWidgetToDOM('scale');
+                var wrapper = document.getElementById('dashboardWrapperEl');
+                if (wrapper) {
+                    var neededH = 3 * MIN_PANEL_H + 4 * LAYOUT_PAD;
+                    if (wrapper.offsetHeight < neededH) {
+                        wrapper.style.flex = '0 0 auto';
+                        wrapper.style.height = neededH + 'px';
+                        buildGrid();
+                        var scalePanel = document.getElementById('widget-scale');
+                        if (scalePanel && layoutMap['scale']) {
+                            var pos = layoutMap['scale'];
+                            scalePanel.style.left = pos.x + 'px';
+                            scalePanel.style.top = pos.y + 'px';
+                            scalePanel.style.width = pos.w + 'px';
+                            scalePanel.style.height = pos.h + 'px';
+                        }
+                        setTimeout(function() {
+                            Object.keys(charts).forEach(function(k) { if (charts[k]) charts[k].resize(); });
+                        }, 80);
+                    }
+                }
             }
         } else {
             if (sidebarGroup) sidebarGroup.style.display = 'none';
@@ -1083,129 +1449,205 @@
 
     // --- WIDGET LOGIC ---
 
+    // Panel registry for collision/drag (key -> { panel, menuEl, sbWrap })
+    const widgetPanels = {};
+
     function initDashboard() {
+        buildGrid();
         const area = document.getElementById('dashboardArea');
-        area.innerHTML = ''; // Clear
+        if (!area) return;
+        area.innerHTML = '';
         activeWidgets = [];
 
         initialLayout.forEach(item => {
-            addWidgetToDOM(item.key, item.width);
+            addWidgetToDOM(item.key);
         });
 
         updateWidgetDropdown();
     }
 
-    function addWidgetToDOM(key, widthClass = 'span-full') {
-        if (activeWidgets.includes(key)) return; // Prevent duplicates
+    function addWidgetToDOM(key) {
+        if (activeWidgets.includes(key)) return;
 
         const config = widgetConfig[key];
         const area = document.getElementById('dashboardArea');
-        
-        // Create HTML Structure
-        const div = document.createElement('div');
-        div.className = `widget-card ${widthClass}`;
-        div.id = `widget-${key}`;
-        // Note: We DO NOT set draggable='true' here anymore. It blocks the canvas.
+        if (!area) return;
 
-        div.innerHTML = `
-            <div class="widget-header">
-                <span class="widget-title">${config.title}</span>
-                <div class="widget-controls">
-                    <button class="widget-icon-btn" onclick="toggleWidgetWidth('${key}')" title="Toggle Width">⇲</button>
-                    <button class="widget-icon-btn remove" onclick="removeWidget('${key}')" title="Remove">✕</button>
-                </div>
-            </div>
-            <div class="canvas-container">
-                <canvas id="${config.chartId}"></canvas>
+        const pos = layoutMap[key] || { x: 20, y: 20, w: 400, h: 300 };
+
+        const div = document.createElement('div');
+        div.className = 'widget-card';
+        div.id = 'widget-' + key;
+        div.style.left = pos.x + 'px';
+        div.style.top = pos.y + 'px';
+        div.style.width = pos.w + 'px';
+        div.style.height = pos.h + 'px';
+
+        ['n','s','e','w'].forEach(d => {
+            const h = document.createElement('div');
+            h.className = 'rh rh-' + d;
+            h.dataset.dir = d;
+            div.appendChild(h);
+        });
+
+        const header = document.createElement('div');
+        header.className = 'widget-header';
+        header.innerHTML = `
+            <span class="widget-title">${config.title}</span>
+            <div class="widget-controls">
+                <button type="button" class="widget-menu-btn" title="Series">&#9776;</button>
+                <button class="widget-icon-btn remove" onclick="removeWidget('${key}')" title="Remove">&#10005;</button>
             </div>
         `;
 
-        // --- NEW DRAG HANDLE LOGIC ---
-        // Only allow the HTML5 drag API to activate when grabbing the header
-        const header = div.querySelector('.widget-header');
-        header.addEventListener('mousedown', () => div.setAttribute('draggable', 'true'));
-        header.addEventListener('mouseup', () => div.setAttribute('draggable', 'false'));
-        header.addEventListener('mouseleave', () => div.setAttribute('draggable', 'false'));
+        const menuEl = document.createElement('div');
+        menuEl.className = 'widget-series-menu';
+        menuEl.innerHTML = '<div class="widget-series-menu-title">Series</div>';
 
-        // Add Drag and Drop Event Listeners
-        div.addEventListener('dragstart', handleDragStart);
-        div.addEventListener('dragenter', handleDragEnter);
-        div.addEventListener('dragover', handleDragOver);
-        div.addEventListener('dragleave', handleDragLeave);
-        div.addEventListener('drop', handleDrop);
-        div.addEventListener('dragend', handleDragEnd);
+        const canvasContainer = document.createElement('div');
+        canvasContainer.className = 'canvas-container';
+        canvasContainer.innerHTML = '<canvas id="' + config.chartId + '"></canvas>';
 
+        const sbWrap = document.createElement('div');
+        sbWrap.className = 'chart-scrollbar-wrap';
+        const sbRange = document.createElement('input');
+        sbRange.type = 'range';
+        sbRange.min = 0;
+        sbRange.step = 1;
+        sbWrap.appendChild(sbRange);
+
+        div.append(header, menuEl, canvasContainer, sbWrap);
         area.appendChild(div);
         activeWidgets.push(key);
+        widgetPanels[key] = { panel: div, menuEl, sbWrap, sbRange };
 
-        // Initialize Chart.js instance
         const dataObj = config.createData();
         initChartInstance(key, config.chartId, dataObj.sets, dataObj.unified);
+
+        // Populate per-chart series menu
+        const chart = charts[key];
+        if (chart && chart.data && chart.data.datasets) {
+            menuEl.innerHTML = '<div class="widget-series-menu-title">Series</div>';
+            chart.data.datasets.forEach((ds, i) => {
+                const item = document.createElement('label');
+                item.className = 'widget-series-item';
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.checked = !ds.hidden;
+                cb.dataset.dsIndex = i;
+                const color = ds.borderColor || '#666';
+                item.innerHTML = '<span style="width:10px;height:10px;border-radius:2px;background:' + color + ';"></span> ';
+                item.appendChild(cb);
+                item.appendChild(document.createTextNode(ds.label || 'Series ' + (i + 1)));
+                cb.addEventListener('change', () => {
+                    chart.setDatasetVisibility(i, cb.checked);
+                    chart.update();
+                });
+                menuEl.appendChild(item);
+            });
+        }
+
+        header.querySelector('.widget-menu-btn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            document.querySelectorAll('.widget-series-menu.open').forEach(m => { if (m !== menuEl) m.classList.remove('open'); });
+            menuEl.classList.toggle('open');
+        });
+
+        // --- Drag: mousedown on header (delta-based for 1:1 cursor follow) ---
+        header.addEventListener('mousedown', function(e) {
+            if (e.target.closest('.widget-menu-btn') || e.target.closest('.widget-icon-btn')) return;
+            e.preventDefault();
+            var startClientX = e.clientX;
+            var startClientY = e.clientY;
+            var startLeft = div.offsetLeft;
+            var startTop = div.offsetTop;
+            var areaEl = document.getElementById('dashboardArea');
+            var maxL = areaEl ? Math.max(0, areaEl.offsetWidth - div.offsetWidth) : 1e4;
+            var maxT = areaEl ? Math.max(0, areaEl.offsetHeight - div.offsetHeight) : 1e4;
+            div.classList.add('dragging', 'live');
+            div.style.zIndex = 200;
+
+            const onMove = function(ev) {
+                var deltaX = (ev.clientX - startClientX) / currentZoom;
+                var deltaY = (ev.clientY - startClientY) / currentZoom;
+                var nl = Math.max(0, Math.min(maxL, startLeft + deltaX));
+                var nt = Math.max(0, Math.min(maxT, startTop + deltaY));
+                div.style.left = nl + 'px';
+                div.style.top = nt + 'px';
+            };
+            const onUp = function() {
+                div.classList.remove('dragging', 'live');
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                resolveCollisions(div);
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
+
+        // --- Resize handles (clamped to dashboard area so panels stay fully visible) ---
+        div.querySelectorAll('.rh').forEach(rh => {
+            rh.addEventListener('mousedown', function(e) {
+                e.stopPropagation(); e.preventDefault();
+                const dir = rh.dataset.dir;
+                const canvasEl = document.getElementById('dashboardCanvas');
+                const areaEl = document.getElementById('dashboardArea');
+                const cr = canvasEl ? canvasEl.getBoundingClientRect() : { left: 0, top: 0 };
+                const sx = (e.clientX - cr.left) / currentZoom, sy = (e.clientY - cr.top) / currentZoom;
+                const sw = div.offsetWidth, sh = div.offsetHeight, sl = div.offsetLeft, st = div.offsetTop;
+                div.classList.add('resizing', 'live');
+                div.style.zIndex = 200;
+
+                const onMove = function(ev) {
+                    const cr2 = canvasEl ? canvasEl.getBoundingClientRect() : { left: 0, top: 0 };
+                    const dx = (ev.clientX - cr2.left) / currentZoom - sx;
+                    const dy = (ev.clientY - cr2.top) / currentZoom - sy;
+                    const cw = areaEl ? areaEl.offsetWidth : 2000;
+                    const ch = areaEl ? areaEl.offsetHeight : 1200;
+                    let w = sw, h = sh, l = sl, t = st;
+                    if (dir === 'e') w = Math.max(MIN_PANEL_W, sw + dx);
+                    if (dir === 'w') { w = Math.max(MIN_PANEL_W, sw - dx); l = sl + (sw - w); }
+                    if (dir === 's') h = Math.max(MIN_PANEL_H, sh + dy);
+                    if (dir === 'n') { h = Math.max(MIN_PANEL_H, sh - dy); t = st + (sh - h); }
+                    l = Math.max(0, Math.min(l, cw - MIN_PANEL_W));
+                    t = Math.max(0, Math.min(t, ch - MIN_PANEL_H));
+                    w = Math.max(MIN_PANEL_W, Math.min(w, cw - l));
+                    h = Math.max(MIN_PANEL_H, Math.min(h, ch - t));
+                    div.style.left = l + 'px'; div.style.top = t + 'px';
+                    div.style.width = w + 'px'; div.style.height = h + 'px';
+                    if (charts[key]) charts[key].resize();
+                };
+                const onUp = function() {
+                    div.classList.remove('resizing', 'live');
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                    if (charts[key]) charts[key].resize();
+                    resolveCollisions(div);
+                };
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+            });
+        });
+
+        div.addEventListener('mousedown', function() {
+            if (!div.classList.contains('dragging') && !div.classList.contains('resizing')) {
+                div.style.zIndex = Math.max(200, parseInt(div.style.zIndex || 10, 10) + 1);
+            }
+        });
+
         updateWidgetDropdown();
     }
 
-    // --- DRAG AND DROP LOGIC ---
-    let draggedWidget = null;
-
-    function handleDragStart(e) {
-        draggedWidget = this;
-        e.dataTransfer.effectAllowed = 'move';
-        setTimeout(() => this.classList.add('dragging'), 0);
-    }
-
-    function handleDragOver(e) {
-        e.preventDefault(); // Necessary to allow dropping
-        e.dataTransfer.dropEffect = 'move';
-        return false;
-    }
-
-    function handleDragEnter(e) {
-        e.preventDefault();
-        if (this !== draggedWidget) {
-            this.classList.add('drag-over');
-        }
-    }
-
-    function handleDragLeave(e) {
-        this.classList.remove('drag-over');
-    }
-
-    function handleDrop(e) {
-        e.stopPropagation();
-        this.classList.remove('drag-over');
-        
-        if (draggedWidget !== this && draggedWidget) {
-            const grid = document.getElementById('dashboardArea');
-            const allWidgets = Array.from(grid.children);
-            const draggedIndex = allWidgets.indexOf(draggedWidget);
-            const droppedIndex = allWidgets.indexOf(this);
-
-            // Reorder nodes in the DOM
-            if (draggedIndex < droppedIndex) {
-                this.parentNode.insertBefore(draggedWidget, this.nextSibling);
-            } else {
-                this.parentNode.insertBefore(draggedWidget, this);
-            }
-        }
-        return false;
-    }
-
-    function handleDragEnd(e) {
-        this.classList.remove('dragging');
-        this.setAttribute('draggable', 'false'); // Reset the state after drop
-        document.querySelectorAll('.widget-card').forEach(c => c.classList.remove('drag-over'));
-    }
-
     function removeWidget(key) {
-        const el = document.getElementById(`widget-${key}`);
-        if(el) {
-            // Destroy chart instance to free memory
-            if(charts[key]) {
+        const el = document.getElementById('widget-' + key);
+        if (el) {
+            if (charts[key]) {
                 charts[key].destroy();
                 delete charts[key];
             }
             el.remove();
             activeWidgets = activeWidgets.filter(k => k !== key);
+            delete widgetPanels[key];
             updateWidgetDropdown();
         }
     }
@@ -1213,22 +1655,32 @@
     function addSelectedWidget() {
         const sel = document.getElementById('widgetSelector');
         const key = sel.value;
-        if(key) {
-            // Default new widgets to full width
-            addWidgetToDOM(key, 'span-full');
-            sel.value = "";
+        if (key) {
+            addWidgetToDOM(key);
+            sel.value = '';
         }
     }
 
-    function toggleWidgetWidth(key) {
-        const el = document.getElementById(`widget-${key}`);
-        if (el.classList.contains('span-full')) {
-            el.classList.replace('span-full', 'span-half');
-        } else {
-            el.classList.replace('span-half', 'span-full');
-        }
-        // Chart needs to know resize happened
-        if(charts[key]) charts[key].resize();
+    function resetLayout() {
+        buildGrid();
+        Object.keys(widgetPanels).forEach(key => {
+            const pos = layoutMap[key];
+            const p = widgetPanels[key];
+            if (pos && p && p.panel) {
+                p.panel.style.left = pos.x + 'px';
+                p.panel.style.top = pos.y + 'px';
+                p.panel.style.width = pos.w + 'px';
+                p.panel.style.height = pos.h + 'px';
+                if (charts[key]) charts[key].resize();
+            }
+        });
+    }
+
+    function toggleChartScrollbars(show) {
+        Object.keys(widgetPanels).forEach(key => {
+            const p = widgetPanels[key];
+            if (p && p.sbWrap) p.sbWrap.classList.toggle('visible', !!show);
+        });
     }
 
     function updateWidgetDropdown() {
@@ -1331,13 +1783,13 @@
             activeSubsCount = [...new Set((rawData.substances || []).map(s => s.substance))].length;
         }
         
-        // Calculate required pixel padding to fit all active strips below the graph
-        const freeZoneHeight = (key === 'symptoms') ? (35 + (activeSubsCount * 22)) : 5;
+        // Calculate required pixel padding for X-axis (room for "Date" label + bands below)
+        const freeZoneHeight = (key === 'symptoms') ? (52 + (activeSubsCount * 22)) : (key === 'meds') ? 48 : 5;
 
         // Fetch a fresh, isolated copy of the options and safely apply custom limits
         const chartOptions = getCommonOptions();
         chartOptions.scales.y.max = maxY;
-        chartOptions.scales.x.ticks = { padding: freeZoneHeight };
+        chartOptions.scales.x.ticks = Object.assign({}, chartOptions.scales.x.ticks || {}, { padding: freeZoneHeight });
 
         const ctx = document.getElementById(ctxId);
         if (!ctx) return;
@@ -1485,6 +1937,130 @@
             }
         });
     }
+
+    // --- Canvas zoom (Alt+scroll) ---
+    const dw = document.querySelector('.dashboard-wrapper');
+    if (dw) {
+        dw.addEventListener('wheel', function(e) {
+            if (!e.altKey) return;
+            e.preventDefault();
+            const dir = e.deltaY > 0 ? -1 : 1;
+            applyCanvasZoom(currentZoom + dir * ZOOM_STEP, false);
+        }, { passive: false });
+    }
+    document.addEventListener('keydown', function(e) {
+        if (e.altKey && e.key === '0') { e.preventDefault(); applyCanvasZoom(1); }
+        if (e.altKey && (e.key === '=' || e.key === '+')) { e.preventDefault(); applyCanvasZoom(currentZoom + ZOOM_STEP); }
+        if (e.altKey && e.key === '-') { e.preventDefault(); applyCanvasZoom(currentZoom - ZOOM_STEP); }
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.widget-series-menu') && !e.target.closest('.widget-menu-btn')) {
+            document.querySelectorAll('.widget-series-menu.open').forEach(m => m.classList.remove('open'));
+        }
+    });
+
+    window.addEventListener('resize', function() { buildGrid(); });
+
+    // Resizable sidebar: drag the divider to enlarge/shrink the chart area
+    (function() {
+        const handle = document.getElementById('sidebarResizeHandle');
+        const sidebar = document.querySelector('.sidebar');
+        if (!handle || !sidebar) return;
+        const MIN_SIDEBAR = 200;
+        const MAX_SIDEBAR = 480;
+        const STORAGE_KEY = 'lifechart_sidebar_width';
+        let startX = 0, startW = 0;
+        function getSidebarWidth() {
+            const w = sidebar.offsetWidth;
+            return isNaN(w) ? 280 : w;
+        }
+        function setSidebarWidth(px) {
+            const w = Math.max(MIN_SIDEBAR, Math.min(MAX_SIDEBAR, px));
+            sidebar.style.width = w + 'px';
+            try { localStorage.setItem(STORAGE_KEY, String(w)); } catch (e) {}
+            if (typeof buildGrid === 'function') buildGrid();
+            setTimeout(function() {
+                Object.keys(typeof charts !== 'undefined' ? charts : {}).forEach(function(k) {
+                    if (charts[k]) charts[k].resize();
+                });
+            }, 50);
+        }
+        try {
+            const saved = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+            if (!isNaN(saved)) setSidebarWidth(saved);
+        } catch (e) {}
+        handle.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            startX = e.clientX;
+            startW = getSidebarWidth();
+            function onMove(ev) {
+                setSidebarWidth(startW + (ev.clientX - startX));
+            }
+            function onUp() {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+            }
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
+    })();
+
+    // Resizable chart area height: drag the horizontal handle (dotted line) — indefinitely extensible
+    (function() {
+        function initChartAreaResize() {
+            var handle = document.getElementById('chartAreaResizeHandle');
+            var wrapper = document.getElementById('dashboardWrapperEl');
+            if (!handle || !wrapper) return;
+            var MIN_CHART_H = 80;
+            var STORAGE_KEY = 'lifechart_chart_area_height';
+            var startY = 0, startH = 0;
+            function setChartAreaHeight(px) {
+                var h = Math.max(MIN_CHART_H, px);
+                wrapper.style.minHeight = '0';
+                wrapper.style.flex = '0 0 auto';
+                wrapper.style.height = h + 'px';
+                try { localStorage.setItem(STORAGE_KEY, String(h)); } catch (e) {}
+                if (typeof buildGrid === 'function') buildGrid();
+                setTimeout(function() {
+                    if (typeof charts !== 'undefined') {
+                        Object.keys(charts).forEach(function(k) {
+                            if (charts[k]) charts[k].resize();
+                        });
+                    }
+                }, 50);
+            }
+            try {
+                var saved = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+                if (!isNaN(saved) && saved >= MIN_CHART_H) setChartAreaHeight(saved);
+            } catch (e) {}
+            handle.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                startY = e.clientY;
+                startH = wrapper.offsetHeight;
+                document.body.style.cursor = 'row-resize';
+                document.body.style.userSelect = 'none';
+                function onMove(ev) {
+                    ev.preventDefault();
+                    setChartAreaHeight(startH + (ev.clientY - startY));
+                }
+                function onUp() {
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                }
+                document.addEventListener('mousemove', onMove, { passive: false });
+                document.addEventListener('mouseup', onUp);
+            });
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initChartAreaResize);
+        } else {
+            initChartAreaResize();
+        }
+    })();
 
     // --- SIDEBAR TOGGLES (Updated to check chart existence) ---
     function toggleUnified(type) {

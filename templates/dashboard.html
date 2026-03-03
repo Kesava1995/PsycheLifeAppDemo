@@ -509,14 +509,14 @@
                     <option value="F">Female</option>
                     <option value="Other">Other</option>
                 </select>
-                <select name="appt_type" class="form-control" onchange="document.getElementById('add-appt-duration-hidden').value = this.options[this.selectedIndex].getAttribute('data-duration'); refreshSlotsForModal();">
+                <select name="appt_type" class="form-control" onchange="document.querySelector('input[name=\'appt_duration\']').value = this.options[this.selectedIndex].getAttribute('data-duration'); if(typeof refreshSlotsForModal === 'function') refreshSlotsForModal();">
                     <option value="New Registration" data-duration="45">New Registration (45 Mins)</option>
                     <option value="Extended Follow-up" data-duration="30">Extended Follow-up (30 Mins)</option>
                     <option value="Follow-up" data-duration="15" selected>Follow-up (15 Mins)</option>
                     <option value="Therapy Session" data-duration="45">Therapy Session (45 Mins)</option>
                     <option value="Review/Report Discussion" data-duration="10">Review/Report Discussion (10 Mins)</option>
                 </select>
-                <input type="hidden" name="appt_duration" id="add-appt-duration-hidden" value="15">
+                <input type="hidden" name="appt_duration" value="15">
                 <button type="submit" class="button" id="add-appointment-btn">
                     <span id="add-btn-spinner" class="hidden spinner"></span>
                     <span id="add-btn-text">Schedule</span>
@@ -649,7 +649,7 @@ function updateAppointmentFormState(availableSlots) {
 
 function refreshSlotsForModal() {
     var dateInput = document.getElementById('appt-date-input');
-    var durationInput = document.getElementById('add-appt-duration-hidden');
+    var durationInput = document.querySelector('input[name="appt_duration"]');
 
     var dateStr = dateInput ? dateInput.value : targetDateForSlots;
     var duration = durationInput ? parseInt(durationInput.value, 10) : 15;
@@ -809,7 +809,7 @@ if (appointmentsTable) {
                         appointmentsForDay = dayData;
                         var parsed = parsedAppointmentsForDate(targetDateForSlots);
                         var dur = 15;
-                        var durationHidden = document.getElementById('add-appt-duration-hidden');
+                        var durationHidden = document.querySelector('input[name="appt_duration"]');
                         if (durationHidden && durationHidden.value) dur = parseInt(durationHidden.value, 10);
                         updateAppointmentFormState(getAvailableSlots(parsed, [{start: "09:00", end: "17:00"}, {start: "17:00", end: "22:00"}], dur, targetDateForSlots));
                         showToast('Appointment deleted.');

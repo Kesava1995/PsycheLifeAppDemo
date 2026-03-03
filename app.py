@@ -15,7 +15,7 @@ def get_ist_now():
     return datetime.utcnow() + timedelta(hours=5, minutes=30)
 
 
-from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry, ScaleAssessment, Appointment, DashboardNote, Notification
+from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry, ScaleAssessment, Appointment, DashboardNote, Notification, ScheduleTemplate
 from medical_utils import get_unified_dose, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency, process_scale_submission
 import io
 import os
@@ -524,6 +524,16 @@ def profile():
         doctor.email = request.form.get('email', '').strip()
         
         doctor.social_handle = request.form.get('social_handle', '').strip()
+
+        # Active appointment template
+        active_template = request.form.get('active_template')
+        if active_template and active_template != 'default':
+            try:
+                doctor.active_template_id = int(active_template)
+            except (TypeError, ValueError):
+                doctor.active_template_id = None
+        else:
+            doctor.active_template_id = None
         
         # Handle Signature Upload
         if 'signature' in request.files:
@@ -536,9 +546,11 @@ def profile():
         
         db.session.commit()
         flash('Profile updated successfully!', 'success')
-        return redirect(url_for('first_visit'))
-        
-    return render_template('profile.html', doctor=doctor)
+        next_url = request.args.get('next') or url_for('dashboard')
+        return redirect(next_url)
+
+    schedule_templates = ScheduleTemplate.query.filter_by(doctor_id=doctor.id).all() if doctor else []
+    return render_template('profile.html', doctor=doctor, schedule_templates=schedule_templates)
 
 
 # Root route is now handled by landing()
@@ -614,7 +626,7 @@ def add_note():
     return redirect(url_for('dashboard'))
 
 
-@app.route('/api/add_appointment', methods=['POST'])
+@app.route('/profile', methods=['GET', 'POST'])
 @doctor_required
 def add_appointment():
     doctor_id = session.get('doctor_id')
