@@ -117,13 +117,14 @@ def migrate():
                     print(f"  - {col} exists")
 
             # 6. Update VISITS Table
-            # New fields: next_visit_date, drug_allergies, medical_comorbidities, non_psychiatric_meds
+            # New fields: next_visit_date, drug_allergies, medical_comorbidities, non_psychiatric_meds, ace_data
             print("\n[Visits Table]")
             visit_cols = [
                 ('next_visit_date', 'DATE'),
                 ('drug_allergies', 'TEXT'),
                 ('medical_comorbidities', 'TEXT'),
-                ('non_psychiatric_meds', 'TEXT')
+                ('non_psychiatric_meds', 'TEXT'),
+                ('ace_data', 'TEXT')
             ]
             for col, dtype in visit_cols:
                 if not column_exists(cursor, 'visits', col):

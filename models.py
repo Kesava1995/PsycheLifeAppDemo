@@ -65,7 +65,8 @@ class Visit(db.Model):
     
     clinical_state = db.Column(db.String(50), nullable=True)
     medication_adherence = db.Column(db.String(50), nullable=True)
-    
+    ace_data = db.Column(db.Text, nullable=True)  # Adverse childhood experiences (JSON)
+
     symptom_entries = db.relationship('SymptomEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
     medication_entries = db.relationship('MedicationEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
     side_effect_entries = db.relationship('SideEffectEntry', backref='visit', lazy=True, cascade='all, delete-orphan')

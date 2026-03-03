@@ -178,14 +178,17 @@
 
                     <div class="section-header"><span class="section-title">Background Factors</span></div>
                     <div class="click-trigger-row">
-                        <div class="click-trigger" onclick="openModal('stressorsModal')">
-                            <span>⚠️ Stressors</span><span>▼</span>
-                        </div>
                         <div class="click-trigger" onclick="document.getElementById('modalPers').style.display='block'">
-                            <span>🧠 Personality</span><span>▼</span>
+                            <span>🧠 Premorbid personality traits</span><span>▼</span>
                         </div>
                         <div class="click-trigger" onclick="openModal('majorEventsModal')">
                             <span>📌 Major Events</span><span>▼</span>
+                        </div>
+                        <div class="click-trigger" onclick="openModal('stressorsModal')">
+                            <span>⚠️ Stressors</span><span>▼</span>
+                        </div>
+                        <div class="click-trigger" onclick="openModal('aceModal')">
+                            <span>🌱 Adverse childhood experiences</span><span>▼</span>
                         </div>
                     </div>
                     <input type="hidden" name="stressors_data" id="stressors_data" value="">
@@ -260,11 +263,11 @@
 
                     <div class="section-header"><span class="section-title">Diagnosis</span></div>
 
-                    <div style="margin-top:20px; background:#fff; padding:15px; border:1px solid #eee; border-radius:8px;">
+                    <div style="margin-top:20px; background:#fff; padding:15px; border:1px solid #eee; border-radius:8px; min-height: 100px;">
                         <div class="row-2-col">
                             <div>
                                 <label>Provisional Diagnosis</label>
-                                <textarea name="provisional_diagnosis" rows="2"></textarea>
+                                <input type="text" name="provisional_diagnosis" list="diagnosis-list" placeholder="Type or select..." style="width:100%; padding: 8px; min-height: 36px; box-sizing: border-box;">
                                 <div style="margin-top: 5px; display: flex; gap: 10px;">
                                     <button type="button" class="btn" onclick="showCriteria('ICD')" style="background: #e0e0e0; color: #333; font-size: 11px; padding: 4px 10px; width: auto; border: 1px solid #ccc;">
                                         Show ICD-10
@@ -274,9 +277,12 @@
                                     </button>
                                 </div>
                             </div>
-                            <div><label>Differential Diagnosis</label><textarea name="differential_diagnosis" rows="2"></textarea></div>
+                            <div><label>Differential Diagnosis</label><textarea name="differential_diagnosis" rows="4" style="resize: none; width: 100%; min-height: 88px; box-sizing: border-box;"></textarea></div>
                         </div>
                     </div>
+                    <datalist id="diagnosis-list">
+                        <option value="F32.0 Mild depressive episode"><option value="F32.1 Moderate depressive episode"><option value="F32.2 Severe depressive episode"><option value="F31 Bipolar affective disorder"><option value="F20 Schizophrenia"><option value="F41.1 Generalised anxiety disorder"><option value="F41.0 Panic disorder"><option value="F43.1 Post-traumatic stress disorder"><option value="F40.1 Social phobia"><option value="F42 Obsessive-compulsive disorder"><option value="F10–F19 Mental and behavioural disorders due to substance use"><option value="F90.0 Attention deficit hyperactivity disorder"><option value="F84.0 Autism spectrum disorder"><option value="F60.0 Paranoid personality disorder"><option value="F60.3 Emotionally unstable personality disorder"><option value="F32.3 Severe depressive episode with psychotic symptoms">
+                    </datalist>
 
                     <div style="margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
                         <h4 style="margin:0 0 10px 0; color:#555;">Current Clinical State</h4>
@@ -529,7 +535,7 @@
 
                     <div id="modalPers" class="modal" onclick="if(event.target == this) this.style.display='none'">
                         <div class="modal-content">
-                            <h3>Premorbid Personality</h3>
+                            <h3>Premorbid personality traits</h3>
                             <div class="checklist-group" style="height:200px; overflow-y:auto;">
                                 <label><input type="checkbox" name="personality[]" value="Paranoid"> Paranoid</label>
                                 <label><input type="checkbox" name="personality[]" value="Schizoid"> Schizoid</label>
@@ -558,6 +564,51 @@
                         </div>
                     </div>
 
+                    <div id="aceModal" class="modal" onclick="if(event.target == this) this.style.display='none'">
+                        <div class="modal-content" style="max-width: 520px;">
+                            <h3>Adverse childhood experiences</h3>
+                            <input type="hidden" name="ace_data" id="ace_data" value="{{ ace_data|default('')|e }}">
+                            <div style="max-height: 360px; overflow-y: auto;">
+                                <details style="margin: 8px 0;"><summary style="cursor:pointer; font-weight:600;">Abuse</summary>
+                                    <div class="checklist-group" style="padding-left: 12px;">
+                                        <label><input type="checkbox" class="ace-cb" data-cat="Abuse" value="Emotional Abuse"> Emotional Abuse</label>
+                                        <label><input type="checkbox" class="ace-cb" data-cat="Abuse" value="Physical Abuse"> Physical Abuse</label>
+                                        <label><input type="checkbox" class="ace-cb" data-cat="Abuse" value="Sexual Abuse"> Sexual Abuse</label>
+                                    </div></details>
+                                <details style="margin: 8px 0;"><summary style="cursor:pointer; font-weight:600;">Neglect</summary>
+                                    <div class="checklist-group" style="padding-left: 12px;">
+                                        <label><input type="checkbox" class="ace-cb" data-cat="Neglect" value="Emotional neglect"> Emotional neglect</label>
+                                        <label><input type="checkbox" class="ace-cb" data-cat="Neglect" value="Physical Neglect"> Physical Neglect</label>
+                                    </div></details>
+                                <details style="margin: 8px 0;"><summary style="cursor:pointer; font-weight:600;">Household Dysfunction</summary>
+                                    <div class="checklist-group" style="padding-left: 12px;">
+                                        <label><input type="checkbox" class="ace-cb" data-cat="Household Dysfunction" value="Parental substance use"> Parental substance use</label>
+                                        <label><input type="checkbox" class="ace-cb" data-cat="Household Dysfunction" value="Parental mental illness"> Parental mental illness</label>
+                                        <label><input type="checkbox" class="ace-cb" data-cat="Household Dysfunction" value="Domestic violence exposure"> Domestic violence exposure</label>
+                                        <label><input type="checkbox" class="ace-cb" data-cat="Household Dysfunction" value="Parental separation/divorce"> Parental separation/divorce</label>
+                                    </div></details>
+                                <details style="margin: 8px 0;"><summary style="cursor:pointer; font-weight:600;">Loss/Attachment Disruption</summary>
+                                    <div class="checklist-group" style="padding-left: 12px;">
+                                        <label><input type="checkbox" class="ace-cb" data-cat="Loss/Attachment" value="Early parental loss (death)"> Early parental loss (death)</label>
+                                        <label><input type="checkbox" class="ace-cb" data-cat="Loss/Attachment" value="Prolonged separation from caregiver"> Prolonged separation from caregiver</label>
+                                    </div></details>
+                                <details style="margin: 8px 0;"><summary style="cursor:pointer; font-weight:600;">Peer & Environmental Trauma</summary>
+                                    <div class="checklist-group" style="padding-left: 12px;">
+                                        <label><input type="checkbox" class="ace-cb" data-cat="Peer & Environmental" value="Bullying (Chronic)"> Bullying (Chronic)</label>
+                                        <label><input type="checkbox" class="ace-cb" data-cat="Peer & Environmental" value="Severe academic humiliation"> Severe academic humiliation</label>
+                                        <label><input type="checkbox" class="ace-cb" data-cat="Peer & Environmental" value="Community violence exposure"> Community violence exposure</label>
+                                        <label><input type="checkbox" class="ace-cb" data-cat="Peer & Environmental" value="Natural Disaster exposure"> Natural Disaster exposure</label>
+                                        <label><input type="checkbox" class="ace-cb" data-cat="Peer & Environmental" value="War/conflict exposure"> War/conflict exposure</label>
+                                    </div></details>
+                            </div>
+                            <div style="margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap;">
+                                <label>Age of exposure (years): <input type="number" id="ace_age" min="0" max="25" placeholder="Age" style="width: 60px;"></label>
+                                <label>Trauma burden: <select id="ace_trauma_burden"><option value="">—</option><option value="Mild">Mild</option><option value="Moderate">Moderate</option><option value="Severe">Severe</option></select></label>
+                            </div>
+                            <button type="button" class="btn" style="margin-top: 12px; background: #7ab8e0; color: #fff;" onclick="saveACE(); document.getElementById('aceModal').style.display='none'">Save</button>
+                        </div>
+                    </div>
+
                 </form>
             </div>
         </main>
@@ -580,8 +631,27 @@
         }
         function updVal(slider) { slider.nextElementSibling.innerText = slider.value; }
 
-        function openModal(modalId) { document.getElementById(modalId).style.display = 'block'; if (modalId === 'majorEventsModal') restoreMajorEventsFromHidden(); if (modalId === 'stressorsModal') restoreStressorsFromHidden(); }
+        function openModal(modalId) { document.getElementById(modalId).style.display = 'block'; if (modalId === 'majorEventsModal') restoreMajorEventsFromHidden(); if (modalId === 'stressorsModal') restoreStressorsFromHidden(); if (modalId === 'aceModal') restoreACEFromHidden(); }
         function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
+        function saveACE() {
+            var items = [];
+            document.querySelectorAll('.ace-cb:checked').forEach(function(cb) { items.push({ cat: cb.getAttribute('data-cat'), value: cb.value }); });
+            var ageEl = document.getElementById('ace_age');
+            var burdenEl = document.getElementById('ace_trauma_burden');
+            var data = { items: items, ageOfExposure: ageEl ? ageEl.value : '', traumaBurden: burdenEl ? burdenEl.value : '' };
+            var hid = document.getElementById('ace_data');
+            if (hid) hid.value = JSON.stringify(data);
+        }
+        function restoreACEFromHidden() {
+            var hid = document.getElementById('ace_data');
+            if (!hid || !hid.value) return;
+            try {
+                var data = JSON.parse(hid.value);
+                document.querySelectorAll('.ace-cb').forEach(function(cb) { cb.checked = (data.items || []).some(function(i) { return i.value === cb.value; }); });
+                var ageEl = document.getElementById('ace_age'); if (ageEl && data.ageOfExposure) ageEl.value = data.ageOfExposure;
+                var burdenEl = document.getElementById('ace_trauma_burden'); if (burdenEl && data.traumaBurden) burdenEl.value = data.traumaBurden;
+            } catch (e) {}
+        }
         // --- STRESSORS LOGIC (checklist + inputs below, like Clinical State) ---
         document.querySelectorAll('.stressor-checkbox').forEach(function(box) {
             box.addEventListener('change', function() {

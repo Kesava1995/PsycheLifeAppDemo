@@ -723,16 +723,34 @@
                 {{ 'Edit Visit Details' if visit else 'Save New Visit from Chart' }}
             </h3>
 
-            <div class="row-2-col">
+            <div class="row-2-col diagnosis-section" style="resize: none;">
                 <div>
                     <label style="display:block; margin-bottom:5px; font-weight:600; color:#555;">Provisional Diagnosis</label>
-                    <textarea name="provisional_diagnosis" rows="2">{{ visit.provisional_diagnosis if visit else '' }}</textarea>
+                    <input type="text" name="provisional_diagnosis" list="diagnosis-list" value="{{ visit.provisional_diagnosis if visit else '' }}" placeholder="Type or select..." style="width:100%; padding: 8px; min-height: 36px; box-sizing: border-box;">
                 </div>
                 <div>
                     <label style="display:block; margin-bottom:5px; font-weight:600; color:#555;">Differential Diagnosis</label>
-                    <textarea name="differential_diagnosis" rows="2">{{ visit.differential_diagnosis if visit else '' }}</textarea>
+                    <textarea name="differential_diagnosis" rows="3" style="resize: none; width: 100%; min-height: 72px; box-sizing: border-box;">{{ visit.differential_diagnosis if visit else '' }}</textarea>
                 </div>
             </div>
+            <datalist id="diagnosis-list">
+                <option value="F32.0 Mild depressive episode">
+                <option value="F32.1 Moderate depressive episode">
+                <option value="F32.2 Severe depressive episode">
+                <option value="F31 Bipolar affective disorder">
+                <option value="F20 Schizophrenia">
+                <option value="F41.1 Generalised anxiety disorder">
+                <option value="F41.0 Panic disorder">
+                <option value="F43.1 Post-traumatic stress disorder">
+                <option value="F40.1 Social phobia">
+                <option value="F42 Obsessive-compulsive disorder">
+                <option value="F10–F19 Mental and behavioural disorders due to substance use">
+                <option value="F90.0 Attention deficit hyperactivity disorder">
+                <option value="F84.0 Autism spectrum disorder">
+                <option value="F60.0 Paranoid personality disorder">
+                <option value="F60.3 Emotionally unstable personality disorder">
+                <option value="F32.3 Severe depressive episode with psychotic symptoms">
+            </datalist>
 
             <div style="margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
                 <h4 style="margin:0 0 10px 0; color:#555;">Current Clinical State</h4>
@@ -1078,8 +1096,11 @@
                                 return lines;
                             }
 
+                            // Medications chart: show only actual dose (no RD, %, equivalent)
+                            if (context.chart.config._configKey === 'meds') {
+                                return [`${dsLabel}: ${pt.y} mg`];
+                            }
                             let val = pt.y;
-                            if (context.chart.config._configKey === 'meds') val += ' mg';
                             let lines = [`${dsLabel}: ${val}`];
                             if (pt.detail && pt.detail !== 'Average') {
                                 lines.push(`Note: ${pt.detail}`);
@@ -1105,7 +1126,10 @@
                         
                         if (dataItem && dataItem.x) {
                             const dateStr = dataItem.x.split('T')[0];
-                            activeStickyDate = dateStr; 
+                            activeStickyDate = dateStr;
+                            chart.$crosshair = { dateStr, dataY: dataItem.y != null ? dataItem.y : 0 };
+                            Object.keys(charts || {}).forEach(k => { const c = charts[k]; if (c && c !== chart) c.$crosshair = null; });
+                            chart.update('none');
                             showStickyTooltips(dateStr);
                         }
                     } 
@@ -1257,6 +1281,32 @@
                             });
                         });
                 });
+            }
+
+            /* ========================= CROSSHAIR (on point click) ========================== */
+            if (chart.$crosshair && chart.$crosshair.dateStr && activeStickyDate === chart.$crosshair.dateStr) {
+                const yScale = scales.y;
+                const xPx = xScale.getPixelForValue(new Date(chart.$crosshair.dateStr).getTime());
+                const yPx = yScale.getPixelForValue(chart.$crosshair.dataY != null ? chart.$crosshair.dataY : 0);
+                ctx.save();
+                ctx.setLineDash([5, 5]);
+                ctx.strokeStyle = 'rgba(123, 97, 255, 0.85)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(xPx, topY);
+                ctx.lineTo(xPx, bottomY);
+                ctx.moveTo(chartArea.left, yPx);
+                ctx.lineTo(chartArea.right, yPx);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = 'rgba(123, 97, 255, 0.9)';
+                ctx.beginPath();
+                ctx.arc(xPx, yPx, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.restore();
             }
 
             ctx.restore();
@@ -1734,7 +1784,11 @@
 
         const finalData = [];
         if (unified) {
-            if (key === 'meds') { unified.pointRadius = 1; unified.pointHoverRadius = 5; unified.pointHitRadius = 10; }
+            if (key === 'meds') {
+                unified.pointRadius = (ctx) => (ctx.raw && ctx.raw.actualEntry === true) ? 3 : 1.5;
+                unified.pointHoverRadius = (ctx) => (ctx.raw && ctx.raw.actualEntry === true) ? 6 : 3;
+                unified.pointHitRadius = 10;
+            }
             unified.borderColor = unifiedColor;
             unified.backgroundColor = unifiedColor;
             unified.pointBackgroundColor = unifiedColor;
@@ -1768,7 +1822,15 @@
             if (ds.isUnified) return;
             const c = ds.borderColor || colors[i % colors.length];
             ds.borderColor = c; ds.backgroundColor = c;
-            ds.pointRadius = 2; ds.pointHoverRadius = 5; ds.fill = false;
+            // Medication chart: smaller dots for daily entries, larger for actual entry date
+            if (key === 'meds') {
+                ds.pointRadius = (ctx) => (ctx.raw && ctx.raw.actualEntry === true) ? 5 : 1.5;
+                ds.pointHoverRadius = (ctx) => (ctx.raw && ctx.raw.actualEntry === true) ? 8 : 5;
+            } else {
+                ds.pointRadius = 2;
+                ds.pointHoverRadius = 5;
+            }
+            ds.fill = false;
         });
 
         // 2. Set Min/Max relative to the main 'y' scale
@@ -1790,6 +1852,29 @@
         const chartOptions = getCommonOptions();
         chartOptions.scales.y.max = maxY;
         chartOptions.scales.x.ticks = Object.assign({}, chartOptions.scales.x.ticks || {}, { padding: freeZoneHeight });
+
+        // Medications chart: restrict zoom to -100% (max zoom out 2x) and +200% (max zoom in 3x)
+        // Plugin supports min, max, minRange only (no maxRange); use min/max to cap visible range.
+        if (key === 'meds') {
+            let xMin = Infinity, xMax = -Infinity;
+            finalData.forEach(d => {
+                (d.data || []).forEach(p => {
+                    if (p && p.x) {
+                        const t = new Date(p.x).getTime();
+                        if (t < xMin) xMin = t;
+                        if (t > xMax) xMax = t;
+                    }
+                });
+            });
+            if (xMax > xMin) {
+                const totalRange = xMax - xMin;
+                chartOptions.plugins.zoom.limits.x = {
+                    minRange: totalRange / 3,   // +200%: max zoom in (min visible range = 1/3 of data)
+                    min: xMin - totalRange,     // -100%: cap zoom out (scale can't go below this)
+                    max: xMax + totalRange      // -100%: cap zoom out (scale can't go above this)
+                };
+            }
+        }
 
         const ctx = document.getElementById(ctxId);
         if (!ctx) return;
@@ -2213,6 +2298,7 @@
 
     function clearStickyTooltips() {
         document.querySelectorAll('.sticky-tooltip').forEach(el => el.remove());
+        Object.keys(charts || {}).forEach(k => { const c = charts[k]; if (c) c.$crosshair = null; });
     }
 
     function showRibbonTooltip(x, y, ribbon) {

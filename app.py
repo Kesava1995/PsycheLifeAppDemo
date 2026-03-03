@@ -1290,7 +1290,18 @@ def process_visit_form_data(visit, form_data):
         except (json.JSONDecodeError, TypeError):
             pass
 
-    # 1e. Scales (Phase 2) - from modal JSON
+    # 1e. Adverse childhood experiences (ACE) – from modal JSON
+    ace_json = form_data.get('ace_data', '')
+    if ace_json:
+        try:
+            json.loads(ace_json)  # validate
+            visit.ace_data = ace_json
+        except (json.JSONDecodeError, TypeError):
+            visit.ace_data = None
+    else:
+        visit.ace_data = None
+
+    # 1f. Scales (Phase 2) - from modal JSON
     scales_json = form_data.get('scales_data', '')
     if scales_json:
         try:
@@ -1550,7 +1561,8 @@ def add_visit(patient_id):
     last_visit = Visit.query.filter_by(patient_id=patient.id).order_by(Visit.date.desc()).first()
     
     doctor = Doctor.query.get(session.get('doctor_id'))
-    return render_template('add_visit.html', patient=patient, today=today, last_visit=last_visit, doctor=doctor)
+    ace_data = (last_visit.ace_data or '') if last_visit and getattr(last_visit, 'ace_data', None) else ''
+    return render_template('add_visit.html', patient=patient, today=today, last_visit=last_visit, doctor=doctor, ace_data=ace_data)
 
 
 @app.route('/visit/<int:visit_id>/edit', methods=['GET', 'POST'])
@@ -1665,7 +1677,8 @@ def edit_visit(visit_id):
         'severity_label': sa.severity_label,
         'raw_responses': sa.raw_responses or {}
     } for sa in getattr(visit, 'scale_assessments', [])])
-    return render_template('edit_visit.html', visit=visit, patient=patient, previous_visit=previous_visit, doctor=doctor, major_events_data=major_events_data, stressors_data=stressors_data, adherence_data=adherence_data, clinical_state_data=clinical_state_data, substances_data=substances_data, scales_data=scales_data)
+    ace_data = (visit.ace_data or '') if getattr(visit, 'ace_data', None) else ''
+    return render_template('edit_visit.html', visit=visit, patient=patient, previous_visit=previous_visit, doctor=doctor, major_events_data=major_events_data, stressors_data=stressors_data, adherence_data=adherence_data, clinical_state_data=clinical_state_data, substances_data=substances_data, scales_data=scales_data, ace_data=ace_data)
 
 
 @app.route('/visit/<int:visit_id>/update_clinical', methods=['POST'])
@@ -1688,6 +1701,17 @@ def update_clinical(visit_id):
     next_date = request.form.get('next_visit_date')
     if next_date:
         visit.next_visit_date = parse_date(next_date)
+
+    if 'ace_data' in request.form:
+        ace_json = request.form.get('ace_data', '')
+        try:
+            if ace_json:
+                json.loads(ace_json)
+                visit.ace_data = ace_json
+            else:
+                visit.ace_data = None
+        except (json.JSONDecodeError, TypeError):
+            visit.ace_data = None
 
     # --- RANGES UPDATES (Clinical State & Adherence with dates, same as edit_visit modal) ---
     adherence_json = request.form.get('adherence_data', '')
@@ -2214,7 +2238,8 @@ def life_chart(patient_id):
                         pts.append({
                             'x': d.strftime('%Y-%m-%d'),
                             'y': dose,
-                            'detail': f"Freq: {step.get('frequency', '')} (Tapering)"
+                            'detail': f"Freq: {step.get('frequency', '')} (Tapering)",
+                            'actualEntry': (i == 0)  # Actual prescription/entry date = larger dot
                         })
                     current_date += timedelta(days=duration)
                 return pts
@@ -2231,7 +2256,8 @@ def life_chart(patient_id):
             pts.append({
                 'x': d.strftime('%Y-%m-%d'),
                 'y': dose,
-                'detail': f"Freq: {entry.frequency}"
+                'detail': f"Freq: {entry.frequency}",
+                'actualEntry': (i == 0)  # Actual prescription/entry date = larger dot
             })
         return pts
 
@@ -2332,20 +2358,22 @@ def life_chart(patient_id):
             # Create breakdown for tooltip
             breakdown = []
             is_current = False
+            actual_entry = False
             for name, points in data_map.items():
                 for pt in points:
                     if pt['x'] == k:
                         breakdown.append({'name': name, 'score': pt['y']})
-                        # Determine phase for unified point
                         if pt.get('phase') == 'Current':
                             is_current = True
-            
+                        if pt.get('actualEntry'):
+                            actual_entry = True
             unified_points.append({
-                'x': k, 
-                'y': avg, 
+                'x': k,
+                'y': avg,
                 'detail': 'Average',
                 'breakdown': breakdown,
-                'phase': 'Current' if is_current else 'History' 
+                'phase': 'Current' if is_current else 'History',
+                'actualEntry': actual_entry
             })
             
         unified_points.sort(key=lambda p: p['x'])
@@ -2508,7 +2536,8 @@ def preview_lifechart(patient_id):
                         pts.append({
                             'x': d.strftime('%Y-%m-%d'),
                             'y': dose_val,
-                            'detail': f"Freq: {step.get('frequency', '')} (Tapering)"
+                            'detail': f"Freq: {step.get('frequency', '')} (Tapering)",
+                            'actualEntry': (i == 0)
                         })
                     current_date += timedelta(days=duration)
                 return pts
@@ -2529,7 +2558,8 @@ def preview_lifechart(patient_id):
             pts.append({
                 'x': d.strftime('%Y-%m-%d'),
                 'y': dose_val,
-                'detail': f"Freq: {entry.frequency}"
+                'detail': f"Freq: {entry.frequency}",
+                'actualEntry': (i == 0)
             })
         return pts
 
