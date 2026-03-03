@@ -2651,9 +2651,12 @@ def preview_lifechart(patient_id):
                 if d['label'] in visible_labels
             ]
 
+    doc = getattr(patient, 'doctor', None)
+    doctor_display = (doc.full_name or getattr(doc, 'username', '')) if doc else ''
     return render_template(
         'preview_lifechart.html',
         patient=patient,
+        doctor_display=doctor_display,
         grouped_datasets=grouped_data,
         start_date=start_date,
         end_date=end_date
@@ -2748,12 +2751,14 @@ def guest_preview_lifechart():
         for cat in grouped_data:
             grouped_data[cat] = [d for d in grouped_data[cat] if d['label'] in visible_labels]
 
+    doctor_display = (guest_doctor.get('name', '') if guest_doctor else '') or ''
     return render_template(
         'preview_lifechart.html',
         patient=guest_patient,
         doctor=guest_doctor,
         guest=True,
         guest_token=token,
+        doctor_display=doctor_display,
         grouped_datasets=grouped_data,
         start_date=start_date,
         end_date=end_date

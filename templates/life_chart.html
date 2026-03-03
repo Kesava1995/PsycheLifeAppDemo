@@ -503,9 +503,25 @@
         body.dark-mode .widget-menu-btn { border-color: #555; color: #bbb; }
         body.dark-mode .unified-item .color-dot { background: white !important; }
         body.dark-mode #darkModeToggleBtn { background: white !important; color: black !important; }
+
+        /* View-only: chart area at least viewport height so scrolling reveals lowest widget fully */
+        body.life-chart-view-only .dashboard-wrapper {
+            min-height: 100vh;
+            min-height: max(920px, 100vh);
+            margin-bottom: 20px;
+        }
+        /* View-only with Scale Assessments: extra height so Scale widget bottom + Date label is visible when scrolled */
+        body.life-chart-view-only.view-only-with-scales .dashboard-wrapper {
+            min-height: 1080px;
+            min-height: max(1080px, calc(100vh + 180px));
+            margin-bottom: 24px;
+        }
+        body.life-chart-view-only .main-content {
+            padding-bottom: 32px;
+        }
     </style>
 </head>
-<body>
+<body class="{% if request.args.get('view_only') == '1' %}life-chart-view-only{% endif %} {% if request.args.get('view_only') == '1' and scale_datasets %}view-only-with-scales{% endif %}">
 <div class="sidebar">
     <div class="nav-row" style="flex-wrap: wrap; gap: 8px;">
         {% if not guest %}
@@ -995,6 +1011,7 @@
 
 <script>
     // --- DATA ---
+    const lifeChartViewOnly = {{ 'true' if request.args.get('view_only') == '1' else 'false' }};
     const rawData = {
         symptoms: {{ symptom_datasets | tojson }},
         symptomsUnified: {{ symptom_unified | tojson }},
@@ -1127,7 +1144,8 @@
                         if (dataItem && dataItem.x) {
                             const dateStr = dataItem.x.split('T')[0];
                             activeStickyDate = dateStr;
-                            chart.$crosshair = { dateStr, dataY: dataItem.y != null ? dataItem.y : 0 };
+                            const dsLabel = chart.data.datasets[firstPoint.datasetIndex].label || '';
+                            chart.$crosshair = { dateStr, dataY: dataItem.y != null ? dataItem.y : 0, datasetLabel: dsLabel };
                             Object.keys(charts || {}).forEach(k => { const c = charts[k]; if (c && c !== chart) c.$crosshair = null; });
                             chart.update('none');
                             showStickyTooltips(dateStr);
@@ -1286,8 +1304,13 @@
             /* ========================= CROSSHAIR (on point click) ========================== */
             if (chart.$crosshair && chart.$crosshair.dateStr && activeStickyDate === chart.$crosshair.dateStr) {
                 const yScale = scales.y;
-                const xPx = xScale.getPixelForValue(new Date(chart.$crosshair.dateStr).getTime());
-                const yPx = yScale.getPixelForValue(chart.$crosshair.dataY != null ? chart.$crosshair.dataY : 0);
+                const xVal = new Date(chart.$crosshair.dateStr).getTime();
+                const xPx = xScale.getPixelForValue(xVal);
+                const dataY = chart.$crosshair.dataY != null ? chart.$crosshair.dataY : 0;
+                const yPx = yScale.getPixelForValue(dataY);
+                const isMeds = chart.config._configKey === 'meds';
+                const valueSuffix = isMeds ? ' mg' : '';
+
                 ctx.save();
                 ctx.setLineDash([5, 5]);
                 ctx.strokeStyle = 'rgba(123, 97, 255, 0.85)';
@@ -1306,7 +1329,91 @@
                 ctx.strokeStyle = '#fff';
                 ctx.lineWidth = 1;
                 ctx.stroke();
+
+                // Data at intersections: date at bottom (vertical line ∩ x-axis), value at right (horizontal line ∩ y-axis)
+                const pad = 6;
+                const font = '11px Segoe UI, sans-serif';
+                ctx.font = font;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                // Format date for bottom label (e.g. "Thu 29 May 2025" or "29 May 2025")
+                const d = new Date(chart.$crosshair.dateStr);
+                const dateLabel = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit' });
+                const valueLabel = (typeof dataY === 'number' && Number.isFinite(dataY)) ? (dataY + valueSuffix) : String(dataY) + valueSuffix;
+
+                const dateW = ctx.measureText(dateLabel).width + pad * 2;
+                const dateH = 18;
+                const valueW = ctx.measureText(valueLabel).width + pad * 2;
+                const valueH = 18;
+
+                const boxBg = 'rgba(50, 50, 50, 0.92)';
+                const boxFg = '#fff';
+
+                // Bottom: date where vertical line meets x-axis
+                const dateX = Math.max(chartArea.left + dateW/2, Math.min(chartArea.right - dateW/2, xPx));
+                const dateY = bottomY + 4 + dateH/2;
+                ctx.fillStyle = boxBg;
+                roundRect(ctx, dateX - dateW/2, dateY - dateH/2, dateW, dateH, 4);
+                ctx.fill();
+                ctx.fillStyle = boxFg;
+                ctx.fillText(dateLabel, dateX, dateY);
+
+                // Right: value where horizontal line meets y-axis (right edge)
+                const valueX = chartArea.right - valueW/2 - 4;
+                const valueY = Math.max(topY + valueH/2, Math.min(bottomY - valueH/2, yPx));
+                ctx.fillStyle = boxBg;
+                roundRect(ctx, valueX - valueW/2, valueY - valueH/2, valueW, valueH, 4);
+                ctx.fill();
+                ctx.fillStyle = boxFg;
+                ctx.fillText(valueLabel, valueX, valueY);
+
+                // Optional: at each intersection with a visible dataset line, show that series' value
+                chart.data.datasets.forEach((ds, dsIdx) => {
+                    if (!ds.data || ds.data.length === 0 || chart.getDatasetMeta(dsIdx).hidden) return;
+                    const pts = ds.data;
+                    let best = null;
+                    let bestDist = Infinity;
+                    for (let i = 0; i < pts.length; i++) {
+                        const pt = pts[i];
+                        if (!pt || pt.x == null) continue;
+                        const tx = new Date(pt.x).getTime();
+                        const dist = Math.abs(tx - xVal);
+                        if (dist < bestDist) { bestDist = dist; best = pt; }
+                    }
+                    if (!best || best.y == null) return;
+                    const lineY = yScale.getPixelForValue(best.y);
+                    if (lineY < topY || lineY > bottomY) return;
+                    const label = (ds.label || '') + ': ' + (isMeds ? (best.y + ' mg') : best.y);
+                    const lw = ctx.measureText(label).width + pad * 2;
+                    const lh = 16;
+                    const lx = chartArea.right - lw - 2;
+                    const ly = lineY;
+                    ctx.fillStyle = ds.borderColor || boxBg;
+                    ctx.globalAlpha = 0.9;
+                    roundRect(ctx, lx, ly - lh/2, lw, lh, 3);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                    ctx.fillStyle = '#fff';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(label, lx + lw/2, ly);
+                });
+
                 ctx.restore();
+            }
+
+            function roundRect(ctx, x, y, w, h, r) {
+                ctx.beginPath();
+                ctx.moveTo(x + r, y);
+                ctx.lineTo(x + w - r, y);
+                ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+                ctx.lineTo(x + w, y + h - r);
+                ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+                ctx.lineTo(x + r, y + h);
+                ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+                ctx.lineTo(x, y + r);
+                ctx.quadraticCurveTo(x, y, x + r, y);
+                ctx.closePath();
             }
 
             ctx.restore();
@@ -1355,6 +1462,10 @@
             var restH = availableH - firstRowH;
             var restRows = rows - 1;
             var otherRowH = Math.max(MIN_PANEL_H, Math.floor(restH / restRows));
+            if (rows >= 3 && keys.indexOf('scale') !== -1) {
+                var scaleRowMin = 240;
+                if (otherRowH < scaleRowMin) otherRowH = scaleRowMin;
+            }
             rowHeights = [firstRowH].concat(Array(restRows).fill(otherRowH));
         } else {
             var cellH = Math.max(MIN_PANEL_H, Math.floor(availableH / rows));
@@ -1467,15 +1578,23 @@
         if (toggle.checked) {
             if (sidebarGroup) sidebarGroup.style.display = 'block';
             if (rawData.scale && rawData.scale.length > 0) {
+                buildGrid();
                 addWidgetToDOM('scale');
                 var wrapper = document.getElementById('dashboardWrapperEl');
+                var scalePanel = document.getElementById('widget-scale');
+                if (scalePanel && layoutMap['scale']) {
+                    var pos = layoutMap['scale'];
+                    scalePanel.style.left = pos.x + 'px';
+                    scalePanel.style.top = pos.y + 'px';
+                    scalePanel.style.width = pos.w + 'px';
+                    scalePanel.style.height = pos.h + 'px';
+                }
                 if (wrapper) {
-                    var neededH = 3 * MIN_PANEL_H + 4 * LAYOUT_PAD;
+                    var neededH = 3 * MIN_PANEL_H + 4 * LAYOUT_PAD + 40;
                     if (wrapper.offsetHeight < neededH) {
                         wrapper.style.flex = '0 0 auto';
                         wrapper.style.height = neededH + 'px';
                         buildGrid();
-                        var scalePanel = document.getElementById('widget-scale');
                         if (scalePanel && layoutMap['scale']) {
                             var pos = layoutMap['scale'];
                             scalePanel.style.left = pos.x + 'px';
@@ -1483,10 +1602,10 @@
                             scalePanel.style.width = pos.w + 'px';
                             scalePanel.style.height = pos.h + 'px';
                         }
-                        setTimeout(function() {
-                            Object.keys(charts).forEach(function(k) { if (charts[k]) charts[k].resize(); });
-                        }, 80);
                     }
+                    setTimeout(function() {
+                        Object.keys(charts).forEach(function(k) { if (charts[k]) charts[k].resize(); });
+                    }, 80);
                 }
             }
         } else {
@@ -1512,6 +1631,14 @@
         initialLayout.forEach(item => {
             addWidgetToDOM(item.key);
         });
+
+        if (lifeChartViewOnly && rawData.scale && rawData.scale.length > 0) {
+            addWidgetToDOM('scale');
+            var t = document.getElementById('masterScaleToggle');
+            if (t) t.checked = true;
+            var sg = document.getElementById('sidebar-group-scale');
+            if (sg) sg.style.display = 'block';
+        }
 
         updateWidgetDropdown();
     }
