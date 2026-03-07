@@ -427,7 +427,12 @@
                                 <button type="button" class="btn" onclick="showCriteria('DSM')" style="background: #e0e0e0; color: #333; font-size: 11px; padding: 4px 10px; width: auto; border: 1px solid #ccc;">
                                     Show DSM-5
                                 </button>
+                                <button type="button" class="btn" onclick="openICD11Modal()" style="background: #e0e0e0; color: #333; font-size: 11px; padding: 4px 10px; width: auto; border: 1px solid #ccc;">
+                                    Show ICD-11
+                                </button>
                             </div>
+                            <input type="hidden" name="provisional_diagnosis_icd11" id="icd11SelectedText">
+                            <input type="hidden" name="icd11_code" id="icd11Code">
                         </div>
                         <div><label>Differential Diagnosis</label><textarea name="differential_diagnosis" rows="4" style="resize: none; width: 100%; min-height: 88px; box-sizing: border-box;">{{ visit.differential_diagnosis }}</textarea></div>
                     </div>
@@ -1208,11 +1213,23 @@
         function addMSE(cat) { document.getElementById('mse-' + cat.toLowerCase() + '-container').insertAdjacentHTML('beforeend', createRowHTML('mse', cat)); }
     </script>
 
-<div id="criteriaModal" class="modal" style="z-index: 9999;">
-    <div class="modal-content" style="max-width: 700px; max-height: 80vh; overflow-y: auto;">
+<div id="criteriaModal" class="modal" style="z-index: 9999;" onclick="if(event.target === this) this.style.display='none'">
+    <div class="modal-content" style="max-width: 700px; max-height: 60vh; overflow-y: auto; text-align: center; margin: 10% auto;">
         <span class="close-btn" onclick="document.getElementById('criteriaModal').style.display='none'">&times;</span>
         <h3 id="criteriaTitle" style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:10px;">Diagnostic Criteria</h3>
-        <div id="criteriaBody" style="font-family: 'Segoe UI', sans-serif; font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap;"></div>
+        <div id="criteriaBody" style="font-family: 'Segoe UI', sans-serif; font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap; text-align: left;"></div>
+    </div>
+</div>
+
+<div id="icd11Modal" class="modal" onclick="if(event.target === this) this.style.display='none'">
+    <div class="modal-content" style="width: 480px; max-height: 80vh; display: flex; flex-direction: column; margin: 8% auto; border-radius: 10px;">
+        <h4 style="margin: 0 0 12px 0; color: #333;">ICD-11 Search</h4>
+        <input type="text" id="icd11SearchInput" placeholder="Searching..."
+               style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+        <div id="icd11Results" style="margin-top: 10px; overflow-y: auto; max-height: 45vh; border: 1px solid #eee; border-radius: 6px; padding: 8px; background: #fafafa; min-height: 40px;">
+            <span style="color: #aaa; font-size: 13px;">Results will appear here...</span>
+        </div>
+        <button type="button" class="btn" style="margin-top: 12px; background: #888; color: #fff;" onclick="document.getElementById('icd11Modal').style.display='none'">Close</button>
     </div>
 </div>
 
@@ -1839,6 +1856,74 @@ function updateScalesBadge() {
                 document.body.classList.add('dark-mode');
             }
         });
+    </script>
+    <script>
+        function openICD11Modal() {
+            const diagnosisInput = document.querySelector('input[name="provisional_diagnosis"]');
+            const query = diagnosisInput ? diagnosisInput.value.trim() : '';
+
+            document.getElementById('icd11Modal').style.display = 'block';
+            document.getElementById('icd11Results').innerHTML = '<span style="color:#aaa; font-size:13px;">Searching...</span>';
+
+            const searchBox = document.getElementById('icd11SearchInput');
+            searchBox.value = query;
+
+            if (query) searchICD11(query);
+
+            searchBox.oninput = function() {
+                searchICD11(this.value.trim());
+            };
+        }
+
+        async function searchICD11(query) {
+            if (!query) {
+                document.getElementById('icd11Results').innerHTML = '<span style="color:#aaa; font-size:13px;">Type to search...</span>';
+                return;
+            }
+            document.getElementById('icd11Results').innerHTML = '<span style="color:#aaa; font-size:13px;">Searching...</span>';
+            try {
+                const tokenRes = await fetch('/icd11token');
+                const tokenData = await tokenRes.json();
+                if (tokenData.error) {
+                    document.getElementById('icd11Results').innerHTML = `<span style="color:red; font-size:13px;">${tokenData.error}</span>`;
+                    return;
+                }
+                const token = tokenData.access_token;
+
+                const res = await fetch(`https://id.who.int/icd/release/11/2024-01/mms/search?q=${encodeURIComponent(query)}&flatResults=true`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Accept': 'application/json',
+                        'Accept-Language': 'en',
+                        'API-Version': 'v2'
+                    }
+                });
+                const data = await res.json();
+
+                const resultsDiv = document.getElementById('icd11Results');
+                if (!data.destinationEntities || data.destinationEntities.length === 0) {
+                    resultsDiv.innerHTML = '<span style="color:#aaa; font-size:13px;">No results found.</span>';
+                    return;
+                }
+
+                resultsDiv.innerHTML = '';
+                data.destinationEntities.forEach(entity => {
+                    const div = document.createElement('div');
+                    div.style = 'padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px;';
+                    div.innerHTML = `<strong style="color:#333;">${entity.theCode || ''}</strong> — ${entity.title}`;
+                    div.onmouseenter = () => div.style.background = '#f0f8ff';
+                    div.onmouseleave = () => div.style.background = 'white';
+                    div.onclick = () => {
+                        document.getElementById('icd11SelectedText').value = entity.title;
+                        document.getElementById('icd11Code').value = entity.theCode || '';
+                        document.getElementById('icd11Modal').style.display = 'none';
+                    };
+                    resultsDiv.appendChild(div);
+                });
+            } catch(e) {
+                document.getElementById('icd11Results').innerHTML = '<span style="color:red; font-size:13px;">Error fetching results. Try again.</span>';
+            }
+        }
     </script>
 </body>
 </html>

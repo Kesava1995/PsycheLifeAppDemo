@@ -2,6 +2,9 @@
 PsycheLife - Medical web app for psychiatric patient management.
 """
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response, session, abort
 from functools import wraps
 from datetime import datetime, date, timedelta, timezone
@@ -3615,6 +3618,29 @@ def guest_share_view(token):
 
         visit_details={visit_id_str: dummy_visit_js}
     )
+
+
+@app.route('/icd11token')
+def icd11_token():
+    import requests as _requests
+    client_id = os.environ.get('ICD11_CLIENT_ID')
+    client_secret = os.environ.get('ICD11_CLIENT_SECRET')
+    if not client_id or client_id == 'your_client_id_here':
+        return jsonify({'error': 'ICD-11 API credentials not configured. Set ICD11_CLIENT_ID and ICD11_CLIENT_SECRET in .env'}), 503
+    try:
+        r = _requests.post('https://icdaccessmanagement.who.int/connect/token', data={
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'scope': 'icdapi_access',
+            'grant_type': 'client_credentials'
+        }, timeout=10)
+        return jsonify(r.json())
+    except _requests.exceptions.ConnectionError:
+        return jsonify({'error': 'Cannot reach WHO identity server. Check internet/firewall.'}), 503
+    except _requests.exceptions.Timeout:
+        return jsonify({'error': 'WHO identity server timed out.'}), 503
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
