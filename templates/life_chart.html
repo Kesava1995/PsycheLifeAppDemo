@@ -228,6 +228,93 @@
             vertical-align: middle;
         }
 
+        /* Crosshair Overlay */
+        .crosshair-overlay {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            display: none;
+        }
+        .crosshair-overlay.active {
+            display: block;
+        }
+        .crosshair-line-v {
+            position: absolute;
+            width: 2px;
+            background: repeating-linear-gradient(
+                to bottom,
+                rgba(255, 0, 0, 0.8) 0px,
+                rgba(255, 0, 0, 0.8) 6px,
+                transparent 6px,
+                transparent 10px
+            );
+        }
+        .crosshair-line-h {
+            position: absolute;
+            height: 2px;
+            background: repeating-linear-gradient(
+                to right,
+                rgba(255, 0, 0, 0.8) 0px,
+                rgba(255, 0, 0, 0.8) 6px,
+                transparent 6px,
+                transparent 10px
+            );
+        }
+        .crosshair-dot {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 0, 0, 0.9);
+            border: 4px solid #fff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 8px rgba(0,0,0,0.6), 0 0 0 2px rgba(255,0,0,0.3);
+        }
+        .crosshair-label {
+            position: absolute;
+            background: rgba(30, 35, 45, 0.85);
+            border: 1px solid rgba(88, 102, 126, 0.6);
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 600;
+            font-family: 'Segoe UI', sans-serif;
+            white-space: nowrap;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+            pointer-events: none;
+        }
+        .crosshair-label.dataset-label {
+            font-size: 9px;
+            padding: 3px 6px;
+            background: rgba(0, 0, 0, 0.75);
+            display: none;
+        }
+        .crosshair-label.dataset-label.active {
+            display: block;
+        }
+        .crosshair-intersection-dot {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 0 4px rgba(0,0,0,0.8);
+            cursor: pointer;
+            pointer-events: auto;
+            transform: translate(-50%, -50%);
+            transition: all 0.15s ease;
+            z-index: 10001;
+        }
+        .crosshair-intersection-dot:hover {
+            transform: translate(-50%, -50%) scale(1.8);
+            box-shadow: 0 0 8px rgba(0,0,0,1);
+        }
+        .crosshair-intersection-dot.active {
+            transform: translate(-50%, -50%) scale(2);
+            border-width: 3px;
+        }
+
         .widget-card:hover {
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             border-color: #ccc;
@@ -711,6 +798,9 @@
         <div class="toolbar-group">
             <button type="button" onclick="resetLayout()" class="add-widget-btn" style="background: #555;">⊞ Layout</button>
         </div>
+        <div class="toolbar-group">
+            <button type="button" onclick="clearStickyTooltips(); activeStickyDate = null;" class="add-widget-btn" style="background: #f5576c;" title="Clear crosshair and tooltips">✕ Clear</button>
+        </div>
         <div class="toolbar-group toolbar-group-spacer"></div>
         <div class="toolbar-group">
             <button onclick="openDownloadModal()" class="btn btn-download" style="padding: 6px 14px; font-size: 13px; height: 32px; background: #555; color: white;">Download</button>
@@ -1051,6 +1141,7 @@
     let charts = {}; // Global chart instance storage
     let activeStickyDate = null; // Remember active date for zoom/pan sync
     let isPanning = false;
+    let crosshairModeActive = false; // When true, single click shows crosshair instead of sticky tooltips
 
     // --- CHART OPTIONS (Now a function to prevent infinite loop object merging) ---
     function getCommonOptions() {
@@ -1134,25 +1225,27 @@
                 if (chart.clickTimeout) clearTimeout(chart.clickTimeout);
 
                 chart.clickTimeout = setTimeout(() => {
-                    // FIX: Changed intersect to TRUE so it ONLY triggers on actual data points
                     const points = chart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
 
                     if (points.length > 0) {
                         const firstPoint = points[0];
                         const dataItem = chart.data.datasets[firstPoint.datasetIndex].data[firstPoint.index];
-                        
+
                         if (dataItem && dataItem.x) {
                             const dateStr = dataItem.x.split('T')[0];
                             activeStickyDate = dateStr;
-                            const dsLabel = chart.data.datasets[firstPoint.datasetIndex].label || '';
-                            chart.$crosshair = { dateStr, dataY: dataItem.y != null ? dataItem.y : 0, datasetLabel: dsLabel };
-                            Object.keys(charts || {}).forEach(k => { const c = charts[k]; if (c && c !== chart) c.$crosshair = null; });
-                            chart.update('none');
-                            showStickyTooltips(dateStr);
+
+                            if (crosshairModeActive) {
+                                // Crosshair mode: show crosshair with intersection dots
+                                document.querySelectorAll('.crosshair-overlay').forEach(el => el.remove());
+                                showCrosshair(chart, dateStr, dataItem.y != null ? dataItem.y : 0);
+                            } else {
+                                // Normal mode: show sticky tooltips
+                                showStickyTooltips(dateStr);
+                            }
                         }
-                    } 
-                    // NOTE: Removed the entire fallback block that triggered clicks on empty space
-                }, 220); 
+                    }
+                }, 220);
             }
         };
     }
@@ -1302,73 +1395,106 @@
             }
 
             /* ========================= CROSSHAIR (on point click) ========================== */
-            if (chart.$crosshair && chart.$crosshair.dateStr && activeStickyDate === chart.$crosshair.dateStr) {
+            if (chart.$crosshair && chart.$crosshair.dateStr) {
+                console.log('🎯 Drawing crosshair for:', chart.config._configKey, chart.$crosshair);
                 const yScale = scales.y;
                 const xVal = new Date(chart.$crosshair.dateStr).getTime();
-                const xPx = xScale.getPixelForValue(xVal);
+                let xPx = xScale.getPixelForValue(xVal);
                 const dataY = chart.$crosshair.dataY != null ? chart.$crosshair.dataY : 0;
-                const yPx = yScale.getPixelForValue(dataY);
+                let yPx = yScale.getPixelForValue(dataY);
                 const isMeds = chart.config._configKey === 'meds';
                 const valueSuffix = isMeds ? ' mg' : '';
+                
+                // Clamp positions within chart area
+                xPx = Math.max(chartArea.left, Math.min(chartArea.right, xPx));
+                yPx = Math.max(chartArea.top, Math.min(chartArea.bottom, yPx));
+                
+                console.log('📍 Crosshair position (clamped):', { xPx, yPx, chartArea });
 
                 ctx.save();
-                ctx.setLineDash([5, 5]);
-                ctx.strokeStyle = 'rgba(123, 97, 255, 0.85)';
-                ctx.lineWidth = 1.5;
+                ctx.globalCompositeOperation = 'source-over';
+                
+                // TEST: Draw a bright red rectangle to confirm canvas drawing works
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                ctx.fillRect(xPx - 20, yPx - 20, 40, 40);
+                console.log('🔴 Drew red test rectangle at:', xPx, yPx);
+                
+                // Draw crosshair lines extending in all 4 directions (N/S/E/W)
+                ctx.setLineDash([6, 4]);
+                ctx.strokeStyle = 'rgba(255, 0, 0, 0.9)';  // Changed to bright red for testing
+                ctx.lineWidth = 3;  // Made thicker for visibility
                 ctx.beginPath();
-                ctx.moveTo(xPx, topY);
-                ctx.lineTo(xPx, bottomY);
+                // Vertical line (North-South)
+                ctx.moveTo(xPx, chartArea.top);
+                ctx.lineTo(xPx, chartArea.bottom);
+                // Horizontal line (East-West)
                 ctx.moveTo(chartArea.left, yPx);
                 ctx.lineTo(chartArea.right, yPx);
                 ctx.stroke();
                 ctx.setLineDash([]);
-                ctx.fillStyle = 'rgba(123, 97, 255, 0.9)';
+                console.log('✏️ Drew crosshair lines');
+                
+                // Central dot at intersection
+                ctx.fillStyle = 'rgba(88, 102, 126, 0.95)';
                 ctx.beginPath();
-                ctx.arc(xPx, yPx, 4, 0, Math.PI * 2);
+                ctx.arc(xPx, yPx, 5, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 1;
+                ctx.lineWidth = 2;
                 ctx.stroke();
 
                 // Data at intersections: date at bottom (vertical line ∩ x-axis), value at right (horizontal line ∩ y-axis)
-                const pad = 6;
-                const font = '11px Segoe UI, sans-serif';
+                const pad = 8;
+                const font = 'bold 11px Segoe UI, sans-serif';
                 ctx.font = font;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
 
-                // Format date for bottom label (e.g. "Thu 29 May 2025" or "29 May 2025")
+                // Format date for bottom label (e.g. "Thu 29 May 2025")
                 const d = new Date(chart.$crosshair.dateStr);
-                const dateLabel = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit' });
-                const valueLabel = (typeof dataY === 'number' && Number.isFinite(dataY)) ? (dataY + valueSuffix) : String(dataY) + valueSuffix;
+                const dateLabel = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+                const valueLabel = (typeof dataY === 'number' && Number.isFinite(dataY)) ? (dataY.toFixed(1) + valueSuffix) : String(dataY) + valueSuffix;
 
                 const dateW = ctx.measureText(dateLabel).width + pad * 2;
-                const dateH = 18;
+                const dateH = 22;
                 const valueW = ctx.measureText(valueLabel).width + pad * 2;
-                const valueH = 18;
+                const valueH = 22;
 
-                const boxBg = 'rgba(50, 50, 50, 0.92)';
-                const boxFg = '#fff';
+                const boxBg = 'rgba(58, 68, 84, 0.95)';
+                const boxBorder = 'rgba(88, 102, 126, 0.8)';
+                const boxFg = '#ffffff';
 
                 // Bottom: date where vertical line meets x-axis
-                const dateX = Math.max(chartArea.left + dateW/2, Math.min(chartArea.right - dateW/2, xPx));
-                const dateY = bottomY + 4 + dateH/2;
+                const dateX = Math.max(chartArea.left + dateW/2 + 4, Math.min(chartArea.right - dateW/2 - 4, xPx));
+                const dateY = bottomY + 6 + dateH/2;
                 ctx.fillStyle = boxBg;
                 roundRect(ctx, dateX - dateW/2, dateY - dateH/2, dateW, dateH, 4);
                 ctx.fill();
+                ctx.strokeStyle = boxBorder;
+                ctx.lineWidth = 1;
+                roundRect(ctx, dateX - dateW/2, dateY - dateH/2, dateW, dateH, 4);
+                ctx.stroke();
                 ctx.fillStyle = boxFg;
                 ctx.fillText(dateLabel, dateX, dateY);
 
                 // Right: value where horizontal line meets y-axis (right edge)
-                const valueX = chartArea.right - valueW/2 - 4;
-                const valueY = Math.max(topY + valueH/2, Math.min(bottomY - valueH/2, yPx));
+                const valueX = chartArea.right - valueW/2 - 6;
+                const valueY = Math.max(topY + valueH/2 + 4, Math.min(bottomY - valueH/2 - 4, yPx));
                 ctx.fillStyle = boxBg;
                 roundRect(ctx, valueX - valueW/2, valueY - valueH/2, valueW, valueH, 4);
                 ctx.fill();
+                ctx.strokeStyle = boxBorder;
+                ctx.lineWidth = 1;
+                roundRect(ctx, valueX - valueW/2, valueY - valueH/2, valueW, valueH, 4);
+                ctx.stroke();
                 ctx.fillStyle = boxFg;
                 ctx.fillText(valueLabel, valueX, valueY);
 
-                // Optional: at each intersection with a visible dataset line, show that series' value
+                // At each intersection with a visible dataset line, show that series' value
+                const labelPad = 6;
+                const labelFont = '11px Segoe UI, sans-serif';
+                ctx.font = labelFont;
+                
                 chart.data.datasets.forEach((ds, dsIdx) => {
                     if (!ds.data || ds.data.length === 0 || chart.getDatasetMeta(dsIdx).hidden) return;
                     const pts = ds.data;
@@ -1383,20 +1509,42 @@
                     }
                     if (!best || best.y == null) return;
                     const lineY = yScale.getPixelForValue(best.y);
-                    if (lineY < topY || lineY > bottomY) return;
-                    const label = (ds.label || '') + ': ' + (isMeds ? (best.y + ' mg') : best.y);
-                    const lw = ctx.measureText(label).width + pad * 2;
-                    const lh = 16;
-                    const lx = chartArea.right - lw - 2;
-                    const ly = lineY;
-                    ctx.fillStyle = ds.borderColor || boxBg;
-                    ctx.globalAlpha = 0.9;
-                    roundRect(ctx, lx, ly - lh/2, lw, lh, 3);
+                    if (lineY < topY - 10 || lineY > bottomY + 10) return;
+                    
+                    // Format value
+                    const valStr = isMeds ? (best.y.toFixed(1) + ' mg') : best.y.toFixed(1);
+                    const label = (ds.label || '') + ': ' + valStr;
+                    const lw = ctx.measureText(label).width + labelPad * 2;
+                    const lh = 20;
+                    const lx = chartArea.right - lw - 8;
+                    const ly = Math.max(topY + lh/2, Math.min(bottomY - lh/2, lineY));
+                    
+                    // Draw colored label box with border
+                    const labelColor = ds.borderColor || boxBg;
+                    ctx.fillStyle = labelColor;
+                    ctx.globalAlpha = 0.92;
+                    roundRect(ctx, lx, ly - lh/2, lw, lh, 4);
                     ctx.fill();
                     ctx.globalAlpha = 1;
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.lineWidth = 1;
+                    roundRect(ctx, lx, ly - lh/2, lw, lh, 4);
+                    ctx.stroke();
+                    
+                    // Draw text
                     ctx.fillStyle = '#fff';
                     ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
                     ctx.fillText(label, lx + lw/2, ly);
+                    
+                    // Draw small dot at intersection point on the line
+                    ctx.fillStyle = labelColor;
+                    ctx.beginPath();
+                    ctx.arc(xPx, lineY, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
                 });
 
                 ctx.restore();
@@ -1672,6 +1820,7 @@
         header.innerHTML = `
             <span class="widget-title">${config.title}</span>
             <div class="widget-controls">
+                <button type="button" class="crosshair-toggle-btn" data-chart-key="${key}" title="Toggle Crosshair mode: single click will show crosshair" style="background: #aaa; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600; margin-right: 6px; transition: background 0.2s;">&#10251; Crosshair</button>
                 <button type="button" class="widget-menu-btn" title="Series">&#9776;</button>
                 <button class="widget-icon-btn remove" onclick="removeWidget('${key}')" title="Remove">&#10005;</button>
             </div>
@@ -1697,6 +1846,24 @@
         area.appendChild(div);
         activeWidgets.push(key);
         widgetPanels[key] = { panel: div, menuEl, sbWrap, sbRange };
+        
+        // Crosshair button toggles crosshair MODE globally
+        const crosshairBtn = header.querySelector('.crosshair-toggle-btn');
+        if (crosshairBtn) {
+            crosshairBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                crosshairModeActive = !crosshairModeActive;
+                // Update ALL crosshair buttons across all widgets
+                document.querySelectorAll('.crosshair-toggle-btn').forEach(btn => {
+                    btn.style.background = crosshairModeActive ? '#f5576c' : '#aaa';
+                    btn.style.boxShadow = crosshairModeActive ? '0 0 8px rgba(245,87,108,0.6)' : 'none';
+                });
+                // If turning off, clear any existing crosshair
+                if (!crosshairModeActive) {
+                    document.querySelectorAll('.crosshair-overlay').forEach(el => el.remove());
+                }
+            });
+        }
 
         const dataObj = config.createData();
         initChartInstance(key, config.chartId, dataObj.sets, dataObj.unified);
@@ -2068,6 +2235,7 @@
             }
         });
 
+
         // 3. Hide non-unified datasets initially
         newChart.data.datasets.forEach(ds => { if (!ds.isUnified) ds.hidden = true; });
         newChart.update();
@@ -2423,9 +2591,258 @@
         return div;
     }
 
+    function showCrosshair(chart, dateStr, dataY) {
+        // Remove existing crosshairs
+        document.querySelectorAll('.crosshair-overlay').forEach(el => el.remove());
+        
+        const canvas = chart.canvas;
+        const rect = canvas.getBoundingClientRect();
+        const chartArea = chart.chartArea;
+        const xScale = chart.scales.x;
+        const yScale = chart.scales.y;
+        
+        // Calculate positions in canvas coordinates
+        const xVal = new Date(dateStr).getTime();
+        const xPx = xScale.getPixelForValue(xVal);
+        const yPx = yScale.getPixelForValue(dataY);
+        
+        // Convert to screen coordinates
+        const screenX = rect.left + xPx;
+        const screenY = rect.top + yPx;
+        const chartTop = rect.top + chartArea.top;
+        const chartBottom = rect.top + chartArea.bottom;
+        const chartLeft = rect.left + chartArea.left;
+        const chartRight = rect.left + chartArea.right;
+        
+        
+        // Create overlay container (full viewport)
+        const overlay = document.createElement('div');
+        overlay.className = 'crosshair-overlay active';
+        overlay.style.left = '0';
+        overlay.style.top = '0';
+        overlay.style.width = '100vw';
+        overlay.style.height = '100vh';
+        
+        // Vertical line (from top of chart to bottom)
+        const vLine = document.createElement('div');
+        vLine.className = 'crosshair-line-v';
+        vLine.style.left = screenX + 'px';
+        vLine.style.top = chartTop + 'px';
+        vLine.style.height = (chartBottom - chartTop) + 'px';
+        overlay.appendChild(vLine);
+        
+        // Horizontal line (from left of chart to right)
+        const hLine = document.createElement('div');
+        hLine.className = 'crosshair-line-h';
+        hLine.style.left = chartLeft + 'px';
+        hLine.style.top = screenY + 'px';
+        hLine.style.width = (chartRight - chartLeft) + 'px';
+        overlay.appendChild(hLine);
+        
+        // Central dot
+        const dot = document.createElement('div');
+        dot.className = 'crosshair-dot';
+        dot.style.left = screenX + 'px';
+        dot.style.top = screenY + 'px';
+        overlay.appendChild(dot);
+        
+        // Date label at bottom (where vertical line meets x-axis)
+        const dateLabel = document.createElement('div');
+        dateLabel.className = 'crosshair-label';
+        const d = new Date(dateStr);
+        dateLabel.textContent = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+        dateLabel.style.left = screenX + 'px';
+        dateLabel.style.top = (chartBottom + 8) + 'px';
+        dateLabel.style.transform = 'translateX(-50%)';
+        overlay.appendChild(dateLabel);
+        
+        // Value label on right (where horizontal line meets y-axis)
+        const isMeds = chart.config._configKey === 'meds';
+        const valueSuffix = isMeds ? ' mg' : '';
+        const valueLabel = document.createElement('div');
+        valueLabel.className = 'crosshair-label';
+        valueLabel.textContent = dataY.toFixed(1) + valueSuffix;
+        valueLabel.style.left = (chartRight + 8) + 'px';
+        valueLabel.style.top = screenY + 'px';
+        valueLabel.style.transform = 'translateY(-50%)';
+        overlay.appendChild(valueLabel);
+        
+        // Helper: linear interpolation to find x-timestamp where a dataset line crosses a target Y
+        function interpolateCrossings(dsData, targetY) {
+            const crossings = [];
+            const sorted = [...dsData].filter(p => p && p.x != null && p.y != null)
+                                     .sort((a, b) => new Date(a.x) - new Date(b.x));
+            for (let i = 0; i < sorted.length - 1; i++) {
+                const p1 = sorted[i], p2 = sorted[i + 1];
+                const y1 = p1.y, y2 = p2.y;
+                if ((y1 <= targetY && y2 >= targetY) || (y1 >= targetY && y2 <= targetY)) {
+                    const t = (targetY - y1) / (y2 - y1);
+                    const x1 = new Date(p1.x).getTime();
+                    const x2 = new Date(p2.x).getTime();
+                    const crossX = x1 + t * (x2 - x1);
+                    crossings.push({ xMs: crossX, y: targetY });
+                }
+            }
+            return crossings;
+        }
+
+        // Helper: find dataset's interpolated Y at a specific x-timestamp
+        function interpolateY(dsData, targetXMs) {
+            const sorted = [...dsData].filter(p => p && p.x != null && p.y != null)
+                                     .sort((a, b) => new Date(a.x) - new Date(b.x));
+            for (let i = 0; i < sorted.length - 1; i++) {
+                const x1 = new Date(sorted[i].x).getTime();
+                const x2 = new Date(sorted[i + 1].x).getTime();
+                if (targetXMs >= x1 && targetXMs <= x2) {
+                    const t = (targetXMs - x1) / (x2 - x1);
+                    return sorted[i].y + t * (sorted[i + 1].y - sorted[i].y);
+                }
+            }
+            return null;
+        }
+
+        // Helper: create a clickable intersection dot and its popup label
+        let dotCounter = 0;
+        function makeDot(sx, sy, color, labelLines) {
+            if (sx < chartLeft || sx > chartRight || sy < chartTop || sy > chartBottom) return;
+            const idx = dotCounter++;
+
+            // Hidden label popup
+            const popup = document.createElement('div');
+            popup.className = 'crosshair-label dataset-label';
+            popup.dataset.dotId = 'dot-' + idx;
+            popup.style.background = 'rgba(30,35,45,0.95)';
+            popup.style.borderLeft = `3px solid ${color}`;
+            popup.style.left = (sx + 14) + 'px';
+            popup.style.top = (sy - 10) + 'px';
+            popup.innerHTML = labelLines.map(l => `<div>${l}</div>`).join('');
+            overlay.appendChild(popup);
+
+            // Small dot (size ~8px)
+            const dot = document.createElement('div');
+            dot.className = 'crosshair-intersection-dot';
+            dot.dataset.dotId = 'dot-' + idx;
+            dot.style.width = '8px';
+            dot.style.height = '8px';
+            dot.style.background = color;
+            dot.style.left = sx + 'px';
+            dot.style.top = sy + 'px';
+            dot.title = labelLines.join(' | ');
+
+            dot.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isActive = dot.classList.contains('active');
+                overlay.querySelectorAll('.crosshair-intersection-dot').forEach(d => d.classList.remove('active'));
+                overlay.querySelectorAll('.dataset-label').forEach(l => l.classList.remove('active'));
+                if (!isActive) {
+                    dot.classList.add('active');
+                    popup.classList.add('active');
+                }
+            });
+            overlay.appendChild(dot);
+        }
+
+        const clickedXMs = new Date(dateStr).getTime();
+
+        // ── VERTICAL LINE intersections (same date, each dataset's value there) ──
+        chart.data.datasets.forEach(ds => {
+            if (ds.hidden || !ds.data || ds.data.length === 0) return;
+            const interpY = interpolateY(ds.data, clickedXMs);
+            if (interpY == null) return;
+            const sy = rect.top + yScale.getPixelForValue(interpY);
+            const label = [
+                new Date(dateStr).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' }),
+                ds.label || 'Series',
+                interpY.toFixed(1) + valueSuffix
+            ];
+            makeDot(screenX, sy, ds.borderColor || '#555', label);
+        });
+
+        // ── HORIZONTAL LINE intersections (same clicked Y, where each dataset crosses it) ──
+        chart.data.datasets.forEach(ds => {
+            if (ds.hidden || !ds.data || ds.data.length === 0) return;
+            const crossings = interpolateCrossings(ds.data, dataY);
+            crossings.forEach(c => {
+                if (Math.abs(c.xMs - clickedXMs) < 1000 * 60 * 60 * 24) return; // skip if same date as click
+                const sx = rect.left + xScale.getPixelForValue(c.xMs);
+                const crossDate = new Date(c.xMs).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+                const label = [
+                    crossDate,
+                    ds.label || 'Series',
+                    c.y.toFixed(1) + valueSuffix
+                ];
+                makeDot(sx, screenY, ds.borderColor || '#555', label);
+            });
+        });
+
+        // ── STRIP intersections (vertical line crossing Clinical State / Adherence / Substance strips) ──
+        const ribbons = chart.$ribbons || [];
+        const clickedDate = new Date(dateStr).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+        ribbons.forEach(ribbon => {
+            // Check if the vertical crosshair x-pixel falls inside this strip's x-range
+            const canvasXPx = xScale.getPixelForValue(clickedXMs); // canvas-local x
+            if (canvasXPx < ribbon.xMin || canvasXPx > ribbon.xMax) return;
+
+            // Dot at center-y of the strip (convert canvas-local y to screen y)
+            const stripCenterY = rect.top + (ribbon.yMin + ribbon.yMax) / 2;
+
+            // Strip colour: Clinical State = blue-ish, Adherence = green-ish, Substance = orange-ish
+            const stripColors = {
+                'Clinical State': '#7CA5D0',
+                'Adherence':      '#5ba85b',
+                'Substance':      '#c97d2e'
+            };
+            const color = stripColors[ribbon.type] || '#888';
+
+            const label = [
+                clickedDate,
+                ribbon.type + ': ' + ribbon.title,
+                ribbon.duration || ''
+            ].filter(Boolean);
+
+            // makeDot clamps to chart area, so we bypass it for strips (which are outside chart area)
+            // Build the dot directly
+            const idx = dotCounter++;
+
+            const popup = document.createElement('div');
+            popup.className = 'crosshair-label dataset-label';
+            popup.dataset.dotId = 'dot-' + idx;
+            popup.style.background = 'rgba(30,35,45,0.95)';
+            popup.style.borderLeft = `3px solid ${color}`;
+            popup.style.left = (screenX + 14) + 'px';
+            popup.style.top = (stripCenterY - 10) + 'px';
+            popup.innerHTML = label.map(l => `<div>${l}</div>`).join('');
+            overlay.appendChild(popup);
+
+            const dot = document.createElement('div');
+            dot.className = 'crosshair-intersection-dot';
+            dot.dataset.dotId = 'dot-' + idx;
+            dot.style.width = '8px';
+            dot.style.height = '8px';
+            dot.style.background = color;
+            dot.style.left = screenX + 'px';
+            dot.style.top = stripCenterY + 'px';
+            dot.title = label.join(' | ');
+
+            dot.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isActive = dot.classList.contains('active');
+                overlay.querySelectorAll('.crosshair-intersection-dot').forEach(d => d.classList.remove('active'));
+                overlay.querySelectorAll('.dataset-label').forEach(l => l.classList.remove('active'));
+                if (!isActive) {
+                    dot.classList.add('active');
+                    popup.classList.add('active');
+                }
+            });
+            overlay.appendChild(dot);
+        });
+
+        document.body.appendChild(overlay);
+    }
+
     function clearStickyTooltips() {
         document.querySelectorAll('.sticky-tooltip').forEach(el => el.remove());
-        Object.keys(charts || {}).forEach(k => { const c = charts[k]; if (c) c.$crosshair = null; });
+        document.querySelectorAll('.crosshair-overlay').forEach(el => el.remove());
     }
 
     function showRibbonTooltip(x, y, ribbon) {
