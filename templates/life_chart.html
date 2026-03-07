@@ -286,12 +286,18 @@
         }
         .crosshair-label.dataset-label {
             font-size: 9px;
-            padding: 3px 6px;
+            padding: 4px 8px;
             background: rgba(0, 0, 0, 0.75);
             display: none;
+            line-height: 1.35;
+            min-width: 120px;
         }
         .crosshair-label.dataset-label.active {
             display: block;
+        }
+        .crosshair-popup {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+            z-index: 10002;
         }
         .crosshair-intersection-dot {
             position: absolute;
@@ -1238,7 +1244,9 @@
                             if (crosshairModeActive) {
                                 // Crosshair mode: show crosshair with intersection dots
                                 document.querySelectorAll('.crosshair-overlay').forEach(el => el.remove());
-                                showCrosshair(chart, dateStr, dataItem.y != null ? dataItem.y : 0);
+                                const clickedDs = chart.data.datasets[firstPoint.datasetIndex];
+                                const clickedIsUnified = clickedDs ? !!clickedDs.isUnified : false;
+                                showCrosshair(chart, dateStr, dataItem.y != null ? dataItem.y : 0, clickedIsUnified);
                             } else {
                                 // Normal mode: show sticky tooltips
                                 showStickyTooltips(dateStr);
@@ -2591,7 +2599,7 @@
         return div;
     }
 
-    function showCrosshair(chart, dateStr, dataY) {
+    function showCrosshair(chart, dateStr, dataY, clickedIsUnified = false) {
         // Remove existing crosshairs
         document.querySelectorAll('.crosshair-overlay').forEach(el => el.remove());
         
@@ -2702,19 +2710,22 @@
         }
 
         // Helper: create a clickable intersection dot and its popup label
+        // Tooltip is placed above and to the right of the dot so the dot never obstructs content
+        const TOOLTIP_OFFSET_RIGHT = 22;
+        const TOOLTIP_OFFSET_ABOVE = 52;
         let dotCounter = 0;
         function makeDot(sx, sy, color, labelLines) {
             if (sx < chartLeft || sx > chartRight || sy < chartTop || sy > chartBottom) return;
             const idx = dotCounter++;
 
-            // Hidden label popup
+            // Hidden label popup: above and right of dot so intersection point doesn't obstruct text
             const popup = document.createElement('div');
-            popup.className = 'crosshair-label dataset-label';
+            popup.className = 'crosshair-label dataset-label crosshair-popup';
             popup.dataset.dotId = 'dot-' + idx;
             popup.style.background = 'rgba(30,35,45,0.95)';
             popup.style.borderLeft = `3px solid ${color}`;
-            popup.style.left = (sx + 14) + 'px';
-            popup.style.top = (sy - 10) + 'px';
+            popup.style.left = (sx + TOOLTIP_OFFSET_RIGHT) + 'px';
+            popup.style.top = (sy - TOOLTIP_OFFSET_ABOVE) + 'px';
             popup.innerHTML = labelLines.map(l => `<div>${l}</div>`).join('');
             overlay.appendChild(popup);
 
@@ -2745,8 +2756,10 @@
         const clickedXMs = new Date(dateStr).getTime();
 
         // ── VERTICAL LINE intersections (same date, each dataset's value there) ──
-        chart.data.datasets.forEach(ds => {
-            if (ds.hidden || !ds.data || ds.data.length === 0) return;
+        chart.data.datasets.forEach((ds, dsIdx) => {
+            if (!chart.isDatasetVisible(dsIdx) || !ds.data || ds.data.length === 0) return;
+            // Only show dots for the same type: unified↔unified, individual↔individual
+            if (!!ds.isUnified !== clickedIsUnified) return;
             const interpY = interpolateY(ds.data, clickedXMs);
             if (interpY == null) return;
             const sy = rect.top + yScale.getPixelForValue(interpY);
@@ -2759,8 +2772,10 @@
         });
 
         // ── HORIZONTAL LINE intersections (same clicked Y, where each dataset crosses it) ──
-        chart.data.datasets.forEach(ds => {
-            if (ds.hidden || !ds.data || ds.data.length === 0) return;
+        chart.data.datasets.forEach((ds, dsIdx) => {
+            if (!chart.isDatasetVisible(dsIdx) || !ds.data || ds.data.length === 0) return;
+            // Only show dots for the same type: unified↔unified, individual↔individual
+            if (!!ds.isUnified !== clickedIsUnified) return;
             const crossings = interpolateCrossings(ds.data, dataY);
             crossings.forEach(c => {
                 if (Math.abs(c.xMs - clickedXMs) < 1000 * 60 * 60 * 24) return; // skip if same date as click
@@ -2805,12 +2820,12 @@
             const idx = dotCounter++;
 
             const popup = document.createElement('div');
-            popup.className = 'crosshair-label dataset-label';
+            popup.className = 'crosshair-label dataset-label crosshair-popup';
             popup.dataset.dotId = 'dot-' + idx;
             popup.style.background = 'rgba(30,35,45,0.95)';
             popup.style.borderLeft = `3px solid ${color}`;
-            popup.style.left = (screenX + 14) + 'px';
-            popup.style.top = (stripCenterY - 10) + 'px';
+            popup.style.left = (screenX + TOOLTIP_OFFSET_RIGHT) + 'px';
+            popup.style.top = (stripCenterY - TOOLTIP_OFFSET_ABOVE) + 'px';
             popup.innerHTML = label.map(l => `<div>${l}</div>`).join('');
             overlay.appendChild(popup);
 
