@@ -1230,7 +1230,7 @@
             const bottomY = chartArea.bottom;
             const xScale = scales.x;
             const bottomPadding = chart.options.scales?.x?.ticks?.padding || 0;
-            const stripBandHeight = 32;
+            const stripBandHeight = SUBSTANCE_STRIP_H;
             const clinicalStateStripHeight = 30;
 
             chart.$ribbons = [];
@@ -1567,6 +1567,7 @@
     const ADHERENCE_STRIP_HEIGHT_DEFAULT = Math.round(ADHERENCE_STRIP_BASE * 1.8);
     const ADHERENCE_STRIP_HEIGHT_MAX = ADHERENCE_STRIP_BASE * 3;
     const X_AXIS_RESERVED_PX = 32;
+    const SUBSTANCE_STRIP_H = 24;
     let adherenceStripExpanded = false;
 
     function syncSymptomAdherenceX() {
@@ -1610,16 +1611,17 @@
     function buildGrid() {
         const wrapper = document.querySelector('.dashboard-wrapper');
         const w = wrapper ? wrapper.clientWidth : window.innerWidth - 310;
-        const h = wrapper ? wrapper.clientHeight : window.innerHeight - 120;
+        // Use window.innerHeight for reliable symptom widget sizing regardless of wrapper state
+        const h = window.innerHeight - 55;
         const fullWidth = Math.max(MIN_PANEL_W, w - LAYOUT_PAD * 2);
         const hasScale = typeof rawData !== 'undefined' && rawData.scale && rawData.scale.length > 0;
 
-        // Top: Symptoms + Adherence strip (reduced height so widget is fully visible on load); below: 2x2 grid (MSE, SE | Meds, Scale)
+        // Top: Symptoms + Adherence strip; below: 2x2 grid (MSE, SE | Meds, Scale)
         const gridRows = 2;
         const gridCols = 2;
         const gridGap = 10;
         const gridRowH = Math.max(MIN_ROW_SCALE_MSE, 260);
-        const firstRowH = Math.min(h - LAYOUT_PAD * 2, Math.max(380, Math.floor(h * 0.62)));
+        const firstRowH = Math.max(480, Math.min(h - LAYOUT_PAD * 2, Math.floor(h * 0.68)));
 
         const gridCellW = (fullWidth - gridGap) / 2;
 
@@ -2244,7 +2246,7 @@
         }
         
         // Symptom chart: reserve bottom padding for Substance bands + Adherence strip (max height) + X-axis (one shared X-axis at bottom)
-        const freeZoneHeight = (key === 'symptoms') ? (30 + (activeSubsCount * 32) + ADHERENCE_STRIP_HEIGHT_MAX + X_AXIS_RESERVED_PX) : (key === 'meds') ? 32 : 5;
+        const freeZoneHeight = (key === 'symptoms') ? (30 + (activeSubsCount * SUBSTANCE_STRIP_H) + ADHERENCE_STRIP_HEIGHT_DEFAULT + X_AXIS_RESERVED_PX) : (key === 'meds') ? 32 : 5;
 
         // Fetch a fresh, isolated copy of the options and safely apply custom limits
         const chartOptions = getCommonOptions();
