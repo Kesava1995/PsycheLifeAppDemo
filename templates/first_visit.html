@@ -129,7 +129,13 @@
         <main class="main-content">
             <div class="visit-card">
                 <form method="POST" id="visitForm" enctype="multipart/form-data" action="{{ url_for('first_visit') }}">
-                    <h2 style="margin-bottom: 20px;">New Registration</h2>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                        <h2 style="margin: 0;">New Registration</h2>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label for="visit_date" style="margin: 0; white-space: nowrap; font-weight: 600; color: #555;">Date</label>
+                            <input type="date" name="visit_date" id="visit_date" value="{{ today.strftime('%Y-%m-%d') }}" style="width: auto; min-width: 150px;" title="Visit date (stored in Visits)">
+                        </div>
+                    </div>
                     <div class="section-header" style="margin-top: 0;"><span class="section-title">Socio-Demographic details</span></div>
                     
                     <div class="patient-grid">
@@ -173,7 +179,6 @@
                         </div>
                         
                         <div><label>Identification Notes (Doctor Only)</label><textarea name="personal_notes" rows="1" style="resize: none;"></textarea></div>
-                        <input type="hidden" name="visit_date" value="{{ today.strftime('%Y-%m-%d') }}">
                     </div>
 
                     <div class="section-header"><span class="section-title">Background Factors</span></div>

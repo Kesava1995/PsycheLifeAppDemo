@@ -17,7 +17,21 @@
         body { margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); height: 100vh; display: flex; overflow: hidden; }
         
         /* SIDEBAR STYLES - resizable via divider */
-        .sidebar { width: 280px; min-width: 200px; max-width: 480px; background: white; border-right: none; display: flex; flex-direction: column; flex-shrink: 0; z-index: 2; }
+        .sidebar { width: 200px; min-width: 160px; max-width: 280px; background: white; border-right: none; display: flex; flex-direction: column; flex-shrink: 0; z-index: 2; transition: width 0.22s ease, min-width 0.22s ease; overflow: hidden; }
+        .sidebar.collapsed { width: 32px !important; min-width: 32px !important; }
+        .sidebar.collapsed .sidebar-inner { opacity: 0; pointer-events: none; }
+        .sidebar.collapsed + .sidebar-resize-handle { display: none; }
+        #sidebarToggleBtn {
+            display: flex; align-items: center; justify-content: center;
+            width: 100%; padding: 7px 0; border: none; background: #eef2f7;
+            border-bottom: 1px solid #dde3ea; cursor: pointer; flex-shrink: 0;
+            font-size: 13px; color: #555; transition: background 0.15s, color 0.15s;
+            user-select: none;
+        }
+        #sidebarToggleBtn:hover { background: #dde6f0; color: #222; }
+        #sidebarToggleBtn .sb-icon { display: inline-block; transition: transform 0.22s ease; font-style: normal; }
+        .sidebar.collapsed #sidebarToggleBtn .sb-icon { transform: rotate(180deg); }
+        .sidebar-inner { display: flex; flex-direction: column; flex: 1; overflow: hidden; transition: opacity 0.18s ease; }
         .sidebar-resize-handle {
             width: 10px;
             flex-shrink: 0;
@@ -59,33 +73,32 @@
         .item-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
         .sidebar-item.unified-item { background: #fcfcfc; border-bottom: 1px dashed #eee; font-weight: 600; }
 
-        /* MAIN CONTENT AREA - Dashboard is scroll-free; page can scroll for form below */
+        /* MAIN CONTENT AREA - scrolls vertically when chart area expands so all charts are visible */
         .main-content { 
             flex: 1; 
-            padding: 15px; 
-            overflow-y: auto; 
+            padding: 10px 12px; 
+            overflow-y: auto;
             overflow-x: hidden;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
             background: #f8f9fa;
             min-height: 0;
+            min-width: 0;
         }
 
-        /* Dashboard wrapper: min height must fit 3 rows of panels (symptoms, meds, se, mse, scale) */
+        /* Dashboard wrapper: expands with content (no max-height); scroll lives on main-content */
         .dashboard-wrapper {
-            flex: 1 1 auto;
-            min-height: 680px;
-            min-height: max(680px, min(80vh, 800px));
+            flex: 0 0 auto;
+            min-height: 400px;
             position: relative;
-            overflow: hidden;
+            overflow: visible;
             border-radius: 8px;
             background: #f0f4f8;
         }
         #dashboardCanvas {
             position: relative;
             width: 100%;
-            height: 100%;
             transform-origin: 0 0;
             transition: transform 0.1s ease;
             will-change: transform;
@@ -93,8 +106,7 @@
         #dashboardArea {
             position: relative;
             width: 100%;
-            height: 100%;
-            overflow: hidden;
+            overflow: visible;
         }
 
         /* Zoom toast */
@@ -163,7 +175,7 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             display: flex;
             flex-direction: column;
-            overflow: hidden; 
+            overflow: hidden;
             min-height: 200px;
             min-width: 280px;
             border: 1px solid #e0e0e0;
@@ -182,6 +194,12 @@
         .widget-card.resizing {
             box-shadow: 0 24px 64px rgba(0,0,0,0.25), 0 0 0 2px #7b61ff;
             z-index: 200;
+        }
+        #widget-symptoms.widget-card {
+            overflow: visible;
+        }
+        #widget-symptoms .canvas-container.has-adherence-strip {
+            overflow: visible;
         }
         .widget-card.bumped {
             border: 2px solid #7b61ff;
@@ -243,8 +261,8 @@
             width: 2px;
             background: repeating-linear-gradient(
                 to bottom,
-                rgba(255, 0, 0, 0.8) 0px,
-                rgba(255, 0, 0, 0.8) 6px,
+                rgba(255, 0, 0, 0.65) 0px,
+                rgba(255, 0, 0, 0.65) 6px,
                 transparent 6px,
                 transparent 10px
             );
@@ -254,8 +272,8 @@
             height: 2px;
             background: repeating-linear-gradient(
                 to right,
-                rgba(255, 0, 0, 0.8) 0px,
-                rgba(255, 0, 0, 0.8) 6px,
+                rgba(255, 0, 0, 0.65) 0px,
+                rgba(255, 0, 0, 0.65) 6px,
                 transparent 6px,
                 transparent 10px
             );
@@ -434,8 +452,58 @@
             width: 100%; 
             height: calc(100% - 35px); /* Subtract header height */
             min-height: 0; 
-            padding: 5px; 
+            padding: 2px; 
             box-sizing: border-box;
+        }
+        .canvas-container.has-adherence-strip {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+        .canvas-container.has-adherence-strip .symptom-chart-main {
+            flex: 1;
+            min-height: 0;
+            position: relative;
+        }
+        .canvas-container.has-adherence-strip .symptom-chart-main canvas {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+        }
+        /* Adherence strip: below Substance bands, above X-axis; overlaid in symptom chart padding so both share one X-axis */
+        .adherence-strip-wrap {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 32px;
+            width: 100%;
+            min-height: 40px;
+            overflow: hidden;
+            border: 1px solid #e0e0e0;
+            border-radius: 2px;
+            background: #fafbfc;
+            transition: height 0.2s ease;
+            z-index: 5;
+        }
+        .adherence-strip-wrap .expand-hint {
+            position: absolute;
+            right: 6px;
+            bottom: 4px;
+            font-size: 9px;
+            color: #888;
+            pointer-events: none;
+            z-index: 2;
+        }
+        .adherence-strip-wrap .mini-chart-container {
+            width: 100%;
+            height: 100%;
+            min-height: 20px;
+        }
+        .adherence-strip-wrap .mini-chart-container canvas {
+            display: block;
         }
 
 
@@ -584,6 +652,8 @@
         body.dark-mode .widget-header { background-color: #2a2a2a; border-bottom-color: #444; }
         body.dark-mode .dashboard-wrapper { background-color: #1a1a1a; }
         body.dark-mode .sidebar-resize-handle { background: #1e1e1e; border-left-color: #444; border-right-color: #333; }
+        body.dark-mode #sidebarToggleBtn { background: #2a2a2a; border-bottom-color: #444; color: #bbb; }
+        body.dark-mode #sidebarToggleBtn:hover { background: #383838; color: #fff; }
         body.dark-mode .sidebar-resize-handle:hover,
         body.dark-mode .sidebar-resize-handle:active { background: #2a2a2a; border-left-color: var(--dark); }
         body.dark-mode .sidebar-resize-handle::after { background: repeating-linear-gradient(to bottom, #555 0, #555 3px, transparent 3px, transparent 6px); }
@@ -597,17 +667,10 @@
         body.dark-mode .unified-item .color-dot { background: white !important; }
         body.dark-mode #darkModeToggleBtn { background: white !important; color: black !important; }
 
-        /* View-only: chart area at least viewport height so scrolling reveals lowest widget fully */
+        /* View-only: chart area expands with content; main-content scroll reveals all charts */
         body.life-chart-view-only .dashboard-wrapper {
-            min-height: 100vh;
-            min-height: max(920px, 100vh);
+            min-height: 480px;
             margin-bottom: 20px;
-        }
-        /* View-only with Scale Assessments: extra height so Scale widget bottom + Date label is visible when scrolled */
-        body.life-chart-view-only.view-only-with-scales .dashboard-wrapper {
-            min-height: 1080px;
-            min-height: max(1080px, calc(100vh + 180px));
-            margin-bottom: 24px;
         }
         body.life-chart-view-only .main-content {
             padding-bottom: 32px;
@@ -615,155 +678,39 @@
     </style>
 </head>
 <body class="{% if request.args.get('view_only') == '1' %}life-chart-view-only{% endif %} {% if request.args.get('view_only') == '1' and scale_datasets %}view-only-with-scales{% endif %}">
-<div class="sidebar">
-    <div class="nav-row" style="flex-wrap: wrap; gap: 8px;">
-        {% if not guest %}
-            <div style="display: flex; justify-content: space-between; width: 100%;">
-                <a href="{{ url_for('patient_detail', patient_id=patient.id) if patient else '#' }}">← Patient Details</a>
-				{% if scale_datasets %}
-                <div style="display: flex; align-items: center; gap: 6px;">
-                    <label class="switch">
-                        <input type="checkbox" id="masterScaleToggle" onchange="toggleMasterScales()">
-                        <span class="slider round"></span>
-                    </label>
-                    <span style="font-size: 0.85rem; font-weight: 600; color: #555;">Scales</span>
+<div class="sidebar" id="mainSidebar">
+    <button id="sidebarToggleBtn" onclick="toggleSidebar()" title="Toggle panel">
+        <i class="sb-icon">&#9664;</i>
+    </button>
+    <div class="sidebar-inner">
+        <div class="nav-row" style="flex-wrap: wrap; gap: 8px;">
+            {% if not guest %}
+                <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                    <a href="{{ url_for('patient_detail', patient_id=patient.id) if patient else '#' }}">← Patient Details</a>
                 </div>
-                {% else %}
-                <div style="width: 60px;"></div> 
+				{% if scale_datasets %}
+				<div style="display: flex; align-items: center; gap: 6px;">
+					<label class="switch">
+						<input type="checkbox" id="masterScaleToggle" onchange="toggleMasterScales()">
+						<span class="slider round"></span>
+					</label>
+					<span style="font-size: 0.85rem; font-weight: 600; color: #555;">Scales</span>
+				</div>
 				{% endif %}
-            </div>
-            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: 5px;">
-                <a href="{{ url_for('dashboard') }}">← Dashboard</a>
-                
-                <button type="button" id="darkModeToggleBtn" onclick="toggleDarkMode()" style="background: black; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: background 0.3s, color 0.3s;">Dark Mode</button>
-				<a href="{{ url_for('logout') }}" style="color: red;">Logout</a>
-                
-            </div>
-        {% else %}
-            <span style="font-weight: 600; color: #555;">Guest View</span>
-            <span style="font-size: 0.8rem; color: #888;">Read Only</span>
-        {% endif %}
-    </div>
-    
-    <div class="controls">
-        <div class="sidebar-group">
-            <div class="group-header">Events & Stressors</div>
-            <div style="padding: 10px; display: flex; gap: 10px;">
-                <button id="btnStressors" class="btn btn-sm" style="flex:1; padding: 6px; font-size:12px; background:var(--dark); color:white; margin:0;" onclick="toggleEventDataset('symptoms', 'Stressors', this)">Stressors</button>
-                <button id="btnEvents" class="btn btn-sm" style="flex:1; padding: 6px; font-size:12px; background:var(--dark); color:white; margin:0;" onclick="toggleEventDataset('symptoms', 'Major Events', this)">Major Events</button>
-            </div>
+                <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: 5px;">
+                    <a href="{{ url_for('dashboard') }}">← Dashboard</a>
+				</div>
+				<div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: 5px;">
+                    <button type="button" id="darkModeToggleBtn" onclick="toggleDarkMode()" style="background: black; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: background 0.3s, color 0.3s;">Dark Mode</button>
+                </div>
+				<div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: 5px;">
+					<a href="{{ url_for('logout') }}" style="color: red;">Logout</a>
+                </div>
+            {% else %}
+                <span style="font-weight: 600; color: #555;">Guest View</span>
+                <span style="font-size: 0.8rem; color: #888;">Read Only</span>
+            {% endif %}
         </div>
-        <div class="sidebar-group">
-            <div class="group-header">Symptom Trajectory</div>
-            <div class="list-container">
-                <label class="sidebar-item unified-item">
-                    <input type="checkbox" id="check-unified-symptoms" checked onchange="toggleUnified('symptoms')">
-                    <span class="color-dot" style="background:black;"></span>
-                    <span class="item-text">Unified (Average)</span>
-                </label>
-                <label class="sidebar-item" style="border-bottom:1px solid #eee; margin-bottom:5px;">
-                    <input type="checkbox" onchange="toggleAll('symptoms', this)">
-                    <span></span> <span class="item-text" style="font-weight:700; color:#555; font-style:italic;">Select All</span>
-                </label>
-                {% for ds in symptom_datasets %}
-                <label class="sidebar-item">
-                    <input type="checkbox" class="chk-symptoms" value="{{ ds.label }}" onchange="toggleDataset('symptoms', '{{ ds.label }}')">
-                    <span class="color-dot" style="background:{{ ds.borderColor }};"></span>
-                    <span class="item-text">{{ ds.label }}</span>
-                </label>
-                {% endfor %}
-            </div>
-        </div>
-
-        <div class="sidebar-group">
-            <div class="group-header">Medications</div>
-            <div class="list-container">
-                <label class="sidebar-item unified-item">
-                    <input type="checkbox" id="check-unified-meds" checked onchange="toggleUnified('meds')">
-                    <span class="color-dot" style="background:black;"></span>
-                    <span class="item-text">Unified (Average)</span>
-                </label>
-                <label class="sidebar-item" style="border-bottom:1px solid #eee; margin-bottom:5px;">
-                    <input type="checkbox" onchange="toggleAll('meds', this)">
-                    <span></span> <span class="item-text" style="font-weight:700; color:#555; font-style:italic;">Select All</span>
-                </label>
-                {% for ds in medication_datasets %}
-                <label class="sidebar-item">
-                    <input type="checkbox" class="chk-meds" value="{{ ds.label }}" onchange="toggleDataset('meds', '{{ ds.label }}')">
-                    <span class="color-dot" style="background:{{ ds.borderColor }};"></span>
-                    <span class="item-text">{{ ds.label }}</span>
-                </label>
-                {% endfor %}
-            </div>
-        </div>
-
-        <div class="sidebar-group">
-            <div class="group-header">Side Effects</div>
-            <div class="list-container">
-                <label class="sidebar-item unified-item">
-                    <input type="checkbox" id="check-unified-se" checked onchange="toggleUnified('se')">
-                    <span class="color-dot" style="background:black;"></span>
-                    <span class="item-text">Unified (Average)</span>
-                </label>
-                <label class="sidebar-item" style="border-bottom:1px solid #eee; margin-bottom:5px;">
-                    <input type="checkbox" onchange="toggleAll('se', this)">
-                    <span></span> <span class="item-text" style="font-weight:700; color:#555; font-style:italic;">Select All</span>
-                </label>
-                {% for ds in side_effect_datasets %}
-                <label class="sidebar-item">
-                    <input type="checkbox" class="chk-se" value="{{ ds.label }}" onchange="toggleDataset('se', '{{ ds.label }}')">
-                    <span class="color-dot" style="background:{{ ds.borderColor }};"></span>
-                    <span class="item-text">{{ ds.label }}</span>
-                </label>
-                {% endfor %}
-            </div>
-        </div>
-
-        <div class="sidebar-group">
-            <div class="group-header">MSE Findings</div>
-            <div class="list-container">
-                <label class="sidebar-item unified-item">
-                    <input type="checkbox" id="check-unified-mse" checked onchange="toggleUnified('mse')">
-                    <span class="color-dot" style="background:black;"></span>
-                    <span class="item-text">Unified (Average)</span>
-                </label>
-                <label class="sidebar-item" style="border-bottom:1px solid #eee; margin-bottom:5px;">
-                    <input type="checkbox" onchange="toggleAll('mse', this)">
-                    <span></span> <span class="item-text" style="font-weight:700; color:#555; font-style:italic;">Select All</span>
-                </label>
-                {% for ds in mse_datasets %}
-                <label class="sidebar-item">
-                    <input type="checkbox" class="chk-mse" value="{{ ds.label }}" onchange="toggleDataset('mse', '{{ ds.label }}')">
-                    <span class="color-dot" style="background:{{ ds.borderColor }};"></span>
-                    <span class="item-text">{{ ds.label }}</span>
-                </label>
-                {% endfor %}
-            </div>
-        </div>
-
-        {% if scale_datasets %}
-        <div class="sidebar-group" id="sidebar-group-scale" style="display: none;">
-            <div class="group-header">Scale Assessments</div>
-            <div class="list-container">
-                <label class="sidebar-item unified-item">
-                    <input type="checkbox" id="check-unified-scale" checked onchange="toggleUnified('scale')">
-                    <span class="color-dot" style="background:black;"></span>
-                    <span class="item-text">Unified (Average)</span>
-                </label>
-                <label class="sidebar-item" style="border-bottom:1px solid #eee; margin-bottom:5px;">
-                    <input type="checkbox" onchange="toggleAll('scale', this)">
-                    <span></span> <span class="item-text" style="font-weight:700; color:#555; font-style:italic;">Select All</span>
-                </label>
-                {% for ds in scale_datasets %}
-                <label class="sidebar-item">
-                    <input type="checkbox" class="chk-scale" value="{{ ds.label }}" onchange="toggleDataset('scale', '{{ ds.label }}')">
-                    <span class="color-dot" style="background:{{ ds.borderColor }};"></span>
-                    <span class="item-text">{{ ds.label }}</span>
-                </label>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
     </div>
 </div>
 <div id="sidebarResizeHandle" class="sidebar-resize-handle" title="Drag to resize sidebar"></div>
@@ -1147,17 +1094,18 @@
     let charts = {}; // Global chart instance storage
     let activeStickyDate = null; // Remember active date for zoom/pan sync
     let isPanning = false;
-    let crosshairModeActive = false; // When true, single click shows crosshair instead of sticky tooltips
+    let crosshairModeActive = true; // When true, crosshair follows cursor / click; enabled by default
 
     // --- CHART OPTIONS (Now a function to prevent infinite loop object merging) ---
     function getCommonOptions() {
         return {
             responsive: true, maintainAspectRatio: false, 
-            layout: { padding: { top: 45 } }, 
+            layout: { padding: { top: 8, left: 4, right: 4, bottom: 2 } }, 
             scales: {
                 x: {
                     type: 'time',
                     time: { unit: 'day' },
+                    offset: false,
                     title: { display: true, text: 'Date', padding: { top: 4, bottom: 2 } },
                     ticks: { maxTicksLimit: 10, autoSkip: true }
                 },
@@ -1210,8 +1158,7 @@
                                 return lines;
                             }
 
-                            // Medications chart: show only actual dose (no RD, %, equivalent)
-                            if (context.chart.config._configKey === 'meds') {
+                            if (context.chart.config._configKey === 'meds' || context.chart.config._configKey === 'symptomsAdherence') {
                                 return [`${dsLabel}: ${pt.y} mg`];
                             }
                             let val = pt.y;
@@ -1242,11 +1189,24 @@
                             activeStickyDate = dateStr;
 
                             if (crosshairModeActive) {
-                                // Crosshair mode: show crosshair with intersection dots
                                 document.querySelectorAll('.crosshair-overlay').forEach(el => el.remove());
                                 const clickedDs = chart.data.datasets[firstPoint.datasetIndex];
                                 const clickedIsUnified = clickedDs ? !!clickedDs.isUnified : false;
-                                showCrosshair(chart, dateStr, dataItem.y != null ? dataItem.y : 0, clickedIsUnified);
+                                const dataY = dataItem.y != null ? dataItem.y : 0;
+                                const rawX = dataItem.x || dateStr;
+                                const xValueTs = (typeof rawX === 'number' && Number.isFinite(rawX)) ? rawX : new Date(rawX).getTime();
+                                showCrosshair(chart, dateStr, dataY, clickedIsUnified, xValueTs);
+                                if (chart.config._configKey === 'symptoms' && charts['symptomsAdherence']) {
+                                    syncSymptomAdherenceX();
+                                    const adY = getYAtDate(charts['symptomsAdherence'], dateStr);
+                                    charts['symptomsAdherence'].$crosshair = { dateStr, dataY: adY != null ? adY : 0, xValue: xValueTs };
+                                    charts['symptomsAdherence'].update('none');
+                                }
+                                if (chart.config._configKey === 'symptomsAdherence' && charts['symptoms']) {
+                                    const symY = getYAtDate(charts['symptoms'], dateStr);
+                                    charts['symptoms'].$crosshair = { dateStr, dataY: symY != null ? symY : 0, xValue: xValueTs };
+                                    charts['symptoms'].update('none');
+                                }
                             } else {
                                 // Normal mode: show sticky tooltips
                                 showStickyTooltips(dateStr);
@@ -1270,12 +1230,16 @@
             const bottomY = chartArea.bottom;
             const xScale = scales.x;
             const bottomPadding = chart.options.scales?.x?.ticks?.padding || 0;
+            const stripBandHeight = 32;
+            const clinicalStateStripHeight = 30;
 
             chart.$ribbons = [];
             ctx.save();
 
+            const activeSubsCount = [...new Set((rawData.substances || []).map(s => s.substance))].length;
+            const subsStripTotalH = activeSubsCount > 0 ? (30 + activeSubsCount * stripBandHeight) : 0;
             ctx.beginPath();
-            ctx.rect(chartArea.left, 0, chartArea.right - chartArea.left, chartArea.bottom + bottomPadding);
+            ctx.rect(chartArea.left, 0, chartArea.right - chartArea.left, chartArea.bottom + bottomPadding + subsStripTotalH);
             ctx.clip();
 
             /* ========================= 1️⃣ CLINICAL STATE ========================== */
@@ -1287,14 +1251,14 @@
                     const endMs = new Date(state.end).valueOf();
                     const xMin = xScale.getPixelForValue(startMs);
                     const xMax = xScale.getPixelForValue(endMs);
-                    const height = 28;
-                    const laneTop = topY - height - 5;
+                    const height = clinicalStateStripHeight;
+                    const laneTop = topY - height - 4;
 
-                    ctx.fillStyle = 'rgba(164,194,244,0.7)';
+                    ctx.fillStyle = 'rgba(164,194,244,0.75)';
                     ctx.fillRect(xMin, laneTop, xMax - xMin, height);
 
                     ctx.fillStyle = '#222';
-                    ctx.font = '12px Segoe UI';
+                    ctx.font = '11px Segoe UI';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(state.state, xMin + 6, laneTop + height / 2);
 
@@ -1318,22 +1282,22 @@
                 const endMs = new Date(ad.end).valueOf();
                 const xMin = xScale.getPixelForValue(startMs);
                 const xMax = xScale.getPixelForValue(endMs);
-                const height = 22;
 
-                if (chart.config._configKey === 'symptoms') {
-                    const laneTop = bottomY + 5;
-                    ctx.fillStyle = 'rgba(34,139,34,0.15)';
-                    ctx.fillRect(xMin, laneTop, xMax - xMin, height);
+                if (chart.config._configKey === 'symptomsAdherence') {
+                    const laneTop = topY;
+                    const adStripH = Math.min(stripBandHeight, chartArea.bottom - chartArea.top);
+                    ctx.fillStyle = 'rgba(34,139,34,0.2)';
+                    ctx.fillRect(xMin, laneTop, xMax - xMin, adStripH);
 
-                    ctx.fillStyle = '#000';
-                    ctx.font = '11px Segoe UI';
+                    ctx.fillStyle = '#333';
+                    ctx.font = '10px Segoe UI';
                     ctx.textBaseline = 'middle';
-                    ctx.fillText(ad.status, xMin + 6, laneTop + height/2);
+                    ctx.fillText(ad.status, xMin + 4, laneTop + adStripH / 2);
 
                     chart.$ribbons.push({
                         xMin, xMax,
                         yMin: laneTop,
-                        yMax: laneTop + height,
+                        yMax: laneTop + adStripH,
                         title: ad.status,
                         duration: `${ad.start} → ${ad.end}`,
                         note: ad.note || '',
@@ -1341,22 +1305,26 @@
                     });
                 }
 
+                if (chart.config._configKey === 'symptoms') {
+                    /* Adherence strip is drawn in the separate adherence mini chart */
+                }
+
                 if (chart.config._configKey === 'meds') {
-                    const medHeight = 28;
-                    const laneTop = topY - medHeight - 5;
+                    const adHeight = stripBandHeight;
+                    const laneTop = topY - adHeight - 5;
 
                     ctx.fillStyle = 'rgba(34,139,34,0.8)';
-                    ctx.fillRect(xMin, laneTop, xMax - xMin, medHeight);
+                    ctx.fillRect(xMin, laneTop, xMax - xMin, adHeight);
 
                     ctx.fillStyle = '#fff';
-                    ctx.font = '12px Segoe UI';
+                    ctx.font = '11px Segoe UI';
                     ctx.textBaseline = 'middle';
-                    ctx.fillText(ad.status, xMin + 6, laneTop + 14);
+                    ctx.fillText(ad.status, xMin + 6, laneTop + adHeight / 2);
 
                     chart.$ribbons.push({
                         xMin, xMax,
                         yMin: laneTop,
-                        yMax: laneTop + medHeight,
+                        yMax: laneTop + adHeight,
                         title: ad.status,
                         duration: `${ad.start} → ${ad.end}`,
                         note: ad.note || '',
@@ -1370,8 +1338,7 @@
                 const uniqueSubs = [...new Set((rawData.substances || []).map(s => s.substance))];
 
                 uniqueSubs.forEach((sub, idx) => {
-                    // REQUIREMENT 3: Draw progressively below Adherence lane in the Free Zone
-                    const laneTop = bottomY + 30 + (idx * 22);
+                    const laneTop = bottomY + 30 + (idx * stripBandHeight);
 
                     (rawData.substances || [])
                         .filter(s => s.substance === sub)
@@ -1382,17 +1349,17 @@
                             const xMax = xScale.getPixelForValue(endMs);
 
                             ctx.fillStyle = '#B3742A';
-                            ctx.fillRect(xMin, laneTop, xMax - xMin, 18);
+                            ctx.fillRect(xMin, laneTop, xMax - xMin, stripBandHeight);
 
                             ctx.fillStyle = '#fff';
                             ctx.font = '11px Segoe UI';
                             ctx.textBaseline = 'middle';
-                            ctx.fillText(sub, xMin + 6, laneTop + 9);
+                            ctx.fillText(sub, xMin + 6, laneTop + stripBandHeight / 2);
 
                             chart.$ribbons.push({
                                 xMin, xMax,
                                 yMin: laneTop,
-                                yMax: laneTop + 18,
+                                yMax: laneTop + stripBandHeight,
                                 title: sub,
                                 duration: `${su.start_date} → ${su.end_date}`,
                                 note: su.note || '',
@@ -1404,9 +1371,10 @@
 
             /* ========================= CROSSHAIR (on point click) ========================== */
             if (chart.$crosshair && chart.$crosshair.dateStr) {
-                console.log('🎯 Drawing crosshair for:', chart.config._configKey, chart.$crosshair);
                 const yScale = scales.y;
-                const xVal = new Date(chart.$crosshair.dateStr).getTime();
+                const xVal = (typeof chart.$crosshair.xValue === 'number' && Number.isFinite(chart.$crosshair.xValue))
+                    ? chart.$crosshair.xValue
+                    : (chart.$crosshair.xValue != null ? new Date(chart.$crosshair.xValue).getTime() : new Date(chart.$crosshair.dateStr).getTime());
                 let xPx = xScale.getPixelForValue(xVal);
                 const dataY = chart.$crosshair.dataY != null ? chart.$crosshair.dataY : 0;
                 let yPx = yScale.getPixelForValue(dataY);
@@ -1416,31 +1384,19 @@
                 // Clamp positions within chart area
                 xPx = Math.max(chartArea.left, Math.min(chartArea.right, xPx));
                 yPx = Math.max(chartArea.top, Math.min(chartArea.bottom, yPx));
-                
-                console.log('📍 Crosshair position (clamped):', { xPx, yPx, chartArea });
 
                 ctx.save();
                 ctx.globalCompositeOperation = 'source-over';
                 
-                // TEST: Draw a bright red rectangle to confirm canvas drawing works
-                ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
-                ctx.fillRect(xPx - 20, yPx - 20, 40, 40);
-                console.log('🔴 Drew red test rectangle at:', xPx, yPx);
-                
-                // Draw crosshair lines extending in all 4 directions (N/S/E/W)
+                // Draw crosshair: vertical line only (date alignment); horizontal line removed per UX
                 ctx.setLineDash([6, 4]);
-                ctx.strokeStyle = 'rgba(255, 0, 0, 0.9)';  // Changed to bright red for testing
-                ctx.lineWidth = 3;  // Made thicker for visibility
+                ctx.strokeStyle = 'rgba(255, 0, 0, 0.65)';
+                ctx.lineWidth = 2;
                 ctx.beginPath();
-                // Vertical line (North-South)
                 ctx.moveTo(xPx, chartArea.top);
                 ctx.lineTo(xPx, chartArea.bottom);
-                // Horizontal line (East-West)
-                ctx.moveTo(chartArea.left, yPx);
-                ctx.lineTo(chartArea.right, yPx);
                 ctx.stroke();
                 ctx.setLineDash([]);
-                console.log('✏️ Drew crosshair lines');
                 
                 // Central dot at intersection
                 ctx.fillStyle = 'rgba(88, 102, 126, 0.95)';
@@ -1472,9 +1428,14 @@
                 const boxBorder = 'rgba(88, 102, 126, 0.8)';
                 const boxFg = '#ffffff';
 
-                // Bottom: date where vertical line meets x-axis
+                // Date label: for Symptoms chart place at top of Clinical state strip; otherwise at bottom (x-axis)
+                const clinicalStateStripHeight = 30;
                 const dateX = Math.max(chartArea.left + dateW/2 + 4, Math.min(chartArea.right - dateW/2 - 4, xPx));
-                const dateY = bottomY + 6 + dateH/2;
+                let dateY = bottomY + 6 + dateH/2;
+                if (chart.config._configKey === 'symptoms') {
+                    const clinicalStripTop = topY - clinicalStateStripHeight - 4;
+                    dateY = clinicalStripTop - dateH/2 - 2;
+                }
                 ctx.fillStyle = boxBg;
                 roundRect(ctx, dateX - dateW/2, dateY - dateH/2, dateW, dateH, 4);
                 ctx.fill();
@@ -1587,58 +1548,113 @@
         widgetConfig['scale'] = { title: 'Scale Assessments', chartId: 'chartScale', createData: () => ({ sets: rawData.scale, unified: rawData.scaleUnified }) };
     }
 
-    // Initial Layout Order (positions set by buildGrid; scale added when toggled)
+    // Onload layout: Symptoms+Adherence full-width top (visible space); below that 2x2 grid: MSE, Side-effects | Medications, Scales
     const initialLayout = [
         { key: 'symptoms' },
-        { key: 'meds' },
+        { key: 'mse' },
         { key: 'se' },
-        { key: 'mse' }
+        { key: 'meds' }
     ];
 
     // Layout map: key -> { x, y, w, h } for absolute positioning
     let layoutMap = {};
     const LAYOUT_PAD = 14;
     const MIN_PANEL_W = 280;
-    const MIN_PANEL_H = 200;
+    const MIN_PANEL_H = 240;
+    const MIN_ROW_SCALE_MSE = 260;
+    // Adherence strip (in Symptom chart): height in px; base = 22, default = 1.8x, max = 3x
+    const ADHERENCE_STRIP_BASE = 22;
+    const ADHERENCE_STRIP_HEIGHT_DEFAULT = Math.round(ADHERENCE_STRIP_BASE * 1.8);
+    const ADHERENCE_STRIP_HEIGHT_MAX = ADHERENCE_STRIP_BASE * 3;
+    const X_AXIS_RESERVED_PX = 32;
+    let adherenceStripExpanded = false;
+
+    function syncSymptomAdherenceX() {
+        var sym = charts['symptoms'];
+        var ad = window.adherenceChart;
+        if (!sym || !ad) return;
+        if (!sym.scales || !sym.scales.x) return;
+        if (!ad.options || !ad.options.scales || !ad.options.scales.x) return;
+        ad.options.scales.x.min = sym.scales.x.min;
+        ad.options.scales.x.max = sym.scales.x.max;
+        if (sym.chartArea && ad.chartArea) {
+            var diff = sym.chartArea.left - ad.chartArea.left;
+            if (!ad.options.layout) ad.options.layout = {};
+            if (!ad.options.layout.padding) ad.options.layout.padding = {};
+            var currentLeft = typeof ad.options.layout.padding.left === 'number' ? ad.options.layout.padding.left : 2;
+            ad.options.layout.padding.left = Math.max(0, currentLeft + diff);
+        }
+        ad.update('none');
+    }
+
+    const syncSymptomAdherenceXPlugin = {
+        id: 'syncSymptomAdherenceX',
+        afterUpdate: function(chart) {
+            if (chart.config._configKey !== 'symptoms') return;
+            var ad = window.adherenceChart;
+            if (!ad || !ad.options || !ad.options.scales || !ad.options.scales.x) return;
+            if (!chart.scales || !chart.scales.x) return;
+            ad.options.scales.x.min = chart.scales.x.min;
+            ad.options.scales.x.max = chart.scales.x.max;
+            if (chart.chartArea && ad.chartArea) {
+                var diff = chart.chartArea.left - ad.chartArea.left;
+                if (!ad.options.layout) ad.options.layout = {};
+                if (!ad.options.layout.padding) ad.options.layout.padding = {};
+                var currentLeft = typeof ad.options.layout.padding.left === 'number' ? ad.options.layout.padding.left : 2;
+                ad.options.layout.padding.left = Math.max(0, currentLeft + diff);
+            }
+            ad.update('none');
+        }
+    };
 
     function buildGrid() {
         const wrapper = document.querySelector('.dashboard-wrapper');
         const w = wrapper ? wrapper.clientWidth : window.innerWidth - 310;
         const h = wrapper ? wrapper.clientHeight : window.innerHeight - 120;
-        const keys = [...initialLayout.map(i => i.key)];
-        if (typeof rawData !== 'undefined' && rawData.scale && rawData.scale.length > 0) keys.push('scale');
-        const cols = 2;
-        const rows = Math.ceil(keys.length / cols) || 1;
-        const cellW = Math.max(MIN_PANEL_W, Math.floor((w - LAYOUT_PAD * (cols + 1)) / cols));
-        const totalPad = LAYOUT_PAD * (rows + 1);
-        const availableH = h - totalPad;
-        var rowHeights = [];
-        if (rows >= 2 && keys.length >= 2) {
-            var firstRowH = Math.max(320, Math.floor(availableH * 0.52));
-            var restH = availableH - firstRowH;
-            var restRows = rows - 1;
-            var otherRowH = Math.max(MIN_PANEL_H, Math.floor(restH / restRows));
-            if (rows >= 3 && keys.indexOf('scale') !== -1) {
-                var scaleRowMin = 240;
-                if (otherRowH < scaleRowMin) otherRowH = scaleRowMin;
-            }
-            rowHeights = [firstRowH].concat(Array(restRows).fill(otherRowH));
-        } else {
-            var cellH = Math.max(MIN_PANEL_H, Math.floor(availableH / rows));
-            rowHeights = Array(rows).fill(cellH);
-        }
-        keys.forEach((key, i) => {
-            const col = i % cols;
-            const row = Math.floor(i / cols);
-            const cellH = rowHeights[row] || MIN_PANEL_H;
-            const y = LAYOUT_PAD + rowHeights.slice(0, row).reduce(function(a, b) { return a + b; }, 0) + row * LAYOUT_PAD;
+        const fullWidth = Math.max(MIN_PANEL_W, w - LAYOUT_PAD * 2);
+        const hasScale = typeof rawData !== 'undefined' && rawData.scale && rawData.scale.length > 0;
+
+        // Top: Symptoms + Adherence strip (reduced height so widget is fully visible on load); below: 2x2 grid (MSE, SE | Meds, Scale)
+        const gridRows = 2;
+        const gridCols = 2;
+        const gridGap = 10;
+        const gridRowH = Math.max(MIN_ROW_SCALE_MSE, 260);
+        const firstRowH = Math.min(h - LAYOUT_PAD * 2, Math.max(380, Math.floor(h * 0.62)));
+
+        const gridCellW = (fullWidth - gridGap) / 2;
+
+        layoutMap['symptoms'] = {
+            x: LAYOUT_PAD,
+            y: LAYOUT_PAD,
+            w: fullWidth,
+            h: firstRowH
+        };
+
+        var gridKeys = ['mse', 'se', 'meds'];
+        if (hasScale) gridKeys.push('scale');
+        gridKeys.forEach(function(key, idx) {
+            const col = idx % gridCols;
+            const row = Math.floor(idx / gridCols);
             layoutMap[key] = {
-                x: LAYOUT_PAD + col * (cellW + LAYOUT_PAD),
-                y: y,
-                w: cellW,
-                h: cellH
+                x: LAYOUT_PAD + col * (gridCellW + gridGap),
+                y: LAYOUT_PAD + firstRowH + LAYOUT_PAD + row * (gridRowH + gridGap),
+                w: gridCellW,
+                h: gridRowH
             };
         });
+
+        var bottomBuffer = 48;
+        var totalContentH = LAYOUT_PAD + firstRowH + LAYOUT_PAD + gridRowH * 2 + gridGap + LAYOUT_PAD + bottomBuffer;
+        var areaEl = document.getElementById('dashboardArea');
+        var canvasEl = document.getElementById('dashboardCanvas');
+        if (areaEl && totalContentH > 0) {
+            areaEl.style.minHeight = totalContentH + 'px';
+            areaEl.style.height = totalContentH + 'px';
+        }
+        if (canvasEl && totalContentH > 0) {
+            canvasEl.style.minHeight = totalContentH + 'px';
+            canvasEl.style.height = totalContentH + 'px';
+        }
     }
 
     // Collision helpers (DataLab-style)
@@ -1704,6 +1720,18 @@
             zoomToastTimer = setTimeout(() => toast.classList.remove('visible'), 1200);
         }
         setTimeout(() => Object.keys(charts).forEach(k => { if (charts[k]) charts[k].resize(); }), 150);
+    }
+
+    function toggleSidebar() {
+        const sidebar = document.getElementById('mainSidebar');
+        const resizeHandle = document.getElementById('sidebarResizeHandle');
+        const collapsed = sidebar.classList.toggle('collapsed');
+        if (resizeHandle) resizeHandle.style.display = collapsed ? 'none' : '';
+        // Resize charts after transition ends so they fill new available space
+        setTimeout(function() {
+            Object.values(charts).forEach(function(c) { if (c && c.resize) c.resize(); });
+            if (window.adherenceChart && window.adherenceChart.resize) window.adherenceChart.resize();
+        }, 240);
     }
 
     function toggleDarkMode() {
@@ -1788,7 +1816,7 @@
             addWidgetToDOM(item.key);
         });
 
-        if (lifeChartViewOnly && rawData.scale && rawData.scale.length > 0) {
+        if (rawData.scale && rawData.scale.length > 0) {
             addWidgetToDOM('scale');
             var t = document.getElementById('masterScaleToggle');
             if (t) t.checked = true;
@@ -1796,7 +1824,13 @@
             if (sg) sg.style.display = 'block';
         }
 
+        document.querySelectorAll('.crosshair-toggle-btn').forEach(btn => {
+            btn.style.background = crosshairModeActive ? '#f5576c' : '#aaa';
+            btn.style.boxShadow = crosshairModeActive ? '0 0 8px rgba(245,87,108,0.6)' : 'none';
+        });
         updateWidgetDropdown();
+        requestAnimationFrame(function() { buildGrid(); });
+        setTimeout(function() { buildGrid(); }, 100);
     }
 
     function addWidgetToDOM(key) {
@@ -1839,8 +1873,21 @@
         menuEl.innerHTML = '<div class="widget-series-menu-title">Series</div>';
 
         const canvasContainer = document.createElement('div');
-        canvasContainer.className = 'canvas-container';
-        canvasContainer.innerHTML = '<canvas id="' + config.chartId + '"></canvas>';
+        canvasContainer.className = 'canvas-container' + (key === 'symptoms' ? ' has-adherence-strip' : '');
+        if (key === 'symptoms') {
+            const chartMain = document.createElement('div');
+            chartMain.className = 'symptom-chart-main';
+            chartMain.innerHTML = '<canvas id="' + config.chartId + '"></canvas>';
+            canvasContainer.appendChild(chartMain);
+            const stripWrap = document.createElement('div');
+            stripWrap.className = 'adherence-strip-wrap';
+            stripWrap.id = 'adherence-strip-wrap';
+            stripWrap.style.height = ADHERENCE_STRIP_HEIGHT_DEFAULT + 'px';
+            stripWrap.innerHTML = '<span class="expand-hint">⌄ Double-click to expand</span><div class="mini-chart-container"><canvas id="chartAdherenceMini"></canvas></div>';
+            canvasContainer.appendChild(stripWrap);
+        } else {
+            canvasContainer.innerHTML = '<canvas id="' + config.chartId + '"></canvas>';
+        }
 
         const sbWrap = document.createElement('div');
         sbWrap.className = 'chart-scrollbar-wrap';
@@ -1869,12 +1916,17 @@
                 // If turning off, clear any existing crosshair
                 if (!crosshairModeActive) {
                     document.querySelectorAll('.crosshair-overlay').forEach(el => el.remove());
+                    clearLiveCrosshair();
                 }
             });
         }
 
         const dataObj = config.createData();
         initChartInstance(key, config.chartId, dataObj.sets, dataObj.unified);
+
+        if (key === 'symptoms') {
+            createAdherenceMiniChart(div);
+        }
 
         // Populate per-chart series menu
         const chart = charts[key];
@@ -1897,11 +1949,51 @@
                 });
                 menuEl.appendChild(item);
             });
+
+            // For Symptoms widget: add Medications section controlling Adherence strip visibility
+            if (key === 'symptoms') {
+                const adChart = window.adherenceChart;
+                if (adChart && adChart.data && adChart.data.datasets && adChart.data.datasets.length > 0) {
+                    const sep = document.createElement('div');
+                    sep.style.cssText = 'font-size:10px;font-weight:700;color:#888;padding:6px 8px 2px;border-top:1px solid #eee;letter-spacing:0.5px;';
+                    sep.textContent = 'MEDICATIONS (Adherence Strip)';
+                    menuEl.appendChild(sep);
+                    adChart.data.datasets.forEach((ds, i) => {
+                        const item = document.createElement('label');
+                        item.className = 'widget-series-item';
+                        const cb = document.createElement('input');
+                        cb.type = 'checkbox';
+                        cb.checked = !ds.hidden;
+                        cb.dataset.adIdx = i;
+                        const color = ds.borderColor || '#666';
+                        item.innerHTML = '<span style="width:10px;height:10px;border-radius:2px;background:' + color + ';"></span> ';
+                        item.appendChild(cb);
+                        item.appendChild(document.createTextNode(ds.label || 'Series ' + (i + 1)));
+                        cb.addEventListener('change', () => {
+                            adChart.data.datasets[i].hidden = !cb.checked;
+                            adChart.setDatasetVisibility(i, cb.checked);
+                            adChart.update();
+                        });
+                        menuEl.appendChild(item);
+                    });
+                }
+            }
         }
 
         header.querySelector('.widget-menu-btn').addEventListener('click', function(e) {
             e.stopPropagation();
             document.querySelectorAll('.widget-series-menu.open').forEach(m => { if (m !== menuEl) m.classList.remove('open'); });
+            // Refresh adherence meds checkboxes to reflect current strip visibility
+            if (key === 'symptoms' && !menuEl.classList.contains('open')) {
+                const adChart = window.adherenceChart;
+                if (adChart && adChart.data && adChart.data.datasets) {
+                    const adItems = menuEl.querySelectorAll('[data-ad-idx]');
+                    adItems.forEach(function(cb) {
+                        var idx = parseInt(cb.dataset.adIdx, 10);
+                        if (!isNaN(idx)) cb.checked = !adChart.data.datasets[idx].hidden;
+                    });
+                }
+            }
             menuEl.classList.toggle('open');
         });
 
@@ -1996,6 +2088,11 @@
             if (charts[key]) {
                 charts[key].destroy();
                 delete charts[key];
+            }
+            if (key === 'symptoms' && charts['symptomsAdherence']) {
+                charts['symptomsAdherence'].destroy();
+                delete charts['symptomsAdherence'];
+                window.adherenceChart = null;
             }
             el.remove();
             activeWidgets = activeWidgets.filter(k => k !== key);
@@ -2124,7 +2221,6 @@
             if (ds.isUnified) return;
             const c = ds.borderColor || colors[i % colors.length];
             ds.borderColor = c; ds.backgroundColor = c;
-            // Medication chart: smaller dots for daily entries, larger for actual entry date
             if (key === 'meds') {
                 ds.pointRadius = (ctx) => (ctx.raw && ctx.raw.actualEntry === true) ? 5 : 1.5;
                 ds.pointHoverRadius = (ctx) => (ctx.raw && ctx.raw.actualEntry === true) ? 8 : 5;
@@ -2147,13 +2243,19 @@
             activeSubsCount = [...new Set((rawData.substances || []).map(s => s.substance))].length;
         }
         
-        // Calculate required pixel padding for X-axis (room for "Date" label + bands below)
-        const freeZoneHeight = (key === 'symptoms') ? (52 + (activeSubsCount * 22)) : (key === 'meds') ? 48 : 5;
+        // Symptom chart: reserve bottom padding for Substance bands + Adherence strip (max height) + X-axis (one shared X-axis at bottom)
+        const freeZoneHeight = (key === 'symptoms') ? (30 + (activeSubsCount * 32) + ADHERENCE_STRIP_HEIGHT_MAX + X_AXIS_RESERVED_PX) : (key === 'meds') ? 32 : 5;
 
         // Fetch a fresh, isolated copy of the options and safely apply custom limits
         const chartOptions = getCommonOptions();
         chartOptions.scales.y.max = maxY;
-        chartOptions.scales.x.ticks = Object.assign({}, chartOptions.scales.x.ticks || {}, { padding: freeZoneHeight });
+        if (key === 'symptoms') {
+            chartOptions.scales.x.position = 'top';
+            chartOptions.scales.x.ticks = Object.assign({}, chartOptions.scales.x.ticks || {}, { padding: 34 });
+            chartOptions.layout.padding = Object.assign({}, chartOptions.layout.padding || {}, { top: 8, bottom: freeZoneHeight });
+        } else {
+            chartOptions.scales.x.ticks = Object.assign({}, chartOptions.scales.x.ticks || {}, { padding: freeZoneHeight });
+        }
 
         // Medications chart: restrict zoom to -100% (max zoom out 2x) and +200% (max zoom in 3x)
         // Plugin supports min, max, minRange only (no maxRange); use min/max to cap visible range.
@@ -2182,12 +2284,13 @@
         if (!ctx) return;
         if(Chart.getChart(ctxId)) Chart.getChart(ctxId).destroy();
 
-        // 1. Initialize Chart with our isolated options and overlay plugin
+        // 1. Initialize Chart with our isolated options and overlay plugin (symptoms chart also gets X-sync-to-adherence plugin)
+        const chartPlugins = (key === 'symptoms') ? [clinicalOverlayPlugin, syncSymptomAdherenceXPlugin] : [clinicalOverlayPlugin];
         const newChart = new Chart(ctx, {
             type: 'line',
             data: { datasets: finalData },
             options: chartOptions,
-            plugins: [clinicalOverlayPlugin]
+            plugins: chartPlugins
         });
         newChart.config._configKey = key;
 
@@ -2213,6 +2316,11 @@
             }
         });
         newChart.canvas.addEventListener('mouseleave', hideRibbonTooltip);
+
+        newChart.canvas.addEventListener('mousemove', function(ev) {
+            if (crosshairModeActive) updateLiveCrosshair(newChart, ev);
+        });
+        newChart.canvas.addEventListener('mouseleave', function() { clearLiveCrosshair(); });
 
         // Modal Double Click Handler
         ctx.addEventListener('dblclick', (e) => {
@@ -2249,6 +2357,119 @@
         newChart.update();
 
         charts[key] = newChart;
+    }
+
+    function createAdherenceMiniChart(symptomPanel) {
+        const stripWrap = symptomPanel.querySelector('.adherence-strip-wrap');
+        const miniCanvas = document.getElementById('chartAdherenceMini');
+        if (!stripWrap || !miniCanvas) return;
+
+        const isDarkMode = document.body.classList.contains('dark-mode');
+        const unifiedColor = isDarkMode ? '#ffffff' : '#000000';
+        const finalData = [];
+        if (rawData.medsUnified) {
+            const u = Object.assign({}, rawData.medsUnified);
+            u.pointRadius = (ctx) => (ctx.raw && ctx.raw.actualEntry === true) ? 2 : 1;
+            u.pointHoverRadius = (ctx) => (ctx.raw && ctx.raw.actualEntry === true) ? 4 : 2;
+            u.pointHitRadius = 8;
+            u.borderColor = unifiedColor;
+            u.backgroundColor = unifiedColor;
+            u.pointBackgroundColor = unifiedColor;
+            u.pointBorderColor = unifiedColor;
+            u.isUnified = true;
+            finalData.push(u);
+        }
+        if (rawData.meds && rawData.meds.length) finalData.push(...rawData.meds.map((ds, i) => {
+            const c = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'][i % 6];
+            return Object.assign({}, ds, { borderColor: ds.borderColor || c, backgroundColor: ds.borderColor || c, fill: false, pointRadius: 1.5, pointHoverRadius: 4 });
+        }));
+
+        let maxY = 10;
+        finalData.forEach(d => { (d.data || []).forEach(p => { if (p.y != null && p.y > maxY) maxY = p.y; }); });
+        maxY = Math.max(maxY * 1.1, 12);
+
+        const chartOptions = getCommonOptions();
+        chartOptions.scales.y.max = maxY;
+        chartOptions.scales.y.display = false;
+        chartOptions.scales.x.display = false;
+        chartOptions.scales.x.offset = false;
+        chartOptions.scales.x.ticks = Object.assign({}, chartOptions.scales.x.ticks || {}, { display: false, padding: 0 });
+        chartOptions.scales.x.title = { display: false };
+        chartOptions.layout.padding = { top: 2, left: 2, right: 2, bottom: 2 };
+        chartOptions.plugins.legend = { display: false };
+        chartOptions.plugins.tooltip = Object.assign({}, chartOptions.plugins.tooltip, { enabled: true });
+
+        if (Chart.getChart('chartAdherenceMini')) Chart.getChart('chartAdherenceMini').destroy();
+        if (window.adherenceChart && window.adherenceChart !== Chart.getChart('chartAdherenceMini')) {
+            window.adherenceChart = null;
+        }
+        const miniChart = new Chart(miniCanvas, {
+            type: 'line',
+            data: { datasets: finalData },
+            options: chartOptions,
+            plugins: [clinicalOverlayPlugin]
+        });
+        miniChart.config._configKey = 'symptomsAdherence';
+        charts['symptomsAdherence'] = miniChart;
+        window.adherenceChart = miniChart;
+
+        miniChart.canvas.addEventListener('mousemove', function(e) {
+            if (crosshairModeActive) updateLiveCrosshair(miniChart, e);
+            if (!miniChart.$ribbons) return;
+            const rect = miniChart.canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left, mouseY = e.clientY - rect.top;
+            const hit = miniChart.$ribbons.find(r => mouseX >= r.xMin && mouseX <= r.xMax && mouseY >= r.yMin && mouseY <= r.yMax);
+            if (hit) { miniChart.canvas.style.cursor = 'pointer'; showRibbonTooltip(e.clientX, e.clientY, hit); } else { miniChart.canvas.style.cursor = 'default'; hideRibbonTooltip(); }
+        });
+        miniChart.canvas.addEventListener('mouseleave', function() { clearLiveCrosshair(); hideRibbonTooltip(); });
+
+        function toggleAdherenceStripHeight() {
+            adherenceStripExpanded = !adherenceStripExpanded;
+            stripWrap.style.height = (adherenceStripExpanded ? ADHERENCE_STRIP_HEIGHT_MAX : ADHERENCE_STRIP_HEIGHT_DEFAULT) + 'px';
+            if (miniChart && miniChart.options.scales && miniChart.options.scales.y) {
+                miniChart.options.scales.y.display = adherenceStripExpanded;
+                miniChart.update();
+            }
+            setTimeout(function() { if (miniChart && miniChart.resize) miniChart.resize(); }, 80);
+        }
+        stripWrap.addEventListener('dblclick', function(e) {
+            suppressSingleClickUntil = Date.now() + 400;
+            e.preventDefault();
+            e.stopPropagation();
+            toggleAdherenceStripHeight();
+        });
+
+        miniChart.options.onClick = function(e, activeEls, chart) {
+            if (isPanning) return;
+            if (Date.now() < suppressSingleClickUntil) return;
+            if (chart.clickTimeout) clearTimeout(chart.clickTimeout);
+            chart.clickTimeout = setTimeout(() => {
+                const points = chart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
+                if (points.length > 0) {
+                    const pt = chart.data.datasets[points[0].datasetIndex].data[points[0].index];
+                    if (pt && pt.x) {
+                        const dateStr = pt.x.split('T')[0];
+                        activeStickyDate = dateStr;
+                        if (crosshairModeActive) {
+                            document.querySelectorAll('.crosshair-overlay').forEach(el => el.remove());
+                            const dataY = pt.y != null ? pt.y : 0;
+                            const rawX = pt.x || dateStr;
+                            const xValueTs = (typeof rawX === 'number' && Number.isFinite(rawX)) ? rawX : new Date(rawX).getTime();
+                            showCrosshair(chart, dateStr, dataY, !!chart.data.datasets[points[0].datasetIndex].isUnified, xValueTs);
+                            if (charts['symptoms']) {
+                                const symY = getYAtDate(charts['symptoms'], dateStr);
+                                charts['symptoms'].$crosshair = { dateStr, dataY: symY != null ? symY : 0, xValue: xValueTs };
+                                charts['symptoms'].update('none');
+                            }
+                        } else showStickyTooltips(dateStr);
+                    }
+                }
+            }, 220);
+        };
+
+        miniChart.data.datasets.forEach(ds => { if (!ds.isUnified) ds.hidden = true; });
+        miniChart.update();
+        requestAnimationFrame(function() { syncSymptomAdherenceX(); });
     }
 
     function handleZoomSelect(val) {
@@ -2452,17 +2673,35 @@
 
     // --- SIDEBAR TOGGLES (Updated to check chart existence) ---
     function toggleUnified(type) {
-        const chart = charts[type]; if(!chart) return;
+        const chart = charts[type];
         const cb = document.getElementById(`check-unified-${type}`);
-        if(chart.data.datasets[0].isUnified) { chart.setDatasetVisibility(0, cb.checked); chart.update(); }
+        const checked = cb ? cb.checked : false;
+        if (chart && chart.data.datasets[0].isUnified) {
+            chart.setDatasetVisibility(0, checked);
+            chart.update();
+        }
+        if (type === 'meds') {
+            const ad = charts['symptomsAdherence'];
+            if (ad && ad.data.datasets[0] && ad.data.datasets[0].isUnified) {
+                ad.setDatasetVisibility(0, checked);
+                ad.update();
+            }
+        }
     }
     function toggleDataset(type, label) {
-        const chart = charts[type]; if(!chart) return;
-        const idx = chart.data.datasets.findIndex(ds => ds.label === label);
-        if(idx !== -1) {
-            let isChecked = false;
-            document.querySelectorAll(`.chk-${type}`).forEach(c => { if(c.value===label) isChecked = c.checked; });
-            chart.setDatasetVisibility(idx, isChecked); chart.update();
+        const chart = charts[type];
+        let isChecked = false;
+        document.querySelectorAll(`.chk-${type}`).forEach(c => { if (c.value === label) isChecked = c.checked; });
+        if (chart) {
+            const idx = chart.data.datasets.findIndex(ds => ds.label === label);
+            if (idx !== -1) { chart.setDatasetVisibility(idx, isChecked); chart.update(); }
+        }
+        if (type === 'meds') {
+            const ad = charts['symptomsAdherence'];
+            if (ad) {
+                const idx = ad.data.datasets.findIndex(ds => ds.label === label);
+                if (idx !== -1) { ad.setDatasetVisibility(idx, isChecked); ad.update(); }
+            }
         }
     }
 
@@ -2599,8 +2838,7 @@
         return div;
     }
 
-    function showCrosshair(chart, dateStr, dataY, clickedIsUnified = false) {
-        // Remove existing crosshairs
+    function showCrosshair(chart, dateStr, dataY, clickedIsUnified = false, xValue = null) {
         document.querySelectorAll('.crosshair-overlay').forEach(el => el.remove());
         
         const canvas = chart.canvas;
@@ -2609,13 +2847,14 @@
         const xScale = chart.scales.x;
         const yScale = chart.scales.y;
         
-        // Calculate positions in canvas coordinates
-        const xVal = new Date(dateStr).getTime();
+        const xVal = (xValue != null)
+            ? (typeof xValue === 'number' && Number.isFinite(xValue) ? xValue : new Date(xValue).getTime())
+            : new Date(dateStr).getTime();
         const xPx = xScale.getPixelForValue(xVal);
         const yPx = yScale.getPixelForValue(dataY);
         
         // Convert to screen coordinates
-        const screenX = rect.left + xPx;
+        const screenX = rect.left + xPx - 4;
         const screenY = rect.top + yPx;
         const chartTop = rect.top + chartArea.top;
         const chartBottom = rect.top + chartArea.bottom;
@@ -2638,14 +2877,6 @@
         vLine.style.top = chartTop + 'px';
         vLine.style.height = (chartBottom - chartTop) + 'px';
         overlay.appendChild(vLine);
-        
-        // Horizontal line (from left of chart to right)
-        const hLine = document.createElement('div');
-        hLine.className = 'crosshair-line-h';
-        hLine.style.left = chartLeft + 'px';
-        hLine.style.top = screenY + 'px';
-        hLine.style.width = (chartRight - chartLeft) + 'px';
-        overlay.appendChild(hLine);
         
         // Central dot
         const dot = document.createElement('div');
@@ -2858,6 +3089,93 @@
     function clearStickyTooltips() {
         document.querySelectorAll('.sticky-tooltip').forEach(el => el.remove());
         document.querySelectorAll('.crosshair-overlay').forEach(el => el.remove());
+        clearLiveCrosshair();
+        Object.keys(charts).forEach(k => {
+            if (charts[k] && charts[k].$crosshair) {
+                delete charts[k].$crosshair;
+                charts[k].update('none');
+            }
+        });
+    }
+
+    function getYAtDate(chart, dateStr) {
+        if (!chart || !chart.data || !chart.data.datasets) return null;
+        const xMs = new Date(dateStr).getTime();
+        for (let dsIdx = 0; dsIdx < chart.data.datasets.length; dsIdx++) {
+            if (chart.getDatasetMeta(dsIdx).hidden) continue;
+            const data = chart.data.datasets[dsIdx].data;
+            if (!data || data.length === 0) continue;
+            const sorted = [...data].filter(p => p && p.x != null && p.y != null).sort((a, b) => new Date(a.x) - new Date(b.x));
+            for (let i = 0; i < sorted.length - 1; i++) {
+                const x1 = new Date(sorted[i].x).getTime(), x2 = new Date(sorted[i + 1].x).getTime();
+                if (xMs >= x1 && xMs <= x2) {
+                    const t = (xMs - x1) / (x2 - x1);
+                    return sorted[i].y + t * (sorted[i + 1].y - sorted[i].y);
+                }
+            }
+        }
+        return null;
+    }
+
+    let liveCrosshairOverlay = null;
+    function clearLiveCrosshair() {
+        if (liveCrosshairOverlay && liveCrosshairOverlay.parentNode) liveCrosshairOverlay.parentNode.removeChild(liveCrosshairOverlay);
+        liveCrosshairOverlay = null;
+    }
+    function getNearestPointAtX(chart, canvasX) {
+        const xVal = chart.scales.x.getValueForPixel(canvasX);
+        if (xVal == null) return null;
+        const xMs = new Date(xVal).getTime();
+        let nearest = null;
+        let nearestIsMeds = false;
+        let nearestDist = Infinity;
+        chart.data.datasets.forEach((ds, dsIdx) => {
+            if (chart.getDatasetMeta(dsIdx).hidden || !ds.data) return;
+            ds.data.forEach(p => {
+                if (!p || p.x == null) return;
+                const d = Math.abs(new Date(p.x).getTime() - xMs);
+                if (d < nearestDist) { nearestDist = d; nearest = p; nearestIsMeds = !!ds.isMeds; }
+            });
+        });
+        return nearest ? { point: nearest, isMeds: nearestIsMeds } : null;
+    }
+    function updateLiveCrosshair(chart, ev) {
+        if (!chart || !chart.chartArea || !chart.scales || !chart.scales.x || !chart.scales.y) return;
+        const rect = chart.canvas.getBoundingClientRect();
+        const canvasPos = Chart.helpers.getRelativePosition(ev, chart);
+        const nearestResult = getNearestPointAtX(chart, canvasPos.x);
+        const nearest = nearestResult ? nearestResult.point : null;
+        const xVal = nearest && nearest.x != null ? new Date(nearest.x).getTime() : chart.scales.x.getValueForPixel(canvasPos.x);
+        const yVal = nearest && nearest.y != null ? nearest.y : chart.scales.y.getValueForPixel(canvasPos.y);
+        const xPx = chart.scales.x.getPixelForValue(xVal);
+        const yPx = chart.scales.y.getPixelForValue(yVal);
+        const screenX = rect.left + xPx - 4;
+        const screenY = rect.top + yPx;
+        const chartTop = rect.top + chart.chartArea.top;
+        const chartBottom = rect.top + chart.chartArea.bottom;
+        const chartLeft = rect.left + chart.chartArea.left;
+        const chartRight = rect.left + chart.chartArea.right;
+        clearLiveCrosshair();
+        liveCrosshairOverlay = document.createElement('div');
+        liveCrosshairOverlay.className = 'crosshair-overlay active';
+        liveCrosshairOverlay.style.cssText = 'left:0;top:0;width:100vw;height:100vh;pointer-events:none;';
+        const vLine = document.createElement('div');
+        vLine.className = 'crosshair-line-v';
+        vLine.style.cssText = 'left:' + screenX + 'px;top:' + chartTop + 'px;height:' + (chartBottom - chartTop) + 'px;';
+        liveCrosshairOverlay.appendChild(vLine);
+        const isMeds = chart.config._configKey === 'meds' || chart.config._configKey === 'symptomsAdherence' || (nearestResult && nearestResult.isMeds);
+        const valueSuffix = isMeds ? ' mg' : '';
+        const dateLabel = document.createElement('div');
+        dateLabel.className = 'crosshair-label';
+        dateLabel.textContent = (xVal != null ? new Date(xVal).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');
+        dateLabel.style.cssText = 'left:' + screenX + 'px;top:' + (chartBottom + 8) + 'px;transform:translateX(-50%);';
+        const valueLabel = document.createElement('div');
+        valueLabel.className = 'crosshair-label';
+        valueLabel.textContent = (yVal != null && typeof yVal === 'number' && Number.isFinite(yVal) ? yVal.toFixed(1) : '') + valueSuffix;
+        valueLabel.style.cssText = 'left:' + (chartRight + 8) + 'px;top:' + screenY + 'px;transform:translateY(-50%);';
+        liveCrosshairOverlay.appendChild(dateLabel);
+        liveCrosshairOverlay.appendChild(valueLabel);
+        document.body.appendChild(liveCrosshairOverlay);
     }
 
     function showRibbonTooltip(x, y, ribbon) {
@@ -3233,6 +3551,12 @@
     }
 
     window.onload = function() {
+        // Collapse sidebar on load
+        const _sb = document.getElementById('mainSidebar');
+        const _rh = document.getElementById('sidebarResizeHandle');
+        if (_sb) _sb.classList.add('collapsed');
+        if (_rh) _rh.style.display = 'none';
+
         initDashboard(); // LOAD DASHBOARD WIDGETS
         
         // DATE LOGIC: Check if the element exists first (it won't in view_only mode)
