@@ -1225,6 +1225,10 @@ def process_visit_form_data(visit, form_data):
     if next_date:
         visit.next_visit_date = parse_date(next_date)
     
+    # Type of Next Follow up
+    t = (form_data.get('type_of_next_follow_up') or '').strip()
+    visit.type_of_next_follow_up = t if t else None
+
     visit.note = form_data.get('visit_note', '')
     
     # Helper for Duration (Single Field Now)
@@ -1331,6 +1335,20 @@ def process_visit_form_data(visit, form_data):
             visit.family_history_psychiatric = None
     else:
         visit.family_history_psychiatric = None
+
+    # 1e3. History of Developmental Milestone Delay – JSON {"status": "...", "types": [...], "notes": ""}
+    dm_json = form_data.get('developmental_milestone_delay', '')
+    if dm_json:
+        try:
+            data = json.loads(dm_json)
+            if isinstance(data, dict) and 'status' in data:
+                visit.developmental_milestone_delay = dm_json
+            else:
+                visit.developmental_milestone_delay = None
+        except (json.JSONDecodeError, TypeError):
+            visit.developmental_milestone_delay = None
+    else:
+        visit.developmental_milestone_delay = None
 
     # 1f. Scales (Phase 2) - from modal JSON
     scales_json = form_data.get('scales_data', '')
@@ -1745,6 +1763,8 @@ def update_clinical(visit_id):
     next_date = request.form.get('next_visit_date')
     if next_date:
         visit.next_visit_date = parse_date(next_date)
+    t = (request.form.get('type_of_next_follow_up') or '').strip()
+    visit.type_of_next_follow_up = t if t else None
 
     if 'ace_data' in request.form:
         ace_json = request.form.get('ace_data', '')

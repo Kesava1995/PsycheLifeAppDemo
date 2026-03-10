@@ -919,12 +919,23 @@
                 </div>
             </div>
 
-            <div style="background:#f9fafb; padding:15px; border-radius:8px; margin-top:20px; display:flex; gap:20px; align-items:center;">
+            <div style="background:#f9fafb; padding:15px; border-radius:8px; margin-top:20px; display:flex; gap:20px; align-items:center; flex-wrap: wrap;">
                 <div>
                     <label style="font-weight:600; color:#555;">Next Follow-up Date</label>
                     <input type="date" name="next_visit_date" id="nextVisitDate" value="{{ visit.next_visit_date.strftime('%Y-%m-%d') if visit and visit.next_visit_date else '' }}">
                 </div>
-                <div style="flex:1;">
+                <div>
+                    <label style="font-weight:600; color:#555;">Type of Next Follow up</label>
+                    <select name="type_of_next_follow_up" style="min-width: 180px; padding: 6px 8px;">
+                        <option value="">— Select —</option>
+                        <option value="New Registration" {{ 'selected' if visit and visit.type_of_next_follow_up == 'New Registration' else '' }}>New Registration</option>
+                        <option value="Extended Follow up" {{ 'selected' if visit and visit.type_of_next_follow_up == 'Extended Follow up' else '' }}>Extended Follow up</option>
+                        <option value="Follow up" {{ 'selected' if visit and visit.type_of_next_follow_up == 'Follow up' else '' }}>Follow up</option>
+                        <option value="Therapy Session" {{ 'selected' if visit and visit.type_of_next_follow_up == 'Therapy Session' else '' }}>Therapy Session</option>
+                        <option value="Review/ Report Discussion" {{ 'selected' if visit and visit.type_of_next_follow_up == 'Review/ Report Discussion' else '' }}>Review/ Report Discussion</option>
+                    </select>
+                </div>
+                <div style="flex:1; min-width: 200px;">
                     <label style="font-weight:600; color:#555;">Visit Note</label>
                     <input type="text" name="visit_note" value="{{ visit.note if visit else '' }}" placeholder="Summary...">
                 </div>

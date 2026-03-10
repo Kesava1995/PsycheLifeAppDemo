@@ -129,7 +129,9 @@ def migrate():
                 ('medical_comorbidities', 'TEXT'),
                 ('non_psychiatric_meds', 'TEXT'),
                 ('ace_data', 'TEXT'),
-                ('family_history_psychiatric', 'TEXT')
+                ('family_history_psychiatric', 'TEXT'),
+                ('developmental_milestone_delay', 'TEXT'),
+                ('type_of_next_follow_up', 'TEXT')
             ]
             for col, dtype in visit_cols:
                 if not column_exists(cursor, 'visits', col):

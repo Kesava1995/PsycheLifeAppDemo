@@ -146,7 +146,7 @@
                 
                 {% if visit.next_visit_date %}
                 <div class="info-row" style="margin-top: 5px; color: #d9534f;">
-                    <strong>Next Follow-up:</strong> {{ visit.next_visit_date.strftime('%d-%m-%Y') }}
+                    <strong>Next Follow-up:</strong> {{ visit.next_visit_date.strftime('%d-%m-%Y') }}{% if visit.type_of_next_follow_up %} ({{ visit.type_of_next_follow_up }}){% endif %}
                 </div>
                 {% endif %}
             </div>

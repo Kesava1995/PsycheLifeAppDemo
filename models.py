@@ -58,15 +58,15 @@ class Visit(db.Model):
     visit_type = db.Column(db.String(20), nullable=False)  # 'First' or 'Follow-up'
     provisional_diagnosis = db.Column(db.Text)
     differential_diagnosis = db.Column(db.Text)
-    
     next_visit_date = db.Column(db.Date)
-    
+    type_of_next_follow_up = db.Column(db.String(80), nullable=True)
     note = db.Column(db.Text)
     
     clinical_state = db.Column(db.String(50), nullable=True)
     medication_adherence = db.Column(db.String(50), nullable=True)
     ace_data = db.Column(db.Text, nullable=True)  # Adverse childhood experiences (JSON)
     family_history_psychiatric = db.Column(db.Text, nullable=True)  # JSON: {"present": bool, "items": ["Depression", "OTHERS: ..."]}
+    developmental_milestone_delay = db.Column(db.Text, nullable=True)  # JSON: {"status": "No delay reported"|"Delay reported"|"Unknown", "types": [...], "notes": ""}
 
     symptom_entries = db.relationship('SymptomEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
     medication_entries = db.relationship('MedicationEntry', backref='visit', lazy=True, cascade='all, delete-orphan')

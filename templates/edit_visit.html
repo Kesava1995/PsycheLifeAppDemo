@@ -323,6 +323,31 @@
                         </div>
                     </div>
 
+                    <div class="section-header"><span class="section-title">History of Developmental Milestone Delay</span></div>
+                    <input type="hidden" name="developmental_milestone_delay" id="developmental_milestone_delay" value="{{ ((visit.developmental_milestone_delay or '') if visit else '') | e }}">
+                    <div class="patient-grid" style="margin-bottom: 10px;">
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px;">
+                            <label style="display:inline-flex; align-items:center; margin:0; cursor:pointer;"><input type="radio" name="dev_delay_status" value="No delay reported" checked onchange="toggleDevDelayBox(); updateDevDelayHidden();"> No delay reported</label>
+                            <label style="display:inline-flex; align-items:center; margin:0; cursor:pointer;"><input type="radio" name="dev_delay_status" value="Delay reported" onchange="toggleDevDelayBox(); updateDevDelayHidden();"> Delay reported</label>
+                            <label style="display:inline-flex; align-items:center; margin:0; cursor:pointer;"><input type="radio" name="dev_delay_status" value="Unknown" onchange="toggleDevDelayBox(); updateDevDelayHidden();"> Unknown</label>
+                        </div>
+                    </div>
+                    <div id="dev_delay_types_box" style="display:none; margin-bottom: 16px; padding: 12px; border: 1px solid #eee; border-radius: 6px; background: #fafafa;">
+                        <div style="font-weight:600; margin-bottom: 8px;">Type of Delay (multi-select)</div>
+                        <div class="checklist-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px;">
+                            <label><input type="checkbox" class="dev-delay-type-cb" value="Speech / language delay" onchange="updateDevDelayHidden()"> Speech / language delay</label>
+                            <label><input type="checkbox" class="dev-delay-type-cb" value="Motor delay" onchange="updateDevDelayHidden()"> Motor delay</label>
+                            <label><input type="checkbox" class="dev-delay-type-cb" value="Social developmental delay" onchange="updateDevDelayHidden()"> Social developmental delay</label>
+                            <label><input type="checkbox" class="dev-delay-type-cb" value="Learning delay" onchange="updateDevDelayHidden()"> Learning delay</label>
+                            <label><input type="checkbox" class="dev-delay-type-cb" value="Global developmental delay" onchange="updateDevDelayHidden()"> Global developmental delay</label>
+                            <label><input type="checkbox" class="dev-delay-type-cb" value="Not sure" onchange="updateDevDelayHidden()"> Not sure</label>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <label style="display:block; margin-bottom: 4px;">Optional: Notes</label>
+                            <textarea id="dev_delay_notes" rows="2" style="width:100%; resize:vertical; padding:6px 8px;" placeholder="Notes..." oninput="updateDevDelayHidden()"></textarea>
+                        </div>
+                    </div>
+
                     <div class="section-header"><span class="section-title">MSE Findings</span></div>
                     
                     {% for cat in ['Thought', 'Perception', 'Affect'] %}
@@ -536,6 +561,15 @@
                     <div style="margin-top: 10px; background:#f9fafb; padding:20px; border-radius:8px;">
                         <label>Next Follow-up Date</label>
                         <input type="date" name="next_visit_date" value="{{ visit.next_visit_date.strftime('%Y-%m-%d') if visit.next_visit_date else '' }}">
+                        <label style="margin-top:15px;">Type of Next Follow up</label>
+                        <select name="type_of_next_follow_up" style="display:block; margin-top:6px; min-width: 200px; padding: 6px 8px;">
+                            <option value="">— Select —</option>
+                            <option value="New Registration" {{ 'selected' if visit.type_of_next_follow_up == 'New Registration' else '' }}>New Registration</option>
+                            <option value="Extended Follow up" {{ 'selected' if visit.type_of_next_follow_up == 'Extended Follow up' else '' }}>Extended Follow up</option>
+                            <option value="Follow up" {{ 'selected' if visit.type_of_next_follow_up == 'Follow up' else '' }}>Follow up</option>
+                            <option value="Therapy Session" {{ 'selected' if visit.type_of_next_follow_up == 'Therapy Session' else '' }}>Therapy Session</option>
+                            <option value="Review/ Report Discussion" {{ 'selected' if visit.type_of_next_follow_up == 'Review/ Report Discussion' else '' }}>Review/ Report Discussion</option>
+                        </select>
                         <label style="margin-top:15px;">Visit Note</label>
                         <textarea name="visit_note" rows="2">{{ visit.note }}</textarea>
                     </div>
@@ -863,6 +897,9 @@
             if (typeof updateComorbiditiesSummary === 'function') updateComorbiditiesSummary();
             if (typeof restoreFamilyHistoryFromHidden === 'function') restoreFamilyHistoryFromHidden();
             if (typeof toggleFamilyHistoryPresent === 'function') toggleFamilyHistoryPresent();
+            if (typeof restoreDevDelayFromHidden === 'function') restoreDevDelayFromHidden();
+            if (typeof toggleDevDelayBox === 'function') toggleDevDelayBox();
+            if (typeof updateDevDelayHidden === 'function') updateDevDelayHidden();
 
             // --- LOAD SUBSTANCES FROM JSON ---
             const subDataEl = document.getElementById('substances_data');
@@ -992,6 +1029,39 @@
                         document.querySelectorAll('.family-history-cb').forEach(function(cb) { if (cb.value === item) cb.checked = true; });
                     }
                 });
+            } catch (e) {}
+        }
+        function toggleDevDelayBox() {
+            var status = document.querySelector('input[name="dev_delay_status"]:checked');
+            var box = document.getElementById('dev_delay_types_box');
+            if (box) box.style.display = (status && status.value === 'Delay reported') ? 'block' : 'none';
+        }
+        function updateDevDelayHidden() {
+            var status = document.querySelector('input[name="dev_delay_status"]:checked');
+            var statusVal = status ? status.value : 'No delay reported';
+            var types = [];
+            if (statusVal === 'Delay reported') {
+                document.querySelectorAll('.dev-delay-type-cb:checked').forEach(function(cb) { types.push(cb.value); });
+            }
+            var notesEl = document.getElementById('dev_delay_notes');
+            var notes = notesEl ? notesEl.value.trim() : '';
+            var hid = document.getElementById('developmental_milestone_delay');
+            if (hid) hid.value = JSON.stringify({ status: statusVal, types: types, notes: notes });
+        }
+        function restoreDevDelayFromHidden() {
+            var hid = document.getElementById('developmental_milestone_delay');
+            if (!hid || !hid.value) return;
+            try {
+                var data = JSON.parse(hid.value);
+                if (!data || !data.status) return;
+                document.querySelectorAll('input[name="dev_delay_status"]').forEach(function(r) { r.checked = (r.value === data.status); });
+                toggleDevDelayBox();
+                if (data.status !== 'Delay reported') return;
+                (data.types || []).forEach(function(t) {
+                    document.querySelectorAll('.dev-delay-type-cb').forEach(function(cb) { if (cb.value === t) cb.checked = true; });
+                });
+                var notesEl = document.getElementById('dev_delay_notes');
+                if (notesEl && data.notes) notesEl.value = data.notes;
             } catch (e) {}
         }
         // --- STRESSORS LOGIC (checklist + inputs below, like Clinical State) ---
