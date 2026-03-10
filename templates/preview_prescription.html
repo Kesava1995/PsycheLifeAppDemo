@@ -217,7 +217,7 @@
                     <div class="mse-group"><span>Allergies:</span> {{ visit.safety_profile.drug_allergies }}</div>
                 {% endif %}
                 {% if visit.safety_profile.medical_comorbidities %}
-                    <div class="mse-group"><span>Comorbidities:</span> {{ visit.safety_profile.medical_comorbidities }}</div>
+                    <div class="mse-group"><span>Comorbidities:</span> {{ visit.safety_profile.medical_comorbidities | format_comorbidities }}</div>
                 {% endif %}
                 {% if visit.safety_profile.non_psychiatric_meds %}
                     <div class="mse-group"><span>Non-Psych Meds:</span> {{ visit.safety_profile.non_psychiatric_meds }}</div>

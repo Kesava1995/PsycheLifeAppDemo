@@ -102,7 +102,11 @@ def migrate():
             mse_cols = [
                 ('score_onset', 'FLOAT'),
                 ('score_progression', 'FLOAT'),
-                ('score_current', 'FLOAT DEFAULT 0')
+                ('score_current', 'FLOAT DEFAULT 0'),
+                # New columns for Insight + Additional MSE Findings
+                ('insight_status', 'TEXT'),
+                ('insight_grade', 'INTEGER'),
+                ('addl_mse_f_note', 'TEXT')
             ]
             for col, dtype in mse_cols:
                 if not column_exists(cursor, 'mse_entries', col):
@@ -124,7 +128,8 @@ def migrate():
                 ('drug_allergies', 'TEXT'),
                 ('medical_comorbidities', 'TEXT'),
                 ('non_psychiatric_meds', 'TEXT'),
-                ('ace_data', 'TEXT')
+                ('ace_data', 'TEXT'),
+                ('family_history_psychiatric', 'TEXT')
             ]
             for col, dtype in visit_cols:
                 if not column_exists(cursor, 'visits', col):

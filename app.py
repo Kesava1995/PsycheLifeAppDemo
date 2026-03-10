@@ -85,6 +85,20 @@ def utility_processor():
     return dict(format_frequency=format_frequency)
 
 
+@app.template_filter('format_comorbidities')
+def format_comorbidities_filter(val):
+    """Display medical_comorbidities: if JSON array, join with ', '; else return as-is (legacy text)."""
+    if not val or not str(val).strip():
+        return ''
+    try:
+        arr = json.loads(val)
+        if isinstance(arr, list):
+            return ', '.join(str(x) for x in arr)
+    except (TypeError, json.JSONDecodeError):
+        pass
+    return val
+
+
 @app.template_filter('from_json')
 def from_json(value):
     """Parse JSON string in templates. Returns empty list on invalid/empty."""
@@ -1304,6 +1318,20 @@ def process_visit_form_data(visit, form_data):
     else:
         visit.ace_data = None
 
+    # 1e2. Family history of psychiatric illness – JSON {"present": bool, "items": [...]}
+    fh_json = form_data.get('family_history_psychiatric', '')
+    if fh_json:
+        try:
+            data = json.loads(fh_json)
+            if isinstance(data, dict):
+                visit.family_history_psychiatric = fh_json
+            else:
+                visit.family_history_psychiatric = None
+        except (json.JSONDecodeError, TypeError):
+            visit.family_history_psychiatric = None
+    else:
+        visit.family_history_psychiatric = None
+
     # 1f. Scales (Phase 2) - from modal JSON
     scales_json = form_data.get('scales_data', '')
     if scales_json:
@@ -1439,6 +1467,15 @@ def process_visit_form_data(visit, form_data):
     mse_progs = form_data.getlist('mse_progression[]')
     mse_currs = form_data.getlist('mse_current[]')
     mse_notes = form_data.getlist('mse_note[]')
+
+    # New: single-visit Insight + Additional MSE findings (applied to all MSE rows for this visit)
+    insight_status = form_data.get('insight_status') or None
+    insight_grade_raw = form_data.get('insight_grade') or None
+    try:
+        insight_grade_val = int(insight_grade_raw) if insight_grade_raw else None
+    except (TypeError, ValueError):
+        insight_grade_val = None
+    addl_mse_f_note = form_data.get('addl_mse_f_note', '').strip()
     
     # Fallback for old field name (backward compatibility)
     if not mse_currs or all(not x for x in mse_currs):
@@ -1458,6 +1495,10 @@ def process_visit_form_data(visit, form_data):
                 score_current=curr_val,
                 duration=get_duration(i, 'mse'),  # Helper (Maps to mse_duration_val[])
                 note=mse_notes[i] if i < len(mse_notes) else '',
+                # New Insight + Additional MSE fields (same for all rows of this visit)
+                insight_status=insight_status,
+                insight_grade=insight_grade_val,
+                addl_mse_f_note=addl_mse_f_note,
                 # CRITICAL FIX: Populate legacy score column
                 score=int(curr_val)
             )

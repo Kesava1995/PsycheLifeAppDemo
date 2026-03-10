@@ -67,9 +67,13 @@
         .checklist-group input[type="checkbox"] { width: auto; margin: 0; }
 
         /* Major Events modal: position + checkbox alignment */
-        #majorEventsModal .modal-content {
+        #majorEventsModal .modal-content,
+        #insightGradeModal .modal-content {
             margin-top: 5% !important;
         }
+        #insightGradeModal .insight-grade-table { width: 100%; border-collapse: collapse; }
+        #insightGradeModal .insight-grade-table td { padding: 6px 0; vertical-align: top; }
+        #insightGradeModal .insight-grade-table td:first-child { width: 1%; padding-right: 10px; white-space: nowrap; }
         .major-event-group label {
             display: flex;
             align-items: center;
@@ -227,15 +231,66 @@
                         {% endif %}
                     </div>
 
+                    <div class="section-header"><span class="section-title">Family History of Psychiatric illness</span></div>
+                    <input type="hidden" name="family_history_psychiatric" id="family_history_psychiatric" value="">
+                    <div class="patient-grid" style="margin-bottom: 12px;">
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px;">
+                            <span style="font-weight:600;">Status</span>
+                            <label style="display:inline-flex; align-items:center; margin:0; cursor:pointer;"><input type="radio" name="family_history_present" value="Absent" checked onchange="toggleFamilyHistoryPresent(); updateFamilyHistoryHidden();"> Absent</label>
+                            <label style="display:inline-flex; align-items:center; margin:0; cursor:pointer;"><input type="radio" name="family_history_present" value="Present" onchange="toggleFamilyHistoryPresent(); updateFamilyHistoryHidden();"> Present</label>
+                        </div>
+                    </div>
+                    <div id="family_history_present_box" style="display:none; margin-bottom: 16px; padding: 12px; border: 1px solid #eee; border-radius: 6px; background: #fafafa;">
+                        <div class="checklist-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px;">
+                            <label><input type="checkbox" class="family-history-cb" value="Depression" onchange="updateFamilyHistoryHidden()"> Depression</label>
+                            <label><input type="checkbox" class="family-history-cb" value="Bipolar disorder" onchange="updateFamilyHistoryHidden()"> Bipolar disorder</label>
+                            <label><input type="checkbox" class="family-history-cb" value="Schizophrenia/Psychotic disorder" onchange="updateFamilyHistoryHidden()"> Schizophrenia/Psychotic disorder</label>
+                            <label><input type="checkbox" class="family-history-cb" value="Anxiety disorder" onchange="updateFamilyHistoryHidden()"> Anxiety disorder</label>
+                            <label><input type="checkbox" class="family-history-cb" value="Substance use disorder" onchange="updateFamilyHistoryHidden()"> Substance use disorder</label>
+                            <label><input type="checkbox" class="family-history-cb" value="Suicide" onchange="updateFamilyHistoryHidden()"> Suicide</label>
+                            <label><input type="checkbox" class="family-history-cb" value="Personality Disorder" onchange="updateFamilyHistoryHidden()"> Personality Disorder</label>
+                            <label><input type="checkbox" class="family-history-cb" value="Neurodevelopmental disorder" onchange="updateFamilyHistoryHidden()"> Neurodevelopmental disorder</label>
+                            <label><input type="checkbox" class="family-history-cb" value="Neurological disorder" onchange="updateFamilyHistoryHidden()"> Neurological disorder</label>
+                            <label><input type="checkbox" class="family-history-cb" value="Unknown psychiatric illness" onchange="updateFamilyHistoryHidden()"> Unknown psychiatric illness</label>
+                        </div>
+                        <div style="margin-top: 10px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                            <label style="display: inline-flex; align-items: center; gap: 6px; margin: 0; cursor: pointer;">
+                                <input type="checkbox" class="family-history-cb" value="OTHERS" id="family_history_others_cb" onchange="updateFamilyHistoryHidden()" style="margin: 0; vertical-align: middle;">
+                                <span style="white-space: nowrap;">OTHERS – Specify:</span>
+                            </label>
+                            <input type="text" id="family_history_others_text" placeholder="Free text..." style="flex: 1; min-width: 180px; padding: 4px 8px;" oninput="updateFamilyHistoryHidden()">
+                        </div>
+                    </div>
+
                     <div class="section-header"><span class="section-title">MSE Findings</span></div>
                     <div class="subsection-header"><span class="subsection-title">Thought</span><button type="button" class="add-btn" onclick="addMSE('Thought')">+</button></div>
                     <div id="mse-thought-container"></div>
-                    
+
                     <div class="subsection-header"><span class="subsection-title">Perception</span><button type="button" class="add-btn" onclick="addMSE('Perception')">+</button></div>
                     <div id="mse-perception-container"></div>
-                    
+
                     <div class="subsection-header"><span class="subsection-title">Affect</span><button type="button" class="add-btn" onclick="addMSE('Affect')">+</button></div>
                     <div id="mse-affect-container"></div>
+
+                    <div class="subsection-header" style="margin-top:10px;">
+                        <span class="subsection-title">Insight</span>
+                    </div>
+                    <div class="patient-grid" style="grid-template-columns: repeat(4, minmax(0, 1fr)); align-items:center;">
+                        <div style="grid-column: span 3; display: flex; flex-wrap: wrap; align-items: center; gap: 0 16px;">
+                            <span style="font-weight:600; margin-right:4px;">Insight status</span>
+                            <label style="display:inline-flex; align-items:center; margin:0; cursor:pointer;"><input type="radio" name="insight_status" value="Present" style="margin:0 6px 0 0;"> Present</label>
+                            <label style="display:inline-flex; align-items:center; margin:0; cursor:pointer;"><input type="radio" name="insight_status" value="Partial" style="margin:0 6px 0 0;"> Partial</label>
+                            <label style="display:inline-flex; align-items:center; margin:0; cursor:pointer;"><input type="radio" name="insight_status" value="Absent" style="margin:0 6px 0 0;"> Absent</label>
+                        </div>
+                        <div style="text-align:right;">
+                            <button type="button" class="btn" onclick="openModal('insightGradeModal')" style="margin-top:0; background:#7ab8e0; color:#fff;">GRADE</button>
+                        </div>
+                    </div>
+
+                    <div class="subsection-header" style="margin-top:10px;">
+                        <span class="subsection-title">Additional MSE Findings</span>
+                    </div>
+                    <textarea name="addl_mse_f_note" rows="2" style="width:100%; resize:vertical;" placeholder="Any additional MSE findings..."></textarea>
 
                     <div class="section-header"><span class="section-title">Safety and Medical Profile</span></div>
                     <div class="patient-grid" style="margin-bottom: 20px;">
@@ -246,7 +301,10 @@
                             </div>
                             <div>
                                 <label>Medical Comorbidities</label>
-                                <textarea name="medical_comorbidities" rows="2" style="resize:none;">{{ last_visit.safety_profile.medical_comorbidities if last_visit and last_visit.safety_profile else (visit.safety_profile.medical_comorbidities if visit and visit.safety_profile else '') }}</textarea>
+                                <input type="hidden" name="medical_comorbidities" id="medical_comorbidities" value="{{ last_visit.safety_profile.medical_comorbidities if last_visit and last_visit.safety_profile and last_visit.safety_profile.medical_comorbidities else (visit.safety_profile.medical_comorbidities if visit and visit.safety_profile and visit.safety_profile.medical_comorbidities else '') }}">
+                                <div class="click-trigger" onclick="openModal('comorbiditiesModal')" style="margin-top:4px;">
+                                    <span id="comorbidities-summary">Select...</span><span>▼</span>
+                                </div>
                             </div>
                             <div>
                                 <label>Current Non-Psychiatric Medication</label>
@@ -443,7 +501,6 @@
                             <div style="overflow-y: auto; flex-grow: 1; padding-right: 10px;">
                                 <div class="checklist-group">
                                     <label><input type="checkbox" class="major-event-checkbox" value="Hospitalization"> Hospitalization</label>
-                                    <label><input type="checkbox" class="major-event-checkbox" value="Suicide"> Suicide</label>
                                     <label><input type="checkbox" class="major-event-checkbox" value="Major Medication Change"> Major Medication Change</label>
                                     <label><input type="checkbox" class="major-event-checkbox" value="Stoppage of medications"> Stoppage of medications</label>
                                     <label><input type="checkbox" class="major-event-checkbox" value="Marriage"> Marriage</label>
@@ -451,12 +508,62 @@
                                     <label><input type="checkbox" class="major-event-checkbox" value="ECT or any Intervention given"> ECT or any Intervention given</label>
                                     <label><input type="checkbox" class="major-event-checkbox" value="Major Medical event"> Major Medical event</label>
                                     <label><input type="checkbox" class="major-event-checkbox" value="Legal issues"> Legal issues</label>
+                                    <label><input type="checkbox" class="major-event-checkbox" value="Significant Migration/ Relocation"> Significant Migration/ Relocation</label>
+                                    <label><input type="checkbox" class="major-event-checkbox" value="Suicide Attempt"> Suicide Attempt</label>
+                                    <label><input type="checkbox" class="major-event-checkbox" value="Suicide in family"> Suicide in family</label>
                                 </div>
                                 <div id="major-events-inputs-container" style="margin-top:12px;"></div>
                             </div>
                             <div style="margin-top:15px; padding-top:15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
                                 <button type="button" class="btn" style="margin-top:0; background:#7ab8e0; color:#fff;" onclick="saveMajorEvents()">Save Events</button>
                                 <button type="button" class="btn" style="margin-top:0; background:#888; color:#fff;" onclick="closeModal('majorEventsModal')">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="insightGradeModal" class="modal" onclick="if(event.target === this) closeModal('insightGradeModal')">
+                        <div class="modal-content" style="width: 480px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; margin-top: 5vh;">
+                            <h4 style="margin-top: 0;">Grades of Insight</h4>
+                            <div style="overflow-y: auto; flex-grow: 1; padding-right: 10px;">
+                                <table class="insight-grade-table">
+                                    <tr><td><input type="radio" name="insight_grade" value="1" id="insight_grade_1"></td><td><label for="insight_grade_1">1. Complete Denial of illness</label></td></tr>
+                                    <tr><td><input type="radio" name="insight_grade" value="2" id="insight_grade_2"></td><td><label for="insight_grade_2">2. Slight Awareness of being sick but denying at the same time</label></td></tr>
+                                    <tr><td><input type="radio" name="insight_grade" value="3" id="insight_grade_3"></td><td><label for="insight_grade_3">3. Awareness of being sick but blaming on external/ organic factors</label></td></tr>
+                                    <tr><td><input type="radio" name="insight_grade" value="4" id="insight_grade_4"></td><td><label for="insight_grade_4">4. Awareness that illness is caused but something is unknown in the patient</label></td></tr>
+                                    <tr><td><input type="radio" name="insight_grade" value="5" id="insight_grade_5"></td><td><label for="insight_grade_5">5. Intellectual insight</label></td></tr>
+                                    <tr><td><input type="radio" name="insight_grade" value="6" id="insight_grade_6"></td><td><label for="insight_grade_6">6. True emotional insight</label></td></tr>
+                                </table>
+                            </div>
+                            <div style="margin-top:15px; padding-top:15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
+                                <button type="button" class="btn" style="margin-top:0; background:#7ab8e0; color:#fff;" onclick="closeModal('insightGradeModal')">Done</button>
+                                <button type="button" class="btn" style="margin-top:0; background:#888; color:#fff;" onclick="closeModal('insightGradeModal')">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="comorbiditiesModal" class="modal" onclick="if(event.target === this) closeModal('comorbiditiesModal')">
+                        <div class="modal-content" style="width: 480px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; margin-top: 5vh;">
+                            <h4 style="margin-top: 0;">Medical Comorbidities</h4>
+                            <div style="overflow-y: auto; flex-grow: 1; padding-right: 10px;">
+                                <div class="checklist-group">
+                                    <label><input type="checkbox" class="comorbidity-cb" value="Diabetes mellitus"> Diabetes mellitus</label>
+                                    <label><input type="checkbox" class="comorbidity-cb" value="Hypertension"> Hypertension</label>
+                                    <label><input type="checkbox" class="comorbidity-cb" value="Hypothyroidism"> Hypothyroidism</label>
+                                    <label><input type="checkbox" class="comorbidity-cb" value="Hyperthyroidism"> Hyperthyroidism</label>
+                                    <label><input type="checkbox" class="comorbidity-cb" value="Epilepsy"> Epilepsy</label>
+                                    <label><input type="checkbox" class="comorbidity-cb" value="COPD"> COPD</label>
+                                    <label><input type="checkbox" class="comorbidity-cb" value="Asthma"> Asthma</label>
+                                    <label><input type="checkbox" class="comorbidity-cb" value="Tuberculosis"> Tuberculosis</label>
+                                    <label><input type="checkbox" class="comorbidity-cb" value="HIV"> HIV</label>
+                                    <label style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+                                        <input type="checkbox" class="comorbidity-cb" value="OTHERS" id="comorbidity_others_cb"> OTHERS, specify:
+                                        <input type="text" id="comorbidity_others_text" placeholder="Specify..." style="flex:1; min-width:120px; padding:4px 8px;">
+                                    </label>
+                                </div>
+                            </div>
+                            <div style="margin-top:15px; padding-top:15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
+                                <button type="button" class="btn" style="margin-top:0; background:#7ab8e0; color:#fff;" onclick="saveComorbidities(); closeModal('comorbiditiesModal');">Save</button>
+                                <button type="button" class="btn" style="margin-top:0; background:#888; color:#fff;" onclick="closeModal('comorbiditiesModal')">Cancel</button>
                             </div>
                         </div>
                     </div>
@@ -546,28 +653,72 @@
                     <div id="modalPers" class="modal" onclick="if(event.target == this) this.style.display='none'">
                         <div class="modal-content">
                             <h3>Premorbid personality traits</h3>
-                            <div class="checklist-group" style="height:200px; overflow-y:auto;">
-                                <label><input type="checkbox" name="personality[]" value="Paranoid"> Paranoid</label>
-                                <label><input type="checkbox" name="personality[]" value="Schizoid"> Schizoid</label>
-                                <label><input type="checkbox" name="personality[]" value="Schizotypal"> Schizotypal</label>
-                                <label><input type="checkbox" name="personality[]" value="Antisocial"> Antisocial</label>
-                                <label><input type="checkbox" name="personality[]" value="Borderline"> Borderline</label>
-                                <label><input type="checkbox" name="personality[]" value="Histrionic"> Histrionic</label>
-                                <label><input type="checkbox" name="personality[]" value="Narcissistic"> Narcissistic</label>
-                                <label><input type="checkbox" name="personality[]" value="Avoidant"> Avoidant</label>
-                                <label><input type="checkbox" name="personality[]" value="Dependent"> Dependent</label>
-                                <label><input type="checkbox" name="personality[]" value="Anankastic"> Anankastic</label>
-								<label><input type="checkbox" name="personality[]" value="Neuroticism" > Neuroticism</label>
-								<label><input type="checkbox" name="personality[]" value="Low Conscientiousness" > Low Conscientiousness</label>
-								<label><input type="checkbox" name="personality[]" value="Low Agreeableness" > Low Agreeableness</label>
-								<label><input type="checkbox" name="personality[]" value="High Extraversion" > High Extraversion</label>
-								<label><input type="checkbox" name="personality[]" value="Low Openness" > Low Openness</label>
-								<label><input type="checkbox" name="personality[]" value="High Introversion" > High Introversion</label>
-								<label><input type="checkbox" name="personality[]" value="Negative affectivity"> Negative affectivity</label>
-								<label><input type="checkbox" name="personality[]" value="Detachment"> Detachment</label>
-								<label><input type="checkbox" name="personality[]" value="Dissociality"> Dissociality</label>
-								<label><input type="checkbox" name="personality[]" value="Disinhibition"> Disinhibition</label>
-								<label><input type="checkbox" name="personality[]" value="Others" > Others</label>
+                            <div class="checklist-group" style="height:260px; overflow-y:auto;">
+                                <div><strong>Temperament</strong></div>
+                                <label><input type="checkbox" name="personality[]" value="Introverted"> Introverted</label>
+                                <label><input type="checkbox" name="personality[]" value="Extroverted"> Extroverted</label>
+                                <label><input type="checkbox" name="personality[]" value="Emotionally reactive"> Emotionally reactive</label>
+                                <label><input type="checkbox" name="personality[]" value="Irritable"> Irritable</label>
+                                <label><input type="checkbox" name="personality[]" value="Anxious"> Anxious</label>
+                                <label><input type="checkbox" name="personality[]" value="Cyclothymic traits"> Cyclothymic traits</label>
+                                <label><input type="checkbox" name="personality[]" value="Hyperthymic traits"> Hyperthymic traits</label>
+
+                                <div style="margin-top:8px;"><strong>Social Style</strong></div>
+                                <label><input type="checkbox" name="personality[]" value="Socially withdrawn"> Socially withdrawn</label>
+                                <label><input type="checkbox" name="personality[]" value="Few close relationships"> Few close relationships</label>
+                                <label><input type="checkbox" name="personality[]" value="Dependent on others"> Dependent on others</label>
+                                <label><input type="checkbox" name="personality[]" value="Interpersonally sensitive"> Interpersonally sensitive</label>
+                                <label><input type="checkbox" name="personality[]" value="Conflict-prone"> Conflict-prone</label>
+
+                                <div style="margin-top:8px;"><strong>Work / Functioning Pattern</strong></div>
+                                <label><input type="checkbox" name="personality[]" value="Highly driven / Overachiever"> Highly driven / Overachiever</label>
+                                <label><input type="checkbox" name="personality[]" value="Perfectionistic"> Perfectionistic</label>
+                                <label><input type="checkbox" name="personality[]" value="Procrastinating"> Procrastinating</label>
+                                <label><input type="checkbox" name="personality[]" value="Poor initiative"> Poor initiative</label>
+                                <label><input type="checkbox" name="personality[]" value="Rigid / black-and-white thinking"> Rigid / black-and-white thinking</label>
+
+                                <div style="margin-top:8px;"><strong>Emotional Regulation Style</strong></div>
+                                <label><input type="checkbox" name="personality[]" value="Avoidant coping"> Avoidant coping</label>
+                                <label><input type="checkbox" name="personality[]" value="Ruminative"> Ruminative</label>
+                                <label><input type="checkbox" name="personality[]" value="Emotionally expressive"> Emotionally expressive</label>
+                                <label><input type="checkbox" name="personality[]" value="Emotionally inhibited"> Emotionally inhibited</label>
+                                <label><input type="checkbox" name="personality[]" value="Difficulty handling criticism"> Difficulty handling criticism</label>
+                                <label><input type="checkbox" name="personality[]" value="Poor stress tolerance"> Poor stress tolerance</label>
+
+                                <div style="margin-top:8px;"><strong>Impulse / Behavioral Regulation</strong></div>
+                                <label><input type="checkbox" name="personality[]" value="Impulsive"> Impulsive</label>
+                                <label><input type="checkbox" name="personality[]" value="Risk-taking"> Risk-taking</label>
+                                <label><input type="checkbox" name="personality[]" value="Sensation-seeking"> Sensation-seeking</label>
+                                <label><input type="checkbox" name="personality[]" value="Poor frustration tolerance"> Poor frustration tolerance</label>
+                                <label><input type="checkbox" name="personality[]" value="Aggressive tendencies"> Aggressive tendencies</label>
+
+                                <div style="margin-top:8px;"><strong>Cluster A-like Traits</strong></div>
+                                <label><input type="checkbox" name="personality[]" value="Suspicious / mistrustful style"> Suspicious / mistrustful style</label>
+                                <label><input type="checkbox" name="personality[]" value="Social withdrawal / detachment"> Social withdrawal / detachment</label>
+                                <label><input type="checkbox" name="personality[]" value="Few close relationships (Cluster A-like)"> Few close relationships</label>
+                                <label><input type="checkbox" name="personality[]" value="Odd or eccentric thinking style"> Odd or eccentric thinking style</label>
+
+                                <div style="margin-top:8px;"><strong>Cluster B-like Traits</strong></div>
+                                <label><input type="checkbox" name="personality[]" value="Impulsivity"> Impulsivity</label>
+                                <label><input type="checkbox" name="personality[]" value="Emotional instability"> Emotional instability</label>
+                                <label><input type="checkbox" name="personality[]" value="Poor frustration tolerance (Cluster B-like)"> Poor frustration tolerance</label>
+                                <label><input type="checkbox" name="personality[]" value="Aggressive tendencies (Cluster B-like)"> Aggressive tendencies</label>
+                                <label><input type="checkbox" name="personality[]" value="Attention-seeking / dramatic interpersonal style"> Attention-seeking / dramatic interpersonal style</label>
+                                <label><input type="checkbox" name="personality[]" value="Risk-taking behavior"> Risk-taking behavior</label>
+
+                                <div style="margin-top:8px;"><strong>Cluster C-like Traits</strong></div>
+                                <label><input type="checkbox" name="personality[]" value="Excessive dependency in relationships"> Excessive dependency in relationships</label>
+                                <label><input type="checkbox" name="personality[]" value="Avoidant interpersonal style"> Avoidant interpersonal style</label>
+                                <label><input type="checkbox" name="personality[]" value="Perfectionism / overcontrol"> Perfectionism / overcontrol</label>
+                                <label><input type="checkbox" name="personality[]" value="Interpersonal hypersensitivity"> Interpersonal hypersensitivity</label>
+                                <label><input type="checkbox" name="personality[]" value="High anxiety-proneness"> High anxiety-proneness</label>
+
+                                <div style="margin-top:8px;"><strong>OCEAN Model Traits</strong></div>
+                                <label><input type="checkbox" name="personality[]" value="Openness"> Openness</label>
+                                <label><input type="checkbox" name="personality[]" value="Conscientiousness"> Conscientiousness</label>
+                                <label><input type="checkbox" name="personality[]" value="Extraversion"> Extraversion</label>
+                                <label><input type="checkbox" name="personality[]" value="Agreeableness"> Agreeableness</label>
+                                <label><input type="checkbox" name="personality[]" value="Neuroticism"> Neuroticism</label>
                             </div>
                             <textarea name="personality_note" placeholder="History Notes on personality..." rows="2" style="margin-top:10px;"></textarea>
                             <button type="button" class="btn" style="margin-top:15px; background-color:#a5dcfe; color:#333;" onclick="document.getElementById('modalPers').style.display='none'">Done</button>
@@ -641,7 +792,7 @@
         }
         function updVal(slider) { slider.nextElementSibling.innerText = slider.value; }
 
-        function openModal(modalId) { document.getElementById(modalId).style.display = 'block'; if (modalId === 'majorEventsModal') restoreMajorEventsFromHidden(); if (modalId === 'stressorsModal') restoreStressorsFromHidden(); if (modalId === 'aceModal') restoreACEFromHidden(); }
+        function openModal(modalId) { document.getElementById(modalId).style.display = 'block'; if (modalId === 'majorEventsModal') restoreMajorEventsFromHidden(); if (modalId === 'stressorsModal') restoreStressorsFromHidden(); if (modalId === 'aceModal') restoreACEFromHidden(); if (modalId === 'comorbiditiesModal') restoreComorbiditiesFromHidden(); }
         function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
         function saveACE() {
             var items = [];
@@ -793,6 +944,87 @@
                 });
             } catch (e) {}
         }
+        function saveComorbidities() {
+            var arr = [];
+            document.querySelectorAll('.comorbidity-cb:checked').forEach(function(cb) {
+                if (cb.value === 'OTHERS') {
+                    var spec = document.getElementById('comorbidity_others_text');
+                    arr.push('OTHERS' + (spec && spec.value.trim() ? ': ' + spec.value.trim() : ''));
+                } else { arr.push(cb.value); }
+            });
+            var hid = document.getElementById('medical_comorbidities');
+            if (hid) hid.value = JSON.stringify(arr);
+            updateComorbiditiesSummary();
+        }
+        function restoreComorbiditiesFromHidden() {
+            document.querySelectorAll('.comorbidity-cb').forEach(function(cb) { cb.checked = false; });
+            var spec = document.getElementById('comorbidity_others_text');
+            if (spec) spec.value = '';
+            var hid = document.getElementById('medical_comorbidities');
+            if (!hid || !hid.value) return;
+            try {
+                var arr = JSON.parse(hid.value);
+                if (!Array.isArray(arr)) return;
+                arr.forEach(function(item) {
+                    if (typeof item === 'string' && item.startsWith('OTHERS')) {
+                        document.getElementById('comorbidity_others_cb').checked = true;
+                        if (item.length > 6 && item.substring(0, 7) === 'OTHERS:') spec.value = item.substring(7).trim();
+                    } else {
+                        document.querySelectorAll('.comorbidity-cb').forEach(function(cb) { if (cb.value === item) cb.checked = true; });
+                    }
+                });
+            } catch (e) {
+                if (hid.value.trim()) { document.getElementById('comorbidity_others_cb').checked = true; if (spec) spec.value = hid.value; }
+            }
+        }
+        function toggleFamilyHistoryPresent() {
+            var present = document.querySelector('input[name="family_history_present"]:checked');
+            var box = document.getElementById('family_history_present_box');
+            if (box) box.style.display = (present && present.value === 'Present') ? 'block' : 'none';
+        }
+        function updateFamilyHistoryHidden() {
+            var present = document.querySelector('input[name="family_history_present"]:checked');
+            var isPresent = present && present.value === 'Present';
+            var items = [];
+            if (isPresent) {
+                document.querySelectorAll('.family-history-cb:checked').forEach(function(cb) {
+                    if (cb.value === 'OTHERS') {
+                        var t = document.getElementById('family_history_others_text');
+                        items.push('OTHERS' + (t && t.value.trim() ? ': ' + t.value.trim() : ''));
+                    } else { items.push(cb.value); }
+                });
+            }
+            var hid = document.getElementById('family_history_psychiatric');
+            if (hid) hid.value = JSON.stringify({ present: isPresent, items: items });
+        }
+        function restoreFamilyHistoryFromHidden() {
+            var hid = document.getElementById('family_history_psychiatric');
+            if (!hid || !hid.value) return;
+            try {
+                var data = JSON.parse(hid.value);
+                if (!data || typeof data.present === 'undefined') return;
+                document.querySelectorAll('input[name="family_history_present"]').forEach(function(r) { r.checked = (r.value === (data.present ? 'Present' : 'Absent')); });
+                toggleFamilyHistoryPresent();
+                if (!data.present) return;
+                (data.items || []).forEach(function(item) {
+                    if (typeof item === 'string' && item.startsWith('OTHERS')) {
+                        document.getElementById('family_history_others_cb').checked = true;
+                        var t = document.getElementById('family_history_others_text');
+                        if (t && item.length > 7 && item.substring(0, 7) === 'OTHERS:') t.value = item.substring(7).trim();
+                    } else {
+                        document.querySelectorAll('.family-history-cb').forEach(function(cb) { if (cb.value === item) cb.checked = true; });
+                    }
+                });
+            } catch (e) {}
+        }
+        function updateComorbiditiesSummary() {
+            var el = document.getElementById('comorbidities-summary');
+            if (!el) return;
+            var hid = document.getElementById('medical_comorbidities');
+            var n = 0;
+            if (hid && hid.value) try { var arr = JSON.parse(hid.value); n = Array.isArray(arr) ? arr.length : 0; } catch (e) { if (hid.value.trim()) n = 1; }
+            el.textContent = n ? n + ' selected' : 'Select...';
+        }
         function bindAdherenceCheckboxes() { document.querySelectorAll('.adherence-checkbox').forEach(cb => { cb.addEventListener('change', function() { const c = document.getElementById('adherence-ranges-container'); const id = 'adherence-range-' + this.value.replace(/\s+/g, '_'); if (this.checked) c.insertAdjacentHTML('beforeend', '<div class="range-group" id="' + id + '" data-status="' + this.value + '"><div class="range-row"><label>Start: <input type="date" class="range-start"></label> <label>End: <input type="date" class="range-end"></label></div><button type="button" class="btn" style="margin-top:6px; padding:4px 10px; font-size:11px; background:#7ab8e0; color:#fff;" onclick="addExtraRange(this)">+ Add another range</button></div>'); else { const g = document.getElementById(id); if (g) g.remove(); } }); }); }
         function addExtraRange(btn) { const group = btn.closest('.range-group'); const row = document.createElement('div'); row.className = 'range-row'; row.innerHTML = '<label>Start: <input type="date" class="range-start"></label> <label>End: <input type="date" class="range-end"></label>'; group.insertBefore(row, btn); }
         function closeAdherenceRangesModal() { const data = []; document.querySelectorAll('#adherence-ranges-container .range-group').forEach(group => { const status = group.getAttribute('data-status'); group.querySelectorAll('.range-row').forEach(row => { const s = row.querySelector('.range-start'), e = row.querySelector('.range-end'); if (s && e) data.push({ status: status, start: s.value || null, end: e.value || null }); }); }); document.getElementById('adherence_data').value = JSON.stringify(data); closeModal('adherenceRangesModal'); }
@@ -881,6 +1113,9 @@
             bindAdherenceCheckboxes();
             renderClinicalStates();
             addMSE('Thought'); addMSE('Perception'); addMSE('Affect');
+            updateComorbiditiesSummary();
+            if (typeof toggleFamilyHistoryPresent === 'function') toggleFamilyHistoryPresent();
+            if (typeof updateFamilyHistoryHidden === 'function') updateFamilyHistoryHidden();
         });
 
         // --- SMART DROPDOWN LOGIC ---

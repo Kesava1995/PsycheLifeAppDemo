@@ -66,6 +66,7 @@ class Visit(db.Model):
     clinical_state = db.Column(db.String(50), nullable=True)
     medication_adherence = db.Column(db.String(50), nullable=True)
     ace_data = db.Column(db.Text, nullable=True)  # Adverse childhood experiences (JSON)
+    family_history_psychiatric = db.Column(db.Text, nullable=True)  # JSON: {"present": bool, "items": ["Depression", "OTHERS: ..."]}
 
     symptom_entries = db.relationship('SymptomEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
     medication_entries = db.relationship('MedicationEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
@@ -157,6 +158,11 @@ class MSEEntry(db.Model):
     
     duration = db.Column(db.String(100))
     note = db.Column(db.Text)
+
+    # New: Insight + Additional MSE findings
+    insight_status = db.Column(db.String(20))  # 'Present', 'Partial', 'Absent'
+    insight_grade = db.Column(db.Integer)      # 1–6, if graded
+    addl_mse_f_note = db.Column(db.Text)       # Additional MSE findings (free text)
     
     # --- FIX FOR CRASH: Explicitly map the legacy 'score' column ---
     score = db.Column(db.Integer, default=0)
