@@ -25,6 +25,9 @@ class Doctor(db.Model):
 
     # Active schedule template for appointment slot calculation
     active_template_id = db.Column(db.Integer, db.ForeignKey('schedule_templates.id'), nullable=True)
+
+    # Clinic hours for dashboard: JSON text e.g. {"morning": {"start": "09:00", "end": "17:00"}, "evening": {"start": "17:00", "end": "22:00"}}
+    clinic_hours = db.Column(db.Text, nullable=True)
     
     patients = db.relationship('Patient', backref='doctor', lazy=True)
 

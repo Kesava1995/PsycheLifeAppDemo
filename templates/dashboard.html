@@ -337,7 +337,10 @@
         </div>
 
         <div class="card scrollable-card" id="appointments-view">
-            <h3 style="margin-top:0;">Appointments for <span id="display-date">{{ target_date.strftime('%d-%b-%Y') }}</span></h3>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px;">
+                <h3 style="margin: 0;">Appointments for <span id="display-date">{{ target_date.strftime('%d-%b-%Y') }}</span></h3>
+                <button type="button" title="Schedule Appointment" style="width: 28px; height: 28px; min-width: 28px; padding: 0; font-size: 18px; line-height: 1; border-radius: 6px; border: 1px solid #A5DCFE; background: #f0f8ff; color: #2c7be5; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;" onclick="document.getElementById('appointmentModal').style.display='block'; document.getElementById('topbar-plus-menu').classList.remove('show'); if(typeof refreshSlotsForModal === 'function') refreshSlotsForModal();">+</button>
+            </div>
             <table id="appointments-table">
                 <thead>
                 <tr>
@@ -403,8 +406,17 @@
         </div>
 
         <div class="card hidden scrollable-card" id="patients-view">
-            <h3 style="margin-top:0;">My Patients Directory</h3>
-            <table>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+                <h3 style="margin: 0;">My Patients Directory</h3>
+                <input type="text" id="patient-search-input" class="form-control" placeholder="Search patients..." list="patient-search-datalist" style="max-width: 240px; padding: 6px 10px;" autocomplete="off">
+                <datalist id="patient-search-datalist">
+                    {% for p in patients %}
+                    <option value="{{ p.name }}">
+                    {% endfor %}
+                </datalist>
+            </div>
+            <table id="patients-directory-table">
+                <thead>
                 <tr>
                     <th>ID</th>
                     <th>Name</th>
@@ -413,8 +425,10 @@
                     <th>Notes</th>
                     <th>Actions</th>
                 </tr>
+                </thead>
+                <tbody>
                 {% for p in patients %}
-                <tr>
+                <tr class="patient-row" data-patient-name="{{ p.name|lower }}" data-patient-diagnosis="{{ (p.diagnosis or '')|lower }}" data-patient-notes="{{ (p.note or '')|lower }}">
                     <td>{{ p.id }}</td>
                     <td><a href="{{ url_for('patient_detail', patient_id=p.id) }}">{{ p.name }}</a></td>
                     <td>{{ p.age }} / {{ p.sex }}</td>
@@ -426,6 +440,7 @@
                     </td>
                 </tr>
                 {% endfor %}
+                </tbody>
             </table>
         </div>
     </div>
@@ -450,8 +465,8 @@
                 </div>
                 <div style="display:flex; flex-direction:column; align-items:flex-start;">
                     <span class="clinic-hour-badge active" id="badge-all" data-slot="all" onclick="filterAppointmentsByClinicHour('all')">All</span>
-                    <span class="clinic-hour-badge" id="badge-morning" data-slot="morning" onclick="filterAppointmentsByClinicHour('morning')">&#9728; 9:00–5:00 PM</span>
-                    <span class="clinic-hour-badge" id="badge-evening" data-slot="evening" onclick="filterAppointmentsByClinicHour('evening')">&#9789; 5:00–10:00 PM</span>
+                    <span class="clinic-hour-badge" id="badge-morning" data-slot="morning" onclick="filterAppointmentsByClinicHour('morning')">&#9728; {{ (clinic_hours.morning_display if clinic_hours is defined and clinic_hours else '9:00–5:00 PM') }}</span>
+                    <span class="clinic-hour-badge" id="badge-evening" data-slot="evening" onclick="filterAppointmentsByClinicHour('evening')">&#9789; {{ (clinic_hours.evening_display if clinic_hours is defined and clinic_hours else '5:00–10:00 PM') }}</span>
                 </div>
             </div>
         </div>
@@ -496,15 +511,15 @@
 <div id="editClinicHoursModal" class="modal" onclick="if(event.target === this) closeModal('editClinicHoursModal')">
     <div class="modal-content" style="max-width: 400px;">
         <h3>Edit Clinic Hours</h3>
-        <form id="edit-clinic-hours-form" onsubmit="return saveClinicHours(event);">
+        <form id="edit-clinic-hours-form" data-api-url="{{ url_for('save_clinic_hours') }}" onsubmit="return saveClinicHours(event);">
             <label>Morning: Start</label>
-            <input type="time" id="edit-morning-start" class="form-control" value="09:00">
+            <input type="time" id="edit-morning-start" class="form-control" value="{{ clinic_hours.morning_start|default('09:00') if clinic_hours is defined and clinic_hours else '09:00' }}">
             <label>Morning: End</label>
-            <input type="time" id="edit-morning-end" class="form-control" value="17:00">
+            <input type="time" id="edit-morning-end" class="form-control" value="{{ clinic_hours.morning_end|default('17:00') if clinic_hours is defined and clinic_hours else '17:00' }}">
             <label>Evening: Start</label>
-            <input type="time" id="edit-evening-start" class="form-control" value="17:00">
+            <input type="time" id="edit-evening-start" class="form-control" value="{{ clinic_hours.evening_start|default('17:00') if clinic_hours is defined and clinic_hours else '17:00' }}">
             <label>Evening: End</label>
-            <input type="time" id="edit-evening-end" class="form-control" value="22:00">
+            <input type="time" id="edit-evening-end" class="form-control" value="{{ clinic_hours.evening_end|default('22:00') if clinic_hours is defined and clinic_hours else '22:00' }}">
             <div style="margin-top: 16px; display: flex; gap: 8px;">
                 <button type="submit" class="button">Save</button>
                 <button type="button" class="button" style="background: #888;" onclick="closeModal('editClinicHoursModal')">Cancel</button>
@@ -1035,15 +1050,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function saveClinicHours(e) {
     e.preventDefault();
+    e.preventDefault();
+    var form = document.getElementById('edit-clinic-hours-form');
     var mStart = document.getElementById('edit-morning-start').value;
     var mEnd = document.getElementById('edit-morning-end').value;
     var eStart = document.getElementById('edit-evening-start').value;
     var eEnd = document.getElementById('edit-evening-end').value;
-    var badgeMorning = document.getElementById('badge-morning');
-    var badgeEvening = document.getElementById('badge-evening');
-    if (badgeMorning) badgeMorning.textContent = '\u9728 ' + (mStart || '9:00') + '\u2013' + (mEnd || '17:00');
-    if (badgeEvening) badgeEvening.textContent = '\u9789 ' + (eStart || '17:00') + '\u2013' + (eEnd || '22:00');
-    document.getElementById('editClinicHoursModal').style.display = 'none';
+    var apiUrl = form && form.getAttribute('data-api-url');
+    if (!apiUrl) {
+        if (typeof showToast === 'function') showToast('Configuration error', 'error');
+        return false;
+    }
+    fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify({
+            morning: { start: mStart || '09:00', end: mEnd || '17:00' },
+            evening: { start: eStart || '17:00', end: eEnd || '22:00' }
+        })
+    }).then(function(r) { return r.json(); }).then(function(data) {
+        var badgeMorning = document.getElementById('badge-morning');
+        var badgeEvening = document.getElementById('badge-evening');
+        if (data.clinic_hours) {
+            if (badgeMorning) badgeMorning.textContent = '\u9728 ' + (data.clinic_hours.morning_display || '');
+            if (badgeEvening) badgeEvening.textContent = '\u9789 ' + (data.clinic_hours.evening_display || '');
+        } else {
+            if (badgeMorning) badgeMorning.textContent = '\u9728 ' + (mStart || '9:00') + '\u2013' + (mEnd || '17:00');
+            if (badgeEvening) badgeEvening.textContent = '\u9789 ' + (eStart || '17:00') + '\u2013' + (eEnd || '22:00');
+        }
+        document.getElementById('editClinicHoursModal').style.display = 'none';
+        if (data.ok && typeof showToast === 'function') showToast('Clinic hours saved.', 'success');
+    }).catch(function() {
+        if (typeof showToast === 'function') showToast('Failed to save clinic hours.', 'error');
+    });
     return false;
 }
 
@@ -1053,6 +1092,30 @@ function handlePatientSearch(val) {
         switchView('patients');
     }
 }
+
+// My Patients Directory: filter table by search (datalist + text filter)
+(function() {
+    var searchInput = document.getElementById('patient-search-input');
+    var table = document.getElementById('patients-directory-table');
+    if (!searchInput || !table) return;
+    function filterPatientRows() {
+        var q = (searchInput.value || '').trim().toLowerCase();
+        var rows = table.querySelectorAll('tbody tr.patient-row');
+        rows.forEach(function(tr) {
+            if (!q) {
+                tr.style.display = '';
+                return;
+            }
+            var name = (tr.getAttribute('data-patient-name') || '');
+            var diagnosis = (tr.getAttribute('data-patient-diagnosis') || '');
+            var notes = (tr.getAttribute('data-patient-notes') || '');
+            var match = name.indexOf(q) !== -1 || diagnosis.indexOf(q) !== -1 || notes.indexOf(q) !== -1;
+            tr.style.display = match ? '' : 'none';
+        });
+    }
+    searchInput.addEventListener('input', filterPatientRows);
+    searchInput.addEventListener('change', filterPatientRows);
+})();
 
 // ==========================================
 // SCALES LOGIC (Display Only)

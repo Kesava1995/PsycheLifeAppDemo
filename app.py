@@ -18,6 +18,51 @@ def get_ist_now():
     return datetime.utcnow() + timedelta(hours=5, minutes=30)
 
 
+# Default clinic hours (morning / evening) for dashboard badges and edit modal
+DEFAULT_CLINIC_HOURS = {
+    "morning": {"start": "09:00", "end": "17:00"},
+    "evening": {"start": "17:00", "end": "22:00"},
+}
+
+
+def _time_to_display(s):
+    """Convert 24h 'HH:MM' to display e.g. '9:00 AM', '5:00 PM'."""
+    if not s or len(s) < 5:
+        return s or ""
+    h, m = int(s[:2]), s[3:5]
+    if h == 0:
+        return "12:" + m + " AM"
+    if h < 12:
+        return str(h) + ":" + m + " AM"
+    if h == 12:
+        return "12:" + m + " PM"
+    return str(h - 12) + ":" + m + " PM"
+
+
+def get_clinic_hours(doctor):
+    """Return clinic hours dict for template: morning_start/end, evening_start/end, morning_display, evening_display."""
+    raw = DEFAULT_CLINIC_HOURS.copy()
+    if doctor and getattr(doctor, "clinic_hours", None):
+        try:
+            raw = json.loads(doctor.clinic_hours)
+        except (TypeError, ValueError):
+            pass
+    m = raw.get("morning", {})
+    e = raw.get("evening", {})
+    m_start = m.get("start", "09:00")
+    m_end = m.get("end", "17:00")
+    e_start = e.get("start", "17:00")
+    e_end = e.get("end", "22:00")
+    return {
+        "morning_start": m_start,
+        "morning_end": m_end,
+        "evening_start": e_start,
+        "evening_end": e_end,
+        "morning_display": _time_to_display(m_start) + "\u2013" + _time_to_display(m_end),
+        "evening_display": _time_to_display(e_start) + "\u2013" + _time_to_display(e_end),
+    }
+
+
 from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry, ScaleAssessment, Appointment, DashboardNote, Notification, ScheduleTemplate
 from medical_utils import get_unified_dose, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency, process_scale_submission, duration_to_days, format_timedelta_as_duration
 import io
@@ -578,6 +623,7 @@ def profile():
 def dashboard():
     """Renders the main dashboard view with dynamic data."""
     doctor_id = session.get('doctor_id')
+    doctor = Doctor.query.get(doctor_id)
     today = get_ist_now().date()
 
     # Get Patients
@@ -616,8 +662,8 @@ def dashboard():
             'note': p.personal_notes or "None"
         })
 
-    # Clinic name for topbar; replace with DB/session lookup if needed (e.g. Doctor.clinic_name)
-    clinic_name = ""
+    clinic_name = (doctor.clinic_name or "") if doctor else ""
+    clinic_hours = get_clinic_hours(doctor)
 
     return render_template('dashboard.html',
                            patients=patient_data,
@@ -628,7 +674,49 @@ def dashboard():
                            appointments=appointments,
                            appointments_for_day=appointments_for_day,
                            top_5_patients=patients[:5],
-                           clinic_name=clinic_name)
+                           clinic_name=clinic_name,
+                           clinic_hours=clinic_hours)
+
+
+@app.route('/api/clinic_hours', methods=['POST'])
+@doctor_required
+def save_clinic_hours():
+    """Save clinic hours for the current doctor. Expects JSON or form: morning_start, morning_end, evening_start, evening_end (HH:MM)."""
+    doctor_id = session.get('doctor_id')
+    doctor = Doctor.query.get(doctor_id)
+    if not doctor:
+        return jsonify({"ok": False, "error": "Doctor not found"}), 400
+
+    if request.is_json:
+        data = request.get_json()
+        morning = data.get("morning", {})
+        evening = data.get("evening", {})
+        m_start = morning.get("start") or data.get("morning_start", "09:00")
+        m_end = morning.get("end") or data.get("morning_end", "17:00")
+        e_start = evening.get("start") or data.get("evening_start", "17:00")
+        e_end = evening.get("end") or data.get("evening_end", "22:00")
+    else:
+        m_start = request.form.get("morning_start", "09:00")
+        m_end = request.form.get("morning_end", "17:00")
+        e_start = request.form.get("evening_start", "17:00")
+        e_end = request.form.get("evening_end", "22:00")
+
+    # Normalize to HH:MM (strip seconds if present)
+    def norm(t):
+        if not t:
+            return "09:00"
+        s = str(t).strip()
+        if len(s) >= 5:
+            return s[:5]
+        return s
+
+    payload = {
+        "morning": {"start": norm(m_start), "end": norm(m_end)},
+        "evening": {"start": norm(e_start), "end": norm(e_end)},
+    }
+    doctor.clinic_hours = json.dumps(payload)
+    db.session.commit()
+    return jsonify({"ok": True, "clinic_hours": get_clinic_hours(doctor)})
 
 
 @app.route('/api/add_note', methods=['POST'])
@@ -644,9 +732,10 @@ def add_note():
     return redirect(url_for('dashboard'))
 
 
-@app.route('/profile', methods=['GET', 'POST'])
+@app.route('/add_appointment', methods=['POST'])
 @doctor_required
 def add_appointment():
+    """Handle form POST from Add New Appointment modal; redirects back to dashboard with optional date."""
     doctor_id = session.get('doctor_id')
     date_str = request.form.get('appt_date')
     start_time = request.form.get('appt_time')

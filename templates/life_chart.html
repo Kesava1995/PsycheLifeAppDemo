@@ -1659,7 +1659,59 @@
         }
     };
 
+    function buildBarChartLayout() {
+        const wrapper = document.querySelector('.dashboard-wrapper');
+        const w = wrapper ? wrapper.clientWidth : window.innerWidth - 310;
+        const fullWidth = Math.max(MIN_PANEL_W, w - LAYOUT_PAD * 2);
+        const gridGap = 10;
+        const barCols = 3;
+        const cellW = (fullWidth - (barCols - 1) * gridGap) / barCols;
+        const barRowH = Math.max(260, 280);
+        const barKeys = ['symptoms_bar', 'mse_bar', 'se_bar', 'meds_bar', 'scale_bar'];
+        barKeys.forEach(function(key, idx) {
+            const col = idx % barCols;
+            const row = Math.floor(idx / barCols);
+            layoutMap[key] = {
+                x: LAYOUT_PAD + col * (cellW + gridGap),
+                y: LAYOUT_PAD + row * (barRowH + gridGap),
+                w: cellW,
+                h: barRowH
+            };
+        });
+        var totalBarH = LAYOUT_PAD + 2 * barRowH + gridGap + LAYOUT_PAD + 48;
+        var areaEl = document.getElementById('dashboardArea');
+        var canvasEl = document.getElementById('dashboardCanvas');
+        if (areaEl && totalBarH > 0) {
+            areaEl.style.minHeight = totalBarH + 'px';
+            areaEl.style.height = totalBarH + 'px';
+        }
+        if (canvasEl && totalBarH > 0) {
+            canvasEl.style.minHeight = totalBarH + 'px';
+            canvasEl.style.height = totalBarH + 'px';
+        }
+    }
+
+    function applyBarLayoutToPanels() {
+        var barKeys = ['symptoms_bar', 'mse_bar', 'se_bar', 'meds_bar', 'scale_bar'];
+        barKeys.forEach(function(key) {
+            var panel = document.getElementById('widget-' + key);
+            if (panel && layoutMap[key]) {
+                var pos = layoutMap[key];
+                panel.style.left = pos.x + 'px';
+                panel.style.top = pos.y + 'px';
+                panel.style.width = pos.w + 'px';
+                panel.style.height = pos.h + 'px';
+            }
+            if (charts[key] && charts[key].resize) charts[key].resize();
+        });
+    }
+
     function buildGrid() {
+        if (componentBarViewEnabled) {
+            buildBarChartLayout();
+            applyBarLayoutToPanels();
+            return;
+        }
         const wrapper = document.querySelector('.dashboard-wrapper');
         const w = wrapper ? wrapper.clientWidth : window.innerWidth - 310;
         // Use window.innerHeight for reliable symptom widget sizing regardless of wrapper state
@@ -1817,16 +1869,13 @@
         componentBarViewEnabled = toggle ? toggle.checked : false;
 
         if (componentBarViewEnabled) {
-            // Switch all visible line charts to component bar (month-wise)
+            buildBarChartLayout();
             LINE_CHART_KEYS.forEach(function(lineKey) {
                 if (!activeWidgets.includes(lineKey)) return;
-                if (!layoutMap[lineKey]) return;
-                layoutMap[lineKey + '_bar'] = Object.assign({}, layoutMap[lineKey]);
                 removeWidget(lineKey);
                 addWidgetToDOM(lineKey + '_bar');
             });
             if (rawData.scale && rawData.scale.length > 0 && activeWidgets.includes('scale')) {
-                layoutMap['scale_bar'] = Object.assign({}, layoutMap['scale']);
                 removeWidget('scale');
                 addWidgetToDOM('scale_bar');
             }
@@ -2467,8 +2516,8 @@
         }
 
         barData.datasets.forEach(function(ds) {
-            ds.barThickness = 10;
-            ds.maxBarThickness = 14;
+            ds.barThickness = 20;
+            ds.maxBarThickness = 28;
         });
 
         var maxStack = 0;
@@ -2476,7 +2525,7 @@
             var sum = barData.datasets.reduce(function(s, ds) { return s + (ds.data[idx] || 0); }, 0);
             if (sum > maxStack) maxStack = sum;
         });
-        var maxY = Math.max(50, maxStack + 10, numComponents * 10);
+        var maxY = Math.max(20, maxStack + 5, numComponents * 8);
 
         const newChart = new Chart(ctx, {
             type: 'bar',
@@ -2497,8 +2546,8 @@
                         grid: { display: false },
                         min: minIdx,
                         max: maxIdx,
-                        barPercentage: 0.5,
-                        categoryPercentage: 0.7
+                        barPercentage: 0.95,
+                        categoryPercentage: 1.0
                     },
                     y: { stacked: true, min: 0, max: maxY, title: { display: true, text: 'Cumulative score (month)' } }
                 },
