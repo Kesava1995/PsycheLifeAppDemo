@@ -19,7 +19,7 @@ def get_ist_now():
 
 
 from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry, ScaleAssessment, Appointment, DashboardNote, Notification, ScheduleTemplate
-from medical_utils import get_unified_dose, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency, process_scale_submission
+from medical_utils import get_unified_dose, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency, process_scale_submission, duration_to_days, format_timedelta_as_duration
 import io
 import os
 from reportlab.lib.pagesizes import letter, A4
@@ -636,8 +636,9 @@ def dashboard():
 def add_note():
     doctor_id = session.get('doctor_id')
     content = request.form.get('note_content')
+    note_date = parse_date(request.form.get('note_date')) if request.form.get('note_date') else get_ist_now().date()
     if content:
-        note = DashboardNote(doctor_id=doctor_id, date=get_ist_now().date(), content=content)
+        note = DashboardNote(doctor_id=doctor_id, date=note_date, content=content)
         db.session.add(note)
         db.session.commit()
     return redirect(url_for('dashboard'))
@@ -1164,12 +1165,21 @@ def update_guest_share(token, redirect_to_prescription=False):
                 'taper_plan': json.dumps(med.get('taper_plan', [])) if med.get('taper_plan') else None
             })
 
+        chief_complaints_sorted = []
+        for s in current_symps:
+            name = s.get("symptom_name", "")
+            dur = s.get("duration_text", "")
+            chief_complaints_sorted.append({"name": name, "duration_display": dur, "sort_days": duration_to_days(dur)})
+        chief_complaints_sorted.sort(key=lambda x: x["sort_days"], reverse=True)
+        chief_complaints_sorted = [{"name": x["name"], "duration_display": x["duration_display"]} for x in chief_complaints_sorted]
+
         lifchart_url = f"{request.url_root.rstrip('/')}/guest/share/{token}"
         return render_template(
             "preview_prescription.html",
             visit=visit_obj, patient=None, guest=True,
             guest_patient=guest_patient, lifchart_url=lifchart_url,
-            guest_doctor=guest_doctor, guest_signature_b64=data.get('signature_b64')
+            guest_doctor=guest_doctor, guest_signature_b64=data.get('signature_b64'),
+            chief_complaints_sorted=chief_complaints_sorted
         )
     return redirect(url_for('guest_share_view', token=token))
 
@@ -1535,24 +1545,29 @@ def process_visit_form_data(visit, form_data):
         )
         db.session.add(profile)
 
-    # 8. Substance Use History
+    # 8. Substance Use History (no date fields; "Usually: Since X" stored in note)
     sub_names = form_data.getlist('substance_name[]')
     sub_patterns = form_data.getlist('substance_pattern[]')
-    sub_starts = form_data.getlist('substance_start[]')
-    sub_ends = form_data.getlist('substance_end[]')
+    sub_usually = form_data.getlist('substance_usually[]')  # e.g. "Since 5 years"
     sub_notes = form_data.getlist('substance_note[]')
     SubstanceUseEntry.query.filter_by(visit_id=visit.id).delete()
     for i, name in enumerate(sub_names):
         if name.strip():
-            start_d = parse_date(sub_starts[i]) if i < len(sub_starts) and sub_starts[i] else None
-            end_d = parse_date(sub_ends[i]) if i < len(sub_ends) and sub_ends[i] else None
+            usually = (sub_usually[i] or '').strip() if i < len(sub_usually) else ''
+            extra_note = (sub_notes[i] or '').strip() if i < len(sub_notes) else ''
+            note_parts = []
+            if usually:
+                note_parts.append('Usually: ' + usually)
+            if extra_note:
+                note_parts.append(extra_note)
+            note_str = ' | '.join(note_parts)
             db.session.add(SubstanceUseEntry(
                 visit_id=visit.id,
                 substance_name=name,
                 pattern=sub_patterns[i] if i < len(sub_patterns) else 'Occasional',
-                start_date=start_d,
-                end_date=end_d,
-                note=sub_notes[i] if i < len(sub_notes) else ''
+                start_date=None,
+                end_date=None,
+                note=note_str or None
             ))
 
 
@@ -2836,6 +2851,26 @@ def preview_prescription(visit_id):
     visit = Visit.query.get_or_404(visit_id)
     patient = visit.patient
     include_qr = request.args.get('include_qr') == 'true'
+
+    # Chief complaints: chronological (longest duration first); follow-up: carried-over duration from previous visit
+    previous_visit = Visit.query.filter(
+        Visit.patient_id == visit.patient_id,
+        Visit.date < visit.date
+    ).order_by(Visit.date.desc()).first()
+    previous_symptom_names = {s.symptom_name.strip().lower() for s in previous_visit.symptom_entries} if previous_visit else set()
+
+    chief_complaints_sorted = []
+    for s in visit.symptom_entries:
+        name = s.symptom_name
+        if previous_visit and name.strip().lower() in previous_symptom_names:
+            delta = visit.date - previous_visit.date
+            display_duration = format_timedelta_as_duration(delta)
+            sort_days = delta.days
+        else:
+            display_duration = s.duration_text or ''
+            sort_days = duration_to_days(s.duration_text or '')
+        chief_complaints_sorted.append({'name': name, 'duration_display': display_duration, 'sort_days': sort_days})
+    chief_complaints_sorted.sort(key=lambda x: x['sort_days'], reverse=True)
     
     lifchart_url = None
     qr_image_b64 = None
@@ -2854,6 +2889,7 @@ def preview_prescription(visit_id):
     return render_template('preview_prescription.html', 
                          patient=patient, 
                          visit=visit, 
+                         chief_complaints_sorted=chief_complaints_sorted,
                          lifchart_url=lifchart_url,
                          qr_image_b64=qr_image_b64)
 
@@ -3383,6 +3419,14 @@ def guest_both():
             'taper_plan': json.dumps(med.get('taper_plan', [])) if med.get('taper_plan') else None
         })
 
+    chief_complaints_sorted = []
+    for s in current_symps:
+        name = s.get("symptom_name", "")
+        dur = s.get("duration_text", "")
+        chief_complaints_sorted.append({"name": name, "duration_display": dur, "sort_days": duration_to_days(dur)})
+    chief_complaints_sorted.sort(key=lambda x: x["sort_days"], reverse=True)
+    chief_complaints_sorted = [{"name": x["name"], "duration_display": x["duration_display"]} for x in chief_complaints_sorted]
+
     session.pop('guest_first_visit', None)
 
     return render_template(
@@ -3393,7 +3437,8 @@ def guest_both():
         guest_patient=guest_patient,
         lifchart_url=lifchart_url,
         guest_doctor=guest_doctor,
-        guest_signature_b64=signature_b64
+        guest_signature_b64=signature_b64,
+        chief_complaints_sorted=chief_complaints_sorted
     )
 
 

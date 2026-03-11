@@ -30,6 +30,38 @@ def parse_duration(duration_text):
         
     return None
 
+
+def duration_to_days(duration_text):
+    """
+    Returns approximate number of days for a duration string (for sorting).
+    Returns 0 if parsing fails.
+    """
+    delta = parse_duration(duration_text)
+    return delta.days if delta else 0
+
+
+def format_timedelta_as_duration(delta):
+    """
+    Formats a timedelta as human-readable duration (e.g. '3 months', '2 weeks').
+    Uses singular form when value is 1.
+    """
+    if not delta or not hasattr(delta, 'days'):
+        return ''
+    days = delta.days
+    if days <= 0:
+        return ''
+    if days >= 365:
+        n = round(days / 365)
+        return f"{n} year" if n == 1 else f"{n} years"
+    if days >= 30:
+        n = round(days / 30)
+        return f"{n} month" if n == 1 else f"{n} months"
+    if days >= 7:
+        n = round(days / 7)
+        return f"{n} week" if n == 1 else f"{n} weeks"
+    return f"{days} day" if days == 1 else f"{days} days"
+
+
 def calculate_start_date(duration_text, reference_date=None):
     """
     Calculates the start date by subtracting duration from the reference date.

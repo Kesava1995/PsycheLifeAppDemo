@@ -56,6 +56,8 @@
         .clinical-row { display: flex; margin-bottom: 8px; }
         .clinical-label { font-weight: bold; width: 140px; flex-shrink: 0; }
         .clinical-data { flex: 1; }
+        .chief-complaints-vertical { display: flex; flex-direction: column; gap: 4px; }
+        .chief-complaint-item { display: block; }
         .mse-group { display: inline-block; margin-right: 15px; }
         .mse-group span { font-weight: 600; text-decoration: underline; font-size: 10pt; }
 
@@ -155,12 +157,21 @@
         {% if visit.symptom_entries or visit.side_effect_entries or visit.mse_entries %}
         <div class="clinical-section">
             
-            {% if visit.symptom_entries %}
+            {% if chief_complaints_sorted is defined and chief_complaints_sorted %}
             <div class="clinical-row">
                 <div class="clinical-label">Chief Complaints:</div>
-                <div class="clinical-data">
+                <div class="clinical-data chief-complaints-vertical">
+                    {% for s in chief_complaints_sorted %}
+                        <div class="chief-complaint-item">{{ s.name }}{% if s.duration_display %} x {{ s.duration_display }}{% endif %}</div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% elif visit.symptom_entries %}
+            <div class="clinical-row">
+                <div class="clinical-label">Chief Complaints:</div>
+                <div class="clinical-data chief-complaints-vertical">
                     {% for s in visit.symptom_entries %}
-                        {{ s.symptom_name }}{% if s.duration_text %} x {{ s.duration_text }}{% endif %}{% if not loop.last %}, {% endif %}
+                        <div class="chief-complaint-item">{{ s.symptom_name }}{% if s.duration_text %} x {{ s.duration_text }}{% endif %}</div>
                     {% endfor %}
                 </div>
             </div>

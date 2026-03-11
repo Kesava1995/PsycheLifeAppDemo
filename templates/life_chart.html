@@ -209,6 +209,26 @@
             transition: box-shadow 0.2s ease !important;
         }
 
+        /* Bar chart month tooltip: stuck to bar, moves with scroll */
+        .bar-month-tooltip {
+            position: absolute;
+            z-index: 100;
+            max-width: 300px;
+            padding: 8px 10px;
+            background: rgba(50,50,50,0.96);
+            color: #fff;
+            border-radius: 8px;
+            font-size: 12px;
+            line-height: 1.4;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            pointer-events: none;
+            white-space: pre-wrap;
+        }
+        .canvas-container.bar-chart-wrap {
+            position: relative;
+            overflow: visible;
+        }
+
         /* New Sticky Tooltip Style (matches standard Chart.js hover look) */
         .sticky-tooltip {
             position: fixed; 
@@ -700,6 +720,13 @@
                 <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: 5px;">
                     <a href="{{ url_for('dashboard') }}">← Dashboard</a>
 				</div>
+				<div style="display: flex; align-items: center; gap: 6px; margin-top: 5px;">
+					<label class="switch">
+						<input type="checkbox" id="componentBarViewToggle" onchange="toggleComponentBarView()">
+						<span class="slider round"></span>
+					</label>
+					<span style="font-size: 0.85rem; font-weight: 600; color: #555;">COMPONENT BAR CHART(&#128202;)</span>
+				</div>
 				<div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: 5px;">
                     <button type="button" id="darkModeToggleBtn" onclick="toggleDarkMode()" style="background: black; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: background 0.3s, color 0.3s;">Dark Mode</button>
                 </div>
@@ -866,7 +893,11 @@
                                                 <button type="button" onclick="removeFreqBoxLC(this)" style="font-size:10px; line-height:10px; padding:0 2px; cursor:pointer; background: none; border: 1px solid #ddd; border-radius: 2px;">-</button>
                                             </div>
                                         </div>
-                                        <input list="duration-options-list" name="med_duration[]" value="{{ step.duration_text or '' }}" placeholder="Dur" style="width: 80px; flex: none; padding: 8px;" oninput="updateDurationOptions(this)">
+                                        <div class="duration-adjust-wrap" style="display: flex; align-items: center; gap: 2px; flex: none;">
+                                            <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
+                                            <input type="text" list="duration-options-list" name="med_duration[]" value="{{ step.duration_text or '' }}" placeholder="Dur" style="width: 80px; padding: 8px;" oninput="updateDurationOptions(this)">
+                                            <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
+                                        </div>
                                         <div style="display:flex; gap:5px; flex:none; align-items: center;">
                                             <button type="button" class="btn btn-sm" onclick="duplicateTaperRowLC(this)" style="padding:6px 10px; font-size:11px; border-radius:4px; border:1px dashed #7ab8e0; background:#f0f8ff; color:#555; margin: 0; line-height: 1;">+ Taper</button>
                                             <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()" style="margin: 0; font-size: 16px;">✕</button>
@@ -906,7 +937,11 @@
                                                 <button type="button" onclick="removeFreqBoxLC(this)" style="font-size:10px; line-height:10px; padding:0 2px; cursor:pointer; background: none; border: 1px solid #ddd; border-radius: 2px;">-</button>
                                             </div>
                                         </div>
-                                        <input list="duration-options-list" name="med_duration[]" value="{{ entry.duration_text or '' }}" placeholder="Dur" style="width: 80px; flex: none; padding: 8px;" oninput="updateDurationOptions(this)">
+                                        <div class="duration-adjust-wrap" style="display: flex; align-items: center; gap: 2px; flex: none;">
+                                            <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
+                                            <input type="text" list="duration-options-list" name="med_duration[]" value="{{ entry.duration_text or '' }}" placeholder="Dur" style="width: 80px; padding: 8px;" oninput="updateDurationOptions(this)">
+                                            <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
+                                        </div>
                                         <div style="display:flex; gap:5px; flex:none; align-items: center;">
                                             <button type="button" class="btn btn-sm" onclick="duplicateTaperRowLC(this)" style="padding:6px 10px; font-size:11px; border-radius:4px; border:1px dashed #7ab8e0; background:#f0f8ff; color:#555; margin: 0; line-height: 1;">+ Taper</button>
                                             <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()" style="margin: 0; font-size: 16px;">✕</button>
@@ -1553,10 +1588,15 @@
         'symptoms': { title: 'Symptom Trajectory', chartId: 'chartSymptoms', createData: () => ({ sets: rawData.symptoms, unified: rawData.symptomsUnified }) },
         'meds': { title: 'Medications', chartId: 'chartMeds', createData: () => ({ sets: rawData.meds, unified: rawData.medsUnified }) },
         'se': { title: 'Side Effects', chartId: 'chartSE', createData: () => ({ sets: rawData.se, unified: rawData.seUnified }) },
-        'mse': { title: 'MSE Findings', chartId: 'chartMSE', createData: () => ({ sets: rawData.mse, unified: rawData.mseUnified }) }
+        'mse': { title: 'MSE Findings', chartId: 'chartMSE', createData: () => ({ sets: rawData.mse, unified: rawData.mseUnified }) },
+        'symptoms_bar': { title: 'Symptom Trajectory (Bar)', chartId: 'chartSymptomsBar', sourceKey: 'symptoms', isBar: true },
+        'mse_bar': { title: 'MSE Findings (Bar)', chartId: 'chartMSEBar', sourceKey: 'mse', isBar: true },
+        'se_bar': { title: 'Side Effects (Bar)', chartId: 'chartSEBar', sourceKey: 'se', isBar: true },
+        'meds_bar': { title: 'Medications (Bar)', chartId: 'chartMedsBar', sourceKey: 'meds', isBar: true }
     };
     if (rawData.scale && rawData.scale.length > 0) {
         widgetConfig['scale'] = { title: 'Scale Assessments', chartId: 'chartScale', createData: () => ({ sets: rawData.scale, unified: rawData.scaleUnified }) };
+        widgetConfig['scale_bar'] = { title: 'Scale Assessments (Bar)', chartId: 'chartScaleBar', sourceKey: 'scale', isBar: true };
     }
 
     // Onload layout: Symptoms+Adherence full-width top (visible space); below that 2x2 grid: MSE, Side-effects | Medications, Scales
@@ -1768,6 +1808,40 @@
         });
     }
 
+    var componentBarViewEnabled = false;
+    var LINE_CHART_KEYS = ['symptoms', 'mse', 'se', 'meds'];
+    var BAR_CHART_KEYS = ['symptoms_bar', 'mse_bar', 'se_bar', 'meds_bar'];
+
+    function toggleComponentBarView() {
+        const toggle = document.getElementById('componentBarViewToggle');
+        componentBarViewEnabled = toggle ? toggle.checked : false;
+
+        if (componentBarViewEnabled) {
+            // Switch all visible line charts to component bar (month-wise)
+            LINE_CHART_KEYS.forEach(function(lineKey) {
+                if (!activeWidgets.includes(lineKey)) return;
+                if (!layoutMap[lineKey]) return;
+                layoutMap[lineKey + '_bar'] = Object.assign({}, layoutMap[lineKey]);
+                removeWidget(lineKey);
+                addWidgetToDOM(lineKey + '_bar');
+            });
+            if (rawData.scale && rawData.scale.length > 0 && activeWidgets.includes('scale')) {
+                layoutMap['scale_bar'] = Object.assign({}, layoutMap['scale']);
+                removeWidget('scale');
+                addWidgetToDOM('scale_bar');
+            }
+        } else {
+            // Switch all visible bar charts back to line
+            var barKeysToRemove = activeWidgets.filter(function(k) { return k.indexOf('_bar') !== -1; });
+            barKeysToRemove.forEach(function(barKey) {
+                var baseKey = barKey.replace('_bar', '');
+                removeWidget(barKey);
+                addWidgetToDOM(baseKey);
+            });
+        }
+        if (typeof buildGrid === 'function') buildGrid();
+    }
+
     function toggleMasterScales() {
         const toggle = document.getElementById('masterScaleToggle');
         const sidebarGroup = document.getElementById('sidebar-group-scale');
@@ -1886,8 +1960,10 @@
         menuEl.innerHTML = '<div class="widget-series-menu-title">Series</div>';
 
         const canvasContainer = document.createElement('div');
-        canvasContainer.className = 'canvas-container' + (key === 'symptoms' ? ' has-adherence-strip' : '');
-        if (key === 'symptoms') {
+        canvasContainer.className = 'canvas-container' + (key === 'symptoms' && !config.isBar ? ' has-adherence-strip' : '') + (config.isBar ? ' bar-chart-wrap' : '');
+        if (config.isBar) {
+            canvasContainer.innerHTML = '<canvas id="' + config.chartId + '"></canvas>';
+        } else if (key === 'symptoms') {
             const chartMain = document.createElement('div');
             chartMain.className = 'symptom-chart-main';
             chartMain.innerHTML = '<canvas id="' + config.chartId + '"></canvas>';
@@ -1934,10 +2010,14 @@
             });
         }
 
-        const dataObj = config.createData();
-        initChartInstance(key, config.chartId, dataObj.sets, dataObj.unified);
+        if (config.isBar) {
+            initComponentBarChart(key, config.chartId, config.sourceKey);
+        } else {
+            const dataObj = config.createData();
+            initChartInstance(key, config.chartId, dataObj.sets, dataObj.unified);
+        }
 
-        if (key === 'symptoms') {
+        if (key === 'symptoms' && !config.isBar) {
             createAdherenceMiniChart(div);
         }
 
@@ -2186,6 +2266,285 @@
             removeWidget(key);
             sel.value = "";
         }
+    }
+
+    // --- COMPONENT BAR CHART (Month-wise: cumulative total per month; tooltip = per-visit) ---
+    function buildMonthBarData(sourceKey) {
+        const sets = (rawData[sourceKey] || []).filter(function(d) { return !d.isUnified; });
+        const monthSet = {};
+        sets.forEach(function(ds) {
+            (ds.data || []).forEach(function(p) {
+                if (p && p.x) {
+                    var ym = p.x.substring(0, 7);
+                    monthSet[ym] = true;
+                }
+            });
+        });
+        const months = Object.keys(monthSet).sort();
+        const monthLabels = months.map(function(m) {
+            var parts = m.split('-');
+            var names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return names[parseInt(parts[1], 10) - 1] + ' ' + parts[0];
+        });
+        const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#E56399', '#7BCF7B'];
+        var isMeds = (sourceKey === 'meds');
+        const datasets = sets.map(function(ds, i) {
+            var firstMonthIndex = -1;
+            months.forEach(function(month, idx) {
+                var pts = (ds.data || []).filter(function(p) { return p && p.x && p.x.startsWith(month); });
+                if (pts.length > 0 && firstMonthIndex === -1) firstMonthIndex = idx;
+            });
+            const data = [];
+            const visitDetails = [];
+            months.forEach(function(month, monthIdx) {
+                var allPoints = (ds.data || []).filter(function(p) { return p && p.x && p.x.startsWith(month); });
+                var points = isMeds ? allPoints.filter(function(p) { return p.actualEntry === true; }) : allPoints;
+                if (points.length === 0) {
+                    data.push(0);
+                    visitDetails.push({ visits: [], isFirstMonth: false });
+                    return;
+                }
+                points.sort(function(a, b) { return (a.x || '').localeCompare(b.x || ''); });
+                var cumulative = 0;
+                var visits = [];
+                points.forEach(function(p) {
+                    var v = typeof p.y === 'number' ? p.y : 0;
+                    cumulative += v;
+                    var dateStr = (p.x || '').split('T')[0] || p.x;
+                    visits.push({ x: dateStr, y: v });
+                });
+                data.push(cumulative);
+                visitDetails.push({ visits: visits, isFirstMonth: (monthIdx === firstMonthIndex) });
+            });
+            return {
+                label: ds.label || ('Series ' + (i + 1)),
+                data: data,
+                visitDetails: visitDetails,
+                backgroundColor: colors[i % colors.length],
+                borderColor: colors[i % colors.length],
+                borderWidth: 1
+            };
+        });
+        return { labels: monthLabels, datasets: datasets };
+    }
+
+    function formatVisitDate(x) {
+        if (!x) return '';
+        var s = (x + '').split('T')[0];
+        if (s.length >= 10) {
+            var day = s.substring(8, 10);
+            var month = s.substring(5, 7);
+            var names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return (names[parseInt(month, 10) - 1] || '') + ' ' + day;
+        }
+        return s;
+    }
+
+    function buildBarTooltipVisitLines(visitDetails, label, forMeds) {
+        if (!visitDetails || !visitDetails.visits || visitDetails.visits.length === 0) return [];
+        var lines = [];
+        var visits = visitDetails.visits;
+        var useOnsetProgression = !forMeds && visitDetails.isFirstMonth && visits.length > 0;
+        visits.forEach(function(v, idx) {
+            var dateStr = formatVisitDate(v.x);
+            var role = '';
+            if (useOnsetProgression) {
+                if (visits.length === 1) role = 'Onset & Current';
+                else if (idx === 0) role = 'Onset';
+                else if (idx === visits.length - 1) role = 'Current';
+                else role = 'Progression';
+            }
+            var text = role ? (role + ' (' + dateStr + '): ' + (v.y != null ? v.y : '')) : (dateStr + ': ' + (v.y != null ? v.y : ''));
+            lines.push(text);
+        });
+        return lines;
+    }
+
+    var barChartMonthTooltips = {};
+    var barMonthTooltipHide = null;
+
+    function buildBarMonthTooltipContent(chart, dataIndex, sourceKey) {
+        if (!chart || dataIndex == null || dataIndex < 0) return null;
+        var labels = chart.data.labels || [];
+        var monthLabel = labels[dataIndex] || '';
+        var datasets = chart.data.datasets || [];
+        var forMeds = (sourceKey === 'meds');
+        var total = 0;
+        var parts = [];
+        datasets.forEach(function(ds, i) {
+            var val = (ds.data && ds.data[dataIndex] != null) ? Number(ds.data[dataIndex]) : 0;
+            if (val === 0) return;
+            total += val;
+            parts.push(ds.label + ' — cumulative: ' + val);
+            var detail = ds.visitDetails && ds.visitDetails[dataIndex];
+            if (detail && detail.visits && detail.visits.length > 0) {
+                buildBarTooltipVisitLines(detail, ds.label, forMeds).forEach(function(l) { parts.push('  ' + l); });
+            }
+        });
+        if (parts.length === 0) return null;
+        parts.push('Total (month): ' + total.toFixed(1));
+        return { monthLabel: monthLabel, html: '<strong style="display:block;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.3);">' + monthLabel + '</strong>' + parts.join('\n') };
+    }
+
+    function showBarMonthTooltipsForAll(monthLabel) {
+        if (barMonthTooltipHide) barMonthTooltipHide();
+        var barKeys = Object.keys(widgetConfig || {}).filter(function(k) { return widgetConfig[k].isBar; });
+        barKeys.forEach(function(key) {
+            var chart = charts[key];
+            if (!chart || !chart.data || !chart.data.labels) return;
+            var dataIndex = chart.data.labels.indexOf(monthLabel);
+            if (dataIndex < 0) return;
+            var config = widgetConfig[key];
+            var sourceKey = config && config.sourceKey ? config.sourceKey : 'symptoms';
+            var built = buildBarMonthTooltipContent(chart, dataIndex, sourceKey);
+            if (!built) return;
+            var container = chart.canvas && chart.canvas.parentElement;
+            if (!container) return;
+            var tip = barChartMonthTooltips[key];
+            if (!tip) {
+                tip = document.createElement('div');
+                tip.className = 'bar-month-tooltip';
+                tip.setAttribute('data-bar-chart-key', key);
+                barChartMonthTooltips[key] = tip;
+            }
+            tip.innerHTML = built.html;
+            if (tip.parentNode !== container) container.appendChild(tip);
+            tip.style.display = 'block';
+            var meta = chart.getDatasetMeta(0);
+            var el = meta && meta.data && meta.data[dataIndex];
+            var x = el ? el.x : (chart.scales && chart.scales.x ? chart.scales.x.getPixelForValue(dataIndex) : 0);
+            var y = chart.chartArea ? chart.chartArea.top : 0;
+            var c = chart.canvas;
+            var left = (c.offsetLeft || 0) + x - (tip.offsetWidth / 2);
+            var top = (c.offsetTop || 0) + y - tip.offsetHeight - 6;
+            if (left < 4) left = 4;
+            if (top < 4) top = 4;
+            tip.style.left = left + 'px';
+            tip.style.top = top + 'px';
+        });
+        barMonthTooltipHide = function() {
+            Object.keys(barChartMonthTooltips).forEach(function(k) {
+                var t = barChartMonthTooltips[k];
+                if (t) t.style.display = 'none';
+            });
+            barMonthTooltipHide = null;
+        };
+        var once = function(e) {
+            var t = e.target;
+            var isBarCanvas = barKeys.some(function(k) { var ch = charts[k]; return ch && ch.canvas && (t === ch.canvas || ch.canvas.contains(t)); });
+            var isTooltip = t.classList && t.classList.contains('bar-month-tooltip') || (t.parentNode && t.parentNode.classList && t.parentNode.classList.contains('bar-month-tooltip'));
+            if (!isBarCanvas && !isTooltip) {
+                if (barMonthTooltipHide) barMonthTooltipHide();
+                document.removeEventListener('click', once);
+            }
+        };
+        setTimeout(function() { document.addEventListener('click', once); }, 0);
+    }
+
+    function initComponentBarChart(key, ctxId, sourceKey) {
+        const barData = buildMonthBarData(sourceKey);
+        if (!barData.datasets.length || !barData.labels.length) {
+            barData.labels = ['No data'];
+            barData.datasets = [{ label: '—', data: [0], backgroundColor: '#ddd', borderWidth: 1 }];
+        }
+        const ctx = document.getElementById(ctxId);
+        if (!ctx) return;
+        if (Chart.getChart(ctxId)) Chart.getChart(ctxId).destroy();
+        const numComponents = barData.datasets.length;
+
+        var n = barData.labels.length;
+        var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        var now = new Date();
+        var currentLabel = monthNames[now.getMonth()] + ' ' + now.getFullYear();
+        var currentIndex = barData.labels.indexOf(currentLabel);
+        if (currentIndex === -1) currentIndex = Math.max(0, n - 1);
+        var visibleCount = 3;
+        var minIdx = Math.max(0, currentIndex - 1);
+        var maxIdx = Math.min(n - 1, minIdx + visibleCount - 1);
+        if (n <= visibleCount) {
+            minIdx = 0;
+            maxIdx = Math.max(0, n - 1);
+        }
+
+        barData.datasets.forEach(function(ds) {
+            ds.barThickness = 10;
+            ds.maxBarThickness = 14;
+        });
+
+        var maxStack = 0;
+        barData.labels.forEach(function(_, idx) {
+            var sum = barData.datasets.reduce(function(s, ds) { return s + (ds.data[idx] || 0); }, 0);
+            if (sum > maxStack) maxStack = sum;
+        });
+        var maxY = Math.max(50, maxStack + 10, numComponents * 10);
+
+        const newChart = new Chart(ctx, {
+            type: 'bar',
+            data: barData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                onClick: function(evt, elements, chart) {
+                    if (elements && elements.length > 0) {
+                        var dataIndex = elements[0].index;
+                        var monthLabel = (chart.data.labels && chart.data.labels[dataIndex]) ? chart.data.labels[dataIndex] : '';
+                        if (monthLabel) showBarMonthTooltipsForAll(monthLabel);
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        grid: { display: false },
+                        min: minIdx,
+                        max: maxIdx,
+                        barPercentage: 0.5,
+                        categoryPercentage: 0.7
+                    },
+                    y: { stacked: true, min: 0, max: maxY, title: { display: true, text: 'Cumulative score (month)' } }
+                },
+                plugins: {
+                    legend: { display: true, position: 'top' },
+                    tooltip: {
+                        mode: 'index',
+                        callbacks: {
+                            label: function(context) {
+                                var value = context.parsed.y != null ? context.parsed.y : 0;
+                                var ds = context.dataset;
+                                var detail = ds.visitDetails && ds.visitDetails[context.dataIndex];
+                                var lines = [ds.label + ' — cumulative: ' + value];
+                                if (detail && detail.visits && detail.visits.length > 0) {
+                                    var forMeds = (sourceKey === 'meds');
+                                    buildBarTooltipVisitLines(detail, ds.label, forMeds).forEach(function(l) { lines.push('  ' + l); });
+                                }
+                                return lines;
+                            },
+                            footer: function(items) {
+                                var total = items.reduce(function(s, it) { return s + (it.parsed.y || 0); }, 0);
+                                return 'Total (month): ' + total.toFixed(1);
+                            }
+                        }
+                    },
+                    zoom: {
+                        limits: {
+                            x: { min: 0, max: Math.max(0, n - 1) },
+                            y: { min: 0 }
+                        },
+                        zoom: {
+                            wheel: { enabled: false },
+                            pinch: { enabled: false },
+                            mode: 'x'
+                        },
+                        pan: {
+                            enabled: true,
+                            mode: 'x',
+                            modifierKey: null
+                        }
+                    }
+                }
+            }
+        });
+        newChart.config._configKey = key;
+        charts[key] = newChart;
     }
 
     // --- CHART GENERATION LOGIC ---
@@ -3408,10 +3767,36 @@
             list.appendChild(opt);
         }
     }
+function adjustDuration(input, delta) {
+        if (!input) return;
+        if (!input.value || !input.value.trim()) { input.value = '1 day'; if (typeof updateDurationOptions === 'function') updateDurationOptions(input); return; }
+        const s = input.value.trim().replace(/^Since\s+/i, '').replace(/\s+ago\s*$/i, '');
+        const m = s.match(/^(\d+(?:\.\d+)?)\s*(days?|weeks?|months?|years?)?$/i);
+        let num = 1, unit = 'days';
+        if (m) {
+            num = parseInt(m[1], 10) || 1;
+            unit = (m[2] || 'days').toLowerCase();
+            if (unit === 'day') unit = 'days';
+            if (unit === 'week') unit = 'weeks';
+            if (unit === 'month') unit = 'months';
+            if (unit === 'year') unit = 'years';
+        }
+        num = num + delta;
+        if (num < 1) num = 1;
+        var singular = { days: 'day', weeks: 'week', months: 'month', years: 'year' };
+        var displayUnit = (num === 1 && singular[unit]) ? singular[unit] : (unit || 'days');
+        input.value = num + ' ' + displayUnit;
+        if (typeof updateDurationOptions === 'function') updateDurationOptions(input);
+    }
     function updateDurationOptions(input) {
-        const v = parseFloat(input.value); if(!isNaN(v)) { 
-            const l = document.getElementById('duration-options-list'); l.innerHTML=''; 
-            ['Days','Weeks','Months'].forEach(u => { let o=document.createElement('option'); o.value=`${v} ${u}`; l.appendChild(o); });
+        const val = (input.value || '').trim().replace(/^Since\s+/i, '').replace(/\s+ago\s*$/i, '');
+        const v = Math.floor(parseFloat(val));
+        if (!isNaN(v) && v > 0) {
+            const l = document.getElementById('duration-options-list'); l.innerHTML = '';
+            [{ s: 'day', p: 'days' }, { s: 'week', p: 'weeks' }, { s: 'month', p: 'months' }, { s: 'year', p: 'years' }].forEach(({ s, p }) => {
+                const label = v === 1 ? s : p;
+                let o = document.createElement('option'); o.value = v + ' ' + label; l.appendChild(o);
+            });
         }
     }
     // --- SMART DOSE (Life Chart) ---
@@ -3454,18 +3839,6 @@
         // Auto-advance to the next box if a value is entered
         if (input.value !== '' && currentIndex < boxes.length - 1) {
             boxes[currentIndex + 1].focus();
-        }
-        
-        // Auto-add a new box if typing in the last box
-        if (input === boxes[boxes.length - 1] && input.value !== '') {
-            const addBtn = container.parentElement.querySelector('.add-freq-btn');
-            if (addBtn) {
-                addFreqBoxLC(addBtn);
-                setTimeout(() => {
-                    const newBoxes = container.querySelectorAll('.freq-box');
-                    newBoxes[newBoxes.length - 1].focus();
-                }, 10);
-            }
         }
     }
     function addFreqBoxLC(btn) {
@@ -3553,7 +3926,11 @@
                         <button type="button" onclick="removeFreqBoxLC(this)" style="font-size:10px; line-height:10px; padding:0 2px; cursor:pointer; background: none; border: 1px solid #ddd; border-radius: 2px;">-</button>
                     </div>
                 </div>
-                <input type="text" list="duration-options-list" name="med_duration[]" placeholder="Dur" style="width: 80px; flex: none; padding: 8px;" oninput="updateDurationOptions(this)">
+                <div class="duration-adjust-wrap" style="display: flex; align-items: center; gap: 2px; flex: none;">
+                        <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
+                        <input type="text" list="duration-options-list" name="med_duration[]" placeholder="Dur" style="width: 80px; padding: 8px;" oninput="updateDurationOptions(this)">
+                        <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
+                    </div>
                 <div style="display:flex; gap:5px; flex:none; align-items: center;">
                     <button type="button" class="btn btn-sm" onclick="duplicateTaperRowLC(this)" style="padding:6px 10px; font-size:11px; border-radius:4px; border:1px dashed #7ab8e0; background:#f0f8ff; color:#555; margin: 0; line-height: 1;">+ Taper</button>
                     <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()" style="margin: 0; font-size: 16px;">✕</button>

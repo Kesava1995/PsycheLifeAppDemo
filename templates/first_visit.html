@@ -71,6 +71,12 @@
         #insightGradeModal .modal-content {
             margin-top: 5% !important;
         }
+        /* ACE modal: keep within viewport, move up */
+        #aceModal .modal-content {
+            margin-top: 3vh !important;
+            max-height: 90vh !important;
+            overflow-y: auto !important;
+        }
         #insightGradeModal .insight-grade-table { width: 100%; border-collapse: collapse; }
         #insightGradeModal .insight-grade-table td { padding: 6px 0; vertical-align: top; }
         #insightGradeModal .insight-grade-table td:first-child { width: 1%; padding-right: 10px; white-space: nowrap; }
@@ -99,6 +105,17 @@
         .form-check-input { margin-top: 0; }
         .form-check-label.ml-2 { margin-left: 8px; cursor: pointer; margin-bottom: 0; }
         .form-control, .form-control-sm { width: 100%; padding: 6px 8px; border: 1px solid #e0e0e0; border-radius: 4px; box-sizing: border-box; }
+        /* Datalist multi-select: tag chips */
+        .tag-list { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+        .tag-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: #e8f4fc; border: 1px solid #7ab8e0; border-radius: 12px; font-size: 12px; }
+        .tag-chip .tag-remove { cursor: pointer; color: #666; font-weight: bold; padding: 0 2px; line-height: 1; }
+        .tag-chip .tag-remove:hover { color: #c00; }
+        .datalist-input-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+        .datalist-input-wrap input[list] { width: 200px; min-width: 160px; padding: 4px 8px; }
+        .dev-notes-popover { display: none; margin-top: 6px; padding: 8px; background: #fafafa; border: 1px solid #eee; border-radius: 6px; }
+        .dev-notes-popover.visible { display: block; }
+        .note-icon-btn { background: none; border: none; cursor: pointer; padding: 2px 6px; font-size: 1.1em; opacity: 0.8; }
+        .note-icon-btn:hover { opacity: 1; }
         
         /* Dark Mode */
         body.dark-mode { background-color: #121212; color: #ffffff; }
@@ -226,65 +243,71 @@
                     <div id="substances-container">
                         {% if visit and visit.substance_use_entries %}
                             {% for su in visit.substance_use_entries %}
-                                <script>window.addEventListener('load', () => addSubstance("{{ su.substance_name }}", "{{ su.pattern }}", "{{ su.start_date.strftime('%Y-%m-%d') if su.start_date else '' }}", "{{ su.end_date.strftime('%Y-%m-%d') if su.end_date else '' }}", "{{ su.note | e }}");</script>
+                                <script>window.addEventListener('load', () => addSubstance("{{ su.substance_name }}", "{{ su.pattern }}", "", "", {{ (su.note or '') | tojson }});</script>
                             {% endfor %}
                         {% endif %}
                     </div>
 
                     <div class="section-header"><span class="section-title">Family History of Psychiatric illness</span></div>
                     <input type="hidden" name="family_history_psychiatric" id="family_history_psychiatric" value="">
-                    <div class="patient-grid" style="margin-bottom: 12px;">
-                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px;">
+                    <div class="patient-grid" style="margin-bottom: 8px;">
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
                             <span style="font-weight:600;">Status</span>
                             <label style="display:inline-flex; align-items:center; margin:0; cursor:pointer;"><input type="radio" name="family_history_present" value="Absent" checked onchange="toggleFamilyHistoryPresent(); updateFamilyHistoryHidden();"> Absent</label>
                             <label style="display:inline-flex; align-items:center; margin:0; cursor:pointer;"><input type="radio" name="family_history_present" value="Present" onchange="toggleFamilyHistoryPresent(); updateFamilyHistoryHidden();"> Present</label>
+                            <span id="family_history_others_inline" style="display:none; align-items:center; gap:6px;">
+                                <span style="white-space:nowrap;">OTHERS – Specify:</span>
+                                <input type="text" id="family_history_others_text" placeholder="Free text..." style="width:140px; padding:4px 8px;" oninput="updateFamilyHistoryHidden()">
+                            </span>
                         </div>
                     </div>
-                    <div id="family_history_present_box" style="display:none; margin-bottom: 16px; padding: 12px; border: 1px solid #eee; border-radius: 6px; background: #fafafa;">
-                        <div class="checklist-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px;">
-                            <label><input type="checkbox" class="family-history-cb" value="Depression" onchange="updateFamilyHistoryHidden()"> Depression</label>
-                            <label><input type="checkbox" class="family-history-cb" value="Bipolar disorder" onchange="updateFamilyHistoryHidden()"> Bipolar disorder</label>
-                            <label><input type="checkbox" class="family-history-cb" value="Schizophrenia/Psychotic disorder" onchange="updateFamilyHistoryHidden()"> Schizophrenia/Psychotic disorder</label>
-                            <label><input type="checkbox" class="family-history-cb" value="Anxiety disorder" onchange="updateFamilyHistoryHidden()"> Anxiety disorder</label>
-                            <label><input type="checkbox" class="family-history-cb" value="Substance use disorder" onchange="updateFamilyHistoryHidden()"> Substance use disorder</label>
-                            <label><input type="checkbox" class="family-history-cb" value="Suicide" onchange="updateFamilyHistoryHidden()"> Suicide</label>
-                            <label><input type="checkbox" class="family-history-cb" value="Personality Disorder" onchange="updateFamilyHistoryHidden()"> Personality Disorder</label>
-                            <label><input type="checkbox" class="family-history-cb" value="Neurodevelopmental disorder" onchange="updateFamilyHistoryHidden()"> Neurodevelopmental disorder</label>
-                            <label><input type="checkbox" class="family-history-cb" value="Neurological disorder" onchange="updateFamilyHistoryHidden()"> Neurological disorder</label>
-                            <label><input type="checkbox" class="family-history-cb" value="Unknown psychiatric illness" onchange="updateFamilyHistoryHidden()"> Unknown psychiatric illness</label>
+                    <div id="family_history_present_box" style="display:none; margin-bottom: 12px;">
+                        <div class="datalist-input-wrap">
+                            <input type="text" id="family_history_input" list="family_history_datalist" placeholder="Type or select..." autocomplete="off" style="width:220px;" onkeydown="if(event.key==='Enter'){ event.preventDefault(); addFamilyHistoryItem(this.value); }" onblur="if(this.value.trim()) addFamilyHistoryItem(this.value);" oninput="tryAddFamilyHistoryOnInput(this)">
+                            <datalist id="family_history_datalist">
+                                <option value="Depression">
+                                <option value="Bipolar disorder">
+                                <option value="Schizophrenia/Psychotic disorder">
+                                <option value="Anxiety disorder">
+                                <option value="Substance use disorder">
+                                <option value="Suicide">
+                                <option value="Personality Disorder">
+                                <option value="Neurodevelopmental disorder">
+                                <option value="Neurological disorder">
+                                <option value="Unknown psychiatric illness">
+                                <option value="OTHERS">
+                            </datalist>
                         </div>
-                        <div style="margin-top: 10px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-                            <label style="display: inline-flex; align-items: center; gap: 6px; margin: 0; cursor: pointer;">
-                                <input type="checkbox" class="family-history-cb" value="OTHERS" id="family_history_others_cb" onchange="updateFamilyHistoryHidden()" style="margin: 0; vertical-align: middle;">
-                                <span style="white-space: nowrap;">OTHERS – Specify:</span>
-                            </label>
-                            <input type="text" id="family_history_others_text" placeholder="Free text..." style="flex: 1; min-width: 180px; padding: 4px 8px;" oninput="updateFamilyHistoryHidden()">
-                        </div>
+                        <div id="family_history_tags" class="tag-list"></div>
                     </div>
 
                     <div class="section-header"><span class="section-title">History of Developmental Milestone Delay</span></div>
                     <input type="hidden" name="developmental_milestone_delay" id="developmental_milestone_delay" value="">
-                    <div class="patient-grid" style="margin-bottom: 10px;">
-                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px;">
+                    <div class="patient-grid" style="margin-bottom: 8px;">
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
                             <label style="display:inline-flex; align-items:center; margin:0; cursor:pointer;"><input type="radio" name="dev_delay_status" value="No delay reported" checked onchange="toggleDevDelayBox(); updateDevDelayHidden();"> No delay reported</label>
                             <label style="display:inline-flex; align-items:center; margin:0; cursor:pointer;"><input type="radio" name="dev_delay_status" value="Delay reported" onchange="toggleDevDelayBox(); updateDevDelayHidden();"> Delay reported</label>
                             <label style="display:inline-flex; align-items:center; margin:0; cursor:pointer;"><input type="radio" name="dev_delay_status" value="Unknown" onchange="toggleDevDelayBox(); updateDevDelayHidden();"> Unknown</label>
+                            <button type="button" class="note-icon-btn" id="dev_delay_note_btn" title="Notes" onclick="document.getElementById('dev_delay_notes_popover').classList.toggle('visible')">📝</button>
+                        </div>
+                        <div id="dev_delay_notes_popover" class="dev-notes-popover">
+                            <label style="display:block; margin-bottom:4px;">Optional: Notes</label>
+                            <textarea id="dev_delay_notes" rows="2" style="width:100%; resize:vertical; padding:6px 8px; min-width: 200px;" placeholder="Notes..." oninput="updateDevDelayHidden()"></textarea>
                         </div>
                     </div>
-                    <div id="dev_delay_types_box" style="display:none; margin-bottom: 16px; padding: 12px; border: 1px solid #eee; border-radius: 6px; background: #fafafa;">
-                        <div style="font-weight:600; margin-bottom: 8px;">Type of Delay (multi-select)</div>
-                        <div class="checklist-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px;">
-                            <label><input type="checkbox" class="dev-delay-type-cb" value="Speech / language delay" onchange="updateDevDelayHidden()"> Speech / language delay</label>
-                            <label><input type="checkbox" class="dev-delay-type-cb" value="Motor delay" onchange="updateDevDelayHidden()"> Motor delay</label>
-                            <label><input type="checkbox" class="dev-delay-type-cb" value="Social developmental delay" onchange="updateDevDelayHidden()"> Social developmental delay</label>
-                            <label><input type="checkbox" class="dev-delay-type-cb" value="Learning delay" onchange="updateDevDelayHidden()"> Learning delay</label>
-                            <label><input type="checkbox" class="dev-delay-type-cb" value="Global developmental delay" onchange="updateDevDelayHidden()"> Global developmental delay</label>
-                            <label><input type="checkbox" class="dev-delay-type-cb" value="Not sure" onchange="updateDevDelayHidden()"> Not sure</label>
+                    <div id="dev_delay_types_box" style="display:none; margin-bottom: 12px;">
+                        <div class="datalist-input-wrap">
+                            <input type="text" id="dev_delay_input" list="dev_delay_datalist" placeholder="Type or select type of delay..." autocomplete="off" style="width:240px;" onkeydown="if(event.key==='Enter'){ event.preventDefault(); addDevDelayType(this.value); }" onblur="if(this.value.trim()) addDevDelayType(this.value);" oninput="tryAddDevDelayOnInput(this)">
+                            <datalist id="dev_delay_datalist">
+                                <option value="Speech / language delay">
+                                <option value="Motor delay">
+                                <option value="Social developmental delay">
+                                <option value="Learning delay">
+                                <option value="Global developmental delay">
+                                <option value="Not sure">
+                            </datalist>
                         </div>
-                        <div style="margin-top: 10px;">
-                            <label style="display:block; margin-bottom: 4px;">Optional: Notes</label>
-                            <textarea id="dev_delay_notes" rows="2" style="width:100%; resize:vertical; padding:6px 8px;" placeholder="Notes..." oninput="updateDevDelayHidden()"></textarea>
-                        </div>
+                        <div id="dev_delay_tags" class="tag-list"></div>
                     </div>
 
                     <div class="section-header"><span class="section-title">MSE Findings</span></div>
@@ -762,7 +785,7 @@
                     </div>
 
                     <div id="aceModal" class="modal" onclick="if(event.target == this) this.style.display='none'">
-                        <div class="modal-content" style="max-width: 520px;">
+                        <div class="modal-content" style="max-width: 520px; margin-top: 3vh; max-height: 90vh; overflow-y: auto;">
                             <h3>Adverse childhood experiences</h3>
                             <input type="hidden" name="ace_data" id="ace_data" value="{{ ace_data|default('')|e }}">
                             <div style="max-height: 360px; overflow-y: auto;">
@@ -858,7 +881,7 @@
                     var html = '<div id="' + safeId + '" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 10px;">' +
                         '<strong style="font-size: 13px; color: #333;">' + this.value.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</strong>' +
                         '<div style="display: flex; gap: 10px; margin-top: 5px;">' +
-                        '<div style="flex: 1;"><input type="text" class="form-control form-control-sm st-duration" placeholder="Duration" list="duration-options-list" oninput="updateDurationOptions(this)"></div>' +
+                        '<div style="flex: 1;"><input type="text" class="form-control form-control-sm st-duration" placeholder="Duration" list="duration-options-list" data-ago="true" oninput="updateDurationOptions(this)"></div>' +
                         '<div style="flex: 2;"><input type="text" class="form-control form-control-sm st-note" placeholder="Note / Details"></div>' +
                         '</div></div>';
                     container.insertAdjacentHTML('beforeend', html);
@@ -901,7 +924,7 @@
                             var html = '<div id="' + safeId + '" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 10px;">' +
                                 '<strong style="font-size: 13px; color: #333;"></strong>' +
                                 '<div style="display: flex; gap: 10px; margin-top: 5px;">' +
-                                '<div style="flex: 1;"><input type="text" class="form-control form-control-sm st-duration" placeholder="Duration" list="duration-options-list" oninput="updateDurationOptions(this)"></div>' +
+                                '<div style="flex: 1;"><input type="text" class="form-control form-control-sm st-duration" placeholder="Duration" list="duration-options-list" data-ago="true" oninput="updateDurationOptions(this)"></div>' +
                                 '<div style="flex: 2;"><input type="text" class="form-control form-control-sm st-note" placeholder="Note / Details"></div>' +
                                 '</div></div>';
                             container.insertAdjacentHTML('beforeend', html);
@@ -924,7 +947,7 @@
                     var html = '<div id="' + safeId + '" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 10px;">' +
                         '<strong style="font-size: 13px; color: #333;">' + this.value.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</strong>' +
                         '<div style="display: flex; gap: 10px; margin-top: 5px;">' +
-                        '<div style="flex: 1;"><input type="text" class="form-control form-control-sm evt-duration" placeholder="Duration" list="duration-options-list" oninput="updateDurationOptions(this)"></div>' +
+                        '<div style="flex: 1;"><input type="text" class="form-control form-control-sm evt-duration" placeholder="Duration" list="duration-options-list" data-ago="true" oninput="updateDurationOptions(this)"></div>' +
                         '<div style="flex: 2;"><input type="text" class="form-control form-control-sm evt-note" placeholder="Note"></div>' +
                         '</div></div>';
                     container.insertAdjacentHTML('beforeend', html);
@@ -967,7 +990,7 @@
                             var html = '<div id="' + safeId + '" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 10px;">' +
                                 '<strong style="font-size: 13px; color: #333;"></strong>' +
                                 '<div style="display: flex; gap: 10px; margin-top: 5px;">' +
-                                '<div style="flex: 1;"><input type="text" class="form-control form-control-sm evt-duration" placeholder="Duration" list="duration-options-list" oninput="updateDurationOptions(this)"></div>' +
+                                '<div style="flex: 1;"><input type="text" class="form-control form-control-sm evt-duration" placeholder="Duration" list="duration-options-list" data-ago="true" oninput="updateDurationOptions(this)"></div>' +
                                 '<div style="flex: 2;"><input type="text" class="form-control form-control-sm evt-note" placeholder="Note"></div>' +
                                 '</div></div>';
                             container.insertAdjacentHTML('beforeend', html);
@@ -1013,42 +1036,97 @@
                 if (hid.value.trim()) { document.getElementById('comorbidity_others_cb').checked = true; if (spec) spec.value = hid.value; }
             }
         }
+        var familyHistoryItems = [];
         function toggleFamilyHistoryPresent() {
             var present = document.querySelector('input[name="family_history_present"]:checked');
             var box = document.getElementById('family_history_present_box');
             if (box) box.style.display = (present && present.value === 'Present') ? 'block' : 'none';
+            var othersInline = document.getElementById('family_history_others_inline');
+            if (othersInline) othersInline.style.display = (present && present.value === 'Present' && familyHistoryItems.indexOf('OTHERS') !== -1) ? 'inline-flex' : 'none';
+        }
+        function tryAddFamilyHistoryOnInput(inp) {
+            if (!inp) return;
+            var v = inp.value.trim();
+            var opts = Array.from(document.querySelectorAll('#family_history_datalist option')).map(function(o) { return o.value; });
+            if (v && opts.indexOf(v) !== -1) { addFamilyHistoryItem(v); inp.value = ''; }
+        }
+        function addFamilyHistoryItem(val) {
+            var v = (val || '').trim();
+            if (!v || familyHistoryItems.indexOf(v) !== -1) return;
+            familyHistoryItems.push(v);
+            renderFamilyHistoryTags();
+            var inp = document.getElementById('family_history_input');
+            if (inp) inp.value = '';
+            if (v === 'OTHERS') toggleFamilyHistoryPresent();
+            updateFamilyHistoryHidden();
+        }
+        function removeFamilyHistoryItem(idx) {
+            familyHistoryItems.splice(idx, 1);
+            renderFamilyHistoryTags();
+            var othersInline = document.getElementById('family_history_others_inline');
+            if (othersInline) othersInline.style.display = (familyHistoryItems.indexOf('OTHERS') !== -1) ? 'inline-flex' : 'none';
+            updateFamilyHistoryHidden();
+        }
+        function renderFamilyHistoryTags() {
+            var el = document.getElementById('family_history_tags');
+            if (!el) return;
+            el.innerHTML = familyHistoryItems.map(function(item, i) {
+                return '<span class="tag-chip">' + (item.replace(/</g, '&lt;').replace(/>/g, '&gt;')) + ' <span class="tag-remove" onclick="removeFamilyHistoryItem(' + i + ')">×</span></span>';
+            }).join('');
         }
         function updateFamilyHistoryHidden() {
             var present = document.querySelector('input[name="family_history_present"]:checked');
             var isPresent = present && present.value === 'Present';
             var items = [];
             if (isPresent) {
-                document.querySelectorAll('.family-history-cb:checked').forEach(function(cb) {
-                    if (cb.value === 'OTHERS') {
-                        var t = document.getElementById('family_history_others_text');
-                        items.push('OTHERS' + (t && t.value.trim() ? ': ' + t.value.trim() : ''));
-                    } else { items.push(cb.value); }
+                var othersText = document.getElementById('family_history_others_text');
+                familyHistoryItems.forEach(function(it) {
+                    items.push(it === 'OTHERS' ? ('OTHERS' + (othersText && othersText.value.trim() ? ': ' + othersText.value.trim() : '')) : it);
                 });
             }
             var hid = document.getElementById('family_history_psychiatric');
             if (hid) hid.value = JSON.stringify({ present: isPresent, items: items });
         }
+        var devDelayTypes = [];
         function toggleDevDelayBox() {
             var status = document.querySelector('input[name="dev_delay_status"]:checked');
             var box = document.getElementById('dev_delay_types_box');
             if (box) box.style.display = (status && status.value === 'Delay reported') ? 'block' : 'none';
         }
+        function tryAddDevDelayOnInput(inp) {
+            if (!inp) return;
+            var v = inp.value.trim();
+            var opts = Array.from(document.querySelectorAll('#dev_delay_datalist option')).map(function(o) { return o.value; });
+            if (v && opts.indexOf(v) !== -1) { addDevDelayType(v); inp.value = ''; }
+        }
+        function addDevDelayType(val) {
+            var v = (val || '').trim();
+            if (!v || devDelayTypes.indexOf(v) !== -1) return;
+            devDelayTypes.push(v);
+            renderDevDelayTags();
+            var inp = document.getElementById('dev_delay_input');
+            if (inp) inp.value = '';
+            updateDevDelayHidden();
+        }
+        function removeDevDelayType(idx) {
+            devDelayTypes.splice(idx, 1);
+            renderDevDelayTags();
+            updateDevDelayHidden();
+        }
+        function renderDevDelayTags() {
+            var el = document.getElementById('dev_delay_tags');
+            if (!el) return;
+            el.innerHTML = devDelayTypes.map(function(t, i) {
+                return '<span class="tag-chip">' + (t.replace(/</g, '&lt;').replace(/>/g, '&gt;')) + ' <span class="tag-remove" onclick="removeDevDelayType(' + i + ')">×</span></span>';
+            }).join('');
+        }
         function updateDevDelayHidden() {
             var status = document.querySelector('input[name="dev_delay_status"]:checked');
             var statusVal = status ? status.value : 'No delay reported';
-            var types = [];
-            if (statusVal === 'Delay reported') {
-                document.querySelectorAll('.dev-delay-type-cb:checked').forEach(function(cb) { types.push(cb.value); });
-            }
             var notesEl = document.getElementById('dev_delay_notes');
             var notes = notesEl ? notesEl.value.trim() : '';
             var hid = document.getElementById('developmental_milestone_delay');
-            if (hid) hid.value = JSON.stringify({ status: statusVal, types: types, notes: notes });
+            if (hid) hid.value = JSON.stringify({ status: statusVal, types: devDelayTypes.slice(), notes: notes });
         }
         function restoreDevDelayFromHidden() {
             var hid = document.getElementById('developmental_milestone_delay');
@@ -1057,11 +1135,9 @@
                 var data = JSON.parse(hid.value);
                 if (!data || !data.status) return;
                 document.querySelectorAll('input[name="dev_delay_status"]').forEach(function(r) { r.checked = (r.value === data.status); });
+                devDelayTypes = (data.types || []).slice();
+                renderDevDelayTags();
                 toggleDevDelayBox();
-                if (data.status !== 'Delay reported') return;
-                (data.types || []).forEach(function(t) {
-                    document.querySelectorAll('.dev-delay-type-cb').forEach(function(cb) { if (cb.value === t) cb.checked = true; });
-                });
                 var notesEl = document.getElementById('dev_delay_notes');
                 if (notesEl && data.notes) notesEl.value = data.notes;
             } catch (e) {}
@@ -1073,17 +1149,18 @@
                 var data = JSON.parse(hid.value);
                 if (!data || typeof data.present === 'undefined') return;
                 document.querySelectorAll('input[name="family_history_present"]').forEach(function(r) { r.checked = (r.value === (data.present ? 'Present' : 'Absent')); });
-                toggleFamilyHistoryPresent();
-                if (!data.present) return;
+                familyHistoryItems = [];
                 (data.items || []).forEach(function(item) {
                     if (typeof item === 'string' && item.startsWith('OTHERS')) {
-                        document.getElementById('family_history_others_cb').checked = true;
+                        familyHistoryItems.push('OTHERS');
                         var t = document.getElementById('family_history_others_text');
-                        if (t && item.length > 7 && item.substring(0, 7) === 'OTHERS:') t.value = item.substring(7).trim();
+                        if (t && item.length > 6) t.value = item.substring(6).replace(/^\s*:\s*/, '').trim();
                     } else {
-                        document.querySelectorAll('.family-history-cb').forEach(function(cb) { if (cb.value === item) cb.checked = true; });
+                        familyHistoryItems.push(item);
                     }
                 });
+                renderFamilyHistoryTags();
+                toggleFamilyHistoryPresent();
             } catch (e) {}
         }
         function updateComorbiditiesSummary() {
@@ -1152,8 +1229,18 @@
                 container.insertAdjacentHTML('beforeend', html);
             } else { var el = document.getElementById(safeId); if (el) el.remove(); }
         }
-        function addSubstance(sub, pat, start, end, note) {
-            sub = sub || ''; pat = pat || 'Occasional'; start = start || ''; end = end || ''; note = note || '';
+        function addSubstance(sub, pat, usually, extraNote) {
+            sub = sub || ''; pat = pat || 'Occasional';
+            if (arguments.length >= 5 && typeof arguments[4] === 'string') {
+                var noteStr = arguments[4] || '';
+                if (noteStr.indexOf('Usually: ') === 0) {
+                    var idx = noteStr.indexOf(' | ');
+                    if (idx !== -1) { usually = noteStr.substring(9, idx).trim(); extraNote = noteStr.substring(idx + 3).trim(); }
+                    else { usually = noteStr.substring(9).trim(); extraNote = ''; }
+                } else { usually = ''; extraNote = noteStr; }
+            }
+            usually = usually || ''; extraNote = (extraNote != null && extraNote !== undefined) ? String(extraNote) : '';
+            var esc = function(s) { return (s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
             const html = '<div class="entry-wrapper"><div class="row-flex" style="align-items:center; flex-wrap:wrap; gap:10px;">' +
                 '<select name="substance_name[]" style="flex:1; min-width:120px; padding:6px; border-radius:4px; border:1px solid #ccc;">' +
                 '<option value="Alcohol"' + (sub==='Alcohol'?' selected':'') + '>Alcohol</option>' +
@@ -1167,11 +1254,10 @@
                 '<option value="Weekends"' + (pat==='Weekends'?' selected':'') + '>Weekends</option>' +
                 '<option value="Daily"' + (pat==='Daily'?' selected':'') + '>Daily</option>' +
                 '<option value="Severe/Early morning intake"' + (pat==='Severe/Early morning intake'?' selected':'') + '>Severe/Early morning intake</option></select>' +
-                '<label style="display:flex; align-items:center; gap:5px; font-size:12px;">Start: <input type="date" name="substance_start[]" value="' + start + '" style="width:auto; padding:4px; border:1px solid #ccc;"></label>' +
-                '<label style="display:flex; align-items:center; gap:5px; font-size:12px;">End: <input type="date" name="substance_end[]" value="' + end + '" style="width:auto; padding:4px; border:1px solid #ccc;"></label>' +
+                '<label style="display:flex; align-items:center; gap:5px; font-size:12px;">Usually: <input type="text" name="substance_usually[]" list="duration-options-list" data-prefix="Since" placeholder="e.g. Since 5 years" value="' + esc(usually) + '" style="min-width:140px; padding:4px; border:1px solid #ccc;" oninput="updateDurationOptions(this)"></label>' +
                 '<button type="button" class="note-btn" onclick="toggleNote(this)">📝</button>' +
                 '<button type="button" class="remove-btn" onclick="this.closest(\'.entry-wrapper\').remove()">✕</button></div>' +
-                '<input type="text" class="note-input" name="substance_note[]" value="' + (note || '').replace(/"/g, '&quot;') + '" placeholder="Note..."></div>';
+                '<input type="text" class="note-input" name="substance_note[]" value="' + esc(extraNote) + '" placeholder="Note..."></div>';
             document.getElementById('substances-container').insertAdjacentHTML('beforeend', html);
         }
 
@@ -1189,19 +1275,61 @@
             if (typeof updateDevDelayHidden === 'function') updateDevDelayHidden();
         });
 
-        // --- SMART DROPDOWN LOGIC ---
+        // --- DURATION +/- ADJUST ---
+        function adjustDuration(input, delta) {
+            if (!input) return;
+            var raw = (input.value || '').trim();
+            if (!raw) {
+                var n = 1, u = 'day';
+                if (input.getAttribute('data-ago') === 'true') input.value = n + ' ' + u + ' ago';
+                else if (input.getAttribute('data-prefix')) input.value = (input.getAttribute('data-prefix') + ' ' + n + ' ' + u).trim();
+                else input.value = n + ' ' + u;
+                if (typeof updateDurationOptions === 'function') updateDurationOptions(input);
+                return;
+            }
+            var s = raw.replace(/^Since\s+/i, '').replace(/\s+ago\s*$/i, '');
+            var m = s.match(/^(\d+(?:\.\d+)?)\s*(days?|weeks?|months?|years?)?$/i);
+            var num = 1, unit = 'days';
+            if (m) {
+                num = parseInt(m[1], 10) || 1;
+                unit = (m[2] || 'days').toLowerCase();
+                if (unit === 'day') unit = 'days';
+                if (unit === 'week') unit = 'weeks';
+                if (unit === 'month') unit = 'months';
+                if (unit === 'year') unit = 'years';
+            }
+            num = num + delta;
+            if (num < 1) num = 1;
+            var singular = { days: 'day', weeks: 'week', months: 'month', years: 'year' };
+            var displayUnit = (num === 1 && singular[unit]) ? singular[unit] : (unit || 'days');
+            var newVal = num + ' ' + displayUnit;
+            if (input.getAttribute('data-ago') === 'true') newVal = newVal + ' ago';
+            else if (input.getAttribute('data-prefix')) newVal = (input.getAttribute('data-prefix') + ' ' + newVal).trim();
+            input.value = newVal;
+            if (typeof updateDurationOptions === 'function') updateDurationOptions(input);
+        }
+        // --- SMART DROPDOWN LOGIC (singular/plural, "ago" for events/stressors, "Since" for substance) ---
         function updateDurationOptions(input) {
             const val = input.value.trim();
             const list = document.getElementById('duration-options-list');
-            const num = parseFloat(val);
-            if (!isNaN(num) && num > 0) {
-                list.innerHTML = '';
-                ['days', 'weeks', 'months', 'years'].forEach(unit => {
-                    const opt = document.createElement('option');
-                    opt.value = `${num} ${unit}`;
-                    list.appendChild(opt);
-                });
-            }
+            const num = parseFloat(val.replace(/^Since\s+/i, '').replace(/\s+ago\s*$/i, ''));
+            if (isNaN(num) || num <= 0) return;
+            const n = Math.floor(num);
+            const isAgo = input.getAttribute('data-ago') === 'true';
+            const prefix = (input.getAttribute('data-prefix') || '').trim();
+            const units = [
+                { s: 'day', p: 'days' }, { s: 'week', p: 'weeks' }, { s: 'month', p: 'months' }, { s: 'year', p: 'years' }
+            ];
+            list.innerHTML = '';
+            units.forEach(({ s, p }) => {
+                const label = n === 1 ? s : p;
+                let optVal = n + ' ' + label;
+                if (isAgo) optVal = n + ' ' + label + ' ago';
+                else if (prefix) optVal = prefix + ' ' + n + ' ' + label;
+                const opt = document.createElement('option');
+                opt.value = optVal;
+                list.appendChild(opt);
+            });
         }
 
         // --- SMART DOSE DROPDOWN ---
@@ -1296,13 +1424,6 @@
             if (input.value !== '' && currentIndex < boxes.length - 1) {
                 boxes[currentIndex + 1].focus();
             }
-            if (input === boxes[boxes.length - 1] && input.value !== '') {
-                addFreqBox(container.nextElementSibling.querySelector('.add-freq-btn'));
-                setTimeout(() => {
-                    const newBoxes = container.querySelectorAll('.freq-box');
-                    newBoxes[newBoxes.length - 1].focus();
-                }, 10);
-            }
         }
         function addFreqBox(btn) {
             const wrapper = btn.closest('.entry-wrapper').querySelector('.freq-container');
@@ -1363,7 +1484,11 @@
                         <datalist id="dose-list-${uniqueId}"></datalist>
                     </div>
                     
-                    <input type="text" list="duration-options-list" name="med_duration[]" placeholder="Duration" style="flex:1; min-width:80px;" oninput="updateDurationOptions(this)">
+                    <div class="duration-adjust-wrap" style="display:flex; align-items:center; gap:2px; flex:1; min-width:100px;">
+                        <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
+                        <input type="text" list="duration-options-list" name="med_duration[]" placeholder="Duration" style="flex:1; min-width:70px;" oninput="updateDurationOptions(this)">
+                        <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
+                    </div>
                     
                     <div style="display:flex; gap:5px; flex:none;">
                         <button type="button" class="btn btn-sm" onclick="duplicateTaperRow(this)" style="padding:5px 10px; border-radius:4px; border:1px dashed #7ab8e0; background:#f0f8ff; color:#555;">+ Taper Step</button>
@@ -1392,8 +1517,10 @@
                 </div>`;
             } else {
                 // --- OTHER ROWS (Symptoms, SE, MSE) ---
-                let slidersHTML = `
-                <div class="sliders-container">
+                // MSE: cross-sectional — only Current Severity, no onset/progression/duration
+                let slidersHTML = isMSE ?
+                    `<div class="sliders-container"><div class="slider-group" style="grid-column: span 3;"><label>Current Severity</label><div class="slider-wrapper"><input type="range" name="${prefix}_current[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div></div>` :
+                    `<div class="sliders-container">
                     <div class="slider-group"><label>Severity at Onset</label><div class="slider-wrapper"><input type="range" name="${prefix}_onset[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div>
                     <div class="slider-group"><label>Severity during Course</label><div class="slider-wrapper"><input type="range" name="${prefix}_progression[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div>
                     <div class="slider-group"><label>Current Severity</label><div class="slider-wrapper"><input type="range" name="${prefix}_current[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div>
@@ -1403,8 +1530,10 @@
                     `<input type="hidden" name="mse_category[]" value="${cat}"><input type="text" name="mse_finding_name[]" placeholder="Finding..." style="flex:1.5;">` :
                     `<input type="text" name="${prefix}_name[]" placeholder="Name" style="flex:1.5;">`;
 
-                // Single Duration Input with Type Dropdown
-                let durationHTML = `<input type="text" list="duration-options-list" name="${prefix}_duration[]" placeholder="Duration" style="flex:0.5; min-width:100px;" oninput="updateDurationOptions(this)">`;
+                // MSE: no duration (cross-sectional); backend still expects mse_onset[], mse_progression[], mse_duration[] per row
+                let durationHTML = isMSE ?
+                    `<input type="hidden" name="mse_onset[]" value=""><input type="hidden" name="mse_progression[]" value=""><input type="hidden" name="mse_duration[]" value="">` :
+                    `<input type="text" list="duration-options-list" name="${prefix}_duration[]" placeholder="Duration" style="flex:0.5; min-width:100px;" oninput="updateDurationOptions(this)">`;
 
                 contentHTML = `
                 <div class="row-flex" style="align-items:center;">

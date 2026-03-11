@@ -157,6 +157,28 @@
         margin-bottom: 8px; /* Slightly tighter spacing to reduce card height */
     }
 
+    .clinic-hours-row { display: flex; align-items: flex-start; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .clinic-hours-label { font-size: 12px; font-weight: 600; color: #555; white-space: nowrap; }
+    .clinic-hour-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; margin-bottom: 6px; border: 1px solid #A5DCFE; background: #f0f8ff; transition: all 0.2s; }
+    .clinic-hour-badge:hover { background: #e0f0fe; }
+    .clinic-hour-badge.active { background: #2c7be5; color: white; border-color: #2c7be5; }
+    .clinic-hours-edit { cursor: pointer; margin-left: 4px; opacity: 0.7; font-size: 14px; }
+    .clinic-hours-edit:hover { opacity: 1; }
+    .plus-menu-wrap { position: relative; display: inline-block; }
+    .plus-menu-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 4px 10px; line-height: 1; color: #2c3e50; }
+    .plus-menu-dropdown { display: none; position: absolute; top: 100%; right: 0; margin-top: 4px; min-width: 200px; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 3100; padding: 6px 0; border: 1px solid #eee; }
+    .plus-menu-dropdown.show { display: block; }
+    .plus-menu-dropdown a, .plus-menu-dropdown button { display: block; width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px; color: #333; }
+    .plus-menu-dropdown a:hover, .plus-menu-dropdown button:hover { background: #f0f4f9; }
+    .notes-add-btn { background: none; border: none; font-size: 18px; cursor: pointer; padding: 2px 6px; color: #2c7be5; line-height: 1; vertical-align: middle; }
+    .notes-add-btn:hover { color: #1a5dc9; }
+    .quick-add-popover { display: none; position: absolute; background: white; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); padding: 16px; min-width: 280px; z-index: 3500; border: 1px solid #ddd; }
+    .quick-add-popover.show { display: block; }
+    body.dark-mode .plus-menu-dropdown, body.dark-mode .quick-add-popover { background: #1e1e1e; border-color: #333; }
+    body.dark-mode .plus-menu-dropdown a, body.dark-mode .plus-menu-dropdown button { color: #ddd; }
+    body.dark-mode .clinic-hour-badge { background: #2a2a2a; border-color: #555; color: #ddd; }
+    body.dark-mode .clinic-hour-badge.active { background: #2c7be5; color: white; }
+
     .delete-appt-btn { background: transparent; border: none; cursor: pointer; margin-left: 8px; padding: 4px; vertical-align: middle; }
     .delete-appt-btn:hover svg { fill: #c0392b; }
     .view-details-btn { background: transparent; border: none; cursor: pointer; color: #2c7be5; padding: 0; text-decoration: underline; }
@@ -273,6 +295,16 @@
             🌓
         </button>
 
+        <div class="plus-menu-wrap">
+            <button type="button" class="plus-menu-btn" id="topbar-plus-btn" title="Add">+</button>
+            <div class="plus-menu-dropdown" id="topbar-plus-menu" onclick="event.stopPropagation();">
+                <button type="button" onclick="document.getElementById('noteModal').style.display='block'; document.getElementById('topbar-plus-menu').classList.remove('show');">Note / Reminder</button>
+                <a href="{{ url_for('first_visit') }}">New patient Registration</a>
+                <button type="button" onclick="document.getElementById('appointmentModal').style.display='block'; document.getElementById('topbar-plus-menu').classList.remove('show');">Schedule Appointment</button>
+                <button type="button" onclick="document.getElementById('editClinicHoursModal').style.display='block'; document.getElementById('topbar-plus-menu').classList.remove('show');">Edit Clinic Hours</button>
+            </div>
+        </div>
+
         <div id="bell-btn" class="notification-wrapper notif-icon-wrapper" style="position: relative; cursor: pointer; margin-right: 20px; display: flex; align-items: center;" title="Notifications">
             <button type="button" class="bell-btn" style="padding: 0; border: none; background: none; cursor: pointer; display: flex;">
                 <svg id="notif-bell" width="22" height="22" viewBox="0 0 448 512" fill="#7ebacc" xmlns="http://www.w3.org/2000/svg">
@@ -312,7 +344,9 @@
                     <th>Time</th>
                     <th>Name</th>
                     <th>Age/Sex</th>
-                    <th>DID</th> <th>Dx</th>  <th>Type</th>
+                    <th>Recall Cues</th>
+                    <th>Diagnosis</th>
+                    <th>Type</th>
                     <th>Status</th>
                     <th>Actions</th>
                 </tr>
@@ -320,7 +354,8 @@
                 <tbody>
                 {% if appointments %}
                     {% for appt in appointments %}
-                    <tr data-appt-id="{{ appt.id }}" class="appointment-row">
+                    {% set appt_hour = appt.start_time[:2] | int if appt.start_time and appt.start_time|length >= 2 else 0 %}
+                    <tr data-appt-id="{{ appt.id }}" class="appointment-row" data-clinic-slot="{{ 'evening' if appt_hour >= 17 else 'morning' }}">
                         <td>
                         {{ appt.start_time[:5] if appt.start_time else '--' }} -
                         {% if appt.start_time %}
@@ -336,10 +371,8 @@
                         <td>{{ appt.name }}</td>
                         <td>{{ appt.age }} / {{ appt.sex }}</td>
                         
-                        <td title="{{ appt.did }}">{{ (appt.did[:10] ~ '...') if appt.did and appt.did|length > 10 else (appt.did or '--') }}</td>
-                        
+                        <td>{{ (appt.view_details or '--')[:50] }}{% if appt.view_details and appt.view_details|length > 50 %}...{% endif %}</td>
                         <td>{{ appt.dx or '--' }}</td>
-                        
                         <td>{{ appt.type }}</td>
                         <td>
                             {% if appt.status == 'Confirmed' %}
@@ -362,7 +395,7 @@
                 {% else %}
                     <tr><td colspan="8">No appointments scheduled for this date.</td></tr>
                 {% endif %}
-                <tr class="available-slot">
+                <tr class="available-slot" id="available-slot-row">
                     <td colspan="8">End of scheduled – Available Slots Remaining</td>
                 </tr>
                 </tbody>
@@ -410,40 +443,22 @@
             </div>
             <div class="calendar-grid" id="calendar-grid">
             </div>
-            <div class="small-text" style="margin-top:10px;">
-                Appointment Timings:<br>
-                9:00 AM – 5:00 PM<br>
-                5:00 PM – 10:00 PM
-            </div>
-        </div>
-
-        <div class="card">
-            <button class="button" id="change-timing-main-btn" onclick="toggleRescheduleMode()">Change Appointment Timings</button>
-            <button class="button hidden" id="confirm-reschedule-btn" style="background: #28a745;" onclick="confirmReschedule()">
-                <span id="btn-spinner" class="hidden spinner"></span>
-                <span id="btn-text">Confirm Reschedule</span>
-            </button>
-            <div id="reschedule-time-picker" class="card hidden" style="border: 1px solid #a5dcfe; margin-top: 10px;">
-                <h4 style="margin: 0 0 10px 0; font-size: 14px;">Select New Time</h4>
-                <div class="custom-time-picker">
-                    <select class="time-scroll hour-select" id="reschedule-hour-select" size="1"></select>
-                    <span>:</span>
-                    <select class="time-scroll minute-select" id="reschedule-minute-select" size="1">
-                        <option value="00">00</option>
-                        <option value="15">15</option>
-                        <option value="30">30</option>
-                        <option value="45">45</option>
-                    </select>
-                    <!--<span id="reschedule-ampm" class="ampm-label" style="margin-left:4px; font-weight:bold;">AM</span>-->
+            <div class="clinic-hours-row" style="margin-top:10px;">
+                <div>
+                    <span class="clinic-hours-label">Clinic Hours</span>
+                    <span class="clinic-hours-edit" id="edit-clinic-hours-btn" title="Edit clinic hours">&#9998;</span>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:flex-start;">
+                    <span class="clinic-hour-badge active" id="badge-all" data-slot="all" onclick="filterAppointmentsByClinicHour('all')">All</span>
+                    <span class="clinic-hour-badge" id="badge-morning" data-slot="morning" onclick="filterAppointmentsByClinicHour('morning')">&#9728; 9:00–5:00 PM</span>
+                    <span class="clinic-hour-badge" id="badge-evening" data-slot="evening" onclick="filterAppointmentsByClinicHour('evening')">&#9789; 5:00–10:00 PM</span>
                 </div>
             </div>
-            <button class="button" onclick="document.getElementById('appointmentModal').style.display='block'">Add New Appointment</button>
-            <button class="button" onclick="document.getElementById('noteModal').style.display='block'">Add Note</button>
         </div>
 
         <div class="card scrollable-card" id="notes-card">
-            <h4 style="margin-top:0;">Today's Notes</h4>
-            <ul style="padding-left: 20px; margin-bottom: 0;">
+            <h4 style="margin-top:0;">Today's Notes / Reminder <button type="button" class="notes-add-btn" id="notes-add-btn" title="Add note">+</button></h4>
+            <ul style="padding-left: 20px; margin-bottom: 0;" id="notes-list">
                 {% for note in notes %}
                     <li>{{ note.content }}</li>
                 {% else %}
@@ -461,6 +476,39 @@
             <textarea name="note_content" class="form-control" rows="4" placeholder="Enter note..."></textarea>
             <button type="submit" class="button">Save Note</button>
             <button type="button" class="button" style="background: #888;" onclick="closeModal('noteModal')">Cancel</button>
+        </form>
+    </div>
+</div>
+
+<div id="quickAddNotePopover" class="quick-add-popover">
+    <form action="{{ url_for('add_note') }}" method="POST" id="quick-add-note-form">
+        <label style="display:block; margin-bottom:6px; font-weight:600;">Date</label>
+        <input type="date" name="note_date" id="quick-note-date" class="form-control" style="margin-bottom:12px;" value="{{ target_date.strftime('%Y-%m-%d') }}">
+        <label style="display:block; margin-bottom:6px; font-weight:600;">Note / Reminder</label>
+        <textarea name="note_content" class="form-control" rows="3" placeholder="Enter note..."></textarea>
+        <div style="margin-top:12px; display:flex; gap:8px;">
+            <button type="submit" class="button" style="flex:1;">Save</button>
+            <button type="button" class="button" style="background:#888; flex:1;" onclick="document.getElementById('quickAddNotePopover').classList.remove('show');">Cancel</button>
+        </div>
+    </form>
+</div>
+
+<div id="editClinicHoursModal" class="modal" onclick="if(event.target === this) closeModal('editClinicHoursModal')">
+    <div class="modal-content" style="max-width: 400px;">
+        <h3>Edit Clinic Hours</h3>
+        <form id="edit-clinic-hours-form" onsubmit="return saveClinicHours(event);">
+            <label>Morning: Start</label>
+            <input type="time" id="edit-morning-start" class="form-control" value="09:00">
+            <label>Morning: End</label>
+            <input type="time" id="edit-morning-end" class="form-control" value="17:00">
+            <label>Evening: Start</label>
+            <input type="time" id="edit-evening-start" class="form-control" value="17:00">
+            <label>Evening: End</label>
+            <input type="time" id="edit-evening-end" class="form-control" value="22:00">
+            <div style="margin-top: 16px; display: flex; gap: 8px;">
+                <button type="submit" class="button">Save</button>
+                <button type="button" class="button" style="background: #888;" onclick="closeModal('editClinicHoursModal')">Cancel</button>
+            </div>
         </form>
     </div>
 </div>
@@ -923,6 +971,80 @@ function switchView(viewName) {
     if(document.getElementById('sideMenu').classList.contains('active')) {
         toggleSidebar();
     }
+}
+
+// Clinic hours filter: all | morning | evening
+var currentClinicHourFilter = 'all';
+function filterAppointmentsByClinicHour(slot) {
+    currentClinicHourFilter = slot;
+    var rows = document.querySelectorAll('#appointments-table tbody tr.appointment-row');
+    var badges = document.querySelectorAll('.clinic-hour-badge');
+    badges.forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-slot') === slot); });
+    rows.forEach(function(tr) {
+        var rowSlot = tr.getAttribute('data-clinic-slot');
+        var show = (slot === 'all') || (rowSlot === slot);
+        tr.style.display = show ? '' : 'none';
+    });
+    var availableRow = document.getElementById('available-slot-row');
+    if (availableRow) availableRow.style.display = '';
+}
+
+// Topbar + menu toggle
+document.addEventListener('DOMContentLoaded', function() {
+    var plusBtn = document.getElementById('topbar-plus-btn');
+    var plusMenu = document.getElementById('topbar-plus-menu');
+    if (plusBtn && plusMenu) {
+        plusBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            plusMenu.classList.toggle('show');
+        });
+    }
+    document.addEventListener('click', function() {
+        if (plusMenu) plusMenu.classList.remove('show');
+    });
+
+    // Notes + quick-add popover
+    var notesAddBtn = document.getElementById('notes-add-btn');
+    var quickAddPopover = document.getElementById('quickAddNotePopover');
+    var quickNoteDate = document.getElementById('quick-note-date');
+    if (notesAddBtn && quickAddPopover) {
+        notesAddBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (quickNoteDate && typeof targetDateForSlots !== 'undefined') quickNoteDate.value = targetDateForSlots;
+            var rect = notesAddBtn.getBoundingClientRect();
+            quickAddPopover.style.position = 'fixed';
+            quickAddPopover.style.left = Math.min(rect.left, window.innerWidth - 320) + 'px';
+            quickAddPopover.style.top = (rect.bottom + 6) + 'px';
+            quickAddPopover.classList.toggle('show');
+        });
+    }
+    document.addEventListener('click', function(e) {
+        if (quickAddPopover && !quickAddPopover.contains(e.target) && e.target.id !== 'notes-add-btn') {
+            quickAddPopover.classList.remove('show');
+        }
+    });
+
+    // Edit clinic hours button
+    var editClinicBtn = document.getElementById('edit-clinic-hours-btn');
+    if (editClinicBtn) {
+        editClinicBtn.addEventListener('click', function() {
+            document.getElementById('editClinicHoursModal').style.display = 'block';
+        });
+    }
+});
+
+function saveClinicHours(e) {
+    e.preventDefault();
+    var mStart = document.getElementById('edit-morning-start').value;
+    var mEnd = document.getElementById('edit-morning-end').value;
+    var eStart = document.getElementById('edit-evening-start').value;
+    var eEnd = document.getElementById('edit-evening-end').value;
+    var badgeMorning = document.getElementById('badge-morning');
+    var badgeEvening = document.getElementById('badge-evening');
+    if (badgeMorning) badgeMorning.textContent = '\u9728 ' + (mStart || '9:00') + '\u2013' + (mEnd || '17:00');
+    if (badgeEvening) badgeEvening.textContent = '\u9789 ' + (eStart || '17:00') + '\u2013' + (eEnd || '22:00');
+    document.getElementById('editClinicHoursModal').style.display = 'none';
+    return false;
 }
 
 // Patient Search Datalist handling
