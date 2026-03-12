@@ -177,7 +177,13 @@
                 
                 if (canvas) {
                     const opts = { ...commonOptions, layout: { ...commonOptions.layout }, scales: { x: { ...commonOptions.scales.x }, y: { ...commonOptions.scales.y } }, plugins: { ...commonOptions.plugins }, elements: { ...commonOptions.elements } };
-                    if (category === 'Medications') opts.scales.y.max = Math.max(12, opts.scales.y.max);
+                    if (category === 'Medications') {
+                        opts.scales.y.min = -52;
+                        opts.scales.y.max = 152;
+                        opts.scales.y.title = opts.scales.y.title || {};
+                        opts.scales.y.title.text = 'RTP / RTI %';
+                        opts.scales.y.beginAtZero = false;
+                    }
                     const ctx = canvas.getContext('2d');
                     new Chart(ctx, {
                         type: 'line',

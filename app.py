@@ -64,7 +64,7 @@ def get_clinic_hours(doctor):
 
 
 from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry, ScaleAssessment, Appointment, DashboardNote, Notification, ScheduleTemplate
-from medical_utils import get_unified_dose, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency, process_scale_submission, duration_to_days, format_timedelta_as_duration
+from medical_utils import get_unified_dose, compute_med_chart_value, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency, process_scale_submission, duration_to_days, format_timedelta_as_duration
 import io
 import os
 from reportlab.lib.pagesizes import letter, A4
@@ -1660,13 +1660,177 @@ def process_visit_form_data(visit, form_data):
             ))
 
 
+def _aggregate_badge_data(visits):
+    """Build aggregated stressors, major_events, personality, ACE from all visits for the profile badge."""
+    badge_stressors = []
+    badge_major_events = []
+    badge_personality = []
+    badge_ace = []
+    seen_traits = set()
+    for v in visits:
+        visit_date_str = v.date.strftime('%d-%b-%Y') if v.date else ''
+        for s in getattr(v, 'stressor_entries', []):
+            if s.stressor_type:
+                badge_stressors.append({
+                    'stressor_type': s.stressor_type,
+                    'duration': s.duration or '',
+                    'note': s.note or '',
+                    'visit_date': visit_date_str
+                })
+        for m in getattr(v, 'major_events', []):
+            if m.event_type:
+                badge_major_events.append({
+                    'event_type': m.event_type,
+                    'duration': m.duration or '',
+                    'note': m.note or '',
+                    'visit_date': visit_date_str
+                })
+        for p in getattr(v, 'personality_entries', []):
+            if p.trait and p.trait not in seen_traits:
+                seen_traits.add(p.trait)
+                badge_personality.append({
+                    'trait': p.trait,
+                    'note': p.note or '',
+                    'visit_date': visit_date_str
+                })
+        if getattr(v, 'ace_data', None) and v.ace_data.strip():
+            try:
+                data = json.loads(v.ace_data)
+                badge_ace.append({'visit_date': visit_date_str, 'data': data})
+            except (TypeError, ValueError):
+                pass
+    return badge_stressors, badge_major_events, badge_personality, badge_ace
+
+
 @app.route('/patient/<int:patient_id>')
 @login_required
 def patient_detail(patient_id):
-    """Patient detail page showing all visits."""
+    """Patient detail page showing all visits and profile badge (stressors, events, personality, ACE)."""
     patient = Patient.query.get_or_404(patient_id)
     visits = Visit.query.filter_by(patient_id=patient_id).order_by(Visit.date.desc()).all()
-    return render_template('patient_detail.html', patient=patient, visits=visits)
+    badge_stressors, badge_major_events, badge_personality, badge_ace = _aggregate_badge_data(visits)
+    is_new_case = len(visits) == 0
+    return render_template('patient_detail.html',
+                          patient=patient,
+                          visits=visits,
+                          is_new_case=is_new_case,
+                          badge_stressors=badge_stressors,
+                          badge_major_events=badge_major_events,
+                          badge_personality=badge_personality,
+                          badge_ace=badge_ace)
+
+
+def _patient_latest_visit_or_abort(patient_id):
+    """Return (patient, latest_visit) for add-badge-entry routes; abort with redirect if no visit or wrong doctor."""
+    patient = Patient.query.get_or_404(patient_id)
+    doctor_id = session.get('doctor_id')
+    if not doctor_id or patient.doctor_id != doctor_id:
+        flash('You can only add entries for your own patients.', 'error')
+        return None, None
+    latest = Visit.query.filter_by(patient_id=patient_id).order_by(Visit.date.desc()).first()
+    if not latest:
+        flash('Add at least one visit (e.g. New Patient Registration or Follow-up) before adding to the profile.', 'error')
+        return None, None
+    return patient, latest
+
+
+@app.route('/patient/<int:patient_id>/add_stressor', methods=['POST'])
+@doctor_required
+def add_stressor_to_patient(patient_id):
+    """Add a new stressor entry to the patient's latest visit (badge add-new; form is blank)."""
+    patient, latest = _patient_latest_visit_or_abort(patient_id)
+    if not latest:
+        return redirect(url_for('patient_detail', patient_id=patient_id))
+    stressor_type = (request.form.get('stressor_type') or '').strip()
+    if not stressor_type:
+        flash('Stressor type is required.', 'error')
+        return redirect(url_for('patient_detail', patient_id=patient_id))
+    duration = (request.form.get('duration') or '').strip() or None
+    note = (request.form.get('note') or '').strip() or None
+    db.session.add(StressorEntry(visit_id=latest.id, stressor_type=stressor_type, duration=duration, note=note))
+    db.session.commit()
+    flash('Stressor added to profile.', 'success')
+    return redirect(url_for('patient_detail', patient_id=patient_id))
+
+
+@app.route('/patient/<int:patient_id>/add_major_event', methods=['POST'])
+@doctor_required
+def add_major_event_to_patient(patient_id):
+    """Add a new major event entry to the patient's latest visit (badge add-new; form is blank)."""
+    patient, latest = _patient_latest_visit_or_abort(patient_id)
+    if not latest:
+        return redirect(url_for('patient_detail', patient_id=patient_id))
+    event_type = (request.form.get('event_type') or '').strip()
+    if not event_type:
+        flash('Event type is required.', 'error')
+        return redirect(url_for('patient_detail', patient_id=patient_id))
+    duration = (request.form.get('duration') or '').strip() or None
+    note = (request.form.get('note') or '').strip() or None
+    db.session.add(MajorEvent(visit_id=latest.id, event_type=event_type, duration=duration, note=note))
+    db.session.commit()
+    flash('Major event added to profile.', 'success')
+    return redirect(url_for('patient_detail', patient_id=patient_id))
+
+
+@app.route('/patient/<int:patient_id>/add_personality', methods=['POST'])
+@doctor_required
+def add_personality_to_patient(patient_id):
+    """Add a new personality trait entry to the patient's latest visit (badge add-new; form is blank)."""
+    patient, latest = _patient_latest_visit_or_abort(patient_id)
+    if not latest:
+        return redirect(url_for('patient_detail', patient_id=patient_id))
+    trait = (request.form.get('trait') or '').strip()
+    if not trait:
+        flash('Trait is required.', 'error')
+        return redirect(url_for('patient_detail', patient_id=patient_id))
+    note = (request.form.get('note') or '').strip() or None
+    db.session.add(PersonalityEntry(visit_id=latest.id, trait=trait, note=note))
+    db.session.commit()
+    flash('Personality trait added to profile.', 'success')
+    return redirect(url_for('patient_detail', patient_id=patient_id))
+
+
+@app.route('/patient/<int:patient_id>/add_ace', methods=['POST'])
+@doctor_required
+def add_ace_to_patient(patient_id):
+    """Merge new ACE data with the latest visit's ace_data (badge add-new; form is blank)."""
+    patient, latest = _patient_latest_visit_or_abort(patient_id)
+    if not latest:
+        return redirect(url_for('patient_detail', patient_id=patient_id))
+    ace_json = request.form.get('ace_data') or (request.get_json(silent=True) or {}).get('ace_data', '')
+    if not ace_json or not ace_json.strip():
+        flash('No ACE data to add.', 'error')
+        return redirect(url_for('patient_detail', patient_id=patient_id))
+    try:
+        new_data = json.loads(ace_json)
+    except (TypeError, ValueError):
+        flash('Invalid ACE data.', 'error')
+        return redirect(url_for('patient_detail', patient_id=patient_id))
+    new_items = (new_data.get('items') or []) if isinstance(new_data, dict) else []
+    if not new_items and not (new_data.get('ageOfExposure') or new_data.get('traumaBurden')):
+        flash('Select at least one item or enter age/burden to add.', 'error')
+        return redirect(url_for('patient_detail', patient_id=patient_id))
+    existing = latest.ace_data
+    if existing and existing.strip():
+        try:
+            existing_data = json.loads(existing)
+            new_items = (new_data.get('items') or []) if isinstance(new_data, dict) else []
+            existing_items = (existing_data.get('items') or []) if isinstance(existing_data, dict) else []
+            merged_items = existing_items + new_items
+            merged = dict(existing_data) if isinstance(existing_data, dict) else {}
+            merged['items'] = merged_items
+            if new_data.get('ageOfExposure'):
+                merged['ageOfExposure'] = new_data.get('ageOfExposure', merged.get('ageOfExposure', ''))
+            if new_data.get('traumaBurden'):
+                merged['traumaBurden'] = new_data.get('traumaBurden', merged.get('traumaBurden', ''))
+            latest.ace_data = json.dumps(merged)
+        except (TypeError, ValueError):
+            latest.ace_data = ace_json
+    else:
+        latest.ace_data = ace_json
+    db.session.commit()
+    flash('Adverse childhood experiences added to profile.', 'success')
+    return redirect(url_for('patient_detail', patient_id=patient_id))
 
 
 @app.route('/patient/<int:patient_id>/add_visit', methods=['GET', 'POST'])
@@ -2144,29 +2308,29 @@ def prepare_chart_data(patient_id: int) -> dict:
             if name not in med_data:
                 med_data[name] = []
 
-            # --- NEW: Tapering Check ---
+            # --- Tapering: RTP/RTI for chart Y; actual dose for tooltips only ---
             if entry.is_tapering and entry.taper_plan:
                 try:
                     plan = json.loads(entry.taper_plan)
                     current_date = v_date
                     for step in plan:
-                        dose = get_unified_dose(name, step.get('dose_mg', ''))
+                        y_val, actual_dose = compute_med_chart_value(name, step.get('dose_mg', ''), step.get('frequency', ''), 'rtp')
                         med_data[name].append({
                             'x': current_date.isoformat(),
-                            'y': dose,
+                            'y': y_val,
+                            'actualDose': actual_dose,
                             'visit_id': visit.id
                         })
-                        # Advance the date by the duration for the next step's starting point
                         dur_delta = parse_duration(step.get('duration_text', ''))
                         if dur_delta:
                             current_date += dur_delta
-                    continue  # Skip standard logic below
+                    continue
                 except Exception:
                     pass
 
-            # --- Standard Logic ---
-            val = get_unified_dose(name, entry.dose_mg)
-            med_data[name].append({'x': v_date.isoformat(), 'y': val, 'visit_id': visit.id})
+            # --- Standard: RTP/RTI for line chart; tooltips show actual dose only ---
+            y_val, actual_dose = compute_med_chart_value(name, entry.dose_mg, entry.frequency or '', 'rtp')
+            med_data[name].append({'x': v_date.isoformat(), 'y': y_val, 'actualDose': actual_dose, 'visit_id': visit.id})
 
     medication_datasets = []
     for name, points in med_data.items():
@@ -2391,41 +2555,41 @@ def life_chart(patient_id):
     def build_med_points(entry, v_date):
         pts = []
 
-        # --- NEW: Check for Tapering Plan ---
+        # --- Tapering: RTP/RTI for chart Y; actual dose for tooltips only ---
         if entry.is_tapering and entry.taper_plan:
             try:
                 plan = json.loads(entry.taper_plan)
                 current_date = v_date
                 for step in plan:
                     days = get_days(step.get('duration_text', ''))
-                    dose = get_unified_dose(entry.drug_name, step.get('dose_mg', ''))
+                    y_val, actual_dose = compute_med_chart_value(entry.drug_name, step.get('dose_mg', ''), step.get('frequency', ''), 'rtp')
                     duration = max(1, days)
-                    # Fill daily points for this taper step
                     for i in range(duration):
                         d = current_date + timedelta(days=i)
                         pts.append({
                             'x': d.strftime('%Y-%m-%d'),
-                            'y': dose,
+                            'y': y_val,
+                            'actualDose': actual_dose,
                             'detail': f"Freq: {step.get('frequency', '')} (Tapering)",
-                            'actualEntry': (i == 0)  # Actual prescription/entry date = larger dot
+                            'actualEntry': (i == 0)
                         })
                     current_date += timedelta(days=duration)
                 return pts
             except Exception:
-                pass  # Fallback to standard logic if JSON parsing fails
+                pass
 
-        # --- STANDARD (Non-Tapering) LOGIC ---
+        # --- Standard: RTP/RTI for line chart; tooltips show actual dose only ---
         days = get_days(getattr(entry, 'duration_text', ''))
-        dose = get_unified_dose(entry.drug_name, entry.dose_mg)
-        # Daily points from visit date onwards
+        y_val, actual_dose = compute_med_chart_value(entry.drug_name, entry.dose_mg, entry.frequency or '', 'rtp')
         duration = max(1, days)
         for i in range(duration):
             d = v_date + timedelta(days=i)
             pts.append({
                 'x': d.strftime('%Y-%m-%d'),
-                'y': dose,
+                'y': y_val,
+                'actualDose': actual_dose,
                 'detail': f"Freq: {entry.frequency}",
-                'actualEntry': (i == 0)  # Actual prescription/entry date = larger dot
+                'actualEntry': (i == 0)
             })
         return pts
 
@@ -2530,7 +2694,7 @@ def life_chart(patient_id):
             for name, points in data_map.items():
                 for pt in points:
                     if pt['x'] == k:
-                        breakdown.append({'name': name, 'score': pt['y']})
+                        breakdown.append({'name': name, 'score': pt['y'], 'actualDose': pt.get('actualDose')})
                         if pt.get('phase') == 'Current':
                             is_current = True
                         if pt.get('actualEntry'):
@@ -2684,49 +2848,40 @@ def preview_lifechart(patient_id):
 
     def build_med_points(entry, v_date):
         pts = []
+        drug_name = getattr(entry, 'drug_name', '')
 
-        # --- NEW: Check for Tapering Plan ---
         if getattr(entry, 'is_tapering', False) and getattr(entry, 'taper_plan', None):
             try:
                 plan = json.loads(entry.taper_plan)
                 current_date = v_date
                 for step in plan:
                     days = get_days(step.get('duration_text', ''))
-                    try:
-                        dose_str = step.get('dose_mg', '0')
-                        dose_val = float(dose_str.split()[0]) if dose_str.split() else 0
-                    except Exception:
-                        dose_val = 0
+                    y_val, actual_dose = compute_med_chart_value(drug_name, step.get('dose_mg', ''), step.get('frequency', ''), 'rtp')
                     duration = max(1, days)
-
                     for i in range(duration):
                         d = current_date + timedelta(days=i)
                         pts.append({
                             'x': d.strftime('%Y-%m-%d'),
-                            'y': dose_val,
+                            'y': y_val,
+                            'actualDose': actual_dose,
                             'detail': f"Freq: {step.get('frequency', '')} (Tapering)",
                             'actualEntry': (i == 0)
                         })
                     current_date += timedelta(days=duration)
                 return pts
             except Exception:
-                pass  # Fallback
+                pass
 
-        # --- STANDARD (Non-Tapering) LOGIC ---
         days = get_days(getattr(entry, 'duration_text', ''))
-        try:
-            dose_str = entry.dose_mg or '0'
-            dose_val = float(dose_str.split()[0]) if dose_str.split() else 0
-        except Exception:
-            dose_val = 0
-
+        y_val, actual_dose = compute_med_chart_value(drug_name, getattr(entry, 'dose_mg', ''), getattr(entry, 'frequency', '') or '', 'rtp')
         duration = max(1, days)
         for i in range(duration):
             d = v_date + timedelta(days=i)
             pts.append({
                 'x': d.strftime('%Y-%m-%d'),
-                'y': dose_val,
-                'detail': f"Freq: {entry.frequency}",
+                'y': y_val,
+                'actualDose': actual_dose,
+                'detail': f"Freq: {getattr(entry, 'frequency', '')}",
                 'actualEntry': (i == 0)
             })
         return pts
@@ -3716,17 +3871,13 @@ def guest_share_view(token):
                     except Exception:
                         days = 0
                     duration = max(1, days)
-                    dose_val = 0.0
-                    dose_str = step.get("dose_mg", "")
-                    if dose_str:
-                        nums = re.findall(r"[-+]?\d*\.\d+|\d+", dose_str)
-                        if nums:
-                            dose_val = float(nums[0])
+                    y_val, actual_dose = compute_med_chart_value(label, step.get("dose_mg", ""), step.get("frequency", ""), "rtp")
                     for j in range(duration):
                         d = current_date + timedelta(days=j)
                         datasets[label]["data"].append({
                             "x": d.strftime("%Y-%m-%d"),
-                            "y": dose_val,
+                            "y": y_val,
+                            "actualDose": actual_dose,
                             "detail": f"Freq: {step.get('frequency', '')} (Tapering)",
                             "phase": "Current"
                         })
@@ -3738,12 +3889,13 @@ def guest_share_view(token):
                 except Exception:
                     days = 0
                 duration = max(1, days)
-                score_val = item.get("score", 0.0)
+                y_val, actual_dose = compute_med_chart_value(label, item.get("dose", ""), item.get("frequency", ""), "rtp")
                 for j in range(duration):
                     d = v_date + timedelta(days=j)
                     datasets[label]["data"].append({
                         "x": d.strftime("%Y-%m-%d"),
-                        "y": score_val,
+                        "y": y_val,
+                        "actualDose": actual_dose,
                         "detail": f"Freq: {item.get('frequency', '')}",
                         "phase": "Current"
                     })

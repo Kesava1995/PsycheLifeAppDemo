@@ -16,6 +16,38 @@
         .visit-item { background: #fafafa; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #A5DCFE; }
         .visit-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         
+        /* Patient Summary Badge (profile card) */
+        .badge-card { background: #f0f8ff; border: 1px solid #A5DCFE; border-radius: 10px; padding: 20px; margin-bottom: 24px; }
+        .badge-card h2 { margin-top: 0; margin-bottom: 16px; font-size: 1.1rem; color: #333; border-bottom: 1px solid #cce5ff; padding-bottom: 8px; }
+        body.dark-mode .badge-card { background: #1a2332; border-color: #333; }
+        body.dark-mode .badge-card h2 { color: #ddd; border-bottom-color: #444; }
+        .badge-section { margin-bottom: 20px; }
+        .badge-section:last-child { margin-bottom: 0; }
+        .badge-section-title { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; font-weight: 600; color: #555; font-size: 0.95rem; }
+        body.dark-mode .badge-section-title { color: #bbb; }
+        .badge-list { list-style: none; padding-left: 0; margin: 0 0 4px 0; }
+        .badge-list li { padding: 6px 0; border-bottom: 1px dashed #e0e0e0; font-size: 0.9rem; color: #444; }
+        body.dark-mode .badge-list li { border-bottom-color: #444; color: #ccc; }
+        .badge-list li:last-child { border-bottom: none; }
+        .badge-visit-date { font-size: 0.8rem; color: #888; margin-left: 8px; }
+        body.dark-mode .badge-visit-date { color: #888; }
+        .add-new-btn { padding: 4px 12px; font-size: 12px; background: #7ab8e0; color: white; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; display: inline-block; }
+        .add-new-btn:hover { background: #5a9ec9; color: white; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1000; }
+        .modal-overlay.show { display: flex; align-items: center; justify-content: center; }
+        .badge-modal { background: white; border-radius: 10px; padding: 24px; max-width: 480px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        body.dark-mode .badge-modal { background: #1e1e1e; color: #ddd; }
+        .badge-modal h3 { margin-top: 0; margin-bottom: 16px; }
+        .badge-modal label { display: block; margin-bottom: 6px; font-weight: 500; }
+        .badge-modal input[type="text"], .badge-modal input[type="number"], .badge-modal select, .badge-modal textarea { width: 100%; padding: 8px 10px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        body.dark-mode .badge-modal input, body.dark-mode .badge-modal select, body.dark-mode .badge-modal textarea { background: #333; color: #fff; border-color: #555; }
+        .badge-modal .modal-actions { margin-top: 16px; display: flex; gap: 10px; }
+        .badge-modal .btn-cancel { background: #888; color: white; }
+        .badge-modal .btn-submit { background: #7ab8e0; color: white; }
+        .ace-checkbox-group { max-height: 200px; overflow-y: auto; margin-bottom: 12px; }
+        .ace-checkbox-group label { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; cursor: pointer; font-weight: normal; }
+        .ace-checkbox-group input[type="checkbox"] { width: auto; }
+
         /* Add this CSS rule for dark mode */
         body.dark-mode { background-color: #121212; color: #ffffff; }
         body.dark-mode .container, body.dark-mode .patient-info, body.dark-mode .visit-item { background-color: #1e1e1e; color: #ffffff; border-color: #333; }
@@ -38,6 +70,65 @@
                 <a href="{{ url_for('add_visit', patient_id=patient.id) }}" class="btn btn-primary">+ Add Follow-up Visit</a>
             {% endif %}
         </div>
+
+        {% if not is_new_case %}
+        <div class="badge-card">
+            <h2>Patient profile – Stressors, Major Events, Personality, Childhood Adverse Events</h2>
+            <div class="badge-section">
+                <div class="badge-section-title">
+                    <span>⚠️ Stressors</span>
+                    <button type="button" class="add-new-btn" onclick="document.getElementById('modalAddStressor').classList.add('show')">+ Add New</button>
+                </div>
+                <ul class="badge-list">
+                    {% for s in badge_stressors %}
+                    <li>{{ s.stressor_type }}{% if s.duration %} — {{ s.duration }}{% endif %}{% if s.note %} ({{ s.note }}){% endif %}<span class="badge-visit-date">Visit: {{ s.visit_date }}</span></li>
+                    {% else %}
+                    <li style="color: #888;">None recorded.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="badge-section">
+                <div class="badge-section-title">
+                    <span>📌 Major Events</span>
+                    <button type="button" class="add-new-btn" onclick="document.getElementById('modalAddMajorEvent').classList.add('show')">+ Add New</button>
+                </div>
+                <ul class="badge-list">
+                    {% for e in badge_major_events %}
+                    <li>{{ e.event_type }}{% if e.duration %} — {{ e.duration }}{% endif %}{% if e.note %} ({{ e.note }}){% endif %}<span class="badge-visit-date">Visit: {{ e.visit_date }}</span></li>
+                    {% else %}
+                    <li style="color: #888;">None recorded.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="badge-section">
+                <div class="badge-section-title">
+                    <span>🧠 Personality</span>
+                    <button type="button" class="add-new-btn" onclick="document.getElementById('modalAddPersonality').classList.add('show')">+ Add New</button>
+                </div>
+                <ul class="badge-list">
+                    {% for p in badge_personality %}
+                    <li>{{ p.trait }}{% if p.note %} — {{ p.note }}{% endif %}<span class="badge-visit-date">Visit: {{ p.visit_date }}</span></li>
+                    {% else %}
+                    <li style="color: #888;">None recorded.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="badge-section">
+                <div class="badge-section-title">
+                    <span>🌱 Childhood Adverse Events</span>
+                    <button type="button" class="add-new-btn" onclick="document.getElementById('modalAddACE').classList.add('show')">+ Add New</button>
+                </div>
+                <ul class="badge-list">
+                    {% for a in badge_ace %}
+                    <li>Visit {{ a.visit_date }}{% if a.data.get('items') %} — {% for item in a.data.get('items', []) %}{{ item.value }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}{% if a.data.get('ageOfExposure') %} (Age: {{ a.data.ageOfExposure }}){% endif %}{% if a.data.get('traumaBurden') %} — {{ a.data.traumaBurden }}{% endif %}</li>
+                    {% else %}
+                    <li style="color: #888;">None recorded.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
         <div class="visits-list">
             <h2>Visit History</h2>
             {% if is_new_case %}
@@ -56,6 +147,155 @@
                 {% endfor %}
             {% endif %}
         </div>
+
+        {% if not is_new_case %}
+        <!-- Add New Stressor modal – form is blank (no pre-fill) -->
+        <div id="modalAddStressor" class="modal-overlay" onclick="if(event.target === this) this.classList.remove('show')">
+            <div class="badge-modal" onclick="event.stopPropagation()">
+                <h3>Add new stressor</h3>
+                <form method="POST" action="{{ url_for('add_stressor_to_patient', patient_id=patient.id) }}">
+                    <label>Stressor type</label>
+                    <select name="stressor_type" required>
+                        <option value="">— Select —</option>
+                        <option value="Familial or Relationship issues">Familial or Relationship issues</option>
+                        <option value="Loss, Bereavement">Loss, Bereavement</option>
+                        <option value="Divorce / Separation">Divorce / Separation</option>
+                        <option value="Academic/ occupational Stress">Academic/ occupational Stress</option>
+                        <option value="Financial/ Legal">Financial/ Legal</option>
+                        <option value="Medical/ Biological">Medical/ Biological</option>
+                        <option value="Physical or Sexual Violence">Physical or Sexual Violence</option>
+                        <option value="Others – Specify">Others – Specify</option>
+                    </select>
+                    <label>Duration (optional)</label>
+                    <input type="text" name="duration" placeholder="e.g. 2 months" value="">
+                    <label>Note (optional)</label>
+                    <textarea name="note" rows="2" placeholder="Details..." value=""></textarea>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-cancel" onclick="document.getElementById('modalAddStressor').classList.remove('show')">Cancel</button>
+                        <button type="submit" class="btn btn-submit">Add</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Add New Major Event modal – form is blank -->
+        <div id="modalAddMajorEvent" class="modal-overlay" onclick="if(event.target === this) this.classList.remove('show')">
+            <div class="badge-modal" onclick="event.stopPropagation()">
+                <h3>Add new major event</h3>
+                <form method="POST" action="{{ url_for('add_major_event_to_patient', patient_id=patient.id) }}">
+                    <label>Event type</label>
+                    <select name="event_type" required>
+                        <option value="">— Select —</option>
+                        <option value="Hospitalization">Hospitalization</option>
+                        <option value="Major Medication Change">Major Medication Change</option>
+                        <option value="Stoppage of medications">Stoppage of medications</option>
+                        <option value="Marriage">Marriage</option>
+                        <option value="Menarche/ Menopause">Menarche/ Menopause</option>
+                        <option value="ECT or any Intervention given">ECT or any Intervention given</option>
+                        <option value="Major Medical event">Major Medical event</option>
+                        <option value="Legal issues">Legal issues</option>
+                        <option value="Significant Migration/ Relocation">Significant Migration/ Relocation</option>
+                        <option value="Suicide Attempt">Suicide Attempt</option>
+                        <option value="Suicide in family">Suicide in family</option>
+                    </select>
+                    <label>Duration (optional)</label>
+                    <input type="text" name="duration" placeholder="e.g. 2020" value="">
+                    <label>Note (optional)</label>
+                    <textarea name="note" rows="2" placeholder="Details..." value=""></textarea>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-cancel" onclick="document.getElementById('modalAddMajorEvent').classList.remove('show')">Cancel</button>
+                        <button type="submit" class="btn btn-submit">Add</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Add New Personality trait modal – form is blank -->
+        <div id="modalAddPersonality" class="modal-overlay" onclick="if(event.target === this) this.classList.remove('show')">
+            <div class="badge-modal" onclick="event.stopPropagation()">
+                <h3>Add personality trait</h3>
+                <form method="POST" action="{{ url_for('add_personality_to_patient', patient_id=patient.id) }}">
+                    <label>Trait</label>
+                    <input type="text" name="trait" list="personality-datalist" placeholder="e.g. Anxious, Perfectionistic" required value="">
+                    <datalist id="personality-datalist">
+                        <option value="Introverted"><option value="Extroverted"><option value="Anxious"><option value="Perfectionistic"><option value="Emotionally reactive"><option value="Ruminative">
+                    </datalist>
+                    <label>Note (optional)</label>
+                    <textarea name="note" rows="2" placeholder="Notes..." value=""></textarea>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-cancel" onclick="document.getElementById('modalAddPersonality').classList.remove('show')">Cancel</button>
+                        <button type="submit" class="btn btn-submit">Add</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Add New ACE modal – form is blank; JS builds ace_data on submit -->
+        <div id="modalAddACE" class="modal-overlay" onclick="if(event.target === this) this.classList.remove('show')">
+            <div class="badge-modal" onclick="event.stopPropagation()" style="max-width: 520px;">
+                <h3>Add adverse childhood experiences</h3>
+                <form method="POST" action="{{ url_for('add_ace_to_patient', patient_id=patient.id) }}" id="formAddACE">
+                    <input type="hidden" name="ace_data" id="ace_data_hidden" value="">
+                    <div class="ace-checkbox-group">
+                        <details><summary style="cursor:pointer; font-weight:600;">Abuse</summary>
+                            <label><input type="checkbox" class="ace-cb" data-cat="Abuse" value="Emotional Abuse"> Emotional Abuse</label>
+                            <label><input type="checkbox" class="ace-cb" data-cat="Abuse" value="Physical Abuse"> Physical Abuse</label>
+                            <label><input type="checkbox" class="ace-cb" data-cat="Abuse" value="Sexual Abuse"> Sexual Abuse</label>
+                        </details>
+                        <details><summary style="cursor:pointer; font-weight:600;">Neglect</summary>
+                            <label><input type="checkbox" class="ace-cb" data-cat="Neglect" value="Emotional neglect"> Emotional neglect</label>
+                            <label><input type="checkbox" class="ace-cb" data-cat="Neglect" value="Physical Neglect"> Physical Neglect</label>
+                        </details>
+                        <details><summary style="cursor:pointer; font-weight:600;">Household Dysfunction</summary>
+                            <label><input type="checkbox" class="ace-cb" data-cat="Household Dysfunction" value="Parental substance use"> Parental substance use</label>
+                            <label><input type="checkbox" class="ace-cb" data-cat="Household Dysfunction" value="Parental mental illness"> Parental mental illness</label>
+                            <label><input type="checkbox" class="ace-cb" data-cat="Household Dysfunction" value="Domestic violence exposure"> Domestic violence exposure</label>
+                            <label><input type="checkbox" class="ace-cb" data-cat="Household Dysfunction" value="Parental separation/divorce"> Parental separation/divorce</label>
+                        </details>
+                        <details><summary style="cursor:pointer; font-weight:600;">Loss/Attachment</summary>
+                            <label><input type="checkbox" class="ace-cb" data-cat="Loss/Attachment" value="Early parental loss (death)"> Early parental loss (death)</label>
+                            <label><input type="checkbox" class="ace-cb" data-cat="Loss/Attachment" value="Prolonged separation from caregiver"> Prolonged separation from caregiver</label>
+                        </details>
+                        <details><summary style="cursor:pointer; font-weight:600;">Peer & Environmental</summary>
+                            <label><input type="checkbox" class="ace-cb" data-cat="Peer & Environmental" value="Bullying (Chronic)"> Bullying (Chronic)</label>
+                            <label><input type="checkbox" class="ace-cb" data-cat="Peer & Environmental" value="Severe academic humiliation"> Severe academic humiliation</label>
+                            <label><input type="checkbox" class="ace-cb" data-cat="Peer & Environmental" value="Community violence exposure"> Community violence exposure</label>
+                        </details>
+                    </div>
+                    <label>Age of exposure (years)</label>
+                    <input type="number" id="ace_age" name="ace_age" min="0" max="25" placeholder="Age" value="">
+                    <label>Trauma burden</label>
+                    <select id="ace_trauma_burden" name="ace_trauma_burden">
+                        <option value="">—</option>
+                        <option value="Mild">Mild</option>
+                        <option value="Moderate">Moderate</option>
+                        <option value="Severe">Severe</option>
+                    </select>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-cancel" onclick="document.getElementById('modalAddACE').classList.remove('show')">Cancel</button>
+                        <button type="submit" class="btn btn-submit" id="btnSubmitACE">Add</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <script>
+        (function() {
+            var form = document.getElementById('formAddACE');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    var items = [];
+                    document.querySelectorAll('#modalAddACE .ace-cb:checked').forEach(function(cb) {
+                        items.push({ cat: cb.getAttribute('data-cat'), value: cb.value });
+                    });
+                    var ageEl = document.getElementById('ace_age');
+                    var burdenEl = document.getElementById('ace_trauma_burden');
+                    var data = { items: items, ageOfExposure: ageEl ? ageEl.value : '', traumaBurden: burdenEl ? burdenEl.value : '' };
+                    document.getElementById('ace_data_hidden').value = JSON.stringify(data);
+                });
+            }
+        })();
+        </script>
+        {% endif %}
     </div>
     <script>
         window.addEventListener('DOMContentLoaded', function() {

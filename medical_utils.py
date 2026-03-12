@@ -94,15 +94,99 @@ def calculate_midpoint_date(start_date, end_date):
 
 def get_unified_dose(drug_name, dose_mg):
     """
-    Normalizes medication doses for visualization.
+    Returns raw numeric dose (mg) from dose_mg string. Used where RTP is not applied.
     """
     try:
-        if not dose_mg: return 0.0
-        # Extract first number found
+        if not dose_mg:
+            return 0.0
         match = re.search(r"[-+]?\d*\.\d+|\d+", str(dose_mg))
         return float(match.group()) if match else 0.0
-    except:
+    except Exception:
         return 0.0
+
+
+def _frequency_to_daily_multiplier(frequency):
+    """Convert frequency code (e.g. '1-0-1', '1-1-1') to daily multiplier (times per day)."""
+    if not frequency:
+        return 1
+    s = str(frequency).strip()
+    if not s or s.upper() == "SOS":
+        return 1
+    total = 0
+    for part in re.split(r"[\s\-]+", s):
+        part = part.strip()
+        if not part:
+            continue
+        if part in ("½", "1/2", "0.5"):
+            total += 0.5
+        elif part in ("¼", "1/4", "0.25"):
+            total += 0.25
+        else:
+            try:
+                total += float(part)
+            except ValueError:
+                pass
+    return max(1, total) if total > 0 else 1
+
+
+def compute_med_chart_value(drug_name, dose_mg, frequency, norm_mode="rtp"):
+    """
+    For chart representation: compute normalized Y (RTP % or equivalent) and actual dose label.
+    RTP = (Current dose – min) / (max – min) * 100 so each drug sits in 0–100% of its range.
+    On hover/click the UI should show actual_dose_label (what the doctor entered), not the Y value.
+
+    Returns:
+        (y_value, actual_dose_label)
+        - y_value: float for chart Y (RTP 0–100, or CPZ/Diazepam equivalent mg when norm_mode is 'equivalent')
+        - actual_dose_label: string e.g. "10 mg (1-0-1)" for tooltips/modals
+    """
+    try:
+        from dose_data import get_dose_info, get_rtp, get_rti, get_cpz_equivalent_mg, get_diazepam_equivalent_mg
+    except ImportError:
+        match = re.search(r"[-+]?\d*\.\d+|\d+", str(dose_mg))
+        raw = float(match.group()) if dose_mg and match else 0.0
+        lbl = f"{dose_mg or ''} ({frequency or ''})".strip().rstrip("()").strip()
+        return (raw, lbl or f"{raw} mg")
+
+    raw_mg = get_unified_dose(drug_name, dose_mg)
+    if raw_mg is None or raw_mg <= 0:
+        lbl = f"{dose_mg or ''} ({frequency or ''})".strip().rstrip("()").strip()
+        return (0.0, lbl or "—")
+
+    mult = _frequency_to_daily_multiplier(frequency)
+    daily_mg = raw_mg * mult
+    freq_str = (frequency or "").strip()
+    if freq_str:
+        actual_dose_label = f"{dose_mg or ''} ({freq_str})".strip()
+    else:
+        actual_dose_label = (dose_mg or f"{raw_mg} mg").strip()
+    if not actual_dose_label:
+        actual_dose_label = f"{raw_mg} mg"
+
+    if norm_mode == "equivalent":
+        info = get_dose_info(drug_name)
+        category = (info or {}).get("category", "other")
+        if category == "benzodiazepine":
+            eq = get_diazepam_equivalent_mg(drug_name, daily_mg)
+            return (eq if eq is not None else raw_mg, actual_dose_label)
+        if category in ("other",) or info:
+            cpz = get_cpz_equivalent_mg(drug_name, daily_mg)
+            if cpz is not None:
+                return (cpz, actual_dose_label)
+        rtp_val, _, _ = get_rtp(drug_name, daily_mg)
+        return (rtp_val if rtp_val is not None else raw_mg, actual_dose_label)
+
+    # Benzodiazepines: RTI = (Equivalent Dose - 2.5) * 100 / 50 (diazepam equivalent)
+    # Others: RTP = (Current dose - min) * 100 / (max - min)
+    info = get_dose_info(drug_name)
+    if info and (info.get("category") == "benzodiazepine"):
+        rti_val = get_rti(drug_name, daily_mg)
+        if rti_val is not None:
+            return (rti_val, actual_dose_label)
+    rtp_percent, min_mg, max_mg = get_rtp(drug_name, daily_mg)
+    if rtp_percent is not None:
+        return (round(rtp_percent, 1), actual_dose_label)
+    return (raw_mg, actual_dose_label)
 
 # --- PRESCRIPTION LANGUAGE CONVERTER (Positional logic) ---
 def format_frequency(code):

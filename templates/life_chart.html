@@ -1205,6 +1205,13 @@
                             }
 
                             if (context.chart.config._configKey === 'meds' || context.chart.config._configKey === 'symptomsAdherence') {
+                                // Show actual dose from visit only (no RTP/RTI value)
+                                if (pt.actualDose) return [`${dsLabel}: ${pt.actualDose}`];
+                                if (context.dataset.isUnified && pt.breakdown && pt.breakdown.length) {
+                                    const lines = pt.breakdown.map(b => b.actualDose ? `${b.name}: ${b.actualDose}` : `${b.name}: ${b.score} %`).filter(Boolean);
+                                    return lines.length ? lines : [`${dsLabel}: Average`];
+                                }
+                                if (context.dataset.isUnified) return [`${dsLabel}: Average`];
                                 return [`${dsLabel}: ${pt.y} mg`];
                             }
                             let val = pt.y;
@@ -2514,6 +2521,9 @@
             minIdx = 0;
             maxIdx = Math.max(0, n - 1);
         }
+        // Always force x-axis to span exactly 3 slots so bar gap stays fixed
+        var xMin = minIdx;
+        var xMax = xMin + (visibleCount - 1);
 
         barData.datasets.forEach(function(ds) {
             ds.barThickness = 60;
@@ -2544,8 +2554,8 @@
                     x: {
                         stacked: true,
                         grid: { display: false },
-                        min: minIdx,
-                        max: maxIdx,
+                        min: xMin,
+                        max: xMax,
                         barPercentage: 0.95,
                         categoryPercentage: 1.0
                     },
@@ -2657,7 +2667,10 @@
         finalData.forEach(d => { (d.data || []).forEach(p => { if (p.y != null && p.y > maxY) maxY = p.y; }); });
         maxY = maxY * 1.15;
 
-        if (key === 'meds') maxY = Math.max(maxY, 12);
+        // Medications: RTP/RTI scale fixed -52 to 152 (so -50 to 150 does not appear sliced)
+        if (key === 'meds') {
+            maxY = 152;
+        }
 
         let activeSubsCount = 0;
         if (key === 'symptoms' && (rawData.substances || []).length > 0) {
@@ -2678,9 +2691,14 @@
             chartOptions.scales.x.ticks = Object.assign({}, chartOptions.scales.x.ticks || {}, { padding: freeZoneHeight });
         }
 
-        // Medications chart: restrict zoom to -100% (max zoom out 2x) and +200% (max zoom in 3x)
-        // Plugin supports min, max, minRange only (no maxRange); use min/max to cap visible range.
+        // Medications: RTP/RTI %; Y-axis -52 to 152 (visual so -50 to 150 not sliced)
         if (key === 'meds') {
+            chartOptions.scales.y.title = chartOptions.scales.y.title || {};
+            chartOptions.scales.y.title.text = 'RTP / RTI %';
+            chartOptions.scales.y.min = -52;
+            chartOptions.scales.y.max = 152;
+            chartOptions.scales.y.beginAtZero = false;
+            if (chartOptions.plugins.zoom && chartOptions.plugins.zoom.limits) chartOptions.plugins.zoom.limits.y = { min: -52, max: 152 };
             let xMin = Infinity, xMax = -Infinity;
             finalData.forEach(d => {
                 (d.data || []).forEach(p => {
@@ -3250,9 +3268,15 @@
             if (point.detail) div.innerHTML += '<div style="color:#ddd; margin-top:4px; font-style:italic; white-space: normal; max-width: 200px;">Note: ' + point.detail + '</div>';
         } else {
             let valDisplay = point.y;
-            if (chartType === 'meds') valDisplay += ' mg';
-            div.innerHTML = '<span class="tooltip-color-box" style="background:' + dataset.borderColor + '"></span><span style="font-weight:600;">' + dataset.label + ':</span> ' + valDisplay;
-            if (point.detail) div.innerHTML += '<div style="margin-top:2px; font-weight:normal; opacity:0.8;">' + point.detail + '</div>';
+            if (chartType === 'meds') {
+                // Tooltip: only actual dose as entered in visit (no RTP/RTI value)
+                var mainText = point.actualDose || (dataset.isUnified ? 'Average' : (valDisplay + ' mg'));
+                div.innerHTML = '<span class="tooltip-color-box" style="background:' + dataset.borderColor + '"></span><span style="font-weight:600;">' + dataset.label + ':</span> ' + mainText;
+                if (point.detail) div.innerHTML += '<div style="margin-top:2px; font-weight:normal; opacity:0.8;">' + point.detail + '</div>';
+            } else {
+                div.innerHTML = '<span class="tooltip-color-box" style="background:' + dataset.borderColor + '"></span><span style="font-weight:600;">' + dataset.label + ':</span> ' + valDisplay;
+                if (point.detail) div.innerHTML += '<div style="margin-top:2px; font-weight:normal; opacity:0.8;">' + point.detail + '</div>';
+            }
         }
 
         document.body.appendChild(div);
@@ -3653,7 +3677,7 @@
                         </li>`;
                     } else {
                         let val = point.y;
-                        if (key === 'meds') val = `${val} mg`;
+                        if (key === 'meds') val = point.actualDose ? point.actualDose : `${val} mg`;
                         groupHtml += `<li>
                             <span style="color:${ds.borderColor || '#333'}; font-weight:bold;">● ${ds.label}</span>: ${val}
                             ${det ? `<br><small style="color:#666; margin-left:15px;">${det}</small>` : ''}
@@ -3709,7 +3733,9 @@
                     if(ds.data) {
                         ds.data.forEach(pt => {
                             if(pt.x && pt.x.startsWith(date)) {
-                                targetArray.push({ name: ds.label, score: pt.y, detail: pt.detail, phase: pt.phase });
+                                const item = { name: ds.label, score: pt.y, detail: pt.detail, phase: pt.phase };
+                                if (pt.actualDose != null) { item.dose = pt.actualDose; item.freq = ''; }
+                                targetArray.push(item);
                             }
                         });
                     }
@@ -3754,7 +3780,7 @@
                         try { plan = JSON.parse(i.taper_plan); } catch(e) {}
                         line = `<strong>${i.name}</strong> <span style="font-size:0.85em; color:#e65100; border:1px solid #e65100; border-radius:3px; padding:1px 4px; margin-left:4px;">Tapering</span><div style="font-size:0.85em; padding-left:10px; border-left:2px solid #ccc; margin-top:4px;">${(plan.map(s => `&#8212; ${s.dose_mg || '—'} (${s.frequency || ''}) x ${s.duration_text || ''}`).join('<br>'))}</div>`;
                     } else if (i.dose) {
-                        line = `<strong>${i.name}</strong> — ${i.dose || ''} (${i.freq})`;
+                        line = `<strong>${i.name}</strong> — ${i.dose || ''}${i.freq ? ' (' + i.freq + ')' : ''}`;
                     } else {
                         line = `<strong>${i.name}</strong> — Equivalent Dose: ${i.score} ${i.detail ? '<span style="color:#666;font-size:0.9em;">('+i.detail+')</span>' : ''}`;
                     }
@@ -4348,11 +4374,26 @@ function adjustDuration(input, delta) {
         "Obsessive Compulsive Disorder": ["Recovery", "Remission", "Partial Remission", "Active OCD", "Severe OCD", "Treatment Resistant Phase", "Relapse", "Loss of Follow-up"],
         "Anxiety Disorders": ["Recovery", "Remission", "Partial Remission", "Active Anxiety", "Acute Panic Phase", "Relapse", "Loss of Follow-up"]
     };
+    function getStateDBKeysFromProvisionalDiagnosisLC(text) {
+        var t = (text || '').toLowerCase().trim();
+        if (!t) return [];
+        var keys = [];
+        if (t.indexOf('f31') !== -1 || t.indexOf('bipolar') !== -1) keys.push('Bipolar Disorder');
+        if ((t.indexOf('f32') !== -1 || t.indexOf('depressive') !== -1 || t.indexOf('depression') !== -1) && t.indexOf('bipolar') === -1) keys.push('Major Depressive Disorder');
+        if (t.indexOf('f20') !== -1 || t.indexOf('schizophrenia') !== -1 || t.indexOf('psychotic') !== -1) keys.push('Schizophrenia Spectrum');
+        if (t.indexOf('f42') !== -1 || t.indexOf('obsessive') !== -1 || t.indexOf('ocd') !== -1) keys.push('Obsessive Compulsive Disorder');
+        if (t.indexOf('f41') !== -1 || t.indexOf('f40') !== -1 || t.indexOf('anxiety') !== -1 || t.indexOf('panic') !== -1 || t.indexOf('phobia') !== -1) keys.push('Anxiety Disorders');
+        return keys;
+    }
     let customStatesLC = [];
     function renderClinicalStates() {
         const container = document.getElementById('dynamic-states-container');
         if (!container) return;
-        const selectedDiags = Array.from(document.querySelectorAll('#diagnosis-checkboxes input:checked')).map(cb => cb.value);
+        var diagnosisInput = document.querySelector('input[name="provisional_diagnosis"]');
+        var diagnosisText = diagnosisInput ? diagnosisInput.value.trim() : '';
+        var refEl = document.getElementById('clinical-state-diagnosis-ref');
+        if (refEl) refEl.textContent = diagnosisText || '— Enter provisional diagnosis above to see diagnosis-specific states —';
+        var selectedDiags = getStateDBKeysFromProvisionalDiagnosisLC(diagnosisText);
         let statesToShow = new Set();
         if (selectedDiags.length === 0) {
             ["Recovery", "Remission", "Partial Remission", "Relapse", "Loss of Follow-up"].forEach(s => statesToShow.add(s));
@@ -4409,15 +4450,9 @@ function adjustDuration(input, delta) {
 <div id="clinicalStateRangesModal" class="modal" onclick="if(event.target === this) closeClinicalStateRangesModal()">
     <div class="modal-content" style="width: 520px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; margin-top: 5vh;">
         <h4 style="margin-top: 0; color: #333;">Clinical State Ranges</h4>
-        <div style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
-            <strong style="font-size: 13px; color: #555; display:block; margin-bottom: 5px;">Select Diagnoses:</strong>
-            <div class="checklist-group" style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; font-size:12px;" id="diagnosis-checkboxes">
-                <label><input type="checkbox" value="Bipolar Disorder" onchange="renderClinicalStates()"> Bipolar Disorder (I & II)</label>
-                <label><input type="checkbox" value="Major Depressive Disorder" onchange="renderClinicalStates()"> Major Depressive Disorder</label>
-                <label><input type="checkbox" value="Schizophrenia Spectrum" onchange="renderClinicalStates()"> Schizophrenia Spectrum</label>
-                <label><input type="checkbox" value="Obsessive Compulsive Disorder" onchange="renderClinicalStates()"> Obsessive Compulsive Disorder</label>
-                <label><input type="checkbox" value="Anxiety Disorders" onchange="renderClinicalStates()"> Anxiety Disorders</label>
-            </div>
+        <div style="margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #eee;">
+            <strong style="font-size: 12px; color: #555;">States based on Provisional diagnosis:</strong>
+            <div id="clinical-state-diagnosis-ref" style="font-size: 12px; color: #333; margin-top: 4px;"></div>
         </div>
         <div style="overflow-y: auto; flex-grow: 1; padding-right: 10px;">
             <strong style="font-size: 13px; color: #555; display:block; margin-bottom: 5px;">States:</strong>
