@@ -129,11 +129,12 @@
 
             <input type="text" name="drug_name[]" value="{{ entry.drug_name }}" style="flex:2; min-width:150px; {% if readonly_name %}background:#f0f8ff; border:1px dashed #7ab8e0;{% endif %}" {% if readonly_name %}readonly{% endif %}>
             
-            <div style="flex:1; min-width:100px;">
-                <input type="text" name="dose_full[]" value="{{ entry.dose_mg }}" list="dose-list-{{ unique_id }}" oninput="updateDoseOptions(this)">
+            <div class="dose-adjust-wrap" style="display:flex; align-items:center; gap:2px; flex:1; min-width:100px;">
+                <button type="button" onclick="adjustDose(this.closest('.dose-adjust-wrap').querySelector('input[name=\'dose_full[]\']'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
+                <input type="text" name="dose_full[]" value="{{ entry.dose_mg }}" list="dose-list-{{ unique_id }}" placeholder="Dose" style="flex:1; min-width:70px;" oninput="updateDoseOptions(this)">
+                <button type="button" onclick="adjustDose(this.closest('.dose-adjust-wrap').querySelector('input[name=\'dose_full[]\']'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
                 <datalist id="dose-list-{{ unique_id }}"></datalist>
             </div>
-
             <div class="duration-adjust-wrap" style="display:flex; align-items:center; gap:2px; flex:1; min-width:100px;">
                 <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
                 <input type="text" list="duration-options-list" name="med_duration[]" value="{{ entry.duration_text or '' }}" style="flex:1; min-width:70px;" oninput="updateDurationOptions(this)">
@@ -1338,6 +1339,26 @@
             document.getElementById('substances-container').insertAdjacentHTML('beforeend', html);
         }
 
+        // --- DOSE +/- ADJUST (medications) ---
+        function adjustDose(input, delta) {
+            if (!input) return;
+            var raw = (input.value || '').trim();
+            var unit = 'mg';
+            var num = 0;
+            if (raw) {
+                var m = raw.match(/^(\d+(?:\.\d+)?)\s*(mg|g|mcg|μg|ml|IU|Tablet|tablet)?$/i);
+                if (m) {
+                    num = parseFloat(m[1]);
+                    if (m[2]) unit = m[2].toLowerCase();
+                    if (unit === 'μg') unit = 'mcg';
+                }
+            }
+            var step = (num < 1 && num !== Math.floor(num)) ? 0.25 : 1;
+            num = num + (delta > 0 ? step : -step);
+            if (num < 0) num = 0;
+            input.value = (num === Math.floor(num) ? num.toString() : num.toFixed(2)) + ' ' + unit;
+            if (typeof updateDoseOptions === 'function') updateDoseOptions(input);
+        }
         // --- DURATION +/- ADJUST ---
         function adjustDuration(input, delta) {
             if (!input) return;
@@ -1494,8 +1515,10 @@
                     <select name="drug_type[]" style="width:120px; flex:none;"><option value="Gen">Generic</option><option value="Brand">Brand</option></select>
                     <select name="med_form[]" style="width:120px; flex:none;"><option value="Tablet">Tablet</option><option value="Capsule">Capsule</option><option value="Injection">Injection</option></select>
                     <input type="text" name="drug_name[]" placeholder="Drug Name" style="flex:2; min-width:150px;">
-                    <div style="flex:1; min-width:100px;">
-                        <input type="text" name="dose_full[]" list="dose-list-${uniqueId}" placeholder="Dose" oninput="updateDoseOptions(this)">
+                    <div class="dose-adjust-wrap" style="display:flex; align-items:center; gap:2px; flex:1; min-width:100px;">
+                        <button type="button" onclick="adjustDose(this.closest('.dose-adjust-wrap').querySelector('input[name=\'dose_full[]\']'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
+                        <input type="text" name="dose_full[]" list="dose-list-${uniqueId}" placeholder="Dose" style="flex:1; min-width:70px;" oninput="updateDoseOptions(this)">
+                        <button type="button" onclick="adjustDose(this.closest('.dose-adjust-wrap').querySelector('input[name=\'dose_full[]\']'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
                         <datalist id="dose-list-${uniqueId}"></datalist>
                     </div>
                     <div class="duration-adjust-wrap" style="display:flex; align-items:center; gap:2px; flex:1; min-width:100px;">
