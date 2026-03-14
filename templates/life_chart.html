@@ -1163,7 +1163,18 @@
                         mode: 'x',
                         scaleMode: 'y',
                         onZoomStart: () => { clearStickyTooltips(); },
-                        onZoomComplete: ({chart}) => { if(activeStickyDate) showStickyTooltips(activeStickyDate); }
+                        onZoomComplete: ({chart}) => { 
+                            if (chart.config._configKey === 'symptomsAdherence' && charts['symptoms'] && chart.scales && chart.scales.x) {
+                                var sym = charts['symptoms'];
+                                sym.options.scales.x.min = chart.scales.x.min;
+                                sym.options.scales.x.max = chart.scales.x.max;
+                                sym.update('none');
+                            }
+                            if (chart.config._configKey === 'symptoms' && window.adherenceChart) {
+                                syncSymptomAdherenceX();
+                            }
+                            if(activeStickyDate) showStickyTooltips(activeStickyDate); 
+                        }
                     },
                     pan: {
                         enabled: true, 
@@ -1173,6 +1184,15 @@
                             clearStickyTooltips(); 
                         },
                         onPanComplete: ({chart}) => { 
+                            if (chart.config._configKey === 'symptomsAdherence' && charts['symptoms'] && chart.scales && chart.scales.x) {
+                                var sym = charts['symptoms'];
+                                sym.options.scales.x.min = chart.scales.x.min;
+                                sym.options.scales.x.max = chart.scales.x.max;
+                                sym.update('none');
+                            }
+                            if (chart.config._configKey === 'symptoms' && window.adherenceChart) {
+                                syncSymptomAdherenceX();
+                            }
                             if(activeStickyDate) showStickyTooltips(activeStickyDate);
                             setTimeout(() => { isPanning = false; }, 100); 
                         }
@@ -1333,14 +1353,15 @@
 
                 if (chart.config._configKey === 'symptomsAdherence') {
                     const laneTop = topY;
-                    const adStripH = Math.min(stripBandHeight, chartArea.bottom - chartArea.top);
+                    const adStripH = chartArea.bottom - chartArea.top;  // full height when expanded
+                    // Always use date range only (ad.start → ad.end): no full-width fill; bands are continuous when dates abut
                     ctx.fillStyle = 'rgba(34,139,34,0.2)';
                     ctx.fillRect(xMin, laneTop, xMax - xMin, adStripH);
 
                     ctx.fillStyle = '#333';
                     ctx.font = '10px Segoe UI';
                     ctx.textBaseline = 'middle';
-                    ctx.fillText(ad.status, xMin + 4, laneTop + adStripH / 2);
+                    ctx.fillText(ad.status, xMin + 6, laneTop + adStripH / 2);
 
                     chart.$ribbons.push({
                         xMin, xMax,
@@ -3194,35 +3215,48 @@
             return { el, ...c };
         });
 
-        // 3. Collision Resolution (Prevent Overlap)
-        // Sort by Y position (top to bottom) so we handle them in order
-        domElements.sort((a, b) => a.absY - b.absY);
+        // 3. Group by chart, anchor right of each chart's plot area, stack vertically
+        // Sort by chart then by Y (natural data order within each chart)
+        domElements.sort((a, b) => {
+            if (a.chartType !== b.chartType) return (a.chartType || '').localeCompare(b.chartType || '');
+            return a.absY - b.absY;
+        });
 
-        for (let i = 0; i < domElements.length; i++) {
-            for (let j = i + 1; j < domElements.length; j++) {
-                const A = domElements[i];
-                const B = domElements[j];
+        // Reveal first so getBoundingClientRect gives real dimensions
+        domElements.forEach(item => { item.el.style.opacity = '1'; item.el.style.visibility = 'hidden'; });
 
-                // Get current positions (getBoundingClientRect is expensive, so we calculate relative)
-                const rectA = A.el.getBoundingClientRect();
-                const rectB = B.el.getBoundingClientRect();
+        // Group by chart key so each chart's tooltips stack independently
+        const byChart = {};
+        domElements.forEach(item => {
+            if (!byChart[item.chartType]) byChart[item.chartType] = [];
+            byChart[item.chartType].push(item);
+        });
 
-                // Check Intersection
-                const overlapX = (rectA.left < rectB.right && rectA.right > rectB.left);
-                const overlapY = (rectA.top < rectB.bottom && rectA.bottom > rectB.top);
-
-                if (overlapX && overlapY) {
-                    // Collision Detected! Push B down.
-                    const pushDown = (rectA.bottom - rectB.top) + 5;
-                    
-                    const currentTop = parseFloat(B.el.style.top);
-                    B.el.style.top = (currentTop + pushDown) + 'px';
-                }
-            }
-        }
+        Object.keys(byChart).forEach(function(chartKey) {
+            const group = byChart[chartKey];
+            const chart = charts[chartKey];
+            if (!chart) return;
+            const canvasRect = chart.canvas.getBoundingClientRect();
+            const rightEdge = canvasRect.left + chart.chartArea.right + 8; // anchor right of plot
+            const GAP = 4;
+            // Start stacking from the topmost data point y
+            let nextTop = group[0].absY;
+            group.forEach(function(item) {
+                const h = item.el.getBoundingClientRect().height || 22;
+                // Clamp: don't go above chart top or below chart bottom
+                const chartTop    = canvasRect.top  + chart.chartArea.top;
+                const chartBottom = canvasRect.top  + chart.chartArea.bottom;
+                nextTop = Math.max(nextTop, chartTop);
+                nextTop = Math.min(nextTop, chartBottom - h);
+                item.el.style.left = rightEdge + 'px';
+                item.el.style.top  = nextTop + 'px';
+                item.el.style.transform = 'translateY(-50%)';
+                nextTop += h + GAP;
+            });
+        });
 
         // 4. Reveal Elements
-        domElements.forEach(item => item.el.style.opacity = '1');
+        domElements.forEach(item => { item.el.style.visibility = 'visible'; });
     }
 
     // Helper function to create the DOM element
@@ -3359,26 +3393,26 @@
         }
 
         // Helper: create a clickable intersection dot and its popup label
-        // Tooltip is placed above and to the right of the dot so the dot never obstructs content
         const TOOLTIP_OFFSET_RIGHT = 22;
         const TOOLTIP_OFFSET_ABOVE = 52;
+        const POPUP_STACK_HEIGHT = 38;
+        const POPUP_STACK_GAP = 4;
         let dotCounter = 0;
-        function makeDot(sx, sy, color, labelLines) {
+        function makeDot(sx, sy, color, labelLines, popupTop) {
             if (sx < chartLeft || sx > chartRight || sy < chartTop || sy > chartBottom) return;
             const idx = dotCounter++;
+            const top = (popupTop != null) ? popupTop : (sy - TOOLTIP_OFFSET_ABOVE);
 
-            // Hidden label popup: above and right of dot so intersection point doesn't obstruct text
             const popup = document.createElement('div');
             popup.className = 'crosshair-label dataset-label crosshair-popup';
             popup.dataset.dotId = 'dot-' + idx;
             popup.style.background = 'rgba(30,35,45,0.95)';
             popup.style.borderLeft = `3px solid ${color}`;
             popup.style.left = (sx + TOOLTIP_OFFSET_RIGHT) + 'px';
-            popup.style.top = (sy - TOOLTIP_OFFSET_ABOVE) + 'px';
+            popup.style.top = top + 'px';
             popup.innerHTML = labelLines.map(l => `<div>${l}</div>`).join('');
             overlay.appendChild(popup);
 
-            // Small dot (size ~8px)
             const dot = document.createElement('div');
             dot.className = 'crosshair-intersection-dot';
             dot.dataset.dotId = 'dot-' + idx;
@@ -3405,9 +3439,10 @@
         const clickedXMs = new Date(dateStr).getTime();
 
         // ── VERTICAL LINE intersections (same date, each dataset's value there) ──
+        // Collect and sort by sy so we can stack popups without overlap
+        const verticalItems = [];
         chart.data.datasets.forEach((ds, dsIdx) => {
             if (!chart.isDatasetVisible(dsIdx) || !ds.data || ds.data.length === 0) return;
-            // Only show dots for the same type: unified↔unified, individual↔individual
             if (!!ds.isUnified !== clickedIsUnified) return;
             const interpY = interpolateY(ds.data, clickedXMs);
             if (interpY == null) return;
@@ -3417,7 +3452,12 @@
                 ds.label || 'Series',
                 interpY.toFixed(1) + valueSuffix
             ];
-            makeDot(screenX, sy, ds.borderColor || '#555', label);
+            verticalItems.push({ sy, label, color: ds.borderColor || '#555' });
+        });
+        verticalItems.sort((a, b) => a.sy - b.sy);
+        verticalItems.forEach((item, i) => {
+            const popupTop = chartTop + i * (POPUP_STACK_HEIGHT + POPUP_STACK_GAP);
+            makeDot(screenX, item.sy, item.color, item.label, popupTop);
         });
 
         // ── HORIZONTAL LINE intersections (same clicked Y, where each dataset crosses it) ──
