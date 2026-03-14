@@ -493,14 +493,11 @@
             width: 100%;
             height: 100%;
         }
-        /* Adherence strip: below Substance bands, above X-axis; overlaid in symptom chart padding so both share one X-axis */
+        /* Adherence strip: in flex flow below symptom chart; same height as Substance strip (normal), more when expanded */
         .adherence-strip-wrap {
-            position: absolute;
-            left: 0;
-            right: 0;
-            bottom: 32px;
+            flex: 0 0 auto;
             width: 100%;
-            min-height: 40px;
+            min-height: 24px;
             overflow: hidden;
             border: 1px solid #e0e0e0;
             border-radius: 2px;
@@ -631,15 +628,21 @@
         .chart-controls-container .toolbar-group-spacer {
             margin-left: auto;
         }
-        .chart-controls-container select.zoom-control,
         .chart-controls-container .widget-selector {
             min-width: 150px;
             padding: 6px 8px;
             border-radius: 4px;
         }
         .chart-controls-container select.zoom-control {
+            min-width: 110px;
+            padding: 4px 6px;
+            font-size: 11px;
             border: 1px dashed #7ab8e0;
+            border-radius: 3px;
             background: #fff;
+        }
+        .chart-controls-container select.zoom-control option {
+            font-size: 11px;
         }
         .chart-controls-container .btn-download {
             margin-left: auto;
@@ -709,15 +712,6 @@
                 <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
                 <a href="{{ url_for('patient_detail', patient_id=patient.id) if patient else '#' }}">← Patient Details</a>
             </div>
-                {% if scale_datasets %}
-                <div style="display: flex; align-items: center; gap: 6px;">
-                    <label class="switch">
-                        <input type="checkbox" id="masterScaleToggle" onchange="toggleMasterScales()">
-                        <span class="slider round"></span>
-                    </label>
-                    <span style="font-size: 0.85rem; font-weight: 600; color: #555;">Scales</span>
-                </div>
-                {% endif %}
 				<div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: 5px;">
                     <a href="{{ url_for('dashboard') }}">← Dashboard</a>
 				</div>
@@ -751,6 +745,15 @@
             </label>
             <span style="font-size: 0.85rem; font-weight: 600; color: #555;">COMPONENT <br>BAR CHART(📊)</span>
             </div>
+        {% if scale_datasets %}
+        <div class="toolbar-group" style="align-items: center; gap: 6px;">
+            <label class="switch" style="margin: 0;">
+                <input type="checkbox" id="masterScaleToggle" onchange="toggleMasterScales()">
+                <span class="slider round"></span>
+            </label>
+            <span style="font-size: 0.85rem; font-weight: 600; color: #555;">Scales</span>
+        </div>
+        {% endif %}
         <div class="toolbar-group toolbar-group-zoom">
             <select id="zoomSelect" onchange="handleZoomSelect(this.value)" class="btn btn-sm zoom-control" style="background: white; color: #333; margin: 0;">
                 <option value="">Zoom View...</option>
@@ -890,7 +893,7 @@
                                         </div>
                                         <div class="duration-adjust-wrap" style="display: flex; align-items: center; gap: 2px; flex: none;">
                                             <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
-                                            <input type="text" list="duration-options-list" name="med_duration[]" value="{{ step.duration_text or '' }}" placeholder="Dur" style="width: 80px; padding: 8px;" oninput="updateDurationOptions(this)">
+                                            <input type="text" list="duration-options-list" name="med_duration[]" value="{{ step.duration_text or '' }}" placeholder="Dur (required)" required style="width: 80px; padding: 8px;" oninput="updateDurationOptions(this)">
                                             <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
                                         </div>
                                         <div style="display:flex; gap:5px; flex:none; align-items: center;">
@@ -934,7 +937,7 @@
                                         </div>
                                         <div class="duration-adjust-wrap" style="display: flex; align-items: center; gap: 2px; flex: none;">
                                             <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
-                                            <input type="text" list="duration-options-list" name="med_duration[]" value="{{ entry.duration_text or '' }}" placeholder="Dur" style="width: 80px; padding: 8px;" oninput="updateDurationOptions(this)">
+                                            <input type="text" list="duration-options-list" name="med_duration[]" value="{{ entry.duration_text or '' }}" placeholder="Dur (required)" required style="width: 80px; padding: 8px;" oninput="updateDurationOptions(this)">
                                             <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
                                         </div>
                                         <div style="display:flex; gap:5px; flex:none; align-items: center;">
@@ -1173,6 +1176,14 @@
                             if (chart.config._configKey === 'symptoms' && window.adherenceChart) {
                                 syncSymptomAdherenceX();
                             }
+                            if (!skipScrollbarSync) {
+                                var panelKey = chart.config._configKey === 'symptomsAdherence' ? 'symptoms' : chart.config._configKey;
+                                var p = widgetPanels[panelKey];
+                                var srcChart = charts[panelKey] || chart;
+                                if (p && p.sbRange && p.sbWrap && p.sbWrap.classList.contains('visible') && srcChart && srcChart.scales && srcChart.scales.x) {
+                                    updateScrollbarFromChart(srcChart, p.sbRange);
+                                }
+                            }
                             if(activeStickyDate) showStickyTooltips(activeStickyDate); 
                         }
                     },
@@ -1192,6 +1203,14 @@
                             }
                             if (chart.config._configKey === 'symptoms' && window.adherenceChart) {
                                 syncSymptomAdherenceX();
+                            }
+                            if (!skipScrollbarSync) {
+                                var panelKey = chart.config._configKey === 'symptomsAdherence' ? 'symptoms' : chart.config._configKey;
+                                var p = widgetPanels[panelKey];
+                                var srcChart = charts[panelKey] || chart;
+                                if (p && p.sbRange && p.sbWrap && p.sbWrap.classList.contains('visible') && srcChart && srcChart.scales && srcChart.scales.x) {
+                                    updateScrollbarFromChart(srcChart, p.sbRange);
+                                }
                             }
                             if(activeStickyDate) showStickyTooltips(activeStickyDate);
                             setTimeout(() => { isPanning = false; }, 100); 
@@ -1299,7 +1318,7 @@
             const xScale = scales.x;
             const bottomPadding = chart.options.scales?.x?.ticks?.padding || 0;
             const stripBandHeight = SUBSTANCE_STRIP_H;
-            const clinicalStateStripHeight = 30;
+            const clinicalStateStripHeight = 40;  // increased space for Clinical state strip
 
             chart.$ribbons = [];
             ctx.save();
@@ -1315,10 +1334,12 @@
                 (backendClinicalStates || []).forEach(state => {
                     if (!state.start || !state.end) return;
 
-                    const startMs = new Date(state.start).valueOf();
-                    const endMs = new Date(state.end).valueOf();
-                    const xMin = xScale.getPixelForValue(startMs);
-                    const xMax = xScale.getPixelForValue(endMs);
+                    const startVal = typeof state.start === 'string' && state.start.length >= 10 ? state.start : new Date(state.start).valueOf();
+                    const endVal = typeof state.end === 'string' && state.end.length >= 10 ? state.end : new Date(state.end).valueOf();
+                    let xMin = xScale.getPixelForValue(startVal);
+                    let xMax = xScale.getPixelForValue(endVal);
+                    if (!Number.isFinite(xMin)) xMin = xScale.getPixelForValue(new Date(state.start).valueOf());
+                    if (!Number.isFinite(xMax)) xMax = xScale.getPixelForValue(new Date(state.end).valueOf());
                     const height = clinicalStateStripHeight;
                     const laneTop = topY - height - 4;
 
@@ -1346,10 +1367,12 @@
             (backendAdherences || []).forEach(ad => {
                 if (!ad.start || !ad.end) return;
 
-                const startMs = new Date(ad.start).valueOf();
-                const endMs = new Date(ad.end).valueOf();
-                const xMin = xScale.getPixelForValue(startMs);
-                const xMax = xScale.getPixelForValue(endMs);
+                const startVal = typeof ad.start === 'string' && ad.start.length >= 10 ? ad.start : new Date(ad.start).valueOf();
+                const endVal = typeof ad.end === 'string' && ad.end.length >= 10 ? ad.end : new Date(ad.end).valueOf();
+                let xMin = xScale.getPixelForValue(startVal);
+                let xMax = xScale.getPixelForValue(endVal);
+                if (!Number.isFinite(xMin)) xMin = xScale.getPixelForValue(new Date(ad.start).valueOf());
+                if (!Number.isFinite(xMax)) xMax = xScale.getPixelForValue(new Date(ad.end).valueOf());
 
                 if (chart.config._configKey === 'symptomsAdherence') {
                     const laneTop = topY;
@@ -1412,10 +1435,12 @@
                     (rawData.substances || [])
                         .filter(s => s.substance === sub)
                         .forEach(su => {
-                            const startMs = new Date(su.start_date).valueOf();
-                            const endMs = new Date(su.end_date).valueOf();
-                            const xMin = xScale.getPixelForValue(startMs);
-                            const xMax = xScale.getPixelForValue(endMs);
+                            const startVal = typeof su.start_date === 'string' && su.start_date.length >= 10 ? su.start_date : new Date(su.start_date).valueOf();
+                            const endVal = typeof su.end_date === 'string' && su.end_date.length >= 10 ? su.end_date : new Date(su.end_date).valueOf();
+                            let xMin = xScale.getPixelForValue(startVal);
+                            let xMax = xScale.getPixelForValue(endVal);
+                            if (!Number.isFinite(xMin)) xMin = xScale.getPixelForValue(new Date(su.start_date).valueOf());
+                            if (!Number.isFinite(xMax)) xMax = xScale.getPixelForValue(new Date(su.end_date).valueOf());
 
                             ctx.fillStyle = '#B3742A';
                             ctx.fillRect(xMin, laneTop, xMax - xMin, stripBandHeight);
@@ -1497,14 +1522,14 @@
                 const boxBorder = 'rgba(88, 102, 126, 0.8)';
                 const boxFg = '#ffffff';
 
-                // Date label: for Symptoms chart place at top of Clinical state strip; otherwise at bottom (x-axis)
-                const clinicalStateStripHeight = 30;
+                // Date label: show only below Adherence strip (single place for all hovers); do not draw on symptom chart
                 const dateX = Math.max(chartArea.left + dateW/2 + 4, Math.min(chartArea.right - dateW/2 - 4, xPx));
                 let dateY = bottomY + 6 + dateH/2;
                 if (chart.config._configKey === 'symptoms') {
-                    const clinicalStripTop = topY - clinicalStateStripHeight - 4;
-                    dateY = clinicalStripTop - dateH/2 - 2;
+                    // Symptom chart: skip drawing date here; it is shown only below Adherence strip (in DOM overlay / adherence chart)
+                    dateY = null;
                 }
+                if (dateY != null) {
                 ctx.fillStyle = boxBg;
                 roundRect(ctx, dateX - dateW/2, dateY - dateH/2, dateW, dateH, 4);
                 ctx.fill();
@@ -1514,6 +1539,7 @@
                 ctx.stroke();
                 ctx.fillStyle = boxFg;
                 ctx.fillText(dateLabel, dateX, dateY);
+                }
 
                 // Right: value where horizontal line meets y-axis (right edge)
                 const valueX = chartArea.right - valueW/2 - 6;
@@ -1636,12 +1662,11 @@
     const MIN_PANEL_W = 280;
     const MIN_PANEL_H = 240;
     const MIN_ROW_SCALE_MSE = 260;
-    // Adherence strip (in Symptom chart): height in px; base = 22, default = 1.8x, max = 3x
-    const ADHERENCE_STRIP_BASE = 22;
-    const ADHERENCE_STRIP_HEIGHT_DEFAULT = Math.round(ADHERENCE_STRIP_BASE * 1.8);
-    const ADHERENCE_STRIP_HEIGHT_MAX = ADHERENCE_STRIP_BASE * 3;
-    const X_AXIS_RESERVED_PX = 32;
+    // Adherence strip: normal mode taller so strip + graph are clearly visible (symptom chart gets less space); expanded mode gets more space
     const SUBSTANCE_STRIP_H = 24;
+    const ADHERENCE_STRIP_HEIGHT_DEFAULT = 72;  // normal: clearly visible strip and graph
+    const ADHERENCE_STRIP_HEIGHT_MAX = 200;  // expanded mode: more space (symptom chart shrinks)
+    const X_AXIS_RESERVED_PX = 32;
     let adherenceStripExpanded = false;
 
     function _applyAdherenceAlignment(symChart, adChart) {
@@ -1753,7 +1778,7 @@
         const gridCols = 2;
         const gridGap = 10;
         const gridRowH = Math.max(MIN_ROW_SCALE_MSE, 260);
-        const firstRowH = Math.max(480, Math.min(h - LAYOUT_PAD * 2, Math.floor(h * 0.68)));
+        const firstRowH = Math.max(560, Math.min(h - LAYOUT_PAD * 2, Math.floor(h * 0.74)));
 
         const gridCellW = (fullWidth - gridGap) / 2;
 
@@ -2075,6 +2100,23 @@
             createAdherenceMiniChart(div);
         }
 
+        // Wire scrollbar for horizontal panning (line charts with time scale)
+        if (!config.isBar && widgetPanels[key] && widgetPanels[key].sbRange) {
+            var chartInst = charts[key];
+            var sbEl = widgetPanels[key].sbRange;
+            sbEl.min = 0;
+            sbEl.max = 100;
+            sbEl.value = 0;
+            sbEl.addEventListener('input', function() {
+                applyScrollbarToChart(key, parseFloat(sbEl.value));
+            });
+            setTimeout(function() {
+                if (chartInst && chartInst.scales && chartInst.scales.x && widgetPanels[key].sbWrap.classList.contains('visible')) {
+                    updateScrollbarFromChart(chartInst, sbEl);
+                }
+            }, 300);
+        }
+
         // Populate per-chart series menu
         const chart = charts[key];
         if (chart && chart.data && chart.data.datasets) {
@@ -2276,7 +2318,67 @@
         Object.keys(widgetPanels).forEach(key => {
             const p = widgetPanels[key];
             if (p && p.sbWrap) p.sbWrap.classList.toggle('visible', !!show);
+            if (show && p && p.sbRange && charts[key] && charts[key].scales && charts[key].scales.x) {
+                updateScrollbarFromChart(charts[key], p.sbRange);
+            }
         });
+    }
+
+    var skipScrollbarSync = false;
+    function getChartDataTimeRange(chart) {
+        if (!chart || !chart.data || !chart.data.datasets) return null;
+        var min = Infinity, max = -Infinity;
+        chart.data.datasets.forEach(function(ds) {
+            (ds.data || []).forEach(function(p) {
+                if (p && p.x) {
+                    var t = typeof p.x === 'number' ? p.x : new Date(p.x).getTime();
+                    if (t < min) min = t;
+                    if (t > max) max = t;
+                }
+            });
+        });
+        return (max > min) ? { min: min, max: max } : null;
+    }
+    function updateScrollbarFromChart(chart, sbRange) {
+        if (!chart || !chart.scales || !chart.scales.x || !sbRange) return;
+        var range = getChartDataTimeRange(chart);
+        if (!range) return;
+        var fullMin = range.min, fullMax = range.max;
+        var scale = chart.scales.x;
+        var visibleMin = scale.min, visibleMax = scale.max;
+        var fullSpan = fullMax - fullMin;
+        var visibleSpan = visibleMax - visibleMin;
+        if (visibleSpan >= fullSpan) {
+            sbRange.value = 0;
+            return;
+        }
+        var scrollable = fullSpan - visibleSpan;
+        if (scrollable <= 0) return;
+        var pct = Math.max(0, Math.min(100, ((visibleMin - fullMin) / scrollable) * 100));
+        sbRange.value = Math.round(pct);
+    }
+    function applyScrollbarToChart(panelKey, percent) {
+        var chart = charts[panelKey];
+        if (!chart || !chart.scales || !chart.scales.x) return;
+        var range = getChartDataTimeRange(chart);
+        if (!range) return;
+        var fullMin = range.min, fullMax = range.max;
+        var visibleSpan = chart.scales.x.max - chart.scales.x.min;
+        var fullSpan = fullMax - fullMin;
+        if (visibleSpan >= fullSpan) return;
+        var scrollable = fullSpan - visibleSpan;
+        var visibleMin = fullMin + (percent / 100) * scrollable;
+        var visibleMax = visibleMin + visibleSpan;
+        skipScrollbarSync = true;
+        chart.options.scales.x.min = visibleMin;
+        chart.options.scales.x.max = visibleMax;
+        chart.update('none');
+        if (panelKey === 'symptoms' && window.adherenceChart) {
+            window.adherenceChart.options.scales.x.min = visibleMin;
+            window.adherenceChart.options.scales.x.max = visibleMax;
+            window.adherenceChart.update('none');
+        }
+        skipScrollbarSync = false;
     }
 
     function updateWidgetDropdown() {
@@ -2651,16 +2753,21 @@
             activeSubsCount = [...new Set((rawData.substances || []).map(s => s.substance))].length;
         }
         
-        // Symptom chart: reserve bottom padding for Substance bands + Adherence strip (max height) + X-axis (one shared X-axis at bottom)
-        const freeZoneHeight = (key === 'symptoms') ? (30 + (activeSubsCount * SUBSTANCE_STRIP_H) + ADHERENCE_STRIP_HEIGHT_DEFAULT + X_AXIS_RESERVED_PX) : (key === 'meds') ? 32 : 5;
+        // Symptom chart: reserve bottom padding only for Substance bands (Adherence strip is in flex flow below)
+        const freeZoneHeight = (key === 'symptoms') ? (30 + (activeSubsCount * SUBSTANCE_STRIP_H)) : (key === 'meds') ? 32 : 5;
 
         // Fetch a fresh, isolated copy of the options and safely apply custom limits
         const chartOptions = getCommonOptions();
         chartOptions.scales.y.max = maxY;
         if (key === 'symptoms') {
+            // Symptom chart: x-axis invisible (date axis only below Adherence strip)
+            chartOptions.scales.x.display = true;
             chartOptions.scales.x.position = 'top';
-            chartOptions.scales.x.ticks = Object.assign({}, chartOptions.scales.x.ticks || {}, { padding: 34 });
-            chartOptions.layout.padding = Object.assign({}, chartOptions.layout.padding || {}, { top: 8, bottom: freeZoneHeight });
+            chartOptions.scales.x.ticks = Object.assign({}, chartOptions.scales.x.ticks || {}, { display: false, padding: 34 });
+            chartOptions.scales.x.title = Object.assign({}, chartOptions.scales.x.title || {}, { display: false });
+            chartOptions.scales.x.border = Object.assign({}, chartOptions.scales.x.border || {}, { display: false });
+            chartOptions.scales.x.grid = Object.assign({}, chartOptions.scales.x.grid || {}, { display: false });
+            chartOptions.layout.padding = Object.assign({}, chartOptions.layout.padding || {}, { top: 48, bottom: freeZoneHeight });  // top: space for Clinical state strip
         } else {
             chartOptions.scales.x.ticks = Object.assign({}, chartOptions.scales.x.ticks || {}, { padding: freeZoneHeight });
         }
@@ -2806,18 +2913,30 @@
             return Object.assign({}, ds, { borderColor: ds.borderColor || c, backgroundColor: ds.borderColor || c, fill: false, pointRadius: 1.5, pointHoverRadius: 4 });
         }));
 
-        let maxY = 10;
-        finalData.forEach(d => { (d.data || []).forEach(p => { if (p.y != null && p.y > maxY) maxY = p.y; }); });
-        maxY = Math.max(maxY * 1.1, 12);
-
+        // Adherence strip: fixed Y-axis exactly 5 lines at -50, 0, 50, 100, 150; no vertical panning
         const chartOptions = getCommonOptions();
-        chartOptions.scales.y.max = maxY;
+        chartOptions.scales.y.min = -50;
+        chartOptions.scales.y.max = 150;
         chartOptions.scales.y.display = false;
-        chartOptions.scales.x.display = false;
+        chartOptions.scales.y.beginAtZero = false;
+        chartOptions.scales.y.grace = 0;
+        chartOptions.scales.y.ticks = Object.assign({}, chartOptions.scales.y.ticks || {}, {
+            stepSize: 50,
+            maxTicksLimit: 5,
+            callback: function(v) { return Number(v); }
+        });
+        // No vertical panning for Adherence strip-graph
+        if (chartOptions.plugins.zoom) {
+            if (chartOptions.plugins.zoom.pan) chartOptions.plugins.zoom.pan.mode = 'x';
+            if (chartOptions.plugins.zoom.zoom) chartOptions.plugins.zoom.zoom.mode = 'x';
+        }
+        // Single shared date axis below Adherence strip (visible)
+        chartOptions.scales.x.display = true;
+        chartOptions.scales.x.position = 'bottom';
         chartOptions.scales.x.offset = false;
-        chartOptions.scales.x.ticks = Object.assign({}, chartOptions.scales.x.ticks || {}, { display: false, padding: 0 });
-        chartOptions.scales.x.title = { display: false };
-        chartOptions.layout.padding = { top: 2, left: 2, right: 2, bottom: 2 };
+        chartOptions.scales.x.ticks = Object.assign({}, chartOptions.scales.x.ticks || {}, { display: true, padding: 4, maxTicksLimit: 10 });
+        chartOptions.scales.x.title = Object.assign({}, chartOptions.scales.x.title || {}, { display: true, text: 'Date' });
+        chartOptions.layout.padding = { top: 2, left: 2, right: 2, bottom: 24 };
         chartOptions.plugins.legend = { display: false };
         chartOptions.plugins.tooltip = Object.assign({}, chartOptions.plugins.tooltip, { enabled: true });
 
@@ -3308,11 +3427,16 @@
         // Convert to screen coordinates
         const screenX = rect.left + xPx - 4;
         const screenY = rect.top + yPx;
-        const chartTop = rect.top + chartArea.top;
-        const chartBottom = rect.top + chartArea.bottom;
+        var chartTop = rect.top + chartArea.top;
+        var chartBottom = rect.top + chartArea.bottom;
         const chartLeft = rect.left + chartArea.left;
         const chartRight = rect.left + chartArea.right;
-        
+        // Symptom chart: extend line over Clinical state and Substance use strips
+        if (chart.config._configKey === 'symptoms') {
+            var activeSubsCount = (rawData.substances && rawData.substances.length) ? [...new Set((rawData.substances || []).map(function(s) { return s.substance; }))].length : 0;
+            chartTop = rect.top;
+            chartBottom = rect.top + chartArea.bottom + 30 + (activeSubsCount * SUBSTANCE_STRIP_H);
+        }
         
         // Create overlay container (full viewport)
         const overlay = document.createElement('div');
@@ -3322,7 +3446,7 @@
         overlay.style.width = '100vw';
         overlay.style.height = '100vh';
         
-        // Vertical line (from top of chart to bottom)
+        // Vertical line (from top of chart to bottom; for symptom chart includes Clinical state + Substance strips)
         const vLine = document.createElement('div');
         vLine.className = 'crosshair-line-v';
         vLine.style.left = screenX + 'px';
@@ -3337,13 +3461,19 @@
         dot.style.top = screenY + 'px';
         overlay.appendChild(dot);
         
-        // Date label at bottom (where vertical line meets x-axis)
+        // Date label: always below Adherence strip (whether hovering symptom, substance, or adherence)
         const dateLabel = document.createElement('div');
         dateLabel.className = 'crosshair-label';
         const d = new Date(dateStr);
         dateLabel.textContent = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
         dateLabel.style.left = screenX + 'px';
-        dateLabel.style.top = (chartBottom + 8) + 'px';
+        const adWrap = document.getElementById('adherence-strip-wrap');
+        if (adWrap) {
+            const r = adWrap.getBoundingClientRect();
+            dateLabel.style.top = (r.bottom + 8) + 'px';
+        } else {
+            dateLabel.style.top = (chartBottom + 8) + 'px';
+        }
         dateLabel.style.transform = 'translateX(-50%)';
         overlay.appendChild(dateLabel);
         
@@ -3615,6 +3745,15 @@
         const chartTop = rect.top + chart.chartArea.top;
         const chartBottom = rect.top + chart.chartArea.bottom;
         const chartRight = rect.left + chart.chartArea.right;
+        // Symptom chart: extend crosshair over Clinical state strip (top) and Substance use strips (bottom)
+        var vLineTop = chartTop;
+        var vLineHeight = chartBottom - chartTop;
+        if (chart.config._configKey === 'symptoms') {
+            var activeSubsCount = (rawData.substances && rawData.substances.length) ? [...new Set((rawData.substances || []).map(function(s) { return s.substance; }))].length : 0;
+            var substanceStripBottom = chart.chartArea.bottom + 30 + (activeSubsCount * SUBSTANCE_STRIP_H);
+            vLineTop = rect.top;
+            vLineHeight = substanceStripBottom;
+        }
         clearLiveCrosshair();
         // --- Primary overlay (hovered chart) ---
         liveCrosshairOverlay = document.createElement('div');
@@ -3622,14 +3761,20 @@
         liveCrosshairOverlay.style.cssText = 'left:0;top:0;width:100vw;height:100vh;pointer-events:none;';
         const vLine = document.createElement('div');
         vLine.className = 'crosshair-line-v';
-        vLine.style.cssText = 'left:' + screenX + 'px;top:' + chartTop + 'px;height:' + (chartBottom - chartTop) + 'px;';
+        vLine.style.cssText = 'left:' + screenX + 'px;top:' + vLineTop + 'px;height:' + vLineHeight + 'px;';
         liveCrosshairOverlay.appendChild(vLine);
         const isMeds = chart.config._configKey === 'meds' || chart.config._configKey === 'symptomsAdherence' || (nearestResult && nearestResult.isMeds);
         const valueSuffix = isMeds ? ' mg' : '';
         const dateLabel = document.createElement('div');
         dateLabel.className = 'crosshair-label';
         dateLabel.textContent = (xVal != null ? new Date(xVal).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');
-        dateLabel.style.cssText = 'left:' + screenX + 'px;top:' + (chartBottom + 8) + 'px;transform:translateX(-50%);';
+        var dateTop = chartBottom + 8;
+        var adWrap = document.getElementById('adherence-strip-wrap');
+        if (adWrap && (chart.config._configKey === 'symptoms' || chart.config._configKey === 'symptomsAdherence')) {
+            var r = adWrap.getBoundingClientRect();
+            dateTop = r.bottom + 8;
+        }
+        dateLabel.style.cssText = 'left:' + screenX + 'px;top:' + dateTop + 'px;transform:translateX(-50%);';
         const valueLabel = document.createElement('div');
         valueLabel.className = 'crosshair-label';
         valueLabel.textContent = (yVal != null && typeof yVal === 'number' && Number.isFinite(yVal) ? yVal.toFixed(1) : '') + valueSuffix;
@@ -3648,6 +3793,11 @@
             var pScreenX = pRect.left + pXPx - 4;
             var pTop = pRect.top + pairedChart.chartArea.top;
             var pBottom = pRect.top + pairedChart.chartArea.bottom;
+            if (pairedChart.config._configKey === 'symptoms') {
+                var pActiveSubs = (rawData.substances && rawData.substances.length) ? [...new Set((rawData.substances || []).map(function(s) { return s.substance; }))].length : 0;
+                pTop = pRect.top;
+                pBottom = pRect.top + pairedChart.chartArea.bottom + 30 + (pActiveSubs * SUBSTANCE_STRIP_H);
+            }
             liveCrosshairOverlayMirror = document.createElement('div');
             liveCrosshairOverlayMirror.className = 'crosshair-overlay active';
             liveCrosshairOverlayMirror.style.cssText = 'left:0;top:0;width:100vw;height:100vh;pointer-events:none;';
@@ -4039,7 +4189,7 @@ function adjustDuration(input, delta) {
                 </div>
                 <div class="duration-adjust-wrap" style="display: flex; align-items: center; gap: 2px; flex: none;">
                         <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
-                        <input type="text" list="duration-options-list" name="med_duration[]" placeholder="Dur" style="width: 80px; padding: 8px;" oninput="updateDurationOptions(this)">
+                        <input type="text" list="duration-options-list" name="med_duration[]" placeholder="Dur (required)" required style="width: 80px; padding: 8px;" oninput="updateDurationOptions(this)">
                         <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
                     </div>
                 <div style="display:flex; gap:5px; flex:none; align-items: center;">

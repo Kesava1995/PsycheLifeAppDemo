@@ -137,7 +137,7 @@
             </div>
             <div class="duration-adjust-wrap" style="display:flex; align-items:center; gap:2px; flex:1; min-width:100px;">
                 <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
-                <input type="text" list="duration-options-list" name="med_duration[]" value="{{ entry.duration_text or '' }}" style="flex:1; min-width:70px;" oninput="updateDurationOptions(this)">
+                <input type="text" list="duration-options-list" name="med_duration[]" value="{{ entry.duration_text or '' }}" placeholder="Duration (required)" required style="flex:1; min-width:70px;" oninput="updateDurationOptions(this)">
                 <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
             </div>
             
@@ -180,7 +180,7 @@
 
         <main class="main-content">
             <div class="visit-card">
-                <form method="POST">
+                <form method="POST" id="visitForm" onsubmit="return validateDurationRequired(this);">
                     <h3>Follow-up Visit - {{ patient.name }}</h3>
                     <div style="margin-bottom:20px;">
                         <label>Visit Date</label>
@@ -432,7 +432,7 @@
                                     <input type="text" name="side_effect_name[]" value="{{ entry.side_effect_name }}" style="flex:1.5;">
                                     <input type="hidden" name="side_effect_onset[]" value="{{ entry.score_onset }}"><input type="hidden" name="side_effect_progression[]" value="{{ entry.score_progression }}">
                                     <div class="sliders-container"><div class="slider-group" style="grid-column: span 3;"><label>Current Severity</label><div class="slider-wrapper"><input type="range" name="side_effect_current[]" min="0" max="10" value="{{ entry.score_current|int }}" oninput="updVal(this)"><span class="slider-val">{{ entry.score_current|int }}</span></div></div></div>
-                                    <input type="text" list="duration-options-list" name="side_effect_duration[]" placeholder="Duration" style="flex:0.5; min-width:100px;" oninput="updateDurationOptions(this)">
+                                    <input type="text" list="duration-options-list" name="side_effect_duration[]" placeholder="Duration (required)" required style="flex:0.5; min-width:100px;" oninput="updateDurationOptions(this)">
                                     <button type="button" class="note-btn" onclick="toggleNote(this)">📝</button>
                                     <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button>
                                 </div>
@@ -1518,7 +1518,7 @@
                     </div>
                     <div class="duration-adjust-wrap" style="display:flex; align-items:center; gap:2px; flex:1; min-width:100px;">
                         <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
-                        <input type="text" list="duration-options-list" name="med_duration[]" placeholder="Duration" style="flex:1; min-width:70px;" oninput="updateDurationOptions(this)">
+                        <input type="text" list="duration-options-list" name="med_duration[]" placeholder="Duration (required)" required style="flex:1; min-width:70px;" oninput="updateDurationOptions(this)">
                         <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
                     </div>
                     <div style="display:flex; gap:5px; flex:none;">
@@ -1556,9 +1556,9 @@
                 if (isMSE) {
                     durationHTML = `<input type="hidden" name="mse_onset[]" value=""><input type="hidden" name="mse_progression[]" value=""><input type="hidden" name="mse_duration[]" value="">`;
                 } else if (prefix === 'symptom') {
-                    durationHTML = `<label class="symptom-select-label" style="display:flex; align-items:center; gap:4px; font-size:12px; white-space:nowrap;"><input type="checkbox" class="symptom-apply-select" title="Select for Apply Selected"> Select</label><div class="duration-adjust-wrap" style="display:flex; align-items:center; gap:2px; flex:1; min-width:100px;"><button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button><input type="text" list="duration-options-list" name="symptom_duration[]" placeholder="Duration" style="flex:1; min-width:70px;" oninput="updateDurationOptions(this)"><button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button></div>`;
+                    durationHTML = `<label class="symptom-select-label" style="display:flex; align-items:center; gap:4px; font-size:12px; white-space:nowrap;"><input type="checkbox" class="symptom-apply-select" title="Select for Apply Selected"> Select</label><div class="duration-adjust-wrap" style="display:flex; align-items:center; gap:2px; flex:1; min-width:100px;"><button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button><input type="text" list="duration-options-list" name="symptom_duration[]" placeholder="Duration (required)" required style="flex:1; min-width:70px;" oninput="updateDurationOptions(this)"><button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button></div>`;
                 } else {
-                    durationHTML = `<input type="text" list="duration-options-list" name="${prefix}_duration[]" placeholder="Duration" style="flex:0.5; min-width:100px;" oninput="updateDurationOptions(this)">`;
+                    durationHTML = `<input type="text" list="duration-options-list" name="${prefix}_duration[]" placeholder="Duration (required)" required style="flex:0.5; min-width:100px;" oninput="updateDurationOptions(this)">`;
                 }
                 contentHTML = `<div class="row-flex" style="align-items:center;">${inputName}${slidersHTML}${durationHTML}<button type="button" class="note-btn" onclick="toggleNote(this)">📝</button><button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button></div>`;
             }
@@ -1621,6 +1621,26 @@
                 var cb = wrap.querySelector('.symptom-apply-select');
                 if (cb && cb.checked) { var inp = wrap.querySelector('input[name="symptom_duration[]"]'); if (inp) inp.value = val; }
             });
+        }
+        function validateDurationRequired(form) {
+            var missing = [];
+            var hasEmpty = false;
+            form.querySelectorAll('input[name="symptom_duration[]"]').forEach(function(inp) {
+                if (inp.type === 'text' && inp.offsetParent && !(inp.value || '').trim()) hasEmpty = true;
+            });
+            if (hasEmpty) missing.push('Symptoms');
+            hasEmpty = false;
+            form.querySelectorAll('input[name="med_duration[]"]').forEach(function(inp) {
+                if (inp.offsetParent && !(inp.value || '').trim()) hasEmpty = true;
+            });
+            if (hasEmpty) missing.push('Medications');
+            hasEmpty = false;
+            form.querySelectorAll('input[name="side_effect_duration[]"]').forEach(function(inp) {
+                if (inp.offsetParent && !(inp.value || '').trim()) hasEmpty = true;
+            });
+            if (hasEmpty) missing.push('Side effects');
+            if (missing.length) { alert('Please fill Duration (required) for: ' + missing.join(', ')); return false; }
+            return true;
         }
         function addSymptom() {
             document.getElementById('symptoms-container').insertAdjacentHTML('beforeend', createRowHTML('symptom'));

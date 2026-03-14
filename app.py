@@ -1358,8 +1358,10 @@ def process_visit_form_data(visit, form_data):
     
     # Helper for Duration (Single Field Now)
     def get_duration(index, prefix):
-        # Reads 'symptom_duration[]' list directly
+        # Prefer 'symptom_duration[]' / 'side_effect_duration[]' etc.; fallback to 'duration_text[]' for compatibility
         dur_list = form_data.getlist(f'{prefix}_duration[]')
+        if not dur_list and prefix == 'symptom':
+            dur_list = form_data.getlist('duration_text[]')
         return dur_list[index] if index < len(dur_list) else ""
 
     # 1. Stressors (Phase 2) – from modal JSON
@@ -1660,12 +1662,13 @@ def process_visit_form_data(visit, form_data):
         )
         db.session.add(profile)
 
-    # 8. Substance Use History (no date fields; "Usually: Since X" stored in note)
+    # 8. Substance Use History; dates computed from duration (e.g. "Since 12 days") when provided
     sub_names = form_data.getlist('substance_name[]')
     sub_patterns = form_data.getlist('substance_pattern[]')
-    sub_usually = form_data.getlist('substance_usually[]')  # e.g. "Since 5 years"
+    sub_usually = form_data.getlist('substance_usually[]')  # e.g. "Since 5 years" or "12 days"
     sub_notes = form_data.getlist('substance_note[]')
     SubstanceUseEntry.query.filter_by(visit_id=visit.id).delete()
+    visit_date = visit.date
     for i, name in enumerate(sub_names):
         if name.strip():
             usually = (sub_usually[i] or '').strip() if i < len(sub_usually) else ''
@@ -1675,14 +1678,21 @@ def process_visit_form_data(visit, form_data):
                 note_parts.append('Usually: ' + usually)
             if extra_note:
                 note_parts.append(extra_note)
-            note_str = ' | '.join(note_parts)
+            note_str = ' | '.join(note_parts) if note_parts else None
+            start_date = None
+            end_date = None
+            if usually:
+                delta = parse_duration(usually)
+                if delta:
+                    start_date = visit_date - delta
+                    end_date = visit_date
             db.session.add(SubstanceUseEntry(
                 visit_id=visit.id,
                 substance_name=name,
                 pattern=sub_patterns[i] if i < len(sub_patterns) else 'Occasional',
-                start_date=None,
-                end_date=None,
-                note=note_str or None
+                start_date=start_date,
+                end_date=end_date,
+                note=note_str
             ))
 
 
@@ -2456,11 +2466,21 @@ def prepare_chart_data(patient_id: int) -> dict:
                 'date': calc_event_date(visit.date, me.duration)
             })
         for su in getattr(visit, 'substance_use_entries', []):
+            start_str = su.start_date.strftime('%Y-%m-%d') if su.start_date else None
+            end_str = su.end_date.strftime('%Y-%m-%d') if su.end_date else None
+            if not start_str or not end_str:
+                dur = parse_duration(su.note or '')
+                if dur:
+                    start_d = visit.date - dur
+                    if not start_str:
+                        start_str = start_d.strftime('%Y-%m-%d')
+                    if not end_str:
+                        end_str = str_date
             substances_data.append({
                 'substance': su.substance_name,
                 'pattern': su.pattern or 'Occasional',
-                'start_date': su.start_date.strftime('%Y-%m-%d') if su.start_date else str_date,
-                'end_date': su.end_date.strftime('%Y-%m-%d') if su.end_date else str_date,
+                'start_date': start_str or str_date,
+                'end_date': end_str or str_date,
                 'note': su.note or ''
             })
 
@@ -2563,14 +2583,18 @@ def life_chart(patient_id):
 
     def build_clinical_points(entry, v_date, type_lbl):
         pts = []
-        days = get_days(getattr(entry, 'duration_text', '')) or get_days(getattr(entry, 'duration', ''))
-        # First-time: duration present → use Onset, Progression, Current. Subsequently: no duration → visit date only (Current).
+        dur_text = getattr(entry, 'duration_text', None) or getattr(entry, 'duration', None) or ''
+        days = get_days(dur_text)
+        # If onset/progression scores exist but duration is missing, use default so all three points are shown
+        has_onset_or_prog = (entry.score_onset is not None) or (entry.score_progression is not None)
+        if days <= 0 and has_onset_or_prog:
+            days = 14  # default duration in days so onset/progression get a date range
         if days > 0:
-            start = v_date - timedelta(days=days)
+            start = v_date - timedelta(days=days)  # Onset = visit date - duration (e.g. 12 days ago)
             if entry.score_onset is not None:
                 pts.append({'x': start.strftime('%Y-%m-%d'), 'y': entry.score_onset, 'detail': f"{type_lbl} Onset", 'phase': 'Onset'})
             if entry.score_progression is not None:
-                mid = start + timedelta(days=days/2)
+                mid = start + timedelta(days=days // 2)  # Progression = onset + half duration (e.g. 6 days ago)
                 pts.append({'x': mid.strftime('%Y-%m-%d'), 'y': entry.score_progression, 'detail': f"{type_lbl} Progression", 'phase': 'Progression'})
         if entry.score_current is not None:
             pts.append({'x': v_date.strftime('%Y-%m-%d'), 'y': entry.score_current, 'detail': f"{type_lbl} Current", 'phase': 'Current'})
@@ -2644,11 +2668,28 @@ def life_chart(patient_id):
                 'date': calc_event_date(v.date, me.duration)
             })
         for su in getattr(v, 'substance_use_entries', []):
+            start_str = su.start_date.strftime('%Y-%m-%d') if su.start_date else None
+            end_str = su.end_date.strftime('%Y-%m-%d') if su.end_date else None
+            # If no dates stored, compute from duration in note (e.g. "Usually: Since 12 days" or "Since 5 years")
+            if not start_str or not end_str:
+                dur = parse_duration(su.note or '')
+                if dur:
+                    v_d = v.date
+                    start_d = v_d - dur
+                    end_d = v_d
+                    if not start_str:
+                        start_str = start_d.strftime('%Y-%m-%d')
+                    if not end_str:
+                        end_str = end_d.strftime('%Y-%m-%d')
+            if not start_str:
+                start_str = v_date_str
+            if not end_str:
+                end_str = v_date_str
             substances_data.append({
                 'substance': su.substance_name,
                 'pattern': su.pattern or 'Occasional',
-                'start_date': su.start_date.strftime('%Y-%m-%d') if su.start_date else v_date_str,
-                'end_date': su.end_date.strftime('%Y-%m-%d') if su.end_date else v_date_str,
+                'start_date': start_str,
+                'end_date': end_str,
                 'note': su.note or ''
             })
 
@@ -2852,14 +2893,17 @@ def preview_lifechart(patient_id):
 
     def build_clinical_points(entry, v_date, type_lbl):
         pts = []
-        days = get_days(getattr(entry, 'duration_text', '')) or get_days(getattr(entry, 'duration', ''))
-        # First-time: duration present → Onset, Progression, Current. Subsequently: no duration → visit date only (Current).
+        dur_text = getattr(entry, 'duration_text', None) or getattr(entry, 'duration', None) or ''
+        days = get_days(dur_text)
+        has_onset_or_prog = (hasattr(entry, 'score_onset') and entry.score_onset is not None) or (hasattr(entry, 'score_progression') and entry.score_progression is not None)
+        if days <= 0 and has_onset_or_prog:
+            days = 14
         if days > 0:
             start = v_date - timedelta(days=days)
             if hasattr(entry, 'score_onset') and entry.score_onset is not None:
                 pts.append({'x': start.strftime('%Y-%m-%d'), 'y': float(entry.score_onset), 'phase': 'Onset'})
             if hasattr(entry, 'score_progression') and entry.score_progression is not None:
-                mid = start + timedelta(days=days/2)
+                mid = start + timedelta(days=days // 2)
                 pts.append({'x': mid.strftime('%Y-%m-%d'), 'y': float(entry.score_progression), 'phase': 'Progression'})
         if hasattr(entry, 'score_current') and entry.score_current is not None:
             pts.append({'x': v_date.strftime('%Y-%m-%d'), 'y': float(entry.score_current), 'phase': 'Current'})
