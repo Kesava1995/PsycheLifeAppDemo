@@ -29,14 +29,29 @@
     }
 
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: Arial, sans-serif; background-color: #f4f6f9; overflow-x: hidden; transition: 0.3s; }
+    body { margin: 0; font-family: Arial, sans-serif; background-color: #f5f5f5; overflow-x: hidden; transition: 0.3s; }
 
     .topbar { position: fixed; width: 100%; top: 0; left: 0; z-index: 3000; height: 60px; background: white; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
     .top-left { display: flex; align-items: center; gap: 15px; }
     .logo { height: 40px; }
     .hamburger { font-size: 24px; cursor: pointer; padding: 5px; }
-    .top-right { display: flex; align-items: center; gap: 25px; }
-    .top-search { padding: 8px 12px; width: 220px; border-radius: 6px; border: 1px solid #ccc; }
+    .top-right { display: flex; align-items: center; gap: 16px; }
+    .top-search-wrap { position: relative; display: flex; align-items: center; }
+    .top-search-icon { position: absolute; left: 12px; pointer-events: none; color: #888; }
+    .top-search { padding: 8px 12px 8px 38px; width: 220px; border-radius: 20px; border: 1px solid #e0e0e0; background: #fafafa; font-size: 14px; transition: border-color 0.2s, background 0.2s; }
+    .top-search:focus { outline: none; border-color: #2c7be5; background: #fff; }
+    .top-search::placeholder { color: #999; }
+    .topbar-dark-toggle { background: none; border: none; cursor: pointer; padding: 6px; color: #555; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+    .topbar-dark-toggle:hover { color: #2c7be5; background: #f0f4f9; }
+    .topbar-dark-toggle .icon-sun { color: #eab308; }
+    body.dark-mode .topbar-dark-toggle .icon-moon { display: none; }
+    body.dark-mode .topbar-dark-toggle .icon-sun { display: block !important; }
+    .plus-menu-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 4px 10px; line-height: 1; color: #2c3e50; }
+    .topbar-plus-btn { width: 40px; height: 40px; padding: 0; border-radius: 10px; background: #14b8a6; color: #fff; font-size: 22px; font-weight: 300; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+    .topbar-plus-btn:hover { background: #0d9488; color: #fff; }
+    .bell-btn { color: #555; }
+    .bell-btn:hover { color: #2c7be5; }
+    .power-badge { background: #ef4444; color: #fff; }
     .top-link { cursor: pointer; font-weight: 600; color: #2c3e50; display: flex; align-items: center; }
     .bell-icon { font-size: 20px; cursor: pointer; }
 
@@ -45,18 +60,35 @@
     .sidebar { flex: 1; min-width: 250px; }
 
     .dashboard-boxes { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
-    .box { flex: 1; min-width: 150px; background: white; padding: 20px; text-align: center; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; transition: 0.3s; display: flex; flex-direction: column; justify-content: center; }
-    .box:hover { background: #e8f0fe; transform: translateY(-2px); }
-    .highlight { background: #2c7be5; color: white; }
-    .highlight:hover { background: #1a5dc9; }
-    .small-text { font-size: 12px; margin-top: 5px; opacity: 0.9; }
+    .box { flex: 1; min-width: 160px; background: white; padding: 18px 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 14px; text-align: left; position: relative; border: 1px solid #eee; }
+    .box:hover { background: #f8fafc; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .box-with-icon .box-icon { flex-shrink: 0; width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #64748b; }
+    .box-icon-register { background: #f1f5f9; }
+    .box-icon-calendar { background: #e0f2fe; color: #0ea5e9; }
+    .box-icon-patients { background: #f1f5f9; color: #64748b; }
+    .box-icon-scales { background: #f1f5f9; color: #64748b; }
+    .box-badge { position: absolute; top: 10px; right: 12px; background: #14b8a6; color: #fff; font-size: 11px; font-weight: 600; min-width: 20px; height: 20px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; padding: 0 6px; }
+    .highlight { background: #e0f2fe; color: #0c4a6e; border-color: #7dd3fc; }
+    .highlight:hover { background: #bae6fd; }
+    .highlight .box-icon-calendar { background: #7dd3fc; color: #0369a1; }
+    .highlight .small-text { opacity: 0.95; }
+    .small-text { font-size: 12px; margin-top: 4px; opacity: 0.85; color: inherit; }
 
     table { width: 100%; background: white; border-collapse: collapse; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
     th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: center; }
-    th { background: #f1f1f1; }
-    .status-confirmed { background: #28a745; color: white; padding: 5px 10px; border-radius: 5px; }
-    .status-pending { background: #ffc107; padding: 5px 10px; border-radius: 5px; color: black; }
-    .status-postponed { background: #6c757d; color: white; padding: 5px 10px; border-radius: 5px; }
+    th { background: #f1f1f1; font-size: 11px; text-transform: uppercase; letter-spacing: 0.02em; color: #555; }
+    .status-confirmed, .status-pill.status-confirmed { background: #E7F7EC; color: #166534; padding: 5px 10px; border-radius: 14px; font-size: 12px; }
+    .status-pending, .status-pill.status-pending { background: #FFF8E5; color: #b45309; padding: 5px 10px; border-radius: 14px; font-size: 12px; }
+    .status-postponed, .status-pill.status-postponed { background: #F5EEF9; color: #6b21a8; padding: 5px 10px; border-radius: 14px; font-size: 12px; }
+    .status-pill.status-other { background: #f0f0f0; color: #555; padding: 5px 10px; border-radius: 14px; font-size: 12px; }
+    .type-pill { display: inline-block; padding: 5px 10px; border-radius: 14px; font-size: 12px; font-weight: 500; }
+    .type-pill.type-followup { background: #E6F0F6; color: #1e40af; }
+    .type-pill.type-new { background: #FEE7EE; color: #be123c; }
+    .type-pill.type-other { background: #f0f0f0; color: #333; }
+    .btn-appt-view { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #ddd; background: #fafafa; color: #333; }
+    .btn-appt-view:hover { background: #f0f0f0; color: #2c7be5; }
+    .appt-add-btn { width: 28px; height: 28px; min-width: 28px; padding: 0; font-size: 18px; line-height: 1; border-radius: 6px; border: 1px solid #A5DCFE; background: #f0f8ff; color: #2c7be5; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .appt-age-sex { font-size: 12px; color: #666; margin-top: 2px; }
     .available-slot { background: #e6f7ff; font-weight: 600; }
 
     .side-menu { position: fixed; left: -260px; top: 60px; width: 260px; height: calc(100vh - 60px); background: white; border-right: 1px solid #eaeaea; box-shadow: 2px 0 10px rgba(0,0,0,0.05); padding: 20px; transition: left 0.3s ease; z-index: 2900; display: flex; flex-direction: column; overflow-y: auto; }
@@ -83,6 +115,159 @@
     .calendar-grid div.day-header { font-weight: bold; pointer-events: none; background: transparent !important; }
     .calendar-grid div:not(.day-header):not(.empty):hover { background: #e8f0fe; }
     .active-date { background: #2c7be5; color: white !important; }
+
+    /* Calendar & Clinic Hours – compact to give more space to Notes */
+    .calendar-card {
+        background: #F8F9FA;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        padding: 10px 12px;
+        border: 1px solid #eee;
+    }
+    .calendar-header { display: none; }
+    .calendar-month {
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+    }
+    .calendar-month .calendar-nav {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #E5E7EB;
+        color: #6B7280;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: bold;
+        border: none;
+        padding: 0;
+        line-height: 1;
+    }
+    .calendar-month .calendar-nav:hover {
+        background: #D1D5DB;
+        color: #374151;
+    }
+    .calendar-month strong {
+        font-weight: 600;
+        color: #374151;
+    }
+    .calendar-grid {
+        grid-template-columns: repeat(7, 1fr);
+        gap: 2px 1px;
+        font-size: 12px;
+        text-align: center;
+    }
+    .calendar-grid .day-header {
+        font-size: 10px;
+        font-weight: 500;
+        color: #9CA3AF;
+        padding: 2px 0;
+    }
+    .calendar-grid div:not(.day-header) {
+        padding: 4px 0;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        margin: 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 400;
+        color: #374151;
+    }
+    .calendar-grid div.empty {
+        color: #D1D5DB;
+        cursor: default;
+    }
+    .calendar-grid div.active-date {
+        background: #66C2CE !important;
+        color: #fff !important;
+        font-weight: 600;
+    }
+    .calendar-grid div:not(.day-header):not(.empty):not(.active-date):hover {
+        background: #E5E7EB;
+    }
+    .calendar-grid div.calendar-day.has-event {
+        position: relative;
+    }
+    .calendar-grid div.calendar-day.has-event::after {
+        content: '';
+        position: absolute;
+        bottom: 2px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: #66C2CE;
+    }
+    .clinic-hours-section {
+        margin-top: 0;
+        padding-top: 6px;
+        border-top: 1px solid #E5E7EB;
+    }
+    .clinic-hours-title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 6px;
+    }
+    .clinic-hours-title-wrap {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .clinic-hours-title {
+        font-size: 12px;
+        font-weight: 600;
+        color: #374151;
+    }
+    .clinic-hours-edit {
+        cursor: pointer;
+        opacity: 0.7;
+        font-size: 14px;
+        color: #6B7280;
+    }
+    .clinic-hours-edit:hover { opacity: 1; color: #374151; }
+    .clinic-hours-badges {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 6px;
+        align-items: center;
+    }
+    .clinic-hours-badges .clinic-hour-badge {
+        white-space: nowrap;
+    }
+    .clinic-hour-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 5px 8px;
+        border-radius: 8px;
+        font-size: 11px;
+        color: #374151;
+        background: #EFEFEF;
+        border: 1px solid #E5E7EB;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .clinic-hour-badge:hover {
+        background: #E5E7EB;
+    }
+    .clinic-hour-badge.active {
+        background: #66C2CE;
+        color: #fff;
+        border-color: #66C2CE;
+    }
 
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 5000; }
     .modal-content { background: white; margin: 5vh auto; padding: 20px; width: 600px; max-width: 90%; max-height: 90vh; border-radius: 8px; display: flex; flex-direction: column; }
@@ -137,18 +322,30 @@
     }
 
     #notes-card {
-        flex-grow: 1; /* Automatically stretches/shrinks to fill the exact remaining space */
-        height: 0; /* Lets flex-grow handle the exact height calculation */
-        min-height: 120px; /* Prevents it from getting completely crushed */
-        margin-bottom: 0; /* Aligns the bottom perfectly with the left-side cards */
+        flex-grow: 1;
+        height: 0;
+        min-height: 120px;
+        margin-bottom: 0;
+        margin-top: 4px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
     }
+    .notes-header {
+        flex-shrink: 0;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .notes-scroll-wrap {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: #c1c1c1 transparent;
+    }
+    .notes-scroll-wrap::-webkit-scrollbar { width: 6px; }
+    .notes-scroll-wrap::-webkit-scrollbar-thumb { background-color: #c1c1c1; border-radius: 4px; }
 
-    /* Reduce Sidebar / Calendar / Buttons size (Req 3) */
-    .calendar-card { padding: 10px; }
-    .calendar-header { font-size: 14px; margin-bottom: 5px; }
-    .calendar-month { font-size: 12px; margin-bottom: 5px; }
-    .calendar-grid { gap: 2px; font-size: 11px; }
-    .calendar-grid div { padding: 4px 0; }
     .sidebar .card .button {
         width: 100%; /* Changed from 66% so the text has room */
         white-space: nowrap; /* Forces text to stay on one line each */
@@ -157,27 +354,49 @@
         margin-bottom: 8px; /* Slightly tighter spacing to reduce card height */
     }
 
-    .clinic-hours-row { display: flex; align-items: flex-start; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
-    .clinic-hours-label { font-size: 12px; font-weight: 600; color: #555; white-space: nowrap; }
-    .clinic-hour-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; margin-bottom: 6px; border: 1px solid #A5DCFE; background: #f0f8ff; transition: all 0.2s; }
-    .clinic-hour-badge:hover { background: #e0f0fe; }
-    .clinic-hour-badge.active { background: #2c7be5; color: white; border-color: #2c7be5; }
-    .clinic-hours-edit { cursor: pointer; margin-left: 4px; opacity: 0.7; font-size: 14px; }
-    .clinic-hours-edit:hover { opacity: 1; }
     .plus-menu-wrap { position: relative; display: inline-block; }
     .plus-menu-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 4px 10px; line-height: 1; color: #2c3e50; }
     .plus-menu-dropdown { display: none; position: absolute; top: 100%; right: 0; margin-top: 4px; min-width: 200px; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 3100; padding: 6px 0; border: 1px solid #eee; }
     .plus-menu-dropdown.show { display: block; }
     .plus-menu-dropdown a, .plus-menu-dropdown button { display: block; width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px; color: #333; }
     .plus-menu-dropdown a:hover, .plus-menu-dropdown button:hover { background: #f0f4f9; }
-    .notes-add-btn { background: none; border: none; font-size: 18px; cursor: pointer; padding: 2px 6px; color: #2c7be5; line-height: 1; vertical-align: middle; }
-    .notes-add-btn:hover { color: #1a5dc9; }
-    .quick-add-popover { display: none; position: absolute; background: white; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); padding: 16px; min-width: 280px; z-index: 3500; border: 1px solid #ddd; }
+    .notes-add-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #66C2CE;
+        color: #fff;
+        border: none;
+        font-size: 18px;
+        font-weight: 300;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        vertical-align: middle;
+        flex-shrink: 0;
+    }
+    .notes-add-btn:hover { background: #5ab3be; color: #fff; }
+    .notes-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .notes-header .notes-add-btn { margin-left: auto; }
+    .quick-add-popover { display: none; position: fixed; background: white; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); padding: 16px; min-width: 280px; max-width: 90vw; max-height: calc(100vh - 24px); overflow-y: auto; z-index: 3500; border: 1px solid #ddd; }
     .quick-add-popover.show { display: block; }
     body.dark-mode .plus-menu-dropdown, body.dark-mode .quick-add-popover { background: #1e1e1e; border-color: #333; }
     body.dark-mode .plus-menu-dropdown a, body.dark-mode .plus-menu-dropdown button { color: #ddd; }
-    body.dark-mode .clinic-hour-badge { background: #2a2a2a; border-color: #555; color: #ddd; }
-    body.dark-mode .clinic-hour-badge.active { background: #2c7be5; color: white; }
+    body.dark-mode .calendar-card { background: #1f2937; border-color: #374151; }
+    body.dark-mode .calendar-month .calendar-nav { background: #374151; color: #9ca3af; }
+    body.dark-mode .calendar-month .calendar-nav:hover { background: #4b5563; color: #e5e7eb; }
+    body.dark-mode .calendar-month strong { color: #e5e7eb; }
+    body.dark-mode .calendar-grid div:not(.day-header) { color: #e5e7eb; }
+    body.dark-mode .calendar-grid div.empty { color: #4b5563; }
+    body.dark-mode .calendar-grid div:not(.day-header):not(.empty):not(.active-date):hover { background: #374151; }
+    body.dark-mode .clinic-hours-section { border-top-color: #374151; }
+    body.dark-mode .clinic-hours-title { color: #e5e7eb; }
+    body.dark-mode .clinic-hour-badge { background: #374151; border-color: #4b5563; color: #e5e7eb; }
+    body.dark-mode .clinic-hour-badge:hover { background: #4b5563; }
+    body.dark-mode .clinic-hour-badge.active { background: #66C2CE; color: #fff; border-color: #66C2CE; }
 
     .delete-appt-btn { background: transparent; border: none; cursor: pointer; margin-left: 8px; padding: 4px; vertical-align: middle; }
     .delete-appt-btn:hover svg { fill: #c0392b; }
@@ -238,6 +457,78 @@
 
     #appointments-table.selecting-mode .appointment-row { cursor: pointer; transition: background-color 0.2s; }
     #appointments-table.selecting-mode .appointment-row:hover { background-color: #f0f4ff; outline: 1px solid #a5dcfe; }
+
+    /* Today's Notes as cards (pastel blue-green bg, ref image) */
+    .notes-cards-wrap { display: flex; flex-direction: column; gap: 12px; margin-bottom: 0; }
+    .note-card {
+        background: #EAF5F7;
+        border: 1px solid #BCDCE4;
+        border-radius: 10px;
+        padding: 14px 16px;
+        box-shadow: none;
+        transition: border-color 0.2s;
+    }
+    .note-card:hover { border-color: #9ECDD6; }
+    .note-card-content {
+        font-size: 14px;
+        color: #32444B;
+        line-height: 1.5;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+    .note-card-meta {
+        font-size: 12px;
+        color: #7B99A3;
+        margin-top: 8px;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+    .note-card-time { font-size: 12px; color: #7B99A3; margin-top: 8px; }
+    .note-card-empty { color: #7B99A3; font-style: italic; font-size: 14px; }
+    .note-card { position: relative; }
+    .note-card-delete {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 28px;
+        height: 28px;
+        border: none;
+        border-radius: 6px;
+        background: transparent;
+        color: #7B99A3;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        padding: 0;
+    }
+    .note-card:hover .note-card-delete { opacity: 1; }
+    .note-card-delete:hover { background: rgba(0,0,0,0.08); color: #c53030; }
+    body.dark-mode .note-card-delete { color: #9ca3af; }
+    body.dark-mode .note-card-delete:hover { background: rgba(255,255,255,0.1); color: #fc8181; }
+    body.dark-mode .note-card { background: #1e2d31; border-color: #3a5a5e; }
+    body.dark-mode .note-card-content { color: #e0e0e0; }
+    body.dark-mode .note-card-meta, body.dark-mode .note-card-time { color: #9ca3af; }
+
+    /* My Patients table */
+    .patient-cell { display: flex; align-items: center; gap: 10px; }
+    .patient-avatar { width: 36px; height: 36px; border-radius: 50%; background: #2c7be5; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+    .patient-name-link { font-weight: 600; color: #1a1a1a; text-decoration: none; }
+    .patient-name-link:hover { color: #2c7be5; text-decoration: underline; }
+    .patient-visits { font-size: 12px; color: #888; margin-top: 2px; }
+    .dx-pill { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; background: #f0f0f0; color: #333; }
+    .dx-pill.dx-n/a, .dx-pill.dx- { background: #f0f0f0; color: #666; }
+    .dx-major-depressive-disorder, .dx-bipolar-disorder-type-i { background: #fee2e2; color: #b91c1c; }
+    .dx-generalised-anxiety-disorder { background: #dcfce7; color: #166534; }
+    .dx-under-evaluation { background: #dbeafe; color: #1d4ed8; }
+    .dx-obsessive-compulsive-disorder { background: #f3e8ff; color: #6b21a8; }
+    .dx-schizophrenia, .dx-post-traumatic-stress-disorder, .dx-schizophrenia-undifferentiated { background: #e5e7eb; color: #374151; }
+    .dx-post-traumatic-stress-disorder { background: #dbeafe; color: #1e40af; }
+    .btn-lifechart, .btn-followup { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; border: 1px solid #A5DCFE; background: #f0f8ff; color: #2c7be5; margin-right: 6px; }
+    .btn-lifechart:hover, .btn-followup:hover { background: #e0f0fe; }
+    .btn-view-details { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; border: 1px solid #ddd; background: #fafafa; color: #555; text-decoration: none; font-size: 14px; }
+    .btn-view-details:hover { background: #f0f0f0; color: #2c7be5; }
 </style>
 </head>
 <body>
@@ -289,14 +580,18 @@
     </div>
 
     <div class="top-right">
-        <!-- <input type="text" class="top-search" placeholder="Search Patients" list="patient-list" onchange="handlePatientSearch(this.value)"> -->
-        
-        <button onclick="toggleDarkMode(!document.body.classList.contains('dark-mode'))" title="Toggle Dark Mode" style="background:none; border:none; font-size: 22px; cursor:pointer; margin-right: 15px;">
-            🌓
+        <div class="top-search-wrap">
+            <svg class="top-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" class="top-search" placeholder="Search patients..." list="patient-list" onchange="handlePatientSearch(this.value)" id="topbar-patient-search">
+        </div>
+
+        <button type="button" class="topbar-dark-toggle" id="topbar-dark-toggle" onclick="toggleDarkMode(!document.body.classList.contains('dark-mode'))" title="Toggle Dark Mode" aria-label="Toggle dark mode">
+            <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <svg class="icon-sun hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         </button>
 
         <div class="plus-menu-wrap">
-            <button type="button" class="plus-menu-btn" id="topbar-plus-btn" title="Add">+</button>
+            <button type="button" class="plus-menu-btn topbar-plus-btn" id="topbar-plus-btn" title="Add">+</button>
             <div class="plus-menu-dropdown" id="topbar-plus-menu" onclick="event.stopPropagation();">
                 <button type="button" onclick="document.getElementById('noteModal').style.display='block'; document.getElementById('topbar-plus-menu').classList.remove('show');">Note / Reminder</button>
                 <a href="{{ url_for('first_visit') }}">New patient Registration</a>
@@ -305,9 +600,9 @@
             </div>
         </div>
 
-        <div id="bell-btn" class="notification-wrapper notif-icon-wrapper" style="position: relative; cursor: pointer; margin-right: 20px; display: flex; align-items: center;" title="Notifications">
-            <button type="button" class="bell-btn" style="padding: 0; border: none; background: none; cursor: pointer; display: flex;">
-                <svg id="notif-bell" width="22" height="22" viewBox="0 0 448 512" fill="#7ebacc" xmlns="http://www.w3.org/2000/svg">
+        <div id="bell-btn" class="notification-wrapper notif-icon-wrapper" title="Notifications">
+            <button type="button" class="bell-btn" style="padding: 0; border: none; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <svg id="notif-bell" width="22" height="22" viewBox="0 0 448 512" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                     <path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v118.8c0 47-17.3 92-48.4 127.6l-7.4 8.3c-8.4 9.4-10.4 22.9-5.3 34.4S19.4 512 32 512H416c12.6 0 24-7.4 29.1-18.9s3.1-25-5.3-34.4l-7.4-8.3C401.3 418.8 384 373.8 384 326.8V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm45.3 493.3c12-12 18.7-28.3 18.7-45.3H160c0 17 6.7 33.3 18.7 45.3s28.3 18.7 45.3 18.7s33.3-6.7 45.3-18.7z"/>
                 </svg>
             </button>
@@ -325,33 +620,51 @@
 <div class="container">
     <div class="main-content">
         <div class="dashboard-boxes">
-            <div class="box" onclick="window.location.href='{{ url_for('first_visit') }}'">
-                <strong>New Patient Registration</strong>
+            <div class="box box-with-icon" onclick="window.location.href='{{ url_for('first_visit') }}'">
+                <span class="box-icon box-icon-register" aria-hidden="true">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                </span>
+                <div><strong>New Patient Registration</strong><div class="small-text">Click to view →</div></div>
             </div>
-            <div class="box highlight" onclick="switchView('appointments')">
-                <strong>Today's Appointments</strong>
-                <div class="small-text">{{ appointments|length }} Scheduled</div>
+            <div class="box highlight box-with-icon" data-view="appointments" id="box-appointments" onclick="switchView('appointments')">
+                <span class="box-icon box-icon-calendar" aria-hidden="true">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                </span>
+                <div><strong>Today's Appointments</strong><div class="small-text">{{ appointments|length }} scheduled · Currently viewing →</div></div>
+                {% if appointments|length > 0 %}<span class="box-badge">{{ appointments|length }}</span>{% endif %}
             </div>
-            <div class="box" onclick="switchView('patients')"><strong>My Patients ({{ num_patients }})</strong></div>
-            <div class="box" onclick="openScalesModal()"><strong>Scales</strong></div>
+            <div class="box box-with-icon" data-view="patients" id="box-patients" onclick="switchView('patients')">
+                <span class="box-icon box-icon-patients" aria-hidden="true">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </span>
+                <div><strong>My Patients</strong><div class="small-text">{{ num_patients }} total registered · Click to view →</div></div>
+                {% if num_patients > 0 %}<span class="box-badge">{{ num_patients }}</span>{% endif %}
+            </div>
+            <div class="box box-with-icon" onclick="openScalesModal()">
+                <span class="box-icon box-icon-scales" aria-hidden="true">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                </span>
+                <div><strong>Scales</strong><div class="small-text">Click to view →</div></div>
+            </div>
         </div>
 
         <div class="card scrollable-card" id="appointments-view">
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px;">
-                <h3 style="margin: 0;">Appointments for <span id="display-date">{{ target_date.strftime('%d-%b-%Y') }}</span></h3>
-                <button type="button" title="Schedule Appointment" style="width: 28px; height: 28px; min-width: 28px; padding: 0; font-size: 18px; line-height: 1; border-radius: 6px; border: 1px solid #A5DCFE; background: #f0f8ff; color: #2c7be5; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;" onclick="document.getElementById('appointmentModal').style.display='block'; document.getElementById('topbar-plus-menu').classList.remove('show'); if(typeof refreshSlotsForModal === 'function') refreshSlotsForModal();">+</button>
+                <h3 style="margin: 0;"><span id="display-date">{{ target_date.strftime('%A %d %B, %Y') }}</span></h3>
+                <span style="font-size: 13px; color: #666;"><span id="appt-summary">{{ appointments|length }}</span> scheduled · <span id="appt-remaining">—</span> remaining</span>
+                <button type="button" title="Schedule Appointment" class="appt-add-btn" onclick="document.getElementById('appointmentModal').style.display='block'; document.getElementById('topbar-plus-menu').classList.remove('show'); if(typeof refreshSlotsForModal === 'function') refreshSlotsForModal();">+</button>
             </div>
-            <table id="appointments-table">
+            <table id="appointments-table" class="dashboard-table appointments-table">
                 <thead>
                 <tr>
-                    <th>Time</th>
-                    <th>Name</th>
-                    <th>Age/Sex</th>
-                    <th>Recall Cues</th>
-                    <th>Diagnosis</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th>TIME</th>
+                    <th>PATIENT</th>
+                    <th>TYPE</th>
+                    <th>STATUS</th>
+                    <th>DIAGNOSIS</th>
+                    <th>RECALL CUES</th>
+                    <th>FOLLOW-UP TYPE</th>
+                    <th>ACTION</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -359,35 +672,33 @@
                     {% for appt in appointments %}
                     {% set appt_hour = appt.start_time[:2] | int if appt.start_time and appt.start_time|length >= 2 else 0 %}
                     <tr data-appt-id="{{ appt.id }}" class="appointment-row" data-clinic-slot="{{ 'evening' if appt_hour >= 17 else 'morning' }}">
-                        <td>
-                        {{ appt.start_time[:5] if appt.start_time else '--' }} -
-                        {% if appt.start_time %}
-                            {% set h = appt.start_time[:2] | int %}
-                            {% set m = appt.start_time[3:5] | int %}
-                            {% set dur = appt.slot_duration | int %}
-                            {% set total_m = (h * 60) + m + dur %}
-                            {% set new_h = (total_m // 60) % 24 %}
-                            {% set new_m = total_m % 60 %}
-                            {{ "%02d:%02d" | format(new_h, new_m) }}
-                        {% else %}--{% endif %}
+                        <td class="col-time">
+                        {{ appt.start_time[:5] if appt.start_time else '--' }} - {% if appt.start_time %}{% set h = appt.start_time[:2] | int %}{% set m = appt.start_time[3:5] | int %}{% set dur = appt.slot_duration | int %}{% set total_m = (h * 60) + m + dur %}{% set new_h = (total_m // 60) % 24 %}{% set new_m = total_m % 60 %}{{ "%02d:%02d" | format(new_h, new_m) }}{% else %}--{% endif %}
                         </td>
-                        <td>{{ appt.name }}</td>
-                        <td>{{ appt.age }} / {{ appt.sex }}</td>
-                        
-                        <td>{{ (appt.view_details or '--')[:50] }}{% if appt.view_details and appt.view_details|length > 50 %}...{% endif %}</td>
-                        <td>{{ appt.dx or '--' }}</td>
-                        <td>{{ appt.type }}</td>
-                        <td>
-                            {% if appt.status == 'Confirmed' %}
-                                <span class="status-confirmed">{{ appt.status }}</span>
-                            {% elif appt.status == 'Pending' %}
-                                <span class="status-pending">{{ appt.status }}</span>
+                        <td class="col-patient-name">
+                            <div>{{ appt.name }}</div>
+                            <div class="appt-age-sex">{{ appt.age }}/{{ appt.sex }}</div>
+                        </td>
+                        <td class="col-type">
+                            {% if appt.type and 'Follow' in (appt.type or '') or appt.type == 'Follow-up' %}
+                            <span class="type-pill type-followup">Follow-up</span>
+                            {% elif appt.type and 'New' in (appt.type or '') %}
+                            <span class="type-pill type-new">New</span>
                             {% else %}
-                                <span class="status-postponed">{{ appt.status }}</span>
+                            <span class="type-pill type-other">{{ appt.type or '—' }}</span>
                             {% endif %}
                         </td>
-                        <td>
-                            <a href="{{ url_for('appt_details', appt_id=appt.id) }}" class="view-details-btn">View Details</a>
+                        <td class="col-status">
+                            {% if appt.status == 'Confirmed' %}<span class="status-pill status-confirmed">&#9679; {{ appt.status }}</span>
+                            {% elif appt.status == 'Pending' %}<span class="status-pill status-pending">&#9679; {{ appt.status }}</span>
+                            {% elif appt.status == 'Postponed' %}<span class="status-pill status-postponed">&#9679; {{ appt.status }}</span>
+                            {% else %}<span class="status-pill status-other">&#9679; {{ appt.status or '—' }}</span>{% endif %}
+                        </td>
+                        <td class="col-dx">{{ getattr(appt, 'dx', None) or '—' }}</td>
+                        <td class="col-recall">{{ (appt.view_details or '—')[:80] }}{% if appt.view_details and appt.view_details|length > 80 %}...{% endif %}</td>
+                        <td class="col-followup-type">{{ getattr(appt, 'follow_up_type', None) or '—' }}</td>
+                        <td class="col-action">
+                            <a href="{{ url_for('appt_details', appt_id=appt.id) }}" class="btn-appt-view">&#128065; View &#8964;</a>
                             <button type="button" class="delete-appt-btn" data-id="{{ appt.id }}" title="Delete Appointment">
                                 <span class="spinner hidden delete-spinner"></span>
                                 <svg class="trash-icon" width="16" height="16" viewBox="0 0 24 24" fill="grey"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
@@ -407,36 +718,48 @@
 
         <div class="card hidden scrollable-card" id="patients-view">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-                <h3 style="margin: 0;">My Patients Directory</h3>
-                <input type="text" id="patient-search-input" class="form-control" placeholder="Search patients..." list="patient-search-datalist" style="max-width: 240px; padding: 6px 10px;" autocomplete="off">
+                <h3 style="margin: 0;">My Patients</h3>
+                <span style="font-size: 13px; color: #666;">{{ patients|length }} registered patients</span>
+                <input type="text" id="patient-search-input" class="form-control patient-search-input" placeholder="Search patients..." list="patient-search-datalist" style="max-width: 240px; padding: 8px 12px 8px 36px; border-radius: 20px; border: 1px solid #e0e0e0;" autocomplete="off">
                 <datalist id="patient-search-datalist">
                     {% for p in patients %}
                     <option value="{{ p.name }}">
                     {% endfor %}
                 </datalist>
             </div>
-            <table id="patients-directory-table">
+            <table id="patients-directory-table" class="dashboard-table my-patients-table">
                 <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Name</th>
-                    <th>Age/Sex</th>
-                    <th>Diagnosis</th>
-                    <th>Notes</th>
-                    <th>Actions</th>
+                    <th>PATIENT</th>
+                    <th>AGE/SEX</th>
+                    <th>DIAGNOSIS</th>
+                    <th>RECALL CUES</th>
+                    <th>LAST VISIT</th>
+                    <th>ACTIONS</th>
                 </tr>
                 </thead>
                 <tbody>
                 {% for p in patients %}
                 <tr class="patient-row" data-patient-name="{{ p.name|lower }}" data-patient-diagnosis="{{ (p.diagnosis or '')|lower }}" data-patient-notes="{{ (p.note or '')|lower }}">
-                    <td>{{ p.id }}</td>
-                    <td><a href="{{ url_for('patient_detail', patient_id=p.id) }}">{{ p.name }}</a></td>
-                    <td>{{ p.age }} / {{ p.sex }}</td>
-                    <td>{{ p.diagnosis }}</td>
-                    <td>{{ p.note }}</td>
-                    <td>
-                        <a href="{{ url_for('life_chart', patient_id=p.id, view_only=1) }}" style="margin-right: 10px;">Life Chart</a>
-                        <a href="{{ url_for('add_visit', patient_id=p.id) }}">Add Follow-up</a>
+                    <td class="col-id">{{ p.id }}</td>
+                    <td class="col-patient">
+                        <div class="patient-cell">
+                            <span class="patient-avatar" title="{{ p.name }}">{% set n = p.name or '' %}{% set sp = n.split() %}{% if sp|length >= 2 %}{{ sp[0][0]|upper }}{{ sp[-1][0]|upper }}{% else %}{{ n[:2]|upper }}{% endif %}</span>
+                            <div>
+                                <a href="{{ url_for('patient_detail', patient_id=p.id) }}" class="patient-name-link">{{ p.name }}</a>
+                                <div class="patient-visits">{{ p.visit_count|default(0) }} visit{{ 's' if (p.visit_count|default(0)) != 1 else '' }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="col-age-sex">{{ p.age }} / {{ p.sex }}</td>
+                    <td class="col-diagnosis"><span class="dx-pill dx-{{ (p.diagnosis or '')|lower|replace(' ', '-')|replace('/', '-')|replace('(', '')|replace(')', '') }}">{{ p.diagnosis or '—' }}</span></td>
+                    <td class="col-recall">{{ (p.note or '—')[:60] }}{% if (p.note or '')|length > 60 %}...{% endif %}</td>
+                    <td class="col-last-visit">{{ p.last_visit|default('—') }}</td>
+                    <td class="col-actions">
+                        <a href="{{ url_for('life_chart', patient_id=p.id, view_only=1) }}" class="btn-lifechart">Lifechart</a>
+                        <a href="{{ url_for('add_visit', patient_id=p.id) }}" class="btn-followup">Follow-up</a>
+                        <a href="{{ url_for('patient_detail', patient_id=p.id) }}" class="btn-view-details" title="View Details">&#128065;</a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -447,39 +770,45 @@
 
     <div class="sidebar">
         <div class="card calendar-card">
-            <div class="calendar-header">
-                <span>Calendar</span>
-                <span class="calendar-icon">📅</span>
-            </div>
             <div class="calendar-month">
-                <span onclick="changeMonth(-1)">‹</span>
+                <button type="button" class="calendar-nav" onclick="changeMonth(-1)" aria-label="Previous month">&#8249;</button>
                 <strong id="calendar-month-year">...</strong>
-                <span onclick="changeMonth(1)">›</span>
+                <button type="button" class="calendar-nav" onclick="changeMonth(1)" aria-label="Next month">&#8250;</button>
             </div>
             <div class="calendar-grid" id="calendar-grid">
             </div>
-            <div class="clinic-hours-row" style="margin-top:10px;">
-                <div>
-                    <span class="clinic-hours-label">Clinic Hours</span>
-                    <span class="clinic-hours-edit" id="edit-clinic-hours-btn" title="Edit clinic hours">&#9998;</span>
-                </div>
-                <div style="display:flex; flex-direction:column; align-items:flex-start;">
+            <div class="clinic-hours-section">
+                <div class="clinic-hours-title-row">
+                    <span class="clinic-hours-title-wrap">
+                        <span class="clinic-hours-title">Clinic Hours</span>
+                        <span class="clinic-hours-edit" id="edit-clinic-hours-btn" title="Edit clinic hours">&#9998;</span>
+                    </span>
                     <span class="clinic-hour-badge active" id="badge-all" data-slot="all" onclick="filterAppointmentsByClinicHour('all')">All</span>
-                    <span class="clinic-hour-badge" id="badge-morning" data-slot="morning" onclick="filterAppointmentsByClinicHour('morning')">&#9728; {{ (clinic_hours.morning_display if clinic_hours is defined and clinic_hours else '9:00–5:00 PM') }}</span>
-                    <span class="clinic-hour-badge" id="badge-evening" data-slot="evening" onclick="filterAppointmentsByClinicHour('evening')">&#9789; {{ (clinic_hours.evening_display if clinic_hours is defined and clinic_hours else '5:00–10:00 PM') }}</span>
+                </div>
+                <div class="clinic-hours-badges">
+                    <span class="clinic-hour-badge" id="badge-morning" data-slot="morning" onclick="filterAppointmentsByClinicHour('morning')">&#9728; {{ (clinic_hours.morning_display if clinic_hours is defined and clinic_hours else '9:00 AM – 5:00 PM') }}</span>
+                    <span class="clinic-hour-badge" id="badge-evening" data-slot="evening" onclick="filterAppointmentsByClinicHour('evening')">&#9789; {{ (clinic_hours.evening_display if clinic_hours is defined and clinic_hours else '5:00 PM – 10:00 PM') }}</span>
                 </div>
             </div>
         </div>
 
-        <div class="card scrollable-card" id="notes-card">
-            <h4 style="margin-top:0;">Today's Notes / Reminder <button type="button" class="notes-add-btn" id="notes-add-btn" title="Add note">+</button></h4>
-            <ul style="padding-left: 20px; margin-bottom: 0;" id="notes-list">
+        <div class="card" id="notes-card">
+            <h4 class="notes-header" style="margin-top:0;">{% if target_date == today %}Today's Notes / Reminder{% else %}Notes – {{ target_date.strftime('%d %b %Y') }}{% endif %} <button type="button" class="notes-add-btn" id="notes-add-btn" title="Add note" aria-label="Add note">+</button></h4>
+            <div class="notes-scroll-wrap">
+            <div class="notes-cards-wrap" id="notes-list">
                 {% for note in notes %}
-                    <li>{{ note.content }}</li>
+                <div class="note-card" data-note-id="{{ note.id }}">
+                    <button type="button" class="note-card-delete" title="Delete note" aria-label="Delete note" data-note-id="{{ note.id }}">&#10005;</button>
+                    <div class="note-card-content">{{ note.content }}</div>
+                    <div class="note-card-meta">
+                        Added: {{ note.date.strftime('%d %b %Y') }}{% if note.created_at %} · <span class="note-time-local" data-utc="{{ note.created_at.strftime('%Y-%m-%dT%H:%M:%S') }}Z"></span>{% endif %}
+                    </div>
+                </div>
                 {% else %}
-                    <li style="color: gray; list-style-type: none; margin-left: -20px;">No notes for today.</li>
+                <div class="note-card note-card-empty">No notes for this date.</div>
                 {% endfor %}
-            </ul>
+            </div>
+            </div>
         </div>
     </div>
 </div>
@@ -982,6 +1311,12 @@ function switchView(viewName) {
         document.getElementById('patients-view').classList.remove('hidden');
     }
 
+    // Update card highlight to match active view
+    var boxAppointments = document.getElementById('box-appointments');
+    var boxPatients = document.getElementById('box-patients');
+    if (boxAppointments) boxAppointments.classList.toggle('highlight', viewName === 'appointments');
+    if (boxPatients) boxPatients.classList.toggle('highlight', viewName === 'patients');
+
     // Auto-close sidebar if open
     if(document.getElementById('sideMenu').classList.contains('active')) {
         toggleSidebar();
@@ -1029,8 +1364,18 @@ document.addEventListener('DOMContentLoaded', function() {
             var rect = notesAddBtn.getBoundingClientRect();
             quickAddPopover.style.position = 'fixed';
             quickAddPopover.style.left = Math.min(rect.left, window.innerWidth - 320) + 'px';
-            quickAddPopover.style.top = (rect.bottom + 6) + 'px';
             quickAddPopover.classList.toggle('show');
+            if (quickAddPopover.classList.contains('show')) {
+                requestAnimationFrame(function() {
+                    var popoverHeight = quickAddPopover.offsetHeight || 280;
+                    var spaceBelow = window.innerHeight - rect.bottom - 12;
+                    if (spaceBelow < popoverHeight && rect.top > popoverHeight + 12) {
+                        quickAddPopover.style.top = (rect.top - popoverHeight - 8) + 'px';
+                    } else {
+                        quickAddPopover.style.top = (rect.bottom + 8) + 'px';
+                    }
+                });
+            }
         });
     }
     document.addEventListener('click', function(e) {
@@ -1044,6 +1389,49 @@ document.addEventListener('DOMContentLoaded', function() {
     if (editClinicBtn) {
         editClinicBtn.addEventListener('click', function() {
             document.getElementById('editClinicHoursModal').style.display = 'block';
+        });
+    }
+
+    // Show note created_at in user's local timezone
+    function renderLocalTimes() {
+        document.querySelectorAll('.note-time-local').forEach(function(el) {
+            var utc = el.getAttribute('data-utc');
+            if (!utc) return;
+            try {
+                var d = new Date(utc);
+                if (isNaN(d.getTime())) return;
+                el.textContent = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+            } catch (e) {}
+        });
+    }
+    renderLocalTimes();
+
+    // Delete note (transparent button, visible on card hover)
+    var notesList = document.getElementById('notes-list');
+    if (notesList) {
+        notesList.addEventListener('click', function(e) {
+            var btn = e.target.closest('.note-card-delete');
+            if (!btn) return;
+            e.preventDefault();
+            e.stopPropagation();
+            var noteId = btn.getAttribute('data-note-id');
+            var card = btn.closest('.note-card');
+            if (!noteId || !card) return;
+            if (!confirm('Delete this note?')) return;
+            fetch('{{ url_for("delete_note") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify({ note_id: parseInt(noteId, 10) })
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.ok) {
+                    card.remove();
+                    if (typeof showToast === 'function') showToast('Note deleted.', 'success');
+                } else {
+                    if (typeof showToast === 'function') showToast(data.error || 'Failed to delete note', 'error');
+                }
+            }).catch(function() {
+                if (typeof showToast === 'function') showToast('Failed to delete note', 'error');
+            });
         });
     }
 });
@@ -1297,19 +1685,23 @@ function renderCalendar() {
     var monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     monthYear.innerText = monthNames[month] + " " + year;
 
-    grid.innerHTML = '<div class="day-header">S</div><div class="day-header">M</div><div class="day-header">T</div><div class="day-header">W</div><div class="day-header">T</div><div class="day-header">F</div><div class="day-header">S</div>';
+    grid.innerHTML = '<div class="day-header">Su</div><div class="day-header">Mo</div><div class="day-header">Tu</div><div class="day-header">We</div><div class="day-header">Th</div><div class="day-header">Fr</div><div class="day-header">Sa</div>';
 
     var firstDayIndex = new Date(year, month, 1).getDay();
     var daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    for(var i = 0; i < firstDayIndex; i++) {
+    for (var i = 0; i < firstDayIndex; i++) {
         grid.innerHTML += '<div class="empty"></div>';
     }
-
-    for(var i = 1; i <= daysInMonth; i++) {
-        var loopDate = year + '-' + String(month+1).padStart(2,'0') + '-' + String(i).padStart(2,'0');
-        var activeClass = (loopDate === targetDateStr) ? "active-date" : "";
-        grid.innerHTML += '<div class="' + activeClass + '" data-date="' + loopDate + '" onclick="handleCalendarClick(\'' + loopDate + '\', this)">' + i + '</div>';
+    for (var i = 1; i <= daysInMonth; i++) {
+        var loopDate = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(i).padStart(2, '0');
+        var activeClass = (loopDate === targetDateStr) ? 'active-date' : '';
+        grid.innerHTML += '<div class="calendar-day ' + activeClass + '" data-date="' + loopDate + '" onclick="handleCalendarClick(\'' + loopDate + '\', this)">' + i + '</div>';
+    }
+    var totalFilled = firstDayIndex + daysInMonth;
+    var trailingCount = Math.max(0, 42 - totalFilled);
+    for (var j = 0; j < trailingCount; j++) {
+        grid.innerHTML += '<div class="empty"></div>';
     }
 }
 

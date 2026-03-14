@@ -627,13 +627,10 @@ def dashboard():
     today = get_ist_now().date()
 
     # Get Patients
-    patients = Patient.query.filter_by(doctor_id=doctor_id).order_by(Patient.name).all()
+    patients = Patient.query.filter_by(doctor_id=doctor_id).order_by(Patient.id).all()
     num_patients = len(patients)
 
-    # Get Today's Notes
-    notes = DashboardNote.query.filter_by(doctor_id=doctor_id, date=today).all()
-
-    # Get Appointments for the current date
+    # Resolve target date (selected date for appointments and notes)
     target_date_str = request.args.get('date')
     if target_date_str:
         try:
@@ -643,23 +640,30 @@ def dashboard():
     else:
         target_date = today
 
+    # Notes for the selected date (so notes for 16 Mar show when viewing 16 Mar, not today)
+    notes = DashboardNote.query.filter_by(doctor_id=doctor_id, date=target_date).all()
+
     appointments = Appointment.query.filter_by(doctor_id=doctor_id, date=target_date).order_by(Appointment.start_time).all()
 
     # JSON-serializable list for JS slot calculation (id, start_time, slot_duration, name)
     appointments_for_day = [{"id": a.id, "start_time": a.start_time or "", "slot_duration": a.slot_duration or 15, "name": a.name or ""} for a in appointments]
 
-    # Prepare patient data for the table (including latest diagnosis)
+    # Prepare patient data for the table (including latest diagnosis, last visit, visit count)
     patient_data = []
     for p in patients:
-        latest_visit = Visit.query.filter_by(patient_id=p.id).order_by(Visit.date.desc()).first()
+        visits = Visit.query.filter_by(patient_id=p.id).order_by(Visit.date.desc()).all()
+        latest_visit = visits[0] if visits else None
         diagnosis = latest_visit.provisional_diagnosis if latest_visit else "N/A"
+        last_visit_date = latest_visit.date.strftime("%d %b %y") if latest_visit and getattr(latest_visit, 'date', None) else "—"
         patient_data.append({
             'id': p.id,
             'name': p.name,
             'age': p.age,
             'sex': p.sex,
             'diagnosis': diagnosis,
-            'note': p.personal_notes or "None"
+            'note': p.personal_notes or "None",
+            'last_visit': last_visit_date,
+            'visit_count': len(visits)
         })
 
     clinic_name = (doctor.clinic_name or "") if doctor else ""
@@ -675,7 +679,8 @@ def dashboard():
                            appointments_for_day=appointments_for_day,
                            top_5_patients=patients[:5],
                            clinic_name=clinic_name,
-                           clinic_hours=clinic_hours)
+                           clinic_hours=clinic_hours,
+                           getattr=getattr)
 
 
 @app.route('/api/clinic_hours', methods=['POST'])
@@ -730,6 +735,27 @@ def add_note():
         db.session.add(note)
         db.session.commit()
     return redirect(url_for('dashboard'))
+
+
+@app.route('/api/delete_note', methods=['POST'])
+@doctor_required
+def delete_note():
+    """Delete a dashboard note by id. Expects JSON body: { \"note_id\": <id> } or form note_id."""
+    doctor_id = session.get('doctor_id')
+    if request.is_json:
+        note_id = request.get_json().get('note_id')
+    else:
+        note_id = request.form.get('note_id')
+    try:
+        note_id = int(note_id)
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "error": "Invalid note id"}), 400
+    note = DashboardNote.query.filter_by(id=note_id, doctor_id=doctor_id).first()
+    if not note:
+        return jsonify({"ok": False, "error": "Note not found"}), 404
+    db.session.delete(note)
+    db.session.commit()
+    return jsonify({"ok": True})
 
 
 @app.route('/add_appointment', methods=['POST'])

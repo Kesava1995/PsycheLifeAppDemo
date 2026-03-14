@@ -77,7 +77,7 @@
         .main-content { 
             flex: 1; 
             padding: 10px 12px; 
-            overflow-y: auto;
+            overflow-y: auto; 
             overflow-x: hidden;
             display: flex;
             flex-direction: column;
@@ -175,7 +175,7 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            overflow: hidden; 
             min-height: 200px;
             min-width: 280px;
             border: 1px solid #e0e0e0;
@@ -228,7 +228,7 @@
             position: relative;
             overflow: visible;
         }
-
+        
         /* New Sticky Tooltip Style (matches standard Chart.js hover look) */
         .sticky-tooltip {
             position: fixed; 
@@ -704,20 +704,20 @@
         <i class="sb-icon">&#9664;</i>
     </button>
     <div class="sidebar-inner">
-        <div class="nav-row" style="flex-wrap: wrap; gap: 8px;">
-            {% if not guest %}
+    <div class="nav-row" style="flex-wrap: wrap; gap: 8px;">
+        {% if not guest %}
                 <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                    <a href="{{ url_for('patient_detail', patient_id=patient.id) if patient else '#' }}">← Patient Details</a>
+                <a href="{{ url_for('patient_detail', patient_id=patient.id) if patient else '#' }}">← Patient Details</a>
+            </div>
+                {% if scale_datasets %}
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <label class="switch">
+                        <input type="checkbox" id="masterScaleToggle" onchange="toggleMasterScales()">
+                        <span class="slider round"></span>
+                    </label>
+                    <span style="font-size: 0.85rem; font-weight: 600; color: #555;">Scales</span>
                 </div>
-				{% if scale_datasets %}
-				<div style="display: flex; align-items: center; gap: 6px;">
-					<label class="switch">
-						<input type="checkbox" id="masterScaleToggle" onchange="toggleMasterScales()">
-						<span class="slider round"></span>
-					</label>
-					<span style="font-size: 0.85rem; font-weight: 600; color: #555;">Scales</span>
-				</div>
-				{% endif %}
+                {% endif %}
 				<div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: 5px;">
                     <a href="{{ url_for('dashboard') }}">← Dashboard</a>
 				</div>
@@ -726,31 +726,31 @@
                 </div>
 				<div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: 5px;">
 					<a href="{{ url_for('logout') }}" style="color: red;">Logout</a>
-                </div>
-            {% else %}
-                <span style="font-weight: 600; color: #555;">Guest View</span>
-                <span style="font-size: 0.8rem; color: #888;">Read Only</span>
-            {% endif %}
-        </div>
+            </div>
+        {% else %}
+            <span style="font-weight: 600; color: #555;">Guest View</span>
+            <span style="font-size: 0.8rem; color: #888;">Read Only</span>
+        {% endif %}
     </div>
-</div>
+            </div>
+        </div>
 <div id="sidebarResizeHandle" class="sidebar-resize-handle" title="Drag to resize sidebar"></div>
 <div class="main-content">
     
     <div class="widget-toolbar chart-controls-container">
         <div class="toolbar-group">
-            <select id="widgetSelector" class="widget-selector" style="min-width: 150px;">
-                <option value="" disabled selected>Insert chart...</option>
-            </select>
-            <button onclick="addSelectedWidget()" class="add-widget-btn">Add</button>
-        </div>
+                <select id="widgetSelector" class="widget-selector" style="min-width: 150px;">
+                    <option value="" disabled selected>Insert chart...</option>
+                </select>
+                <button onclick="addSelectedWidget()" class="add-widget-btn">Add</button>
+            </div>
         <div class="toolbar-group" style="align-items: center; gap: 6px;">
             <label class="switch" style="margin: 0;">
                 <input type="checkbox" id="componentBarViewToggle" onchange="toggleComponentBarView()">
                 <span class="slider round"></span>
             </label>
             <span style="font-size: 0.85rem; font-weight: 600; color: #555;">COMPONENT <br>BAR CHART(📊)</span>
-        </div>
+            </div>
         <div class="toolbar-group toolbar-group-zoom">
             <select id="zoomSelect" onchange="handleZoomSelect(this.value)" class="btn btn-sm zoom-control" style="background: white; color: #333; margin: 0;">
                 <option value="">Zoom View...</option>
@@ -1251,10 +1251,10 @@
                     if (points.length > 0) {
                         const firstPoint = points[0];
                         const dataItem = chart.data.datasets[firstPoint.datasetIndex].data[firstPoint.index];
-
+                        
                         if (dataItem && dataItem.x) {
                             const dateStr = dataItem.x.split('T')[0];
-                            activeStickyDate = dateStr;
+                            activeStickyDate = dateStr; 
 
                             if (crosshairModeActive) {
                                 document.querySelectorAll('.crosshair-overlay').forEach(el => el.remove());
@@ -1277,11 +1277,11 @@
                                 }
                             } else {
                                 // Normal mode: show sticky tooltips
-                                showStickyTooltips(dateStr);
-                            }
+                            showStickyTooltips(dateStr);
                         }
+                    } 
                     }
-                }, 220);
+                }, 220); 
             }
         };
     }
@@ -2000,7 +2000,7 @@
         const config = widgetConfig[key];
         const area = document.getElementById('dashboardArea');
         if (!area) return;
-
+        
         const pos = layoutMap[key] || { x: 20, y: 20, w: 400, h: 300 };
 
         const div = document.createElement('div');
@@ -2021,8 +2021,8 @@
         const header = document.createElement('div');
         header.className = 'widget-header';
         header.innerHTML = `
-            <span class="widget-title">${config.title}</span>
-            <div class="widget-controls">
+                <span class="widget-title">${config.title}</span>
+                <div class="widget-controls">
                 <button type="button" class="widget-menu-btn" title="Series">&#9776;</button>
                 <button class="widget-icon-btn remove" onclick="removeWidget('${key}')" title="Remove">&#10005;</button>
             </div>
@@ -2067,8 +2067,8 @@
         if (config.isBar) {
             initComponentBarChart(key, config.chartId, config.sourceKey);
         } else {
-            const dataObj = config.createData();
-            initChartInstance(key, config.chartId, dataObj.sets, dataObj.unified);
+        const dataObj = config.createData();
+        initChartInstance(key, config.chartId, dataObj.sets, dataObj.unified);
         }
 
         if (key === 'symptoms' && !config.isBar) {
@@ -2128,7 +2128,7 @@
         }
 
         header.querySelector('.widget-menu-btn').addEventListener('click', function(e) {
-            e.stopPropagation();
+        e.stopPropagation();
             document.querySelectorAll('.widget-series-menu.open').forEach(m => { if (m !== menuEl) m.classList.remove('open'); });
             // Refresh adherence meds checkboxes to reflect current strip visibility
             if (key === 'symptoms' && !menuEl.classList.contains('open')) {
@@ -3123,7 +3123,7 @@
     }
     function toggleDataset(type, label) {
         const chart = charts[type];
-        let isChecked = false;
+            let isChecked = false;
         document.querySelectorAll(`.chk-${type}`).forEach(c => { if (c.value === label) isChecked = c.checked; });
         if (chart) {
             const idx = chart.data.datasets.findIndex(ds => ds.label === label);
@@ -3281,8 +3281,8 @@
                 div.innerHTML = '<span class="tooltip-color-box" style="background:' + dataset.borderColor + '"></span><span style="font-weight:600;">' + dataset.label + ':</span> ' + mainText;
                 if (point.detail) div.innerHTML += '<div style="margin-top:2px; font-weight:normal; opacity:0.8;">' + point.detail + '</div>';
             } else {
-                div.innerHTML = '<span class="tooltip-color-box" style="background:' + dataset.borderColor + '"></span><span style="font-weight:600;">' + dataset.label + ':</span> ' + valDisplay;
-                if (point.detail) div.innerHTML += '<div style="margin-top:2px; font-weight:normal; opacity:0.8;">' + point.detail + '</div>';
+            div.innerHTML = '<span class="tooltip-color-box" style="background:' + dataset.borderColor + '"></span><span style="font-weight:600;">' + dataset.label + ':</span> ' + valDisplay;
+            if (point.detail) div.innerHTML += '<div style="margin-top:2px; font-weight:normal; opacity:0.8;">' + point.detail + '</div>';
             }
         }
 
