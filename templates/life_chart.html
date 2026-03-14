@@ -712,9 +712,9 @@
                 <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
                 <a href="{{ url_for('patient_detail', patient_id=patient.id) if patient else '#' }}">← Patient Details</a>
             </div>
-				<div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: 5px;">
-                    <a href="{{ url_for('dashboard') }}">← Dashboard</a>
-				</div>
+            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: 5px;">
+                <a href="{{ url_for('dashboard') }}">← Dashboard</a>
+                </div>
 				<div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: 5px;">
                     <button type="button" id="darkModeToggleBtn" onclick="toggleDarkMode()" style="background: black; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: background 0.3s, color 0.3s;">Dark Mode</button>
                 </div>

@@ -11,8 +11,14 @@
         background-color: #121212;
         color: #ffffff;
     }
-    body.dark-mode .topbar, body.dark-mode .card, body.dark-mode .box, body.dark-mode table, body.dark-mode .side-menu, body.dark-mode .modal-content {
-        background-color: #1e1e1e;
+    body.dark-mode .topbar,
+    body.dark-mode .sidebar,
+    body.dark-mode .side-menu,
+    body.dark-mode .card,
+    body.dark-mode .box,
+    body.dark-mode table,
+    body.dark-mode .modal-content {
+        background-color: #1E252E;
         color: #ffffff;
         border-color: #333;
     }
@@ -387,9 +393,9 @@
     .notes-header .notes-add-btn { margin-left: auto; }
     .quick-add-popover { display: none; position: fixed; background: white; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); padding: 16px; min-width: 280px; max-width: 90vw; max-height: calc(100vh - 24px); overflow-y: auto; z-index: 3500; border: 1px solid #ddd; }
     .quick-add-popover.show { display: block; }
-    body.dark-mode .plus-menu-dropdown, body.dark-mode .quick-add-popover { background: #1e1e1e; border-color: #333; }
+    body.dark-mode .plus-menu-dropdown, body.dark-mode .quick-add-popover { background: #1E252E; border-color: #333; }
     body.dark-mode .plus-menu-dropdown a, body.dark-mode .plus-menu-dropdown button { color: #ddd; }
-    body.dark-mode .calendar-card { background: #1f2937; border-color: #374151; }
+    body.dark-mode .calendar-card { background: #1E252E; border-color: #374151; }
     body.dark-mode .calendar-month .calendar-nav { background: #374151; color: #9ca3af; }
     body.dark-mode .calendar-month .calendar-nav:hover { background: #4b5563; color: #e5e7eb; }
     body.dark-mode .calendar-month strong { color: #e5e7eb; }
@@ -511,7 +517,7 @@
     .note-card-delete:hover { background: rgba(0,0,0,0.08); color: #c53030; }
     body.dark-mode .note-card-delete { color: #9ca3af; }
     body.dark-mode .note-card-delete:hover { background: rgba(255,255,255,0.1); color: #fc8181; }
-    body.dark-mode .note-card { background: #1e2d31; border-color: #3a5a5e; }
+    body.dark-mode .note-card { background: #1E252E; border-color: #3a5a5e; }
     body.dark-mode .note-card-content { color: #e0e0e0; }
     body.dark-mode .note-card-meta, body.dark-mode .note-card-time { color: #9ca3af; }
 
@@ -601,8 +607,8 @@
                 <a href="{{ url_for('first_visit') }}">New patient Registration</a>
                 <button type="button" onclick="document.getElementById('appointmentModal').style.display='block'; document.getElementById('topbar-plus-menu').classList.remove('show');">Schedule Appointment</button>
                 <button type="button" onclick="document.getElementById('editClinicHoursModal').style.display='block'; document.getElementById('topbar-plus-menu').classList.remove('show');">Edit Clinic Hours</button>
-            </div>
-        </div>
+    </div>
+</div>
 
         <div id="bell-btn" class="notification-wrapper notif-icon-wrapper" title="Notifications">
             <button type="button" class="bell-btn" style="padding: 0; border: none; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
@@ -708,7 +714,7 @@
                                 <svg class="trash-icon" width="16" height="16" viewBox="0 0 24 24" fill="grey"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                             </button>
                         </td>
-                    </tr>
+                </tr>
                     {% endfor %}
                 {% else %}
                     <tr><td colspan="8">No appointments scheduled for this date.</td></tr>
@@ -815,7 +821,7 @@
             </div>
         </div>
     </div>
-</div>
+        </div>
 
 <div id="noteModal" class="modal" onclick="if(event.target === this) closeModal('noteModal')">
     <div class="modal-content">
@@ -826,7 +832,7 @@
             <button type="button" class="button" style="background: #888;" onclick="closeModal('noteModal')">Cancel</button>
         </form>
     </div>
-</div>
+        </div>
 
 <div id="quickAddNotePopover" class="quick-add-popover">
     <form action="{{ url_for('add_note') }}" method="POST" id="quick-add-note-form">
@@ -839,7 +845,7 @@
             <button type="button" class="button" style="background:#888; flex:1;" onclick="document.getElementById('quickAddNotePopover').classList.remove('show');">Cancel</button>
         </div>
     </form>
-</div>
+    </div>
 
 <div id="editClinicHoursModal" class="modal" onclick="if(event.target === this) closeModal('editClinicHoursModal')">
     <div class="modal-content" style="max-width: 400px;">
