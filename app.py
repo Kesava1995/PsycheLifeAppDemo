@@ -2538,16 +2538,14 @@ def life_chart(patient_id):
     def build_clinical_points(entry, v_date, type_lbl):
         pts = []
         days = get_days(getattr(entry, 'duration_text', '')) or get_days(getattr(entry, 'duration', ''))
-        start = v_date - timedelta(days=days) if days else v_date
-        
-        # Onset (at Start Date)
-        if entry.score_onset is not None:
-            pts.append({'x': start.strftime('%Y-%m-%d'), 'y': entry.score_onset, 'detail': f"{type_lbl} Onset", 'phase': 'Onset'})
-        # Progression (at Midpoint)
-        if entry.score_progression is not None and days > 0:
-            mid = start + timedelta(days=days/2)
-            pts.append({'x': mid.strftime('%Y-%m-%d'), 'y': entry.score_progression, 'detail': f"{type_lbl} Progression", 'phase': 'Progression'})
-        # Current (at Visit Date)
+        # First-time: duration present → use Onset, Progression, Current. Subsequently: no duration → visit date only (Current).
+        if days > 0:
+            start = v_date - timedelta(days=days)
+            if entry.score_onset is not None:
+                pts.append({'x': start.strftime('%Y-%m-%d'), 'y': entry.score_onset, 'detail': f"{type_lbl} Onset", 'phase': 'Onset'})
+            if entry.score_progression is not None:
+                mid = start + timedelta(days=days/2)
+                pts.append({'x': mid.strftime('%Y-%m-%d'), 'y': entry.score_progression, 'detail': f"{type_lbl} Progression", 'phase': 'Progression'})
         if entry.score_current is not None:
             pts.append({'x': v_date.strftime('%Y-%m-%d'), 'y': entry.score_current, 'detail': f"{type_lbl} Current", 'phase': 'Current'})
         return pts
@@ -2829,21 +2827,18 @@ def preview_lifechart(patient_id):
     def build_clinical_points(entry, v_date, type_lbl):
         pts = []
         days = get_days(getattr(entry, 'duration_text', '')) or get_days(getattr(entry, 'duration', ''))
-        start = v_date - timedelta(days=days) if days else v_date
-        
-        # Onset
-        if hasattr(entry, 'score_onset') and entry.score_onset is not None:
-            pts.append({'x': start.strftime('%Y-%m-%d'), 'y': float(entry.score_onset), 'phase': 'Onset'})
-        # Progression
-        if hasattr(entry, 'score_progression') and entry.score_progression is not None and days > 0:
-            mid = start + timedelta(days=days/2)
-            pts.append({'x': mid.strftime('%Y-%m-%d'), 'y': float(entry.score_progression), 'phase': 'Progression'})
-        # Current
+        # First-time: duration present → Onset, Progression, Current. Subsequently: no duration → visit date only (Current).
+        if days > 0:
+            start = v_date - timedelta(days=days)
+            if hasattr(entry, 'score_onset') and entry.score_onset is not None:
+                pts.append({'x': start.strftime('%Y-%m-%d'), 'y': float(entry.score_onset), 'phase': 'Onset'})
+            if hasattr(entry, 'score_progression') and entry.score_progression is not None:
+                mid = start + timedelta(days=days/2)
+                pts.append({'x': mid.strftime('%Y-%m-%d'), 'y': float(entry.score_progression), 'phase': 'Progression'})
         if hasattr(entry, 'score_current') and entry.score_current is not None:
             pts.append({'x': v_date.strftime('%Y-%m-%d'), 'y': float(entry.score_current), 'phase': 'Current'})
         elif hasattr(entry, 'score') and entry.score is not None:
             pts.append({'x': v_date.strftime('%Y-%m-%d'), 'y': float(entry.score), 'phase': 'Current'})
-        
         return pts
 
     def build_med_points(entry, v_date):

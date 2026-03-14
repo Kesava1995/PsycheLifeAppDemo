@@ -524,6 +524,7 @@
         }
         .adherence-strip-wrap .mini-chart-container canvas {
             display: block;
+            background: transparent;
         }
 
 
@@ -717,15 +718,8 @@
 					<span style="font-size: 0.85rem; font-weight: 600; color: #555;">Scales</span>
 				</div>
 				{% endif %}
-                <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: 5px;">
+				<div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: 5px;">
                     <a href="{{ url_for('dashboard') }}">← Dashboard</a>
-				</div>
-				<div style="display: flex; align-items: center; gap: 6px; margin-top: 5px;">
-					<label class="switch">
-						<input type="checkbox" id="componentBarViewToggle" onchange="toggleComponentBarView()">
-						<span class="slider round"></span>
-					</label>
-					<span style="font-size: 0.85rem; font-weight: 600; color: #555;">COMPONENT BAR CHART(&#128202;)</span>
 				</div>
 				<div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: 5px;">
                     <button type="button" id="darkModeToggleBtn" onclick="toggleDarkMode()" style="background: black; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: background 0.3s, color 0.3s;">Dark Mode</button>
@@ -750,11 +744,12 @@
             </select>
             <button onclick="addSelectedWidget()" class="add-widget-btn">Add</button>
         </div>
-        <div class="toolbar-group">
-            <select id="removeWidgetSelector" class="widget-selector" style="min-width: 150px;">
-                <option value="" disabled selected>Remove chart...</option>
-            </select>
-            <button onclick="removeSelectedWidget()" class="add-widget-btn" style="background: #f5576c;">Remove</button>
+        <div class="toolbar-group" style="align-items: center; gap: 6px;">
+            <label class="switch" style="margin: 0;">
+                <input type="checkbox" id="componentBarViewToggle" onchange="toggleComponentBarView()">
+                <span class="slider round"></span>
+            </label>
+            <span style="font-size: 0.85rem; font-weight: 600; color: #555;">COMPONENT BAR CHART(📊)</span>
         </div>
         <div class="toolbar-group toolbar-group-zoom">
             <select id="zoomSelect" onchange="handleZoomSelect(this.value)" class="btn btn-sm zoom-control" style="background: white; color: #333; margin: 0;">
@@ -1155,7 +1150,7 @@
                     title: { display: true, text: 'Date', padding: { top: 4, bottom: 2 } },
                     ticks: { maxTicksLimit: 10, autoSkip: true }
                 },
-                y: { beginAtZero: true, min: 0, title: { display: true, text: 'Score' }, grace: '10%' }
+                y: { beginAtZero: true, min: 0, title: { display: true, text: 'Score' }, grace: '10%', ticks: { precision: 0, callback: function(value) { return Math.round(value); } } }
             },
             plugins: {
                 zoom: {
@@ -1628,40 +1623,46 @@
     const SUBSTANCE_STRIP_H = 24;
     let adherenceStripExpanded = false;
 
+    function _applyAdherenceAlignment(symChart, adChart) {
+        if (!symChart.chartArea || !adChart) return;
+        var symLeft  = symChart.chartArea.left;
+        var symRight = symChart.chartArea.right;
+        var adCanvasW = adChart.canvas ? adChart.canvas.clientWidth : symChart.canvas.clientWidth;
+        // Sync x-range
+        adChart.options.scales.x.min = symChart.scales.x.min;
+        adChart.options.scales.x.max = symChart.scales.x.max;
+        // Right edge: always pad so plot ends at the same pixel
+        adChart.options.layout.padding.right = Math.max(0, adCanvasW - symRight);
+        if (adherenceStripExpanded) {
+            // Y-axis is visible: let it occupy space naturally, force its width
+            // to exactly symLeft so chartArea.left lands on symLeft
+            adChart.options.layout.padding.left = 0;
+            adChart.options.scales.y.afterFit = function(scale) { scale.width = symLeft; };
+        } else {
+            // Y-axis hidden: pad left directly to push plot start to symLeft
+            adChart.options.layout.padding.left = Math.max(0, symLeft);
+            adChart.options.scales.y.afterFit = null;
+        }
+    }
+
     function syncSymptomAdherenceX() {
         var sym = charts['symptoms'];
         var ad = window.adherenceChart;
         if (!sym || !ad) return;
         if (!sym.scales || !sym.scales.x) return;
         if (!ad.options || !ad.options.scales || !ad.options.scales.x) return;
-        ad.options.scales.x.min = sym.scales.x.min;
-        ad.options.scales.x.max = sym.scales.x.max;
-        if (sym.chartArea && ad.chartArea) {
-            var diff = sym.chartArea.left - ad.chartArea.left;
-            if (!ad.options.layout) ad.options.layout = {};
-            if (!ad.options.layout.padding) ad.options.layout.padding = {};
-            var currentLeft = typeof ad.options.layout.padding.left === 'number' ? ad.options.layout.padding.left : 2;
-            ad.options.layout.padding.left = Math.max(0, currentLeft + diff);
-        }
+        _applyAdherenceAlignment(sym, ad);
         ad.update('none');
     }
 
     const syncSymptomAdherenceXPlugin = {
         id: 'syncSymptomAdherenceX',
-        afterUpdate: function(chart) {
+        afterRender: function(chart) {
             if (chart.config._configKey !== 'symptoms') return;
             var ad = window.adherenceChart;
             if (!ad || !ad.options || !ad.options.scales || !ad.options.scales.x) return;
-            if (!chart.scales || !chart.scales.x) return;
-            ad.options.scales.x.min = chart.scales.x.min;
-            ad.options.scales.x.max = chart.scales.x.max;
-            if (chart.chartArea && ad.chartArea) {
-                var diff = chart.chartArea.left - ad.chartArea.left;
-                if (!ad.options.layout) ad.options.layout = {};
-                if (!ad.options.layout.padding) ad.options.layout.padding = {};
-                var currentLeft = typeof ad.options.layout.padding.left === 'number' ? ad.options.layout.padding.left : 2;
-                ad.options.layout.padding.left = Math.max(0, currentLeft + diff);
-            }
+            if (!chart.scales || !chart.scales.x || !chart.chartArea) return;
+            _applyAdherenceAlignment(chart, ad);
             ad.update('none');
         }
     };
@@ -1967,10 +1968,6 @@
             if (sg) sg.style.display = 'block';
         }
 
-        document.querySelectorAll('.crosshair-toggle-btn').forEach(btn => {
-            btn.style.background = crosshairModeActive ? '#f5576c' : '#aaa';
-            btn.style.boxShadow = crosshairModeActive ? '0 0 8px rgba(245,87,108,0.6)' : 'none';
-        });
         updateWidgetDropdown();
         requestAnimationFrame(function() { buildGrid(); });
         setTimeout(function() { buildGrid(); }, 100);
@@ -2005,7 +2002,6 @@
         header.innerHTML = `
             <span class="widget-title">${config.title}</span>
             <div class="widget-controls">
-                <button type="button" class="crosshair-toggle-btn" data-chart-key="${key}" title="Toggle Crosshair mode: single click will show crosshair" style="background: #aaa; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600; margin-right: 6px; transition: background 0.2s;">&#10251; Crosshair</button>
                 <button type="button" class="widget-menu-btn" title="Series">&#9776;</button>
                 <button class="widget-icon-btn remove" onclick="removeWidget('${key}')" title="Remove">&#10005;</button>
             </div>
@@ -2046,25 +2042,6 @@
         area.appendChild(div);
         activeWidgets.push(key);
         widgetPanels[key] = { panel: div, menuEl, sbWrap, sbRange };
-        
-        // Crosshair button toggles crosshair MODE globally
-        const crosshairBtn = header.querySelector('.crosshair-toggle-btn');
-        if (crosshairBtn) {
-            crosshairBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                crosshairModeActive = !crosshairModeActive;
-                // Update ALL crosshair buttons across all widgets
-                document.querySelectorAll('.crosshair-toggle-btn').forEach(btn => {
-                    btn.style.background = crosshairModeActive ? '#f5576c' : '#aaa';
-                    btn.style.boxShadow = crosshairModeActive ? '0 0 8px rgba(245,87,108,0.6)' : 'none';
-                });
-                // If turning off, clear any existing crosshair
-                if (!crosshairModeActive) {
-                    document.querySelectorAll('.crosshair-overlay').forEach(el => el.remove());
-                    clearLiveCrosshair();
-                }
-            });
-        }
 
         if (config.isBar) {
             initComponentBarChart(key, config.chartId, config.sourceKey);
@@ -2283,44 +2260,20 @@
 
     function updateWidgetDropdown() {
         const addSel = document.getElementById('widgetSelector');
-        const remSel = document.getElementById('removeWidgetSelector');
-        
+        if (!addSel) return;
         addSel.innerHTML = '<option value="" disabled selected>Insert chart...</option>';
-        remSel.innerHTML = '<option value="" disabled selected>Remove chart...</option>';
-        
         Object.keys(widgetConfig).forEach(key => {
             const title = widgetConfig[key].title;
-            if(!activeWidgets.includes(key)) {
+            if (!activeWidgets.includes(key)) {
                 addSel.innerHTML += `<option value="${key}">${title}</option>`;
-            } else {
-                remSel.innerHTML += `<option value="${key}">${title}</option>`;
             }
         });
-
         const addBtn = document.querySelector('button[onclick="addSelectedWidget()"]');
-        const remBtn = document.querySelector('button[onclick="removeSelectedWidget()"]');
-        
-        if(addBtn) {
+        if (addBtn) {
             const noMoreToAdd = (addSel.options.length === 1);
             addBtn.disabled = noMoreToAdd;
             addBtn.style.background = noMoreToAdd ? '#ccc' : '';
             addBtn.style.cursor = noMoreToAdd ? 'not-allowed' : 'pointer';
-        }
-        
-        if(remBtn) {
-            const noMoreToRemove = (remSel.options.length === 1);
-            remBtn.disabled = noMoreToRemove;
-            remBtn.style.background = noMoreToRemove ? '#ccc' : '#f5576c';
-            remBtn.style.cursor = noMoreToRemove ? 'not-allowed' : 'pointer';
-        }
-    }
-
-    function removeSelectedWidget() {
-        const sel = document.getElementById('removeWidgetSelector');
-        const key = sel.value;
-        if(key) {
-            removeWidget(key);
-            sel.value = "";
         }
     }
 
@@ -2698,6 +2651,15 @@
             chartOptions.scales.y.min = -52;
             chartOptions.scales.y.max = 152;
             chartOptions.scales.y.beginAtZero = false;
+            chartOptions.scales.y.ticks = Object.assign(chartOptions.scales.y.ticks || {}, {
+                precision: 0,
+                stepSize: 1,
+                callback: function(value) {
+                    var n = Number(value);
+                    if (isNaN(n)) return value;
+                    return String(Math.round(n));
+                }
+            });
             if (chartOptions.plugins.zoom && chartOptions.plugins.zoom.limits) chartOptions.plugins.zoom.limits.y = { min: -52, max: 152 };
             let xMin = Infinity, xMax = -Infinity;
             finalData.forEach(d => {
@@ -2869,7 +2831,15 @@
                 miniChart.options.scales.y.display = adherenceStripExpanded;
                 miniChart.update();
             }
-            setTimeout(function() { if (miniChart && miniChart.resize) miniChart.resize(); }, 80);
+            stripWrap.style.background = adherenceStripExpanded ? '#ffffff' : '#fafbfc';
+            stripWrap.style.border = adherenceStripExpanded ? '1px solid #c0c8d0' : '1px solid #e0e0e0';
+            if (miniChart && miniChart.canvas) miniChart.canvas.style.background = adherenceStripExpanded ? '#ffffff' : 'transparent';
+            setTimeout(function() {
+                if (miniChart && miniChart.resize) miniChart.resize();
+                // Re-sync after resize so plot area re-aligns
+                var sym = charts['symptoms'];
+                if (sym) { _applyAdherenceAlignment(sym, miniChart); miniChart.update('none'); }
+            }, 100);
         }
         stripWrap.addEventListener('dblclick', function(e) {
             suppressSingleClickUntil = Date.now() + 400;
@@ -2926,6 +2896,8 @@
                     chart.update();
                 }
             });
+            // Re-sync adherence strip after reset so padding aligns correctly
+            requestAnimationFrame(function() { syncSymptomAdherenceX(); });
             return;
         }
 
@@ -2984,6 +2956,7 @@
                 chart.update();
             }
         });
+        requestAnimationFrame(function() { syncSymptomAdherenceX(); });
     }
 
     // --- Canvas zoom (Alt+scroll) ---
@@ -3563,9 +3536,12 @@
     }
 
     let liveCrosshairOverlay = null;
+    let liveCrosshairOverlayMirror = null;
     function clearLiveCrosshair() {
         if (liveCrosshairOverlay && liveCrosshairOverlay.parentNode) liveCrosshairOverlay.parentNode.removeChild(liveCrosshairOverlay);
         liveCrosshairOverlay = null;
+        if (liveCrosshairOverlayMirror && liveCrosshairOverlayMirror.parentNode) liveCrosshairOverlayMirror.parentNode.removeChild(liveCrosshairOverlayMirror);
+        liveCrosshairOverlayMirror = null;
     }
     function getNearestPointAtX(chart, canvasX) {
         const xVal = chart.scales.x.getValueForPixel(canvasX);
@@ -3598,9 +3574,9 @@
         const screenY = rect.top + yPx;
         const chartTop = rect.top + chart.chartArea.top;
         const chartBottom = rect.top + chart.chartArea.bottom;
-        const chartLeft = rect.left + chart.chartArea.left;
         const chartRight = rect.left + chart.chartArea.right;
         clearLiveCrosshair();
+        // --- Primary overlay (hovered chart) ---
         liveCrosshairOverlay = document.createElement('div');
         liveCrosshairOverlay.className = 'crosshair-overlay active';
         liveCrosshairOverlay.style.cssText = 'left:0;top:0;width:100vw;height:100vh;pointer-events:none;';
@@ -3621,6 +3597,26 @@
         liveCrosshairOverlay.appendChild(dateLabel);
         liveCrosshairOverlay.appendChild(valueLabel);
         document.body.appendChild(liveCrosshairOverlay);
+        // --- Mirror vertical line on paired chart ---
+        var pairedKey = chart.config._configKey === 'symptoms' ? 'symptomsAdherence'
+                      : chart.config._configKey === 'symptomsAdherence' ? 'symptoms'
+                      : null;
+        var pairedChart = pairedKey ? charts[pairedKey] : null;
+        if (pairedChart && pairedChart.chartArea && pairedChart.scales && pairedChart.scales.x) {
+            var pRect = pairedChart.canvas.getBoundingClientRect();
+            var pXPx = pairedChart.scales.x.getPixelForValue(xVal);
+            var pScreenX = pRect.left + pXPx - 4;
+            var pTop = pRect.top + pairedChart.chartArea.top;
+            var pBottom = pRect.top + pairedChart.chartArea.bottom;
+            liveCrosshairOverlayMirror = document.createElement('div');
+            liveCrosshairOverlayMirror.className = 'crosshair-overlay active';
+            liveCrosshairOverlayMirror.style.cssText = 'left:0;top:0;width:100vw;height:100vh;pointer-events:none;';
+            var pVLine = document.createElement('div');
+            pVLine.className = 'crosshair-line-v';
+            pVLine.style.cssText = 'left:' + pScreenX + 'px;top:' + pTop + 'px;height:' + (pBottom - pTop) + 'px;';
+            liveCrosshairOverlayMirror.appendChild(pVLine);
+            document.body.appendChild(liveCrosshairOverlayMirror);
+        }
     }
 
     function showRibbonTooltip(x, y, ribbon) {

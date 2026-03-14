@@ -183,6 +183,15 @@
                         opts.scales.y.title = opts.scales.y.title || {};
                         opts.scales.y.title.text = 'RTP / RTI %';
                         opts.scales.y.beginAtZero = false;
+                        opts.scales.y.ticks = Object.assign(opts.scales.y.ticks || {}, {
+                            precision: 0,
+                            stepSize: 1,
+                            callback: function(value) {
+                                var n = Number(value);
+                                if (isNaN(n)) return value;
+                                return String(Math.round(n));
+                            }
+                        });
                     }
                     const ctx = canvas.getContext('2d');
                     new Chart(ctx, {
