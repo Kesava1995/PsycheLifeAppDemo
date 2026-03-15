@@ -145,6 +145,12 @@ with app.app_context():
             db.session.commit()
         except Exception:
             db.session.rollback()
+    # Appointment: patient email for reminders
+    try:
+        db.session.execute(text('ALTER TABLE appointments ADD COLUMN email VARCHAR(120)'))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
 # --- Scheduler for daily reminders ---
 scheduler = APScheduler()
@@ -967,6 +973,7 @@ def add_appointment():
         flash("Time slot already booked!", "error")
         return redirect(url_for('dashboard'))
 
+    appt_email = (request.form.get('appt_email') or request.form.get('appt_email_sent') or '').strip()
     appt = Appointment(
         doctor_id=doctor_id,
         date=appt_date,
@@ -977,7 +984,8 @@ def add_appointment():
         slot_duration=duration,
         type=request.form.get('appt_type'),
         status=request.form.get('appt_status', 'Confirmed'),
-        view_details=request.form.get('appt_details', '')
+        view_details=request.form.get('appt_details', ''),
+        email=appt_email if appt_email else None,
     )
     db.session.add(appt)
     db.session.commit()

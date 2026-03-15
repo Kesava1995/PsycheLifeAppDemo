@@ -319,6 +319,7 @@ class Appointment(db.Model):
     type = db.Column(db.String(50))  # 'New Case' or 'Follow-up'
     status = db.Column(db.String(50), default='Confirmed')  # 'Confirmed', 'Pending', 'Postponed'
     view_details = db.Column(db.Text)
+    email = db.Column(db.String(120), nullable=True)  # Patient email for appointment reminders
 
 
 class DashboardNote(db.Model):

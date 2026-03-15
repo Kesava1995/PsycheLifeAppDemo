@@ -705,7 +705,7 @@
                         </td>
                         <td class="col-dx">{{ getattr(appt, 'dx', None) or '—' }}</td>
                         <td class="col-recall">{{ (appt.view_details or '—')[:80] }}{% if appt.view_details and appt.view_details|length > 80 %}...{% endif %}</td>
-                        <td class="col-followup-type">{{ getattr(appt, 'follow_up_type', None) or '—' }}</td>
+                        <td class="col-followup-type">{{ appt.type or '—' }}</td>
                         <td class="col-action">
                             <a href="{{ url_for('appt_details', appt_id=appt.id) }}" class="btn-appt-view">&#128065; View &#8964;</a>
                             <button type="button" class="delete-appt-btn" data-id="{{ appt.id }}" title="Delete Appointment">
@@ -901,7 +901,7 @@
                 <input type="text" name="appt_name" class="form-control" placeholder="Patient Name" list="existing-patients-list" autocomplete="off" required>
                 <datalist id="existing-patients-list">
                     {% for p in patients %}
-                        <option value="{{ p.name }}" data-age="{{ p.age }}" data-sex="{{ p.sex }}"></option>
+                        <option value="{{ p.name }}" data-age="{{ p.age }}" data-sex="{{ p.sex }}" data-email="{{ p.email or '' }}"></option>
                     {% endfor %}
                 </datalist>
                 <input type="number" name="appt_age" class="form-control" placeholder="Age" required>
@@ -910,6 +910,8 @@
                     <option value="F">Female</option>
                     <option value="Other">Other</option>
                 </select>
+                <input type="email" id="appt-email-input" name="appt_email" class="form-control" placeholder="Patient email (for reminders)" autocomplete="email">
+                <input type="hidden" name="appt_email_sent" id="appt-email-sent" value="">
                 <select name="appt_type" class="form-control" onchange="document.querySelector('input[name=\'appt_duration\']').value = this.options[this.selectedIndex].getAttribute('data-duration'); if(typeof refreshSlotsForModal === 'function') refreshSlotsForModal();">
                     <option value="New Registration" data-duration="45">New Registration (45 Mins)</option>
                     <option value="Extended Follow-up" data-duration="30">Extended Follow-up (30 Mins)</option>
@@ -1241,6 +1243,10 @@ if (addAppointmentForm) {
         if (btn) btn.classList.add('loading');
         if (spinner) spinner.classList.remove('hidden');
         if (btnText) btnText.textContent = 'Scheduling...';
+        // Copy email into hidden field so it is always submitted with the form
+        var emailInput = document.getElementById('appt-email-input');
+        var emailSent = document.getElementById('appt-email-sent');
+        if (emailInput && emailSent) emailSent.value = (emailInput.value || '').trim();
     });
 }
 
@@ -1262,11 +1268,12 @@ if (addHourSelect && addMinuteSelect) {
     addMinuteSelect.addEventListener('change', syncAddApptTime);
 }
 
-// Auto-fill existing patient details (type, age, sex) when name matches datalist
+// Auto-fill existing patient details (type, age, sex, email) when name matches datalist
 var apptNameInput = document.querySelector('input[name="appt_name"]');
 var apptTypeSelect = document.querySelector('select[name="appt_type"]');
 var apptAgeInput = document.querySelector('input[name="appt_age"]');
 var apptSexSelect = document.querySelector('select[name="appt_sex"]');
+var apptEmailInput = document.querySelector('input[name="appt_email"]');
 
 if (apptNameInput) {
     apptNameInput.addEventListener('input', function() {
@@ -1277,6 +1284,7 @@ if (apptNameInput) {
             if (opt.value.toLowerCase() === val) {
                 if (apptTypeSelect) apptTypeSelect.value = 'Follow-up';
                 if (apptAgeInput && opt.getAttribute('data-age')) apptAgeInput.value = opt.getAttribute('data-age');
+                if (apptEmailInput && opt.getAttribute('data-email')) apptEmailInput.value = opt.getAttribute('data-email') || '';
                 if (apptSexSelect && opt.getAttribute('data-sex')) {
                     var dbSex = (opt.getAttribute('data-sex') || '').trim();
                     apptSexSelect.value = dbSex;

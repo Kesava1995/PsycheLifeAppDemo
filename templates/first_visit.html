@@ -163,7 +163,7 @@
                         <div class="row-2-col">
                             <div><label>Patient Name *</label><input type="text" name="patient_name" class="form-control" value="{{ appt.name if appt else '' }}" required></div>
                             <div><label>Phone</label><input type="text" name="phone"></div>
-                            <div><label>Email (for reminders)</label><input type="email" name="email" placeholder="patient@example.com"></div>
+                            <div><label>Email (for reminders)</label><input type="email" name="email" placeholder="patient@example.com" value="{{ appt.email if appt and appt.email else '' }}"></div>
                         </div>
                         <div class="row-2-col">
                             <div><label>Age *</label><input type="number" name="age" class="form-control" value="{{ appt.age if appt else '' }}" required></div>
