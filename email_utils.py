@@ -1,7 +1,9 @@
 """
 Dynamic SMTP email helper for per-doctor email sending.
 Uses the doctor's own email provider (Gmail, Zoho, Outlook, etc.) and app password.
+Also provides a system-level sender for password resets (uses env vars).
 """
+import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -69,4 +71,32 @@ def send_dynamic_email(doctor, patient_email, subject, body_text, smtp_password=
         return True
     except Exception as e:
         print(f"Failed to send email for {doctor.email}: {str(e)}")
+        return False
+
+
+def send_system_email(to_email, subject, body_text):
+    """Sends an email from the system account (e.g., for password resets)."""
+    system_email = os.environ.get('SYSTEM_EMAIL')
+    system_password = os.environ.get('SYSTEM_EMAIL_PASSWORD')
+    smtp_server = os.environ.get('SYSTEM_SMTP_SERVER', 'smtp.gmail.com')
+    smtp_port = int(os.environ.get('SYSTEM_SMTP_PORT', '587'))
+
+    if not system_email or not system_password:
+        print("System email credentials not configured.")
+        return False
+
+    msg = MIMEMultipart()
+    msg['From'] = system_email
+    msg['To'] = to_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body_text, 'plain'))
+
+    try:
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(system_email, system_password)
+            server.send_message(msg)
+        return True
+    except Exception as e:
+        print(f"Failed to send system email: {str(e)}")
         return False

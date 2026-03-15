@@ -3,7 +3,10 @@ PsycheLife - Medical web app for psychiatric patient management.
 """
 
 from dotenv import load_dotenv
-load_dotenv()
+import os as _os
+# Load .env from the same directory as app.py (project root), not from cwd
+_env_path = _os.path.join(_os.path.abspath(_os.path.dirname(__file__)), '.env')
+load_dotenv(_env_path)
 
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response, session, abort
 from functools import wraps
@@ -65,8 +68,10 @@ def get_clinic_hours(doctor):
 
 from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry, ScaleAssessment, Appointment, DashboardNote, Notification, ScheduleTemplate
 from medical_utils import get_unified_dose, compute_med_chart_value, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency, process_scale_submission, duration_to_days, format_timedelta_as_duration
-from email_utils import send_dynamic_email
+from email_utils import send_dynamic_email, send_system_email
 from encryption_utils import encrypt_smtp_password, decrypt_smtp_password
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+from werkzeug.security import generate_password_hash
 from flask_apscheduler import APScheduler
 import io
 import os
@@ -85,8 +90,9 @@ import json
 from sqlalchemy import text
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-change-in-production'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
 basedir = os.path.abspath(os.path.dirname(__file__))
+serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
 # Use absolute path for DB
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'psychelife.db')
@@ -237,7 +243,19 @@ def send_daily_reminders():
 
 
 scheduler.init_app(app)
-scheduler.start()
+# On PythonAnywhere, in-process scheduler may not run reliably; set RUN_SCHEDULER=1 to enable, or use Tasks to hit /cron/send_reminders
+if _os.environ.get('RUN_SCHEDULER', '').strip().lower() in ('1', 'true', 'yes'):
+    scheduler.start()
+
+
+@app.route('/cron/send_reminders')
+def cron_send_reminders():
+    """Call from PythonAnywhere Tasks (or external cron) to run daily reminders. Requires CRON_SECRET in env."""
+    if request.args.get('key') != _os.environ.get('CRON_SECRET', ''):
+        return 'Unauthorized', 401
+    send_daily_reminders()
+    return 'OK', 200
+
 
 # --- Register Helper for Templates ---
 @app.context_processor
@@ -381,6 +399,55 @@ def login():
     
     # GET request - redirect to landing
     return redirect(url_for('landing'))
+
+
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip()
+        doctor = Doctor.query.filter_by(email=email).first()
+
+        if doctor:
+            token = serializer.dumps(email, salt='password-reset-salt')
+            reset_url = url_for('reset_password_with_token', token=token, _external=True)
+            subject = "PsycheLife Password Reset Request"
+            body = (
+                f"Hello {doctor.full_name or doctor.username},\n\n"
+                f"To reset your password, please click the following link:\n{reset_url}\n\n"
+                f"This link will expire in 1 hour. If you did not request this, please ignore this email."
+            )
+            send_system_email(email, subject, body)
+
+        flash('If an account with that email exists, a password reset link has been sent.', 'info')
+        return redirect(url_for('landing'))
+
+    return render_template('forgot_password.html')
+
+
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password_with_token(token):
+    try:
+        email = serializer.loads(token, salt='password-reset-salt', max_age=3600)
+    except SignatureExpired:
+        flash('The password reset link has expired. Please request a new one.', 'error')
+        return redirect(url_for('forgot_password'))
+    except BadSignature:
+        flash('Invalid password reset link.', 'error')
+        return redirect(url_for('forgot_password'))
+
+    if request.method == 'POST':
+        new_password = request.form.get('password', '')
+        doctor = Doctor.query.filter_by(email=email).first()
+        if doctor:
+            doctor.password_hash = generate_password_hash(new_password)
+            db.session.commit()
+            flash('Your password has been reset successfully! You can now log in.', 'success')
+            return redirect(url_for('landing'))
+        flash('Account not found.', 'error')
+        return redirect(url_for('landing'))
+
+    return render_template('reset_password_form.html', token=token)
+
 
 @app.route('/guest/lifechart', methods=['GET', 'POST'])
 def guest_lifechart():
