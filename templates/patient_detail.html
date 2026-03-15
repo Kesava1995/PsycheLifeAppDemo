@@ -8,6 +8,25 @@
         body { font-family: 'Segoe UI', sans-serif; background: #f4f8fb; padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         h1 { color: #333; margin-bottom: 20px; }
+        .patient-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+        .patient-header h1 { margin: 0; }
+        .btn-send-email { background: #a5dcfe; color: #333; padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.95rem; font-weight: 500; }
+        .btn-send-email:hover { background: #8bc9f5; color: #333; }
+        .email-modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 2000; align-items: center; justify-content: center; }
+        .email-modal-overlay.show { display: flex; }
+        .email-modal { background: white; border-radius: 10px; padding: 24px; max-width: 520px; width: 90%; max-height: 90vh; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.2); border: 1px solid #e0e0e0; }
+        .email-modal h3 { margin: 0 0 16px 0; font-size: 1.1rem; color: #333; }
+        .email-modal textarea { width: 100%; min-height: 180px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem; resize: vertical; box-sizing: border-box; }
+        .email-modal .email-modal-actions { display: flex; justify-content: space-between; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+        .email-modal .btn-cancel-email { background: #e0e0e0; color: #333; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95rem; }
+        .email-modal .btn-cancel-email:hover { background: #d0d0d0; }
+        .email-modal .btn-default-msg { background: #7ab8e0; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95rem; }
+        .email-modal .btn-default-msg:hover { background: #5a9ec9; color: white; }
+        .email-modal .btn-send-email-submit { background: #a5dcfe; color: #333; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95rem; font-weight: 500; }
+        .email-modal .btn-send-email-submit:hover { background: #8bc9f5; color: #333; }
+        body.dark-mode .email-modal { background: #1e1e1e; border-color: #444; }
+        body.dark-mode .email-modal h3 { color: #ddd; }
+        body.dark-mode .email-modal textarea { background: #333; color: #fff; border-color: #555; }
         .patient-info { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
         .btn, .button { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; display: inline-block; margin: 5px; }
         .btn-primary { background: #7ab8e0; color: white; }
@@ -60,11 +79,65 @@
 </head>
 <body>
     <div class="container">
-        <h1>{{ patient.name }}</h1>
+        <div class="patient-header">
+            <h1>{{ patient.name }}</h1>
+            {% if not is_new_case %}
+            <button type="button" class="btn-send-email" id="btn-open-email-modal">Send Custom email</button>
+            {% endif %}
+        </div>
         <div class="patient-info">
             <p><strong>Age:</strong> {{ patient.age }} | <strong>Sex:</strong> {{ patient.sex }}</p>
             <p><strong>Address:</strong> {{ patient.address or 'Not provided' }}</p>
         </div>
+        {% if not is_new_case %}
+        <div id="send-email-modal" class="email-modal-overlay" onclick="if(event.target === this) closeSendEmailModal()">
+            <div class="email-modal" onclick="event.stopPropagation()">
+                <h3>Send email to {{ patient.email or 'patient' }}</h3>
+                <textarea id="email-body-text" name="email_body" placeholder="Type your message here..."></textarea>
+                <div class="email-modal-actions">
+                    <button type="button" class="btn-cancel-email" onclick="closeSendEmailModal()">Cancel</button>
+                    <button type="button" class="btn-default-msg" onclick="fillDefaultEmailMessage()">Default message</button>
+                    <form method="POST" action="{{ url_for('send_patient_email', patient_id=patient.id) }}" id="send-email-form" style="margin: 0;">
+                        <input type="hidden" name="email_body" id="email-body-hidden" value="">
+                        <button type="submit" class="btn-send-email-submit">Send</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <script>
+        (function() {
+            var defaultMessage = {{ default_email_message | tojson }};
+            window.fillDefaultEmailMessage = function() {
+                document.getElementById('email-body-text').value = defaultMessage;
+            };
+            window.openSendEmailModal = function() {
+                document.getElementById('email-body-text').value = '';
+                document.getElementById('send-email-modal').classList.add('show');
+            };
+            window.closeSendEmailModal = function() {
+                document.getElementById('send-email-modal').classList.remove('show');
+            };
+            document.getElementById('btn-open-email-modal').addEventListener('click', openSendEmailModal);
+            document.getElementById('send-email-form').addEventListener('submit', function() {
+                document.getElementById('email-body-hidden').value = document.getElementById('email-body-text').value;
+            });
+        })();
+        </script>
+        <div class="badge-card" style="margin-bottom: 20px;">
+            <h2>Contact &amp; reminder settings</h2>
+            <form method="POST" action="{{ url_for('update_patient_contact', patient_id=patient.id) }}" style="display: grid; gap: 12px; max-width: 480px;">
+                <div>
+                    <label for="patient_email" style="font-weight: 600;">Email (for reminders)</label>
+                    <input type="email" id="patient_email" name="email" value="{{ patient.email or '' }}" placeholder="patient@example.com" style="width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label for="patient_reminder_days" style="font-weight: 600;">Appointment reminder days (optional override)</label>
+                    <input type="text" id="patient_reminder_days" name="appointment_reminder_days" value="{{ patient.appointment_reminder_days or '' }}" placeholder="e.g. 7,3,1 — leave blank for doctor default" style="width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
+                </div>
+                <button type="submit" class="btn btn-primary">Save contact &amp; reminders</button>
+            </form>
+        </div>
+        {% endif %}
         <div class="actions" style="margin-bottom: 20px;">
             <a href="{{ url_for('dashboard') }}" class="btn btn-primary">← Dashboard</a>
             {% if is_new_case %}

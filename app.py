@@ -65,6 +65,9 @@ def get_clinic_hours(doctor):
 
 from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry, ScaleAssessment, Appointment, DashboardNote, Notification, ScheduleTemplate
 from medical_utils import get_unified_dose, compute_med_chart_value, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency, process_scale_submission, duration_to_days, format_timedelta_as_duration
+from email_utils import send_dynamic_email
+from encryption_utils import encrypt_smtp_password, decrypt_smtp_password
+from flask_apscheduler import APScheduler
 import io
 import os
 from reportlab.lib.pagesizes import letter, A4
@@ -122,6 +125,119 @@ with app.app_context():
         db.session.commit()
     except Exception:
         db.session.rollback()
+    # Doctor: SMTP app password and reminder days
+    for col, spec in [('smtp_app_password', 'VARCHAR(255)'), ('appointment_reminder_days', 'VARCHAR(50)')]:
+        try:
+            db.session.execute(text(f'ALTER TABLE doctors ADD COLUMN {col} {spec}'))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+    # Patient: email and per-patient reminder days override
+    for col, spec in [('email', 'VARCHAR(120)'), ('appointment_reminder_days', 'VARCHAR(50)')]:
+        try:
+            db.session.execute(text(f'ALTER TABLE patients ADD COLUMN {col} {spec}'))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+# --- Scheduler for daily reminders ---
+scheduler = APScheduler()
+
+
+@scheduler.task('cron', id='send_reminders', hour=8, minute=0)
+def send_daily_reminders():
+    """Background task that runs every day at 8:00 AM."""
+    with app.app_context():
+        today = date.today()
+
+        # ---------------------------------------------------------
+        # 1. APPOINTMENT REMINDERS (Dynamic per doctor; per-patient override)
+        # ---------------------------------------------------------
+        doctors = Doctor.query.all()
+
+        for doctor in doctors:
+            reminder_str = doctor.appointment_reminder_days or "7,3,1"
+            try:
+                reminder_days = [int(d.strip()) for d in reminder_str.split(',') if d.strip()]
+            except ValueError:
+                reminder_days = [7, 3, 1]
+
+            for days_ahead in reminder_days:
+                target_date = today + timedelta(days=days_ahead)
+
+                upcoming_visits = Visit.query.join(Patient).filter(
+                    Patient.doctor_id == doctor.id,
+                    Visit.next_visit_date == target_date
+                ).all()
+
+                for visit in upcoming_visits:
+                    patient = visit.patient
+                    # Use patient override if set, else doctor default
+                    effective_str = patient.appointment_reminder_days or doctor.appointment_reminder_days or "7,3,1"
+                    try:
+                        effective_days = [int(d.strip()) for d in effective_str.split(',') if d.strip()]
+                    except ValueError:
+                        effective_days = [7, 3, 1]
+                    if days_ahead not in effective_days:
+                        continue
+
+                    if patient.email:
+                        subject = f"Appointment Reminder with {doctor.full_name}"
+                        body = (
+                            f"Dear {patient.name},\n\n"
+                            f"This is a reminder for your upcoming appointment with {doctor.full_name} "
+                            f"on {target_date.strftime('%B %d, %Y')}.\n\n"
+                            f"Best regards,\n{doctor.clinic_name}"
+                        )
+                        smtp_password = decrypt_smtp_password(doctor.smtp_app_password)
+                        send_dynamic_email(doctor, patient.email, subject, body, smtp_password=smtp_password)
+
+        # ---------------------------------------------------------
+        # 2. MEDICATION TAPERING / TITRATION REMINDERS
+        # ---------------------------------------------------------
+        active_tapering_meds = MedicationEntry.query.filter_by(is_tapering=True).all()
+
+        for med in active_tapering_meds:
+            if not med.taper_plan:
+                continue
+
+            plan_steps = json.loads(med.taper_plan)
+            current_date = med.visit.date
+
+            for index, step in enumerate(plan_steps):
+                duration_delta = parse_duration(step.get('duration_text', ''))
+                if not duration_delta:
+                    continue
+
+                step_end_date = current_date + duration_delta
+
+                if step_end_date == today + timedelta(days=1):
+                    if index + 1 < len(plan_steps):
+                        next_step = plan_steps[index + 1]
+
+                        patient = med.visit.patient
+                        doctor = patient.doctor
+
+                        if patient.email:
+                            subject = f"Medication Update: {med.drug_name}"
+                            body = (
+                                f"Dear {patient.name},\n\n"
+                                f"As per your treatment plan with {doctor.full_name}, your dosage "
+                                f"for {med.drug_name} changes tomorrow.\n\n"
+                                f"New Instructions:\n"
+                                f"- Dose: {next_step.get('dose_mg')}\n"
+                                f"- Frequency: {next_step.get('frequency')}\n"
+                                f"- Duration: {next_step.get('duration_text')}\n\n"
+                                f"Best regards,\n{doctor.clinic_name}"
+                            )
+                            smtp_password = decrypt_smtp_password(doctor.smtp_app_password)
+                            send_dynamic_email(doctor, patient.email, subject, body, smtp_password=smtp_password)
+
+                current_date = step_end_date
+
+
+scheduler.init_app(app)
+scheduler.start()
 
 # --- Register Helper for Templates ---
 @app.context_processor
@@ -584,6 +700,12 @@ def profile():
         # --- PHASE 1 UPDATES: Phone & Email ---
         doctor.phone = request.form.get('phone', '').strip()
         doctor.email = request.form.get('email', '').strip()
+
+        # SMTP app password: encrypt before storing (only update if non-empty so we don't clear it)
+        smtp_pw = request.form.get('smtp_app_password', '').strip()
+        if smtp_pw:
+            doctor.smtp_app_password = encrypt_smtp_password(smtp_pw)
+        doctor.appointment_reminder_days = request.form.get('appointment_reminder_days', '').strip() or "7,3,1"
         
         doctor.social_handle = request.form.get('social_handle', '').strip()
 
@@ -969,6 +1091,7 @@ def first_visit():
             sex=sex,
             address=address,
             phone=request.form.get('phone'),
+            email=request.form.get('email', '').strip() or None,
             attender_name=request.form.get('attender_name'),
             attender_relation=relation,
             attender_reliability=request.form.get('attender_reliability'),
@@ -1746,6 +1869,15 @@ def patient_detail(patient_id):
     visits = Visit.query.filter_by(patient_id=patient_id).order_by(Visit.date.desc()).all()
     badge_stressors, badge_major_events, badge_personality, badge_ace = _aggregate_badge_data(visits)
     is_new_case = len(visits) == 0
+    default_email_message = ""
+    if not is_new_case and patient.doctor:
+        doc = patient.doctor
+        doc_name = doc.full_name or doc.username
+        default_email_message = f"Dear {patient.name},\n\nThis is a reminder from {doc_name}"
+        if doc.clinic_name:
+            default_email_message += f" at {doc.clinic_name}"
+        default_email_message += ".\n\nPlease get in touch if you have any questions.\n\nBest regards,\n"
+        default_email_message += (doc.clinic_name or doc_name)
     return render_template('patient_detail.html',
                           patient=patient,
                           visits=visits,
@@ -1753,7 +1885,53 @@ def patient_detail(patient_id):
                           badge_stressors=badge_stressors,
                           badge_major_events=badge_major_events,
                           badge_personality=badge_personality,
-                          badge_ace=badge_ace)
+                          badge_ace=badge_ace,
+                          default_email_message=default_email_message)
+
+
+@app.route('/patient/<int:patient_id>/update_contact', methods=['POST'])
+@doctor_required
+def update_patient_contact(patient_id):
+    """Update patient email and appointment reminder days (patient-specific override)."""
+    patient = Patient.query.get_or_404(patient_id)
+    if patient.doctor_id != session.get('doctor_id'):
+        abort(403)
+    patient.email = (request.form.get('email') or '').strip() or None
+    patient.appointment_reminder_days = (request.form.get('appointment_reminder_days') or '').strip() or None
+    db.session.commit()
+    flash('Contact and reminder settings updated.', 'success')
+    return redirect(url_for('patient_detail', patient_id=patient_id))
+
+
+@app.route('/patient/<int:patient_id>/send_email', methods=['POST'])
+@doctor_required
+def send_patient_email(patient_id):
+    """Send an instant email from the logged-in doctor to this patient's email."""
+    patient = Patient.query.get_or_404(patient_id)
+    if patient.doctor_id != session.get('doctor_id'):
+        abort(403)
+    doctor = patient.doctor
+    if not patient.email:
+        flash('Add and save the patient\'s email in Contact & reminder settings first.', 'error')
+        return redirect(url_for('patient_detail', patient_id=patient_id))
+    if not doctor.email or not doctor.smtp_app_password:
+        flash('Set your Email and SMTP App Password in Profile to send emails.', 'error')
+        return redirect(url_for('patient_detail', patient_id=patient_id))
+    subject = f"Reminder from {doctor.full_name or doctor.username}"
+    body = (request.form.get('email_body') or '').strip()
+    if not body:
+        doctor_name = doctor.full_name or doctor.username
+        body = f"Dear {patient.name},\n\nThis is a reminder from {doctor_name}"
+        if doctor.clinic_name:
+            body += f" at {doctor.clinic_name}"
+        body += ".\n\nPlease get in touch if you have any questions.\n\nBest regards,\n"
+        body += (doctor.clinic_name or doctor.full_name or doctor.username)
+    smtp_password = decrypt_smtp_password(doctor.smtp_app_password)
+    if send_dynamic_email(doctor, patient.email, subject, body, smtp_password=smtp_password):
+        flash(f'Email sent to {patient.email}.', 'success')
+    else:
+        flash('Failed to send email. Check your SMTP App Password in Profile.', 'error')
+    return redirect(url_for('patient_detail', patient_id=patient_id))
 
 
 def _patient_latest_visit_or_abort(patient_id):
@@ -1957,6 +2135,12 @@ def edit_visit(visit_id):
             
         if 'phone' in request.form:
             patient.phone = request.form.get('phone')
+
+        if 'email' in request.form:
+            patient.email = (request.form.get('email') or '').strip() or None
+
+        if 'appointment_reminder_days' in request.form:
+            patient.appointment_reminder_days = (request.form.get('appointment_reminder_days') or '').strip() or None
             
         if 'attender_name' in request.form:
             patient.attender_name = request.form.get('attender_name')

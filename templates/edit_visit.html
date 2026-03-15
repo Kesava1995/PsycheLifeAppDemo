@@ -190,7 +190,9 @@
                         <div><label>Age</label><input type="number" name="age" value="{{ patient.age }}"></div>
                         <div><label>Sex</label><select name="sex"><option value="Male" {% if patient.sex=='Male'%}selected{%endif%}>Male</option><option value="Female" {% if patient.sex=='Female'%}selected{%endif%}>Female</option></select></div>
                         <div><label>Phone</label><input type="text" name="phone" value="{{ patient.phone }}"></div>
+                        <div><label>Email (for reminders)</label><input type="email" name="email" value="{{ patient.email or '' }}" placeholder="patient@example.com"></div>
                         <div style="grid-column: span 2;"><label>Address</label><input type="text" name="address" value="{{ patient.address }}"></div>
+                        <div style="grid-column: span 2;"><label>Appointment reminder days (optional override)</label><input type="text" name="appointment_reminder_days" value="{{ patient.appointment_reminder_days or '' }}" placeholder="e.g. 7,3,1 or leave blank for doctor default"></div>
                         
                         <div style="grid-column: span 4; display:grid; grid-template-columns: 1fr 1fr 1fr; gap:15px;">
                             <div><label>Attender Name</label><input type="text" name="attender_name" value="{{ patient.attender_name }}"></div>

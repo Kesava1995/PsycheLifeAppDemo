@@ -13,7 +13,7 @@
         .subtitle { color: #666; margin-bottom: 30px; font-size: 0.95rem; }
         .form-group { margin-bottom: 20px; }
         label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; font-size: 0.9rem; }
-        input[type="text"], input[type="email"], textarea, input[type="file"] {
+        input[type="text"], input[type="email"], input[type="password"], textarea, input[type="file"] {
             width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; transition: border 0.2s;
         }
         input:focus, textarea:focus { border-color: var(--primary-dark); outline: none; }
@@ -28,12 +28,34 @@
         .file-info { font-size: 0.85rem; color: #777; margin-top: 5px; }
         .signature-preview { margin-top: 10px; border: 1px dashed #ccc; padding: 10px; text-align: center; border-radius: 8px; }
         .signature-preview img { max-height: 80px; }
+        .label-with-help { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .label-with-help label { margin-bottom: 0; }
+        .btn-help { padding: 4px 10px; font-size: 0.8rem; background: #e0e0e0; color: #555; border: 1px solid #ccc; border-radius: 6px; cursor: pointer; font-weight: 500; }
+        .btn-help:hover { background: #d0d0d0; color: #333; }
+        .smtp-help-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 2000; align-items: center; justify-content: center; }
+        .smtp-help-overlay.show { display: flex; }
+        .smtp-help-modal { background: white; border-radius: 12px; max-width: 520px; width: 90%; max-height: 85vh; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+        .smtp-help-modal .modal-header { padding: 16px 20px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
+        .smtp-help-modal .modal-header h3 { margin: 0; font-size: 1.1rem; color: #333; }
+        .smtp-help-modal .modal-close { background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #666; line-height: 1; padding: 0 4px; }
+        .smtp-help-modal .modal-close:hover { color: #333; }
+        .smtp-help-modal .modal-body { padding: 20px; overflow-y: auto; max-height: calc(85vh - 60px); font-size: 0.95rem; line-height: 1.5; color: #444; }
+        .smtp-help-modal .modal-body a { color: var(--primary-dark); }
+        .smtp-help-modal .modal-body ol { margin: 10px 0 10px 20px; padding-left: 8px; }
+        .smtp-help-modal .modal-body li { margin-bottom: 8px; }
+        .smtp-help-modal .modal-body h4 { margin: 12px 0 6px; font-size: 1rem; color: #333; }
+        body.dark-mode .smtp-help-modal { background: #1e1e1e; color: #ddd; }
+        body.dark-mode .smtp-help-modal .modal-header { border-bottom-color: #444; }
+        body.dark-mode .smtp-help-modal .modal-header h3 { color: #ddd; }
+        body.dark-mode .smtp-help-modal .modal-body { color: #ccc; }
+        body.dark-mode .smtp-help-modal .modal-body h4 { color: #ddd; }
+        body.dark-mode .smtp-help-modal .modal-body a { color: #7ab8e0; }
         
         /* Dark Mode */
         body.dark-mode { background-color: #121212; color: #ffffff; }
         body.dark-mode .container { background-color: #1e1e1e; color: #ffffff; box-shadow: 0 4px 15px rgba(255,255,255,0.05); }
         body.dark-mode h2, body.dark-mode label, body.dark-mode .subtitle { color: #ddd; }
-        body.dark-mode input[type="text"], body.dark-mode input[type="email"], body.dark-mode textarea, body.dark-mode input[type="file"] { background-color: #333; color: white; border: 1px solid #555; }
+        body.dark-mode input[type="text"], body.dark-mode input[type="email"], body.dark-mode input[type="password"], body.dark-mode textarea, body.dark-mode input[type="file"] { background-color: #333; color: white; border: 1px solid #555; }
     </style>
 </head>
 <body>
@@ -75,6 +97,28 @@
             <div class="form-group">
                 <label for="email">Email Address</label>
                 <input type="email" id="email" name="email" value="{{ doctor.email or '' }}" placeholder="doctor@example.com">
+            </div>
+            <div class="form-group">
+                <div class="label-with-help">
+                    <label for="smtp_app_password">SMTP App Password (for email reminders)</label>
+                    <button type="button" class="btn-help" id="smtp-help-btn" aria-label="Help">Help</button>
+                </div>
+                <input type="password" id="smtp_app_password" name="smtp_app_password" placeholder="Leave blank to keep existing" autocomplete="off">
+                <div class="file-info">Use your email provider’s app password (e.g. Gmail, Zoho, Outlook). Leave blank to keep current.</div>
+            </div>
+            <div id="smtp-help-overlay" class="smtp-help-overlay" onclick="if(event.target === this) closeSmtpHelp()">
+                <div class="smtp-help-modal" onclick="event.stopPropagation()">
+                    <div class="modal-header">
+                        <h3 id="smtp-help-title">App Password / SMTP help</h3>
+                        <button type="button" class="modal-close" onclick="closeSmtpHelp()" aria-label="Close">&times;</button>
+                    </div>
+                    <div class="modal-body" id="smtp-help-content"></div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="appointment_reminder_days">Appointment reminder days (comma-separated)</label>
+                <input type="text" id="appointment_reminder_days" name="appointment_reminder_days" value="{{ doctor.appointment_reminder_days or '7,3,1' }}" placeholder="7,3,1">
+                <div class="file-info">Days before appointment to send a reminder (e.g. 7, 3, 1 = one week, 3 days, 1 day before).</div>
             </div>
             <div class="form-group">
                 <label for="social_handle">Social Media Handle (Optional)</label>
@@ -198,7 +242,62 @@
             if(localStorage.getItem('theme') === 'dark') {
                 document.body.classList.add('dark-mode');
             }
+            var helpBtn = document.getElementById('smtp-help-btn');
+            if (helpBtn) helpBtn.addEventListener('click', openSmtpHelp);
         });
+        var smtpHelpContent = {
+            gmail: {
+                title: 'Gmail – App Password',
+                body: '<h4>Generate a Gmail App Password</h4><ol><li>Open <a href="https://myaccount.google.com/security" target="_blank" rel="noopener">Google Account Security</a></li><li>Enable <strong>2-Step Verification</strong> (How you sign in to Google → 2-Step Verification).</li><li>Open <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">App Passwords</a></li><li>Create password: enter a name (e.g. <em>PsycheLife</em>), click <strong>Create</strong>.</li><li>Copy the <strong>16-digit password</strong> and paste it in the SMTP App Password field above.</li></ol>'
+            },
+            zoho: {
+                title: 'Zoho – App Password',
+                body: '<h4>Generate a Zoho App Password</h4><ol><li>Open <a href="https://accounts.zoho.com/home#security" target="_blank" rel="noopener">Zoho Accounts Security</a></li><li>Enable <strong>Two-Factor Authentication</strong> if not already enabled.</li><li>Go to <strong>App Passwords</strong>.</li><li>Click <strong>Generate New Password</strong>.</li><li>Enter a name (e.g. <em>SMTP Script</em>).</li><li>Copy the generated password and paste it in the SMTP App Password field above.</li></ol>'
+            },
+            outlook: {
+                title: 'Outlook / Hotmail – App Password',
+                body: '<h4>Generate a Microsoft App Password</h4><ol><li>Open <a href="https://account.microsoft.com/security" target="_blank" rel="noopener">Microsoft Security Settings</a></li><li>Enable <strong>Two-Step Verification</strong>.</li><li>Go to <strong>Advanced Security Options</strong>.</li><li>Scroll to <strong>App Passwords</strong>.</li><li>Click <strong>Create a new app password</strong>.</li><li>Copy the generated password and use it in the SMTP App Password field above.</li></ol>'
+            },
+            yahoo: {
+                title: 'Yahoo – App Password',
+                body: '<h4>Generate Yahoo App Password</h4><ol><li>Open <a href="https://login.yahoo.com/account/security" target="_blank" rel="noopener">Yahoo Account Security</a></li><li>Enable <strong>Two-Step Verification</strong>.</li><li>Click <strong>Generate App Password</strong>.</li><li>Select <strong>Other App</strong>, enter a name (e.g. <em>SMTP Script</em>).</li><li>Copy the generated password and paste it in the SMTP App Password field above.</li></ol>'
+            },
+            icloud: {
+                title: 'iCloud / Apple Mail – App Password',
+                body: '<h4>Generate Apple App-Specific Password</h4><p>Applies to <em>icloud.com</em>, <em>me.com</em>, <em>mac.com</em>.</p><ol><li>Go to <a href="https://appleid.apple.com" target="_blank" rel="noopener">Apple ID Security</a></li><li>Enable <strong>Two-Factor Authentication</strong>.</li><li>Under <strong>Security</strong>, click <strong>App-Specific Passwords</strong>.</li><li>Click <strong>Generate Password</strong>, enter a label (e.g. <em>SMTP Script</em>).</li><li>Copy the password and use it in the SMTP App Password field above.</li></ol>'
+            },
+            aol: {
+                title: 'AOL – App Password',
+                body: '<h4>Generate AOL App Password</h4><ol><li>Open <a href="https://login.aol.com/account/security" target="_blank" rel="noopener">AOL Account Security</a></li><li>Enable <strong>Two-Step Verification</strong>.</li><li>Click <strong>Generate App Password</strong> → <strong>Other App</strong>.</li><li>Enter an app name (e.g. <em>SMTP Script</em>).</li><li>Copy the password and paste it in the SMTP App Password field above.</li></ol>'
+            },
+            other: {
+                title: 'App Password / SMTP help',
+                body: '<p>Enter your <strong>Email Address</strong> above and click Help again to see instructions for your provider (Gmail, Zoho, Outlook, Yahoo, iCloud, AOL).</p><p>Or check your email provider’s security or account settings for <strong>App Passwords</strong> or <strong>SMTP authentication</strong>.</p>'
+            }
+        };
+        function getProviderKey(email) {
+            if (!email || !email.includes('@')) return 'other';
+            var d = email.split('@')[1].toLowerCase();
+            if (d === 'gmail.com') return 'gmail';
+            if (['zoho.com', 'zoho.in', 'zohomail.in', 'zohomail.com'].indexOf(d) !== -1) return 'zoho';
+            if (['outlook.com', 'hotmail.com', 'live.com'].indexOf(d) !== -1) return 'outlook';
+            if (d === 'yahoo.com') return 'yahoo';
+            if (['icloud.com', 'me.com', 'mac.com'].indexOf(d) !== -1) return 'icloud';
+            if (d === 'aol.com') return 'aol';
+            return 'other';
+        }
+        function openSmtpHelp() {
+            var emailInput = document.getElementById('email');
+            var email = emailInput ? emailInput.value : '';
+            var key = getProviderKey(email);
+            var data = smtpHelpContent[key] || smtpHelpContent.other;
+            document.getElementById('smtp-help-title').textContent = data.title;
+            document.getElementById('smtp-help-content').innerHTML = data.body;
+            document.getElementById('smtp-help-overlay').classList.add('show');
+        }
+        function closeSmtpHelp() {
+            document.getElementById('smtp-help-overlay').classList.remove('show');
+        }
     </script>
 </body>
 </html>

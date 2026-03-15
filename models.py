@@ -23,6 +23,12 @@ class Doctor(db.Model):
     phone = db.Column(db.String(20))
     email = db.Column(db.String(120))
 
+    # SMTP: App Password for the doctor's email provider (Zoho, Gmail, etc.). Stored encrypted (decrypted when sending).
+    smtp_app_password = db.Column(db.String(255), nullable=True)
+
+    # Comma-separated days before appointment to send reminders (e.g. "7,3,1"). Default 7, 3, 1.
+    appointment_reminder_days = db.Column(db.String(50), default="7,3,1")
+
     # Active schedule template for appointment slot calculation
     active_template_id = db.Column(db.Integer, db.ForeignKey('schedule_templates.id'), nullable=True)
 
@@ -44,10 +50,14 @@ class Patient(db.Model):
     
     # Phase 1: Extended Details
     phone = db.Column(db.String(20))  # Optional Phone
+    email = db.Column(db.String(120), nullable=True)  # For appointment and medication reminders
     attender_name = db.Column(db.String(100))
     attender_relation = db.Column(db.String(50))
     attender_reliability = db.Column(db.String(10))  # 'Yes' or 'No'
     personal_notes = db.Column(db.Text)  # Doctor's personal ID notes
+
+    # Patient-specific reminder days override (e.g. "7,3,1"). If empty, doctor's appointment_reminder_days is used.
+    appointment_reminder_days = db.Column(db.String(50), nullable=True)
     
     visits = db.relationship('Visit', backref='patient', lazy=True, cascade='all, delete-orphan')
 
