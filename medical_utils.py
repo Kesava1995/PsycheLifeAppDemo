@@ -159,7 +159,8 @@ def compute_med_chart_value(drug_name, dose_mg, frequency, norm_mode="rtp"):
     if freq_str:
         actual_dose_label = f"{dose_mg or ''} ({freq_str})".strip()
     else:
-        actual_dose_label = (dose_mg or f"{raw_mg} mg").strip()
+        # dose_mg may be float from DB; ensure we have a string before .strip()
+        actual_dose_label = str(dose_mg if (dose_mg not in (None, '')) else f"{raw_mg} mg").strip()
     if not actual_dose_label:
         actual_dose_label = f"{raw_mg} mg"
 
