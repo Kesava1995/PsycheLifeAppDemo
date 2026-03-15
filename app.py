@@ -2047,6 +2047,30 @@ def edit_visit(visit_id):
     return render_template('edit_visit.html', visit=visit, patient=patient, previous_visit=previous_visit, doctor=doctor, major_events_data=major_events_data, stressors_data=stressors_data, adherence_data=adherence_data, clinical_state_data=clinical_state_data, substances_data=substances_data, scales_data=scales_data, ace_data=ace_data)
 
 
+@app.route('/visit/<int:visit_id>/delete', methods=['POST'])
+@doctor_required
+def delete_visit(visit_id):
+    """Delete a patient visit and all related records. No DB-level ON DELETE CASCADE, so we delete child rows explicitly."""
+    visit = Visit.query.get_or_404(visit_id)
+    patient_id = visit.patient_id
+    # Delete all child records that reference this visit (no ondelete=CASCADE in DB)
+    SymptomEntry.query.filter_by(visit_id=visit.id).delete()
+    MedicationEntry.query.filter_by(visit_id=visit.id).delete()
+    SideEffectEntry.query.filter_by(visit_id=visit.id).delete()
+    MSEEntry.query.filter_by(visit_id=visit.id).delete()
+    StressorEntry.query.filter_by(visit_id=visit.id).delete()
+    PersonalityEntry.query.filter_by(visit_id=visit.id).delete()
+    SafetyMedicalProfile.query.filter_by(visit_id=visit.id).delete()
+    MajorEvent.query.filter_by(visit_id=visit.id).delete()
+    AdherenceRange.query.filter_by(visit_id=visit.id).delete()
+    ClinicalStateRange.query.filter_by(visit_id=visit.id).delete()
+    SubstanceUseEntry.query.filter_by(visit_id=visit.id).delete()
+    ScaleAssessment.query.filter_by(visit_id=visit.id).delete()
+    db.session.delete(visit)
+    db.session.commit()
+    return redirect(url_for('patient_detail', patient_id=patient_id))
+
+
 @app.route('/visit/<int:visit_id>/update_clinical', methods=['POST'])
 @login_required
 def update_clinical(visit_id):

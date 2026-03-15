@@ -57,7 +57,7 @@
     body.dark-mode .topbar-dark-toggle .icon-moon { display: none; }
     body.dark-mode .topbar-dark-toggle .icon-sun { display: block !important; }
     .plus-menu-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 4px 10px; line-height: 1; color: #2c3e50; }
-    .topbar-plus-btn { width: 40px; height: 40px; padding: 0; border-radius: 10px; background: #14b8a6; color: #fff; font-size: 22px; font-weight: 300; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+    .topbar-plus-btn { width: 40px; height: 40px; padding: 0; border-radius: 10px; background: #ccfbf1; color: #0d9488; font-size: 22px; font-weight: 300; line-height: 1; display: inline-flex; align-items: center; justify-content: center; transition: background 0.2s, color 0.2s; }
     .topbar-plus-btn:hover { background: #0d9488; color: #fff; }
     .bell-btn { color: #555; }
     .bell-btn:hover { color: #2c7be5; }
@@ -366,6 +366,9 @@
 
     .plus-menu-wrap { position: relative; display: inline-block; }
     .plus-menu-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 4px 10px; line-height: 1; color: #2c3e50; }
+    /* Top app bar '+' button (light mode): default light shade, hover dark shade (override .plus-menu-btn) */
+    .top-right .plus-menu-wrap .topbar-plus-btn { background: #ccfbf1 !important; color: #0d9488 !important; }
+    .top-right .plus-menu-wrap .topbar-plus-btn:hover { background: #0d9488 !important; color: #fff !important; }
     .plus-menu-dropdown { display: none; position: absolute; top: 100%; right: 0; margin-top: 4px; min-width: 200px; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 3100; padding: 6px 0; border: 1px solid #eee; }
     .plus-menu-dropdown.show { display: block; }
     .plus-menu-dropdown a, .plus-menu-dropdown button { display: block; width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px; color: #333; }
@@ -550,10 +553,6 @@
 </datalist>
 
 <div id="sideMenu" class="side-menu">
-    <div class="side-search">
-        <input type="text" placeholder="Search Patients" list="patient-list" onchange="handlePatientSearch(this.value)">
-    </div>
-
     <div class="menu-item" onclick="switchView('appointments')">Dashboard</div>
     <div class="menu-item" onclick="switchView('patients')">My Patients</div>
     <div class="menu-item" onclick="switchView('appointments')">Appointments</div>
