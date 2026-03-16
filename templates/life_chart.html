@@ -891,10 +891,8 @@
                                                 <button type="button" onclick="removeFreqBoxLC(this)" style="font-size:10px; line-height:10px; padding:0 2px; cursor:pointer; background: none; border: 1px solid #ddd; border-radius: 2px;">-</button>
                                             </div>
                                         </div>
-                                        <div class="duration-adjust-wrap" style="display: flex; align-items: center; gap: 2px; flex: none;">
-                                            <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
+                                        <div class="duration-adjust-wrap" style="display: flex; align-items: center; flex: none;">
                                             <input type="text" list="duration-options-list" name="med_duration[]" value="{{ step.duration_text or '' }}" placeholder="Dur (required)" required style="width: 80px; padding: 8px;" oninput="updateDurationOptions(this)">
-                                            <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
                                         </div>
                                         <div style="display:flex; gap:5px; flex:none; align-items: center;">
                                             <button type="button" class="btn btn-sm" onclick="duplicateTaperRowLC(this)" style="padding:6px 10px; font-size:11px; border-radius:4px; border:1px dashed #7ab8e0; background:#f0f8ff; color:#555; margin: 0; line-height: 1;">+ Taper</button>
@@ -935,10 +933,8 @@
                                                 <button type="button" onclick="removeFreqBoxLC(this)" style="font-size:10px; line-height:10px; padding:0 2px; cursor:pointer; background: none; border: 1px solid #ddd; border-radius: 2px;">-</button>
                                             </div>
                                         </div>
-                                        <div class="duration-adjust-wrap" style="display: flex; align-items: center; gap: 2px; flex: none;">
-                                            <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
+                                        <div class="duration-adjust-wrap" style="display: flex; align-items: center; flex: none;">
                                             <input type="text" list="duration-options-list" name="med_duration[]" value="{{ entry.duration_text or '' }}" placeholder="Dur (required)" required style="width: 80px; padding: 8px;" oninput="updateDurationOptions(this)">
-                                            <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
                                         </div>
                                         <div style="display:flex; gap:5px; flex:none; align-items: center;">
                                             <button type="button" class="btn btn-sm" onclick="duplicateTaperRowLC(this)" style="padding:6px 10px; font-size:11px; border-radius:4px; border:1px dashed #7ab8e0; background:#f0f8ff; color:#555; margin: 0; line-height: 1;">+ Taper</button>
@@ -1698,7 +1694,7 @@
         if (!sym.scales || !sym.scales.x) return;
         if (!ad.options || !ad.options.scales || !ad.options.scales.x) return;
         _applyAdherenceAlignment(sym, ad);
-        ad.update('none');
+        ad.update();
     }
 
     const syncSymptomAdherenceXPlugin = {
@@ -2930,13 +2926,13 @@
             if (chartOptions.plugins.zoom.pan) chartOptions.plugins.zoom.pan.mode = 'x';
             if (chartOptions.plugins.zoom.zoom) chartOptions.plugins.zoom.zoom.mode = 'x';
         }
-        // Single shared date axis below Adherence strip (visible)
+        // Single shared date axis below Adherence strip: hidden in normal mode (avoid overlap), visible when expanded
         chartOptions.scales.x.display = true;
         chartOptions.scales.x.position = 'bottom';
         chartOptions.scales.x.offset = false;
-        chartOptions.scales.x.ticks = Object.assign({}, chartOptions.scales.x.ticks || {}, { display: true, padding: 4, maxTicksLimit: 10 });
-        chartOptions.scales.x.title = Object.assign({}, chartOptions.scales.x.title || {}, { display: true, text: 'Date' });
-        chartOptions.layout.padding = { top: 2, left: 2, right: 2, bottom: 24 };
+        chartOptions.scales.x.ticks = Object.assign({}, chartOptions.scales.x.ticks || {}, { display: false, padding: 4, maxTicksLimit: 10 });
+        chartOptions.scales.x.title = Object.assign({}, chartOptions.scales.x.title || {}, { display: false, text: 'Date' });
+        chartOptions.layout.padding = { top: 2, left: 2, right: 2, bottom: 8 };
         chartOptions.plugins.legend = { display: false };
         chartOptions.plugins.tooltip = Object.assign({}, chartOptions.plugins.tooltip, { enabled: true });
 
@@ -2967,8 +2963,13 @@
         function toggleAdherenceStripHeight() {
             adherenceStripExpanded = !adherenceStripExpanded;
             stripWrap.style.height = (adherenceStripExpanded ? ADHERENCE_STRIP_HEIGHT_MAX : ADHERENCE_STRIP_HEIGHT_DEFAULT) + 'px';
-            if (miniChart && miniChart.options.scales && miniChart.options.scales.y) {
-                miniChart.options.scales.y.display = adherenceStripExpanded;
+            if (miniChart && miniChart.options.scales) {
+                if (miniChart.options.scales.y) miniChart.options.scales.y.display = adherenceStripExpanded;
+                if (miniChart.options.scales.x) {
+                    if (miniChart.options.scales.x.ticks) miniChart.options.scales.x.ticks.display = adherenceStripExpanded;
+                    if (miniChart.options.scales.x.title) miniChart.options.scales.x.title.display = adherenceStripExpanded;
+                }
+                miniChart.options.layout.padding = Object.assign({}, miniChart.options.layout.padding || {}, { bottom: adherenceStripExpanded ? 24 : 8 });
                 miniChart.update();
             }
             stripWrap.style.background = adherenceStripExpanded ? '#ffffff' : '#fafbfc';
@@ -3036,8 +3037,10 @@
                     chart.update();
                 }
             });
-            // Re-sync adherence strip after reset so padding aligns correctly
-            requestAnimationFrame(function() { syncSymptomAdherenceX(); });
+            // Re-sync adherence strip after symptom chart has finished layout (double rAF)
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() { syncSymptomAdherenceX(); });
+            });
             return;
         }
 
@@ -4187,10 +4190,8 @@ function adjustDuration(input, delta) {
                         <button type="button" onclick="removeFreqBoxLC(this)" style="font-size:10px; line-height:10px; padding:0 2px; cursor:pointer; background: none; border: 1px solid #ddd; border-radius: 2px;">-</button>
                     </div>
                 </div>
-                <div class="duration-adjust-wrap" style="display: flex; align-items: center; gap: 2px; flex: none;">
-                        <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
+                <div class="duration-adjust-wrap" style="display: flex; align-items: center; flex: none;">
                         <input type="text" list="duration-options-list" name="med_duration[]" placeholder="Dur (required)" required style="width: 80px; padding: 8px;" oninput="updateDurationOptions(this)">
-                        <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
                     </div>
                 <div style="display:flex; gap:5px; flex:none; align-items: center;">
                     <button type="button" class="btn btn-sm" onclick="duplicateTaperRowLC(this)" style="padding:6px 10px; font-size:11px; border-radius:4px; border:1px dashed #7ab8e0; background:#f0f8ff; color:#555; margin: 0; line-height: 1;">+ Taper</button>

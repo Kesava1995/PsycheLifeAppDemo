@@ -2549,6 +2549,7 @@ def prepare_chart_data(patient_id: int) -> dict:
     """
     Transform database rows into Chart.js datasets with Unified averages.
     """
+    patient = Patient.query.get(patient_id)
     visits = Visit.query.filter_by(patient_id=patient_id).order_by(Visit.date).all()
     
     if not visits:
@@ -2825,21 +2826,39 @@ def prepare_chart_data(patient_id: int) -> dict:
                 'date': calc_event_date(visit.date, me.duration)
             })
         for su in getattr(visit, 'substance_use_entries', []):
-            start_str = su.start_date.strftime('%Y-%m-%d') if su.start_date else None
-            end_str = su.end_date.strftime('%Y-%m-%d') if su.end_date else None
-            if not start_str or not end_str:
+            # Life chart strip: same start/end logic as life_chart route
+            patient_age = getattr(patient, 'age', None) if patient else None
+            age_first = getattr(su, 'age_at_first_use', None)
+            current_status = (getattr(su, 'current_status', None) or '').strip()
+            abstinent_since = getattr(su, 'abstinent_since', None)
+            start_str = None
+            end_str = None
+            if age_first is not None and patient_age is not None and age_first < patient_age:
+                years_before_visit = patient_age - age_first
+                try:
+                    start_date = visit.date.replace(year=visit.date.year - years_before_visit)
+                    start_str = start_date.strftime('%Y-%m-%d')
+                except ValueError:
+                    pass
+            if not start_str and su.start_date:
+                start_str = su.start_date.strftime('%Y-%m-%d')
+            if not start_str:
                 dur = parse_duration(su.note or '')
                 if dur:
-                    start_d = visit.date - dur
-                    if not start_str:
-                        start_str = start_d.strftime('%Y-%m-%d')
-                    if not end_str:
-                        end_str = str_date
+                    start_str = (visit.date - dur).strftime('%Y-%m-%d')
+            if not start_str:
+                start_str = str_date
+            if current_status == 'Currently Abstinent' and abstinent_since:
+                end_str = abstinent_since.strftime('%Y-%m-%d')
+            if not end_str and su.end_date:
+                end_str = su.end_date.strftime('%Y-%m-%d')
+            if not end_str:
+                end_str = str_date
             substances_data.append({
                 'substance': su.substance_name,
                 'pattern': su.pattern or 'Occasional',
-                'start_date': start_str or str_date,
-                'end_date': end_str or str_date,
+                'start_date': start_str,
+                'end_date': end_str,
                 'note': su.note or ''
             })
 
@@ -3027,23 +3046,38 @@ def life_chart(patient_id):
                 'date': calc_event_date(v.date, me.duration)
             })
         for su in getattr(v, 'substance_use_entries', []):
-            start_str = su.start_date.strftime('%Y-%m-%d') if su.start_date else None
-            end_str = su.end_date.strftime('%Y-%m-%d') if su.end_date else None
-            # If no dates stored, compute from duration in note (e.g. "Usually: Since 12 days" or "Since 5 years")
-            if not start_str or not end_str:
+            # Life chart strip: compute start/end from Age at First Use + Current Status (see Life Chart Substance Strip Logic)
+            patient_age = getattr(patient, 'age', None)
+            age_first = getattr(su, 'age_at_first_use', None)
+            current_status = (getattr(su, 'current_status', None) or '').strip()
+            abstinent_since = getattr(su, 'abstinent_since', None)
+
+            start_str = None
+            end_str = None
+
+            if age_first is not None and patient_age is not None and age_first < patient_age:
+                years_before_visit = patient_age - age_first
+                try:
+                    start_date = v.date.replace(year=v.date.year - years_before_visit)
+                    start_str = start_date.strftime('%Y-%m-%d')
+                except ValueError:
+                    pass
+            if not start_str and su.start_date:
+                start_str = su.start_date.strftime('%Y-%m-%d')
+            if not start_str:
                 dur = parse_duration(su.note or '')
                 if dur:
-                    v_d = v.date
-                    start_d = v_d - dur
-                    end_d = v_d
-                    if not start_str:
-                        start_str = start_d.strftime('%Y-%m-%d')
-                    if not end_str:
-                        end_str = end_d.strftime('%Y-%m-%d')
+                    start_str = (v.date - dur).strftime('%Y-%m-%d')
             if not start_str:
                 start_str = v_date_str
+
+            if current_status == 'Currently Abstinent' and abstinent_since:
+                end_str = abstinent_since.strftime('%Y-%m-%d')
+            if not end_str and su.end_date:
+                end_str = su.end_date.strftime('%Y-%m-%d')
             if not end_str:
                 end_str = v_date_str
+
             substances_data.append({
                 'substance': su.substance_name,
                 'pattern': su.pattern or 'Occasional',

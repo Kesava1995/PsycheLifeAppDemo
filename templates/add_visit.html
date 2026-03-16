@@ -115,7 +115,7 @@
     
     {% macro row_template_med(entry, unique_id, readonly_name=false) %}
     <div class="entry-wrapper">
-        <div style="display:flex; align-items:center; gap:10px; width:100%;">
+        <div style="display:flex; align-items:center; gap:10px; width:100%; flex-wrap:nowrap;">
             <select name="drug_type[]" style="width:120px; flex:none;">
                 <option value="Gen" {% if entry.drug_type=='Gen'%}selected{%endif%}>Generic</option>
                 <option value="Brand" {% if entry.drug_type=='Brand'%}selected{%endif%}>Brand</option>
@@ -129,16 +129,14 @@
 
             <input type="text" name="drug_name[]" value="{{ entry.drug_name }}" style="flex:2; min-width:150px; {% if readonly_name %}background:#f0f8ff; border:1px dashed #7ab8e0;{% endif %}" {% if readonly_name %}readonly{% endif %}>
             
-            <div class="dose-adjust-wrap" style="display:flex; align-items:center; gap:2px; flex:1; min-width:100px;">
-                <button type="button" onclick="adjustDose(this.closest('.dose-adjust-wrap').querySelector('input[name=\'dose_full[]\']'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
+            <div class="dose-adjust-wrap" style="display:flex; align-items:center; gap:2px; flex:0 0 auto; min-width:100px;">
+                <button type="button" onclick="adjustDose(this.closest('.dose-adjust-wrap').querySelector(&quot;input[name='dose_full[]']&quot;), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
                 <input type="text" name="dose_full[]" value="{{ entry.dose_mg }}" list="dose-list-{{ unique_id }}" placeholder="Dose" style="flex:1; min-width:70px;" oninput="updateDoseOptions(this)">
-                <button type="button" onclick="adjustDose(this.closest('.dose-adjust-wrap').querySelector('input[name=\'dose_full[]\']'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
+                <button type="button" onclick="adjustDose(this.closest('.dose-adjust-wrap').querySelector(&quot;input[name='dose_full[]']&quot;), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
                 <datalist id="dose-list-{{ unique_id }}"></datalist>
             </div>
-            <div class="duration-adjust-wrap" style="display:flex; align-items:center; gap:2px; flex:1; min-width:100px;">
-                <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
+            <div class="duration-adjust-wrap" style="display:flex; align-items:center; flex:1; min-width:100px;">
                 <input type="text" list="duration-options-list" name="med_duration[]" value="{{ entry.duration_text or '' }}" placeholder="Duration (required)" required style="flex:1; min-width:70px;" oninput="updateDurationOptions(this)">
-                <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
             </div>
             
             <div style="display:flex; gap:5px; flex:none;">
@@ -1641,20 +1639,18 @@
             if (type === 'med') {
                 const uniqueId = Date.now() + Math.random();
                 contentHTML = `
-                <div style="display:flex; align-items:center; gap:10px; width:100%;">
+                <div style="display:flex; align-items:center; gap:10px; width:100%; flex-wrap:nowrap;">
                     <select name="drug_type[]" style="width:120px; flex:none;"><option value="Gen">Generic</option><option value="Brand">Brand</option></select>
                     <select name="med_form[]" style="width:120px; flex:none;"><option value="Tablet">Tablet</option><option value="Capsule">Capsule</option><option value="Injection">Injection</option></select>
                     <input type="text" name="drug_name[]" placeholder="Drug Name" style="flex:2; min-width:150px;">
-                    <div class="dose-adjust-wrap" style="display:flex; align-items:center; gap:2px; flex:1; min-width:100px;">
-                        <button type="button" onclick="adjustDose(this.closest('.dose-adjust-wrap').querySelector('input[name=\'dose_full[]\']'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
+                    <div class="dose-adjust-wrap" style="display:flex; align-items:center; gap:2px; flex:0 0 auto; min-width:100px;">
+                        <button type="button" onclick="adjustDose(this.closest('.dose-adjust-wrap').querySelector(&quot;input[name='dose_full[]']&quot;), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
                         <input type="text" name="dose_full[]" list="dose-list-${uniqueId}" placeholder="Dose" style="flex:1; min-width:70px;" oninput="updateDoseOptions(this)">
-                        <button type="button" onclick="adjustDose(this.closest('.dose-adjust-wrap').querySelector('input[name=\'dose_full[]\']'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
+                        <button type="button" onclick="adjustDose(this.closest('.dose-adjust-wrap').querySelector(&quot;input[name='dose_full[]']&quot;), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
                         <datalist id="dose-list-${uniqueId}"></datalist>
                     </div>
-                    <div class="duration-adjust-wrap" style="display:flex; align-items:center; gap:2px; flex:1; min-width:100px;">
-                        <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
+                    <div class="duration-adjust-wrap" style="display:flex; align-items:center; flex:1; min-width:100px;">
                         <input type="text" list="duration-options-list" name="med_duration[]" placeholder="Duration (required)" required style="flex:1; min-width:70px;" oninput="updateDurationOptions(this)">
-                        <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
                     </div>
                     <div style="display:flex; gap:5px; flex:none;">
                         <button type="button" class="btn btn-sm" onclick="duplicateTaperRow(this)" style="padding:5px 10px; border-radius:4px; border:1px dashed #7ab8e0; background:#f0f8ff; color:#555;">+ Taper Step</button>
