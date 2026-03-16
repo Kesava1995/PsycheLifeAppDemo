@@ -201,6 +201,25 @@ def migrate():
             else:
                 print("  - safety_medical_profiles table exists")
 
+            # 10. Phase 4: Extend SUBSTANCE_USE_ENTRIES with structured fields
+            print("\n[Phase 4: Substance Use Entries]")
+            substance_cols = [
+                ('age_at_first_use', 'INTEGER'),
+                ('current_status', 'TEXT'),
+                ('has_abstinence_history', 'BOOLEAN'),
+                ('longest_abstinence_months', 'INTEGER'),
+                ('abstinent_since', 'DATE')
+            ]
+            for col, dtype in substance_cols:
+                if not column_exists(cursor, 'substance_use_entries', col):
+                    try:
+                        cursor.execute(f"ALTER TABLE substance_use_entries ADD COLUMN {col} {dtype}")
+                        print(f"  + Added {col}")
+                    except sqlite3.OperationalError as e:
+                        print(f"  ! Failed to add {col}: {e}")
+                else:
+                    print(f"  - {col} exists")
+
             connection.commit()
             print("\n--- Migration Completed Successfully! ---")
             

@@ -1875,8 +1875,17 @@ def process_visit_form_data(visit, form_data):
     # 8. Substance Use History; dates computed from duration (e.g. "Since 12 days") when provided
     sub_names = form_data.getlist('substance_name[]')
     sub_patterns = form_data.getlist('substance_pattern[]')
-    sub_usually = form_data.getlist('substance_usually[]')  # e.g. "Since 5 years" or "12 days"
+    sub_usually = form_data.getlist('substance_usually[]')  # legacy field; may be empty with new UI
     sub_notes = form_data.getlist('substance_note[]')
+
+    # New structured fields from enhanced UI
+    sub_age_first_use = form_data.getlist('substance_age_first_use[]')
+    sub_current_status = form_data.getlist('substance_current_status[]')
+    sub_has_abstinence_history = form_data.getlist('substance_has_abstinence_history[]')
+    sub_longest_abs_value = form_data.getlist('substance_longest_abstinence_value[]')
+    sub_longest_abs_unit = form_data.getlist('substance_longest_abstinence_unit[]')
+    sub_abstinent_since_month = form_data.getlist('substance_abstinent_since_month[]')
+    sub_abstinent_since_year = form_data.getlist('substance_abstinent_since_year[]')
     SubstanceUseEntry.query.filter_by(visit_id=visit.id).delete()
     visit_date = visit.date
     for i, name in enumerate(sub_names):
@@ -1889,6 +1898,8 @@ def process_visit_form_data(visit, form_data):
             if extra_note:
                 note_parts.append(extra_note)
             note_str = ' | '.join(note_parts) if note_parts else None
+
+            # Derive legacy duration-based dates if "usually" string is present
             start_date = None
             end_date = None
             if usually:
@@ -1896,13 +1907,66 @@ def process_visit_form_data(visit, form_data):
                 if delta:
                     start_date = visit_date - delta
                     end_date = visit_date
+
+            # Map new structured fields safely by index
+            def _get_int(lst, idx):
+                try:
+                    v = (lst[idx] or '').strip()
+                    return int(v) if v else None
+                except (IndexError, ValueError, TypeError):
+                    return None
+
+            def _get_str(lst, idx):
+                try:
+                    return (lst[idx] or '').strip() or None
+                except IndexError:
+                    return None
+
+            age_first_use = _get_int(sub_age_first_use, i)
+            current_status = _get_str(sub_current_status, i)
+
+            raw_has_abs = _get_str(sub_has_abstinence_history, i)
+            has_abstinence_history = None
+            if raw_has_abs is not None:
+                if raw_has_abs.lower() == 'yes':
+                    has_abstinence_history = True
+                elif raw_has_abs.lower() == 'no':
+                    has_abstinence_history = False
+
+            # Normalize longest abstinence to months
+            longest_abs_value = _get_int(sub_longest_abs_value, i) or 0
+            longest_abs_unit = (_get_str(sub_longest_abs_unit, i) or '').lower()
+            longest_abs_months = None
+            if longest_abs_value > 0:
+                if 'year' in longest_abs_unit:
+                    longest_abs_months = longest_abs_value * 12
+                else:
+                    longest_abs_months = longest_abs_value
+
+            # Abstinent since: interpret Month + Year as first of month
+            abstinent_since = None
+            month_str = _get_str(sub_abstinent_since_month, i)
+            year_str = _get_str(sub_abstinent_since_year, i)
+            if month_str and year_str:
+                try:
+                    y = int(year_str)
+                    m = int(month_str)
+                    abstinent_since = date(y, m, 1)
+                except ValueError:
+                    abstinent_since = None
+
             db.session.add(SubstanceUseEntry(
                 visit_id=visit.id,
                 substance_name=name,
                 pattern=sub_patterns[i] if i < len(sub_patterns) else 'Occasional',
                 start_date=start_date,
                 end_date=end_date,
-                note=note_str
+                note=note_str,
+                age_at_first_use=age_first_use,
+                current_status=current_status,
+                has_abstinence_history=has_abstinence_history,
+                longest_abstinence_months=longest_abs_months,
+                abstinent_since=abstinent_since
             ))
 
 

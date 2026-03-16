@@ -291,6 +291,13 @@ class SubstanceUseEntry(db.Model):
     end_date = db.Column(db.Date, nullable=True)
     note = db.Column(db.Text)
 
+    # Extended structured fields for new UI
+    age_at_first_use = db.Column(db.Integer, nullable=True)
+    current_status = db.Column(db.String(50), nullable=True)  # 'Ongoing Use', 'Currently Abstinent', 'Past Use'
+    has_abstinence_history = db.Column(db.Boolean, nullable=True)
+    longest_abstinence_months = db.Column(db.Integer, nullable=True)  # normalized months for easy graphing
+    abstinent_since = db.Column(db.Date, nullable=True)  # interpreted from Month + Year
+
 
 class ScaleAssessment(db.Model):
     __tablename__ = 'scale_assessment'

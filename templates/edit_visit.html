@@ -309,6 +309,13 @@
                         <button type="button" class="add-btn" onclick="addSubstance()">+</button>
                     </div>
                     <div id="substances-container"></div>
+                    <datalist id="substance_datalist">
+                        <option value="Alcohol">
+                        <option value="Cannabis">
+                        <option value="Tobacco">
+                        <option value="Opioids">
+                        <option value="Others">
+                    </datalist>
                     <input type="hidden" id="substances_data" value="{{ substances_data|default('[]')|e }}">
 
                     <div class="section-header"><span class="section-title">Family History of Psychiatric illness</span></div>
@@ -1375,26 +1382,154 @@
                     else { usually = noteStr.substring(9).trim(); extraNote = ''; }
                 } else { usually = ''; extraNote = noteStr; }
             }
-            usually = usually || ''; extraNote = (extraNote != null && extraNote !== undefined) ? String(extraNote) : '';
+            usually = usually || '';
+            extraNote = (extraNote != null && extraNote !== undefined) ? String(extraNote) : '';
             var esc = function(s) { return (s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
-            const html = '<div class="entry-wrapper"><div class="row-flex" style="align-items:center; flex-wrap:wrap; gap:10px;">' +
-                '<select name="substance_name[]" style="flex:1; min-width:120px; padding:6px; border-radius:4px; border:1px solid #ccc;">' +
-                '<option value="Alcohol"' + (sub==='Alcohol'?' selected':'') + '>Alcohol</option>' +
-                '<option value="Tobacco (Smoked)"' + (sub==='Tobacco (Smoked)'?' selected':'') + '>Tobacco (Smoked)</option>' +
-                '<option value="Smokeless Tobacco"' + (sub==='Smokeless Tobacco'?' selected':'') + '>Smokeless Tobacco</option>' +
-                '<option value="Cannabis"' + (sub==='Cannabis'?' selected':'') + '>Cannabis</option>' +
-                '<option value="Opioids"' + (sub==='Opioids'?' selected':'') + '>Opioids</option>' +
-                '<option value="Stimulants"' + (sub==='Stimulants'?' selected':'') + '>Stimulants</option></select>' +
-                '<select name="substance_pattern[]" style="flex:1; min-width:120px; padding:6px; border-radius:4px; border:1px solid #ccc;">' +
-                '<option value="Occasional"' + (pat==='Occasional'?' selected':'') + '>Occasional</option>' +
-                '<option value="Weekends"' + (pat==='Weekends'?' selected':'') + '>Weekends</option>' +
-                '<option value="Daily"' + (pat==='Daily'?' selected':'') + '>Daily</option>' +
-                '<option value="Severe/Early morning intake"' + (pat==='Severe/Early morning intake'?' selected':'') + '>Severe/Early morning intake</option></select>' +
-                '<label style="display:flex; align-items:center; gap:5px; font-size:12px;">Usually: <input type="text" name="substance_usually[]" list="duration-options-list" data-prefix="Since" placeholder="e.g. Since 5 years" value="' + esc(usually) + '" style="min-width:140px; padding:4px; border:1px solid #ccc;" oninput="updateDurationOptions(this)"></label>' +
-                '<button type="button" class="note-btn" onclick="toggleNote(this)">📝</button>' +
-                '<button type="button" class="remove-btn" onclick="this.closest(\'.entry-wrapper\').remove()">✕</button></div>' +
-                '<input type="text" class="note-input" name="substance_note[]" value="' + esc(extraNote) + '" placeholder="Note..."></div>';
+            const html =
+                '<div class="entry-wrapper">' +
+                    '<div class="row-flex" style="align-items:flex-end; flex-wrap:wrap; gap:10px;">' +
+                        '<div class="datalist-input-wrap" style="flex:1; min-width:160px; display:flex; flex-direction:column; align-items:flex-start;">' +
+                            '<label style="display:block; font-size:12px; margin-bottom:2px; text-align:left;">Substance</label>' +
+                            '<input type="text" name="substance_name[]" list="substance_datalist" placeholder="Type or select..." autocomplete="off" value="' + esc(sub) + '" style="width:100%; padding:6px 8px; border-radius:4px; border:1px solid #ccc;">' +
+                        '</div>' +
+                        '<div class="su-age-field" style="display:flex; flex-direction:column; gap:2px; font-size:12px; min-width:100px;">' +
+                            '<span>Age at First Use</span>' +
+                            '<input type="number" name="substance_age_first_use[]" min="0" max="120" step="1" style="width:100%; min-width:80px; padding:6px; border-radius:4px; border:1px solid #ccc; text-align:center; box-sizing:border-box;">' +
+                        '</div>' +
+                        '<div style="display:flex; flex-direction:column; gap:2px; font-size:12px; min-width:150px;">' +
+                            '<span>Current Status</span>' +
+                            '<select name="substance_current_status[]" onchange="handleSubstanceStatusChange(this)" style="padding:6px; border-radius:4px; border:1px solid #ccc;">' +
+                                '<option value="">Select...</option>' +
+                                '<option value="Ongoing Use">Ongoing Use</option>' +
+                                '<option value="Currently Abstinent">Currently Abstinent</option>' +
+                                '<option value="Past Use">Past Use</option>' +
+                            '</select>' +
+                        '</div>' +
+                        '<div style="display:flex; flex-direction:column; gap:2px; font-size:12px; min-width:150px;">' +
+                            '<span>Pattern of Use</span>' +
+                            '<select name="substance_pattern[]" style="padding:6px; border-radius:4px; border:1px solid #ccc;">' +
+                                '<option value="Occasional"' + (pat==='Occasional'?' selected':'') + '>Occasional</option>' +
+                                '<option value="Weekends"' + (pat==='Weekends'?' selected':'') + '>Weekends</option>' +
+                                '<option value="Daily"' + (pat==='Daily'?' selected':'') + '>Daily</option>' +
+                                '<option value="Severe/Early morning intake"' + (pat==='Severe/Early morning intake'?' selected':'') + '>Severe / Early Morning Intake</option>' +
+                                '<option value="Binge Use"' + (pat==='Binge Use'?' selected':'') + '>Binge Use</option>' +
+                            '</select>' +
+                        '</div>' +
+                        '<div class="su-status-ongoing-extra" style="display:none; flex-direction:column; gap:2px; font-size:12px; min-width:180px;">' +
+                            '<span>History of Abstinence</span>' +
+                            '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
+                                '<label style="display:inline-flex; align-items:center; gap:4px; margin:0;"><input type="radio" name="substance_has_abstinence_history[]" value="Yes" onchange="handleSubstanceAbstinenceHistoryChange(this)"> Yes</label>' +
+                                '<label style="display:inline-flex; align-items:center; gap:4px; margin:0;"><input type="radio" name="substance_has_abstinence_history[]" value="No" onchange="handleSubstanceAbstinenceHistoryChange(this)"> No</label>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="su-abstinence-history-extra" style="display:none; flex-direction:column; gap:2px; font-size:12px; min-width:190px;">' +
+                            '<span>Longest Abstinence Period</span>' +
+                            '<div style="display:flex; align-items:center; gap:6px;">' +
+                                '<input type="number" name="substance_longest_abstinence_value[]" min="0" step="1" style="width:70px; padding:4px 6px; border-radius:4px; border:1px solid #ccc; text-align:center;">' +
+                                '<select name="substance_longest_abstinence_unit[]" style="padding:4px 6px; border-radius:4px; border:1px solid #ccc;">' +
+                                    '<option value="Months">Months</option>' +
+                                    '<option value="Years">Years</option>' +
+                                '</select>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="su-status-abstinent-extra" style="display:none; flex-direction:column; gap:2px; font-size:12px;">' +
+                            '<span>Abstinent Since</span>' +
+                            '<div style="display:flex; align-items:center; gap:6px; flex-wrap:nowrap;">' +
+                                '<select name="substance_abstinent_since_month[]" style="width:90px; min-width:90px; padding:4px 6px; border-radius:4px; border:1px solid #ccc;">' +
+                                    '<option value="">Month</option>' +
+                                    '<option value="01">Jan</option>' +
+                                    '<option value="02">Feb</option>' +
+                                    '<option value="03">Mar</option>' +
+                                    '<option value="04">Apr</option>' +
+                                    '<option value="05">May</option>' +
+                                    '<option value="06">Jun</option>' +
+                                    '<option value="07">Jul</option>' +
+                                    '<option value="08">Aug</option>' +
+                                    '<option value="09">Sep</option>' +
+                                    '<option value="10">Oct</option>' +
+                                    '<option value="11">Nov</option>' +
+                                    '<option value="12">Dec</option>' +
+                                '</select>' +
+                                '<input type="text" name="substance_abstinent_since_year[]" placeholder="Year" style="width:70px; padding:4px 6px; border-radius:4px; border:1px solid #ccc; text-align:center;">' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="su-entry-actions" style="display:flex; justify-content:flex-end; align-items:center; gap:8px; margin-top:8px;">' +
+                        '<button type="button" class="note-btn" onclick="toggleNote(this)">📝</button>' +
+                        '<button type="button" class="remove-btn" onclick="this.closest(\'.entry-wrapper\').remove()">✕</button>' +
+                    '</div>' +
+                    '<input type="text" class="note-input" name="substance_note[]" value="' + esc(extraNote) + '" placeholder="Note...">' +
+                '</div>';
             document.getElementById('substances-container').insertAdjacentHTML('beforeend', html);
+        }
+
+        function adjustSubstanceAge(btn, delta) {
+            var container = btn.closest('.su-age-field');
+            if (!container) return;
+            var input = container.querySelector('input[type="number"]');
+            if (!input) return;
+            var val = parseInt(input.value || '0', 10);
+            if (isNaN(val)) val = 0;
+            val += delta;
+            if (val < 0) val = 0;
+            if (val > 120) val = 120;
+            input.value = val || '';
+        }
+
+        function _updateSubstanceConditionalUI(wrapper) {
+            if (!wrapper) return;
+            var statusSel = wrapper.querySelector('select[name="substance_current_status[]"]');
+            var status = statusSel ? (statusSel.value || '') : '';
+
+            var ongoingBox = wrapper.querySelector('.su-status-ongoing-extra');
+            var abstinentBox = wrapper.querySelector('.su-status-abstinent-extra');
+            var longestBox = wrapper.querySelector('.su-abstinence-history-extra');
+
+            function hideDisableClear(container) {
+                if (!container) return;
+                container.style.display = 'none';
+                container.querySelectorAll('input, select, textarea').forEach(function(el) {
+                    el.disabled = true;
+                    if (el.tagName === 'SELECT') el.selectedIndex = 0;
+                    else if ((el.getAttribute('type') || '').toLowerCase() === 'radio' || (el.getAttribute('type') || '').toLowerCase() === 'checkbox') el.checked = false;
+                    else el.value = '';
+                });
+            }
+
+            function showEnable(container) {
+                if (!container) return;
+                container.style.display = 'flex';
+                container.querySelectorAll('input, select, textarea').forEach(function(el) { el.disabled = false; });
+            }
+
+            if (status === 'Ongoing Use') {
+                showEnable(ongoingBox);
+                var yesRadio = wrapper.querySelector('input[name="substance_has_abstinence_history[]"][value="Yes"]');
+                if (yesRadio && yesRadio.checked) {
+                    showEnable(longestBox);
+                } else {
+                    hideDisableClear(longestBox);
+                }
+                hideDisableClear(abstinentBox);
+            } else if (status === 'Currently Abstinent') {
+                showEnable(abstinentBox);
+                hideDisableClear(ongoingBox);
+                hideDisableClear(longestBox);
+            } else {
+                hideDisableClear(ongoingBox);
+                hideDisableClear(abstinentBox);
+                hideDisableClear(longestBox);
+            }
+        }
+
+        function handleSubstanceStatusChange(sel) {
+            var wrapper = sel.closest('.entry-wrapper');
+            _updateSubstanceConditionalUI(wrapper);
+        }
+
+        function handleSubstanceAbstinenceHistoryChange(radio) {
+            var wrapper = radio.closest('.entry-wrapper');
+            _updateSubstanceConditionalUI(wrapper);
         }
 
         // --- DOSE +/- ADJUST (medications) ---
