@@ -62,7 +62,7 @@ def run_daily_reminders():
                         subject = f"Appointment Reminder with {doctor.full_name or 'your Doctor'}"
                         body = (
                             f"Dear {patient.name},\n\n"
-                            f"This is a reminder for your upcoming appointment with {doctor.full_name or 'your doctor'} "
+                            f"This is a reminder for your upcoming appointment with Dr.{doctor.full_name or 'your doctor'} "
                             f"on {target_date.strftime('%B %d, %Y')}.\n\n"
                             f"Best regards,\n{doctor.clinic_name or 'The Clinic'}"
                         )

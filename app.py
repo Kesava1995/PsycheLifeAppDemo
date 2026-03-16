@@ -1702,6 +1702,18 @@ def process_visit_form_data(visit, form_data):
         if t.strip():
             db.session.add(PersonalityEntry(visit_id=visit.id, trait=t, note=pers_note))
 
+    # Helper to safely parse floats from form fields that may contain '', None, or 'None'
+    def _safe_float(val, default=None):
+        try:
+            if val is None:
+                return default
+            s = str(val).strip()
+            if not s or s.lower() == "none":
+                return default
+            return float(s)
+        except (TypeError, ValueError):
+            return default
+
     # 3. SYMPTOMS
     s_names = form_data.getlist('symptom_name[]')
     s_onsets = form_data.getlist('symptom_onset[]')
@@ -1714,9 +1726,9 @@ def process_visit_form_data(visit, form_data):
             entry = SymptomEntry(
                 visit_id=visit.id,
                 symptom_name=name,
-                score_onset=float(s_onsets[i]) if i < len(s_onsets) and s_onsets[i] else None,
-                score_progression=float(s_progs[i]) if i < len(s_progs) and s_progs[i] else None,
-                score_current=float(s_currs[i]) if i < len(s_currs) and s_currs[i] else 0,
+                score_onset=_safe_float(s_onsets[i]) if i < len(s_onsets) else None,
+                score_progression=_safe_float(s_progs[i]) if i < len(s_progs) else None,
+                score_current=_safe_float(s_currs[i], default=0) if i < len(s_currs) else 0,
                 duration_text=get_duration(i, 'symptom'),  # Helper
                 note=s_notes[i] if i < len(s_notes) else ''
             )
@@ -1788,13 +1800,13 @@ def process_visit_form_data(visit, form_data):
     for i, name in enumerate(se_names):
         if name.strip():
             # Handle float/int conversion safely
-            curr_val = float(se_currs[i]) if i < len(se_currs) and se_currs[i] else 0
+            curr_val = _safe_float(se_currs[i], default=0) if i < len(se_currs) else 0
             
             entry = SideEffectEntry(
                 visit_id=visit.id,
                 side_effect_name=name,
-                score_onset=float(se_onsets[i]) if i < len(se_onsets) and se_onsets[i] else None,
-                score_progression=float(se_progs[i]) if i < len(se_progs) and se_progs[i] else None,
+                score_onset=_safe_float(se_onsets[i]) if i < len(se_onsets) else None,
+                score_progression=_safe_float(se_progs[i]) if i < len(se_progs) else None,
                 score_current=curr_val,
                 duration_text=get_duration(i, 'side_effect'),  # New Duration
                 note=se_notes[i] if i < len(se_notes) else '',
@@ -1827,14 +1839,14 @@ def process_visit_form_data(visit, form_data):
     
     for i, cat in enumerate(mse_cats):
         if cat and i < len(mse_findings) and mse_findings[i].strip():
-            curr_val = float(mse_currs[i]) if i < len(mse_currs) and mse_currs[i] else 0
+            curr_val = _safe_float(mse_currs[i], default=0) if i < len(mse_currs) else 0
             
             entry = MSEEntry(
                 visit_id=visit.id,
                 category=cat,
                 finding_name=mse_findings[i],
-                score_onset=float(mse_onsets[i]) if i < len(mse_onsets) and mse_onsets[i] else None,
-                score_progression=float(mse_progs[i]) if i < len(mse_progs) and mse_progs[i] else None,
+                score_onset=_safe_float(mse_onsets[i]) if i < len(mse_onsets) else None,
+                score_progression=_safe_float(mse_progs[i]) if i < len(mse_progs) else None,
                 score_current=curr_val,
                 duration=get_duration(i, 'mse'),  # Helper (Maps to mse_duration_val[])
                 note=mse_notes[i] if i < len(mse_notes) else '',
