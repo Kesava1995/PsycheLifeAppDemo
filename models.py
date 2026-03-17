@@ -60,6 +60,8 @@ class Patient(db.Model):
     appointment_reminder_days = db.Column(db.String(50), nullable=True)
     
     visits = db.relationship('Visit', backref='patient', lazy=True, cascade='all, delete-orphan')
+    adherence_ranges = db.relationship('AdherenceRange', backref='patient', lazy=True, foreign_keys='AdherenceRange.patient_id')
+    clinical_state_ranges = db.relationship('ClinicalStateRange', backref='patient', lazy=True, foreign_keys='ClinicalStateRange.patient_id')
 
 
 class Visit(db.Model):
@@ -91,8 +93,8 @@ class Visit(db.Model):
     personality_entries = db.relationship('PersonalityEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
     safety_profile = db.relationship('SafetyMedicalProfile', backref='visit', uselist=False, cascade='all, delete-orphan')
     major_events = db.relationship('MajorEvent', backref='visit', lazy=True, cascade='all, delete-orphan')
-    adherence_ranges = db.relationship('AdherenceRange', backref='visit', lazy=True, cascade='all, delete-orphan')
-    clinical_state_ranges = db.relationship('ClinicalStateRange', backref='visit', lazy=True, cascade='all, delete-orphan')
+    adherence_ranges = db.relationship('AdherenceRange', backref='visit', lazy=True, foreign_keys='AdherenceRange.visit_id')
+    clinical_state_ranges = db.relationship('ClinicalStateRange', backref='visit', lazy=True, foreign_keys='ClinicalStateRange.visit_id')
     substance_use_entries = db.relationship('SubstanceUseEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
     scale_assessments = db.relationship('ScaleAssessment', backref='visit', lazy=True, cascade='all, delete-orphan')
 
@@ -225,9 +227,10 @@ class MajorEvent(db.Model):
 
 class AdherenceRange(db.Model):
     __tablename__ = 'adherence_ranges'
-    
+
     id = db.Column(db.Integer, primary_key=True)
-    visit_id = db.Column(db.Integer, db.ForeignKey('visits.id'), nullable=False)
+    patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False)
+    visit_id = db.Column(db.Integer, db.ForeignKey('visits.id'), nullable=True)  # optional: which visit last updated
     status = db.Column(db.String(50), nullable=False)  # 'Complete', 'Partial', 'No Adherence'
     start_date = db.Column(db.Date, nullable=True)
     end_date = db.Column(db.Date, nullable=True)
@@ -235,9 +238,10 @@ class AdherenceRange(db.Model):
 
 class ClinicalStateRange(db.Model):
     __tablename__ = 'clinical_state_ranges'
-    
+
     id = db.Column(db.Integer, primary_key=True)
-    visit_id = db.Column(db.Integer, db.ForeignKey('visits.id'), nullable=False)
+    patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False)
+    visit_id = db.Column(db.Integer, db.ForeignKey('visits.id'), nullable=True)  # optional: which visit last updated
     state = db.Column(db.String(50), nullable=False)  # 'Recovery', 'Remission', etc.
     start_date = db.Column(db.Date, nullable=True)
     end_date = db.Column(db.Date, nullable=True)

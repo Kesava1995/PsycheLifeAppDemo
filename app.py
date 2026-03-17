@@ -1606,43 +1606,46 @@ def process_visit_form_data(visit, form_data):
         except (json.JSONDecodeError, TypeError):
             pass
 
-    # 1c. Adherence Ranges (from modal JSON)
+    # 1c. Adherence Ranges (from modal JSON) — stored per patient, not per visit
+    patient_id = visit.patient_id
     adherence_json = form_data.get('adherence_data', '')
-    if adherence_json:
-        try:
-            for ar in AdherenceRange.query.filter_by(visit_id=visit.id).all():
-                db.session.delete(ar)
+    try:
+        for ar in AdherenceRange.query.filter_by(patient_id=patient_id).all():
+            db.session.delete(ar)
+        if adherence_json:
             for item in json.loads(adherence_json):
                 if isinstance(item, dict) and item.get('status'):
                     start_d = parse_date(item.get('start')) if item.get('start') else None
                     end_d = parse_date(item.get('end')) if item.get('end') else None
                     db.session.add(AdherenceRange(
+                        patient_id=patient_id,
                         visit_id=visit.id,
                         status=item['status'],
                         start_date=start_d,
                         end_date=end_d
                     ))
-        except (json.JSONDecodeError, TypeError):
-            pass
+    except (json.JSONDecodeError, TypeError):
+        pass
 
-    # 1d. Clinical State Ranges (from modal JSON)
+    # 1d. Clinical State Ranges (from modal JSON) — stored per patient, not per visit
     clinical_state_json = form_data.get('clinical_state_data', '')
-    if clinical_state_json:
-        try:
-            for csr in ClinicalStateRange.query.filter_by(visit_id=visit.id).all():
-                db.session.delete(csr)
+    try:
+        for csr in ClinicalStateRange.query.filter_by(patient_id=patient_id).all():
+            db.session.delete(csr)
+        if clinical_state_json:
             for item in json.loads(clinical_state_json):
                 if isinstance(item, dict) and item.get('state'):
                     start_d = parse_date(item.get('start')) if item.get('start') else None
                     end_d = parse_date(item.get('end')) if item.get('end') else None
                     db.session.add(ClinicalStateRange(
+                        patient_id=patient_id,
                         visit_id=visit.id,
                         state=item['state'],
                         start_date=start_d,
                         end_date=end_d
                     ))
-        except (json.JSONDecodeError, TypeError):
-            pass
+    except (json.JSONDecodeError, TypeError):
+        pass
 
     # 1e. Adverse childhood experiences (ACE) – from modal JSON
     ace_json = form_data.get('ace_data', '')
@@ -2037,6 +2040,8 @@ def patient_detail(patient_id):
             default_email_message += f" at {doc.clinic_name}"
         default_email_message += ".\n\nPlease get in touch if you have any questions.\n\nBest regards,\n"
         default_email_message += (doc.clinic_name or doc_name)
+    adherence_data = json.dumps([{'status': a.status, 'start': a.start_date.strftime('%Y-%m-%d') if a.start_date else None, 'end': a.end_date.strftime('%Y-%m-%d') if a.end_date else None} for a in AdherenceRange.query.filter_by(patient_id=patient.id).all()])
+    clinical_state_data = json.dumps([{'state': c.state, 'start': c.start_date.strftime('%Y-%m-%d') if c.start_date else None, 'end': c.end_date.strftime('%Y-%m-%d') if c.end_date else None} for c in ClinicalStateRange.query.filter_by(patient_id=patient.id).all()])
     return render_template('patient_detail.html',
                           patient=patient,
                           visits=visits,
@@ -2045,7 +2050,73 @@ def patient_detail(patient_id):
                           badge_major_events=badge_major_events,
                           badge_personality=badge_personality,
                           badge_ace=badge_ace,
-                          default_email_message=default_email_message)
+                          default_email_message=default_email_message,
+                          adherence_data=adherence_data,
+                          clinical_state_data=clinical_state_data)
+
+
+@app.route('/patient/<int:patient_id>/save_ranges', methods=['POST'])
+@doctor_required
+def save_patient_ranges(patient_id):
+    """Save Clinical State or Adherence ranges from patient_detail modals (same scope as in visits)."""
+    patient = Patient.query.get_or_404(patient_id)
+    if patient.doctor_id != session.get('doctor_id'):
+        abort(403)
+    range_type = request.form.get('range_type')  # 'clinical_state' or 'adherence'
+    if range_type == 'adherence':
+        for ar in AdherenceRange.query.filter_by(patient_id=patient_id).all():
+            db.session.delete(ar)
+        raw = request.form.get('adherence_data', '')
+        if raw:
+            try:
+                for item in json.loads(raw):
+                    if isinstance(item, dict) and item.get('status'):
+                        start_d = parse_date(item.get('start')) if item.get('start') else None
+                        end_d = parse_date(item.get('end')) if item.get('end') else None
+                        db.session.add(AdherenceRange(patient_id=patient_id, status=item['status'], start_date=start_d, end_date=end_d))
+            except (json.JSONDecodeError, TypeError):
+                pass
+        db.session.commit()
+        flash('Adherence ranges updated.', 'success')
+    elif range_type == 'clinical_state':
+        for csr in ClinicalStateRange.query.filter_by(patient_id=patient_id).all():
+            db.session.delete(csr)
+        raw = request.form.get('clinical_state_data', '')
+        if raw:
+            try:
+                for item in json.loads(raw):
+                    if isinstance(item, dict) and item.get('state'):
+                        start_d = parse_date(item.get('start')) if item.get('start') else None
+                        end_d = parse_date(item.get('end')) if item.get('end') else None
+                        db.session.add(ClinicalStateRange(patient_id=patient_id, state=item['state'], start_date=start_d, end_date=end_d))
+            except (json.JSONDecodeError, TypeError):
+                pass
+        db.session.commit()
+        flash('Clinical state ranges updated.', 'success')
+    else:
+        flash('Invalid range type.', 'error')
+    return redirect(url_for('patient_detail', patient_id=patient_id))
+
+
+@app.route('/patient/<int:patient_id>/delete_ranges', methods=['POST'])
+@doctor_required
+def delete_patient_ranges(patient_id):
+    """Delete all Clinical State or Adherence ranges for this patient."""
+    patient = Patient.query.get_or_404(patient_id)
+    if patient.doctor_id != session.get('doctor_id'):
+        abort(403)
+    range_type = request.form.get('range_type')  # 'clinical_state' or 'adherence'
+    if range_type == 'adherence':
+        AdherenceRange.query.filter_by(patient_id=patient_id).delete()
+        db.session.commit()
+        flash('Adherence ranges deleted.', 'success')
+    elif range_type == 'clinical_state':
+        ClinicalStateRange.query.filter_by(patient_id=patient_id).delete()
+        db.session.commit()
+        flash('Clinical state ranges deleted.', 'success')
+    else:
+        flash('Invalid range type.', 'error')
+    return redirect(url_for('patient_detail', patient_id=patient_id))
 
 
 @app.route('/patient/<int:patient_id>/update_contact', methods=['POST'])
@@ -2265,7 +2336,9 @@ def add_visit(patient_id):
     
     doctor = Doctor.query.get(session.get('doctor_id'))
     ace_data = (last_visit.ace_data or '') if last_visit and getattr(last_visit, 'ace_data', None) else ''
-    return render_template('add_visit.html', patient=patient, today=today, last_visit=last_visit, doctor=doctor, ace_data=ace_data)
+    adherence_data = json.dumps([{'status': a.status, 'start': a.start_date.strftime('%Y-%m-%d') if a.start_date else None, 'end': a.end_date.strftime('%Y-%m-%d') if a.end_date else None} for a in AdherenceRange.query.filter_by(patient_id=patient.id).all()])
+    clinical_state_data = json.dumps([{'state': c.state, 'start': c.start_date.strftime('%Y-%m-%d') if c.start_date else None, 'end': c.end_date.strftime('%Y-%m-%d') if c.end_date else None} for c in ClinicalStateRange.query.filter_by(patient_id=patient.id).all()])
+    return render_template('add_visit.html', patient=patient, today=today, last_visit=last_visit, doctor=doctor, ace_data=ace_data, adherence_data=adherence_data, clinical_state_data=clinical_state_data)
 
 
 @app.route('/visit/<int:visit_id>/edit', methods=['GET', 'POST'])
@@ -2370,8 +2443,9 @@ def edit_visit(visit_id):
     doctor = Doctor.query.get(session.get('doctor_id'))
     major_events_data = json.dumps([{'event_type': e.event_type, 'duration': e.duration or '', 'note': e.note or ''} for e in visit.major_events])
     stressors_data = json.dumps([{'stressor_type': s.stressor_type, 'duration': s.duration or '', 'note': s.note or ''} for s in visit.stressor_entries])
-    adherence_data = json.dumps([{'status': a.status, 'start': a.start_date.strftime('%Y-%m-%d') if a.start_date else None, 'end': a.end_date.strftime('%Y-%m-%d') if a.end_date else None} for a in visit.adherence_ranges])
-    clinical_state_data = json.dumps([{'state': c.state, 'start': c.start_date.strftime('%Y-%m-%d') if c.start_date else None, 'end': c.end_date.strftime('%Y-%m-%d') if c.end_date else None} for c in visit.clinical_state_ranges])
+    # Load ranges from patient so they persist across visits and are not lost when a visit is deleted
+    adherence_data = json.dumps([{'status': a.status, 'start': a.start_date.strftime('%Y-%m-%d') if a.start_date else None, 'end': a.end_date.strftime('%Y-%m-%d') if a.end_date else None} for a in AdherenceRange.query.filter_by(patient_id=visit.patient_id).all()])
+    clinical_state_data = json.dumps([{'state': c.state, 'start': c.start_date.strftime('%Y-%m-%d') if c.start_date else None, 'end': c.end_date.strftime('%Y-%m-%d') if c.end_date else None} for c in ClinicalStateRange.query.filter_by(patient_id=visit.patient_id).all()])
     substances_data = json.dumps([{
         'substance': su.substance_name,
         'pattern': su.pattern or 'Occasional',
@@ -2405,8 +2479,7 @@ def delete_visit(visit_id):
     PersonalityEntry.query.filter_by(visit_id=visit.id).delete()
     SafetyMedicalProfile.query.filter_by(visit_id=visit.id).delete()
     MajorEvent.query.filter_by(visit_id=visit.id).delete()
-    AdherenceRange.query.filter_by(visit_id=visit.id).delete()
-    ClinicalStateRange.query.filter_by(visit_id=visit.id).delete()
+    # Adherence/Clinical state ranges are stored per patient — do not delete
     SubstanceUseEntry.query.filter_by(visit_id=visit.id).delete()
     ScaleAssessment.query.filter_by(visit_id=visit.id).delete()
     db.session.delete(visit)
@@ -2448,36 +2521,37 @@ def update_clinical(visit_id):
         except (json.JSONDecodeError, TypeError):
             visit.ace_data = None
 
-    # --- RANGES UPDATES (Clinical State & Adherence with dates, same as edit_visit modal) ---
+    # --- RANGES UPDATES (Clinical State & Adherence — stored per patient) ---
+    patient_id = visit.patient_id
     adherence_json = request.form.get('adherence_data', '')
-    if adherence_json:
-        try:
-            for ar in AdherenceRange.query.filter_by(visit_id=visit.id).all():
-                db.session.delete(ar)
+    try:
+        for ar in AdherenceRange.query.filter_by(patient_id=patient_id).all():
+            db.session.delete(ar)
+        if adherence_json:
             for item in json.loads(adherence_json):
                 if isinstance(item, dict) and item.get('status'):
                     start_d = parse_date(item.get('start')) if item.get('start') else None
                     end_d = parse_date(item.get('end')) if item.get('end') else None
                     db.session.add(AdherenceRange(
-                        visit_id=visit.id, status=item['status'], start_date=start_d, end_date=end_d
+                        patient_id=patient_id, visit_id=visit.id, status=item['status'], start_date=start_d, end_date=end_d
                     ))
-        except (json.JSONDecodeError, TypeError):
-            pass
+    except (json.JSONDecodeError, TypeError):
+        pass
 
     clinical_state_json = request.form.get('clinical_state_data', '')
-    if clinical_state_json:
-        try:
-            for csr in ClinicalStateRange.query.filter_by(visit_id=visit.id).all():
-                db.session.delete(csr)
+    try:
+        for csr in ClinicalStateRange.query.filter_by(patient_id=patient_id).all():
+            db.session.delete(csr)
+        if clinical_state_json:
             for item in json.loads(clinical_state_json):
                 if isinstance(item, dict) and item.get('state'):
                     start_d = parse_date(item.get('start')) if item.get('start') else None
                     end_d = parse_date(item.get('end')) if item.get('end') else None
                     db.session.add(ClinicalStateRange(
-                        visit_id=visit.id, state=item['state'], start_date=start_d, end_date=end_d
+                        patient_id=patient_id, visit_id=visit.id, state=item['state'], start_date=start_d, end_date=end_d
                     ))
-        except (json.JSONDecodeError, TypeError):
-            pass
+    except (json.JSONDecodeError, TypeError):
+        pass
     # --- END RANGES UPDATES ---
 
     # 2. Update Medications ONLY (Wipe old meds for this visit, write new ones)
@@ -3224,17 +3298,18 @@ def life_chart(patient_id):
             })
         return datasets
 
-    # 4. Clinical State and Adherence Ranges (for annotation bands)
+    # 4. Clinical State and Adherence Ranges (for annotation bands) — stored per patient
     clinical_states = []
     adherences = []
-    for v in visits:
-        for s in ClinicalStateRange.query.filter_by(visit_id=v.id).all():
+    pid = patient.id if patient else None
+    if pid:
+        for s in ClinicalStateRange.query.filter_by(patient_id=pid).all():
             clinical_states.append({
                 'state': s.state,
                 'start': s.start_date.strftime('%Y-%m-%d') if s.start_date else None,
                 'end': s.end_date.strftime('%Y-%m-%d') if s.end_date else None
             })
-        for a in AdherenceRange.query.filter_by(visit_id=v.id).all():
+        for a in AdherenceRange.query.filter_by(patient_id=pid).all():
             adherences.append({
                 'status': a.status,
                 'start': a.start_date.strftime('%Y-%m-%d') if a.start_date else None,

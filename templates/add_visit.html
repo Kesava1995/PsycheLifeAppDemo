@@ -486,7 +486,7 @@
                     <div style="margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
                         <h4 style="margin:0 0 10px 0; color:#555;">Current Clinical State</h4>
                         <button type="button" class="btn" style="margin-top:0; padding:8px 14px; font-size:12px; background:#666; color:#fff;" onclick="openClinicalStateRangesModal()">Manage Clinical State Ranges (dates)</button>
-                        <input type="hidden" name="clinical_state_data" id="clinical_state_data" value="">
+                        <input type="hidden" name="clinical_state_data" id="clinical_state_data" value="{{ clinical_state_data|default('[]') }}">
                     </div>
 					
                     <div class="section-header" style="flex-wrap: wrap;">
@@ -497,7 +497,7 @@
                 <div style="margin-bottom: 15px; display: flex; align-items: center;">
                     <label style="font-size: 13px; font-weight: 600; color: #555; margin-right: 10px; margin-bottom: 0;">Medication Adherence:</label>
                     <button type="button" class="btn" style="margin-left:0; padding:6px 12px; font-size:12px; background:#666; color:#fff; margin-top:0;" onclick="openAdherenceRangesModal()">Manage Adherence Ranges (dates)</button>
-                    <input type="hidden" name="adherence_data" id="adherence_data" value="">
+                    <input type="hidden" name="adherence_data" id="adherence_data" value="{{ adherence_data|default('[]') }}">
                 </div>
                     <div id="meds-container">
                         {% if last_visit %}
@@ -668,7 +668,10 @@
 
                     <div id="adherenceRangesModal" class="modal" onclick="if(event.target === this) closeAdherenceRangesModal()">
                         <div class="modal-content" style="width: 480px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; margin-top: 5vh;">
-                            <h4 style="margin-top: 0;">Adherence Ranges (with dates)</h4>
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                <h4 style="margin-top: 0;">Adherence Ranges (with dates)</h4>
+                                <button type="button" class="btn" style="padding:6px 12px; font-size:12px; background:#dc3545; color:#fff;" onclick="event.stopPropagation(); deleteAllAdherenceRanges();">Delete</button>
+                            </div>
                             <div style="overflow-y: auto; flex-grow: 1; padding-right: 10px;">
                                 <div class="checklist-group">
                                     <label><input type="checkbox" class="adherence-checkbox" value="Complete"> Complete</label>
@@ -685,7 +688,10 @@
 
                     <div id="clinicalStateRangesModal" class="modal" onclick="if(event.target === this) closeClinicalStateRangesModal()">
                         <div class="modal-content" style="width: 520px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; margin-top: 5vh;">
-                            <h4 style="margin-top: 0; color: #333;">Clinical State Ranges</h4>
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                <h4 style="margin-top: 0; color: #333;">Clinical State Ranges</h4>
+                                <button type="button" class="btn" style="padding:6px 12px; font-size:12px; background:#dc3545; color:#fff;" onclick="event.stopPropagation(); deleteAllClinicalStateRanges();">Delete</button>
+                            </div>
                             <div style="margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #eee;">
                                 <strong style="font-size: 12px; color: #555;">States based on Provisional diagnosis:</strong>
                                 <div id="clinical-state-diagnosis-ref" style="font-size: 12px; color: #333; margin-top: 4px;"></div>
@@ -1237,19 +1243,82 @@
             const data = [];
             document.querySelectorAll('#clinical-state-ranges-container > div[id^="csr-input-"]').forEach(div => {
                 const strong = div.querySelector('strong');
-                const s = div.querySelector('.range-start');
-                const e = div.querySelector('.range-end');
-                if (strong && s && e) data.push({ state: strong.innerText, start: s.value || null, end: e.value || null });
+                if (!strong) return;
+                const stateName = strong.innerText;
+                div.querySelectorAll('.csr-range-row').forEach(row => {
+                    const s = row.querySelector('.range-start');
+                    const e = row.querySelector('.range-end');
+                    if (s && e) data.push({ state: stateName, start: s.value || null, end: e.value || null });
+                });
             });
             document.getElementById('clinical_state_data').value = JSON.stringify(data);
             closeModal('clinicalStateRangesModal');
         }
+        function addExtraClinicalRange(btn) {
+            var block = btn.previousElementSibling;
+            if (!block || !block.classList.contains('csr-range-row')) block = btn.parentElement.querySelector('.csr-range-row');
+            var row = document.createElement('div');
+            row.className = 'csr-range-row';
+            row.style.cssText = 'display: flex; gap: 10px; margin-top: 5px; align-items:center;';
+            row.innerHTML = '<label>Start: <input type="date" class="range-start"></label><label>End: <input type="date" class="range-end"></label>';
+            btn.parentElement.insertBefore(row, btn);
+        }
+        function deleteAllClinicalStateRanges() {
+            document.querySelectorAll('.clinical-state-checkbox').forEach(cb => { cb.checked = false; });
+            document.getElementById('clinical-state-ranges-container').innerHTML = '';
+            document.getElementById('clinical_state_data').value = '[]';
+        }
+        function deleteAllAdherenceRanges() {
+            document.querySelectorAll('.adherence-checkbox').forEach(cb => { cb.checked = false; });
+            document.getElementById('adherence-ranges-container').innerHTML = '';
+            document.getElementById('adherence_data').value = '[]';
+        }
         function openAdherenceRangesModal() {
+            var container = document.getElementById('adherence-ranges-container');
+            var hid = document.getElementById('adherence_data');
+            if (container) container.innerHTML = '';
+            document.querySelectorAll('#adherenceRangesModal .adherence-checkbox').forEach(function(cb) { cb.checked = false; });
+            try {
+                var data = hid && hid.value ? JSON.parse(hid.value) : [];
+                data.forEach(function(item) {
+                    if (!item.status) return;
+                    var id = 'adherence-range-' + item.status.replace(/\s+/g, '_');
+                    var html = '<div class="range-group" id="' + id + '" data-status="' + item.status + '"><div class="range-row"><label>Start: <input type="date" class="range-start" value="' + (item.start || '') + '"></label> <label>End: <input type="date" class="range-end" value="' + (item.end || '') + '"></label></div><button type="button" class="btn" style="margin-top:6px; padding:4px 10px; font-size:11px; background:#7ab8e0; color:#fff;" onclick="addExtraRange(this, \'adherence\')">+ Add another range</button></div>';
+                    container.insertAdjacentHTML('beforeend', html);
+                    var cb = document.querySelector('.adherence-checkbox[value="' + item.status.replace(/"/g, '&quot;') + '"]'); if (cb) cb.checked = true;
+                });
+            } catch (e) {}
             document.getElementById('adherenceRangesModal').style.display = 'block';
         }
         function openClinicalStateRangesModal() {
-            document.getElementById('clinicalStateRangesModal').style.display = 'block';
             renderClinicalStates();
+            var container = document.getElementById('clinical-state-ranges-container');
+            var hid = document.getElementById('clinical_state_data');
+            if (container) container.innerHTML = '';
+            try {
+                var data = hid && hid.value ? JSON.parse(hid.value) : [];
+                var byState = {};
+                data.forEach(function(item) { if (item.state && !byState[item.state]) byState[item.state] = []; if (item.state) byState[item.state].push(item); });
+                Object.keys(byState).forEach(function(state) {
+                    if (customStates.indexOf(state) === -1) customStates.push(state);
+                });
+                renderClinicalStates();
+                data.forEach(function(item) {
+                    if (!item.state) return;
+                    var safeId = 'csr-input-' + item.state.replace(/[^a-zA-Z0-9]/g, '');
+                    var div = document.getElementById(safeId);
+                    if (!div) {
+                        var html = '<div id="' + safeId + '" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 10px;"><strong style="font-size: 13px; color: #333;">' + item.state.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</strong><div class="csr-range-row" style="display: flex; gap: 10px; margin-top: 5px; align-items:center;"><label>Start: <input type="date" class="range-start" value="' + (item.start || '') + '"></label><label>End: <input type="date" class="range-end" value="' + (item.end || '') + '"></label></div><button type="button" class="btn" style="margin-top:6px; padding:4px 10px; font-size:11px; background:#7ab8e0; color:#fff;" onclick="addExtraClinicalRange(this)">+ Range</button></div>';
+                        container.insertAdjacentHTML('beforeend', html);
+                        var cb = document.querySelector('.clinical-state-checkbox[value="' + item.state.replace(/"/g, '&quot;') + '"]'); if (cb) cb.checked = true;
+                    } else {
+                        var row = document.createElement('div'); row.className = 'csr-range-row'; row.style.cssText = 'display: flex; gap: 10px; margin-top: 5px; align-items:center;';
+                        row.innerHTML = '<label>Start: <input type="date" class="range-start" value="' + (item.start || '') + '"></label><label>End: <input type="date" class="range-end" value="' + (item.end || '') + '"></label>';
+                        div.insertBefore(row, div.querySelector('button'));
+                    }
+                });
+            } catch (e) {}
+            document.getElementById('clinicalStateRangesModal').style.display = 'block';
         }
         const stateDB = {
             "Bipolar Disorder": ["Recovery", "Remission", "Partial Remission", "Depressive Episode", "Manic Episode", "Hypomanic Episode", "Mixed Episode", "Relapse", "Loss of Follow-up"],
@@ -1303,7 +1372,7 @@
             var container = document.getElementById('clinical-state-ranges-container');
             var safeId = 'csr-input-' + cb.value.replace(/[^a-zA-Z0-9]/g, '');
             if (cb.checked) {
-                var html = '<div id="' + safeId + '" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 10px;"><strong style="font-size: 13px; color: #333;">' + cb.value.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</strong><div style="display: flex; gap: 10px; margin-top: 5px; align-items:center;"><label>Start: <input type="date" class="range-start"></label><label>End: <input type="date" class="range-end"></label></div></div>';
+                var html = '<div id="' + safeId + '" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 10px;"><strong style="font-size: 13px; color: #333;">' + cb.value.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</strong><div class="csr-range-row" style="display: flex; gap: 10px; margin-top: 5px; align-items:center;"><label>Start: <input type="date" class="range-start"></label><label>End: <input type="date" class="range-end"></label></div><button type="button" class="btn" style="margin-top:6px; padding:4px 10px; font-size:11px; background:#7ab8e0; color:#fff;" onclick="addExtraClinicalRange(this)">+ Range</button></div>';
                 container.insertAdjacentHTML('beforeend', html);
             } else { var el = document.getElementById(safeId); if (el) el.remove(); }
         }

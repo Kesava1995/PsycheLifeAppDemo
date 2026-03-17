@@ -67,6 +67,12 @@
         .badge-modal .modal-actions { margin-top: 16px; display: flex; gap: 10px; }
         .badge-modal .btn-cancel { background: #888; color: white; }
         .badge-modal .btn-submit { background: #7ab8e0; color: white; }
+        .dropdown-item { display: block; padding: 10px 14px; color: #333; text-decoration: none; font-size: 14px; }
+        .dropdown-item:hover { background: #f0f8ff; }
+        .modal { display: none; position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 2000; align-items: center; justify-content: center; }
+        .modal.show { display: flex; }
+        /* Same close-on-backdrop-click pattern as visit templates (closeModal) */
+        .modal-content-pd { background: white; border-radius: 10px; padding: 24px; max-width: 520px; width: 90%; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
         .ace-checkbox-group { max-height: 200px; overflow-y: auto; margin-bottom: 12px; }
         .ace-checkbox-group label { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; cursor: pointer; font-weight: normal; }
         .ace-checkbox-group input[type="checkbox"] { width: auto; }
@@ -82,7 +88,23 @@
         <div class="patient-header">
             <h1>{{ patient.name }}</h1>
             {% if not is_new_case %}
-            <button type="button" class="btn-send-email" id="btn-open-email-modal">Send Custom email</button>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <div class="dropdown-wrap" style="position: relative;">
+                    <button type="button" class="btn btn-primary" id="btn-access-dropdown" style="display: inline-flex; align-items: center; gap: 4px;">Access <span style="font-size: 10px;">▼</span></button>
+                    <div id="access-dropdown" class="dropdown-menu" style="display: none; position: absolute; top: 100%; left: 0; margin-top: 4px; min-width: 180px; background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100;">
+                        <a href="#" class="dropdown-item" data-action="access" data-type="clinical_state">Clinical State Ranges</a>
+                        <a href="#" class="dropdown-item" data-action="access" data-type="adherence">Adherence Ranges</a>
+                    </div>
+                </div>
+                <div class="dropdown-wrap" style="position: relative;">
+                    <button type="button" class="btn btn-danger" id="btn-delete-dropdown" style="display: inline-flex; align-items: center; gap: 4px;">Delete <span style="font-size: 10px;">▼</span></button>
+                    <div id="delete-dropdown" class="dropdown-menu" style="display: none; position: absolute; top: 100%; left: 0; margin-top: 4px; min-width: 180px; background: #fff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100;">
+                        <a href="#" class="dropdown-item" data-action="delete" data-type="clinical_state">Clinical State Ranges</a>
+                        <a href="#" class="dropdown-item" data-action="delete" data-type="adherence">Adherence Ranges</a>
+                    </div>
+                </div>
+                <button type="button" class="btn-send-email" id="btn-open-email-modal">Send Custom email</button>
+            </div>
             {% endif %}
         </div>
         <div class="patient-info">
@@ -123,6 +145,198 @@
             });
         })();
         </script>
+
+        <!-- Access: Adherence Ranges Modal (close on click elsewhere — same pattern as visit templates) -->
+        <div id="pdAdherenceModal" class="modal" onclick="if(event.target === this) closeModal('pdAdherenceModal')">
+            <div class="modal-content-pd" onclick="event.stopPropagation()">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h4 style="margin: 0;">Adherence Ranges (with dates)</h4>
+                    <button type="button" class="btn" style="padding:6px 12px; font-size:12px; background:#dc3545; color:#fff;" onclick="deleteAllPdAdherenceRanges()">Delete</button>
+                </div>
+                <div class="checklist-group" style="margin-bottom: 10px;">
+                    <label><input type="checkbox" class="adherence-checkbox" value="Complete"> Complete</label>
+                    <label><input type="checkbox" class="adherence-checkbox" value="Partial"> Partial</label>
+                    <label><input type="checkbox" class="adherence-checkbox" value="No Adherence"> No Adherence</label>
+                </div>
+                <div id="pd-adherence-ranges-container" style="margin-top:12px; flex:1; overflow-y:auto;"></div>
+                <form method="POST" action="{{ url_for('save_patient_ranges', patient_id=patient.id) }}" id="pdAdherenceForm" style="margin-top: 12px;">
+                    <input type="hidden" name="range_type" value="adherence">
+                    <input type="hidden" name="adherence_data" id="pd_adherence_data" value="{{ adherence_data|default('[]') }}">
+                    <button type="button" class="btn" style="background:#888; color:#fff;" onclick="closeModal('pdAdherenceModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Done</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Access: Clinical State Ranges Modal (close on click elsewhere — same pattern as visit templates) -->
+        <div id="pdClinicalStateModal" class="modal" onclick="if(event.target === this) closeModal('pdClinicalStateModal')">
+            <div class="modal-content-pd" onclick="event.stopPropagation()">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h4 style="margin: 0; color: #333;">Clinical State Ranges</h4>
+                    <button type="button" class="btn" style="padding:6px 12px; font-size:12px; background:#dc3545; color:#fff;" onclick="deleteAllPdClinicalStateRanges()">Delete</button>
+                </div>
+                <p style="font-size: 12px; color: #555; margin: 0 0 10px 0;">States based on Provisional diagnosis — Enter diagnosis in a visit to see diagnosis-specific states.</p>
+                <strong style="font-size: 13px; color: #555; display:block; margin-bottom: 5px;">States:</strong>
+                <div class="checklist-group" id="pd-dynamic-states-container"></div>
+                <div style="margin-top: 10px; display:flex; gap:5px;">
+                    <input type="text" id="pdCustomStateInput" placeholder="Custom state..." style="flex:1; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius:4px;">
+                    <button type="button" class="btn" style="padding:6px 15px; font-size:12px; margin:0;" onclick="pdAddCustomState()">[+] Add State</button>
+                </div>
+                <div id="pd-clinical-state-ranges-container" style="margin-top:15px; border-top:1px dashed #ccc; padding-top:10px; flex:1; overflow-y:auto;"></div>
+                <form method="POST" action="{{ url_for('save_patient_ranges', patient_id=patient.id) }}" id="pdClinicalStateForm" style="margin-top: 12px;">
+                    <input type="hidden" name="range_type" value="clinical_state">
+                    <input type="hidden" name="clinical_state_data" id="pd_clinical_state_data" value="{{ clinical_state_data|default('[]') }}">
+                    <button type="button" class="btn" style="background:#888; color:#fff;" onclick="closeModal('pdClinicalStateModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Done</button>
+                </form>
+            </div>
+        </div>
+
+        <script>
+        (function() {
+            var accessBtn = document.getElementById('btn-access-dropdown');
+            var deleteBtn = document.getElementById('btn-delete-dropdown');
+            var accessDd = document.getElementById('access-dropdown');
+            var deleteDd = document.getElementById('delete-dropdown');
+            if (accessBtn && accessDd) {
+                accessBtn.addEventListener('click', function(e) { e.stopPropagation(); if (deleteDd) deleteDd.style.display = 'none'; accessDd.style.display = accessDd.style.display === 'none' ? 'block' : 'none'; });
+                accessDd.querySelectorAll('.dropdown-item').forEach(function(el) {
+                    el.addEventListener('click', function(e) { e.preventDefault(); accessDd.style.display = 'none'; var t = el.getAttribute('data-type'); if (t === 'adherence') openPdAdherenceModal(); else if (t === 'clinical_state') openPdClinicalStateModal(); });
+                });
+            }
+            if (deleteBtn && deleteDd) {
+                deleteBtn.addEventListener('click', function(e) { e.stopPropagation(); if (accessDd) accessDd.style.display = 'none'; deleteDd.style.display = deleteDd.style.display === 'none' ? 'block' : 'none'; });
+                deleteDd.querySelectorAll('.dropdown-item').forEach(function(el) {
+                    el.addEventListener('click', function(e) { e.preventDefault(); var t = el.getAttribute('data-type'); if (confirm('Delete all ' + (t === 'adherence' ? 'Adherence' : 'Clinical State') + ' ranges for this patient?')) { var f = document.createElement('form'); f.method = 'POST'; f.action = '{{ url_for("delete_patient_ranges", patient_id=patient.id) }}'; var i = document.createElement('input'); i.name = 'range_type'; i.value = t; i.type = 'hidden'; f.appendChild(i); document.body.appendChild(f); f.submit(); } deleteDd.style.display = 'none'; });
+                });
+            }
+            document.addEventListener('click', function() { if (accessDd) accessDd.style.display = 'none'; if (deleteDd) deleteDd.style.display = 'none'; });
+            window.closeModal = function(modalId) { var el = document.getElementById(modalId); if (el) el.style.display = 'none'; };
+            window.closePdModal = function(id) { window.closeModal(id); };
+            function openPdModal(id) { var el = document.getElementById(id); if (el) el.style.display = 'flex'; }
+            function openPdAdherenceModal() {
+                var container = document.getElementById('pd-adherence-ranges-container');
+                var hid = document.getElementById('pd_adherence_data');
+                if (!container) return;
+                container.innerHTML = '';
+                document.querySelectorAll('#pdAdherenceModal .adherence-checkbox').forEach(function(cb) { cb.checked = false; });
+                try {
+                    var data = hid && hid.value ? JSON.parse(hid.value) : [];
+                    data.forEach(function(item) {
+                        var status = item.status;
+                        if (!status) return;
+                        var id = 'adherence-range-' + status.replace(/\s+/g, '_');
+                        var html = '<div class="range-group" id="' + id + '" data-status="' + status + '"><div class="range-row"><label>Start: <input type="date" class="range-start" value="' + (item.start || '') + '"></label> <label>End: <input type="date" class="range-end" value="' + (item.end || '') + '"></label></div><button type="button" class="btn" style="margin-top:6px; padding:4px 10px; font-size:11px; background:#7ab8e0; color:#fff;" onclick="pdAddExtraAdherenceRange(this)">+ Add another range</button></div>';
+                        container.insertAdjacentHTML('beforeend', html);
+                        var cb = document.querySelector('#pdAdherenceModal .adherence-checkbox[value="' + status.replace(/"/g, '&quot;') + '"]'); if (cb) cb.checked = true;
+                    });
+                } catch (e) {}
+                bindPdAdherenceCheckboxes();
+                openPdModal('pdAdherenceModal');
+            }
+            function bindPdAdherenceCheckboxes() {
+                document.querySelectorAll('#pdAdherenceModal .adherence-checkbox').forEach(function(cb) {
+                    cb.onchange = function() {
+                        var container = document.getElementById('pd-adherence-ranges-container');
+                        var id = 'adherence-range-' + this.value.replace(/\s+/g, '_');
+                        if (this.checked) container.insertAdjacentHTML('beforeend', '<div class="range-group" id="' + id + '" data-status="' + this.value + '"><div class="range-row"><label>Start: <input type="date" class="range-start"></label> <label>End: <input type="date" class="range-end"></label></div><button type="button" class="btn" style="margin-top:6px; padding:4px 10px; font-size:11px; background:#7ab8e0; color:#fff;" onclick="pdAddExtraAdherenceRange(this)">+ Add another range</button></div>');
+                        else { var g = document.getElementById(id); if (g) g.remove(); }
+                    };
+                });
+            }
+            window.pdAddExtraAdherenceRange = function(btn) {
+                var group = btn.closest('.range-group');
+                var row = document.createElement('div'); row.className = 'range-row';
+                row.innerHTML = '<label>Start: <input type="date" class="range-start"></label> <label>End: <input type="date" class="range-end"></label>';
+                group.insertBefore(row, btn);
+            };
+            document.getElementById('pdAdherenceForm').addEventListener('submit', function() {
+                var data = [];
+                document.querySelectorAll('#pd-adherence-ranges-container .range-group').forEach(function(group) {
+                    var status = group.getAttribute('data-status');
+                    group.querySelectorAll('.range-row').forEach(function(row) {
+                        var s = row.querySelector('.range-start'); var e = row.querySelector('.range-end');
+                        if (s && e) data.push({ status: status, start: s.value || null, end: e.value || null });
+                    });
+                });
+                document.getElementById('pd_adherence_data').value = JSON.stringify(data);
+            });
+            var pdCustomStates = [];
+            function pdRenderClinicalStates() {
+                var statesToShow = new Set(["Recovery", "Remission", "Partial Remission", "Relapse", "Loss of Follow-up"]);
+                pdCustomStates.forEach(function(s) { statesToShow.add(s); });
+                var container = document.getElementById('pd-dynamic-states-container');
+                if (!container) return;
+                container.innerHTML = '';
+                Array.from(statesToShow).sort().forEach(function(state) {
+                    var isCustom = pdCustomStates.indexOf(state) !== -1;
+                    var remBtn = isCustom ? '<button type="button" onclick="pdRemoveCustomState(\'' + state.replace(/'/g, "\\'") + '\')" style="background:none; border:none; color:red; cursor:pointer; margin-left:auto;">[-]</button>' : '';
+                    container.insertAdjacentHTML('beforeend', '<label style="display:flex; width:100%;"><input type="checkbox" class="clinical-state-checkbox" value="' + state.replace(/"/g, '&quot;') + '" onchange="pdHandleStateCheckboxChange(this)"> <span style="flex:1;">' + state.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span> ' + remBtn + '</label>');
+                });
+                var activeStates = [];
+                document.querySelectorAll('#pd-clinical-state-ranges-container div[id^="csr-input-"]').forEach(function(div) { var s = div.querySelector('strong'); if (s) activeStates.push(s.innerText); });
+                document.querySelectorAll('#pdClinicalStateModal .clinical-state-checkbox').forEach(function(cb) { cb.checked = activeStates.indexOf(cb.value) !== -1; });
+            }
+            window.pdAddCustomState = function() { var val = document.getElementById('pdCustomStateInput').value.trim(); if (val && pdCustomStates.indexOf(val) === -1) { pdCustomStates.push(val); document.getElementById('pdCustomStateInput').value = ''; pdRenderClinicalStates(); } };
+            window.pdRemoveCustomState = function(val) { pdCustomStates = pdCustomStates.filter(function(s) { return s !== val; }); pdRenderClinicalStates(); };
+            window.pdHandleStateCheckboxChange = function(cb) {
+                var container = document.getElementById('pd-clinical-state-ranges-container');
+                var safeId = 'csr-input-' + cb.value.replace(/[^a-zA-Z0-9]/g, '');
+                if (cb.checked) container.insertAdjacentHTML('beforeend', '<div id="' + safeId + '" style="background:#f8f9fa; padding:10px; border-radius:5px; border:1px solid #ddd; margin-bottom:10px;"><strong style="font-size:13px; color:#333;">' + cb.value.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</strong><div class="csr-range-row" style="display:flex; gap:10px; margin-top:5px; align-items:center;"><label>Start: <input type="date" class="range-start"></label><label>End: <input type="date" class="range-end"></label></div><button type="button" class="btn" style="margin-top:6px; padding:4px 10px; font-size:11px; background:#7ab8e0; color:#fff;" onclick="pdAddExtraClinicalRange(this)">+ Range</button></div>');
+                else { var el = document.getElementById(safeId); if (el) el.remove(); }
+            };
+            window.pdAddExtraClinicalRange = function(btn) {
+                var row = document.createElement('div'); row.className = 'csr-range-row'; row.style.cssText = 'display:flex; gap:10px; margin-top:5px; align-items:center;';
+                row.innerHTML = '<label>Start: <input type="date" class="range-start"></label><label>End: <input type="date" class="range-end"></label>';
+                btn.parentElement.insertBefore(row, btn);
+            };
+            function openPdClinicalStateModal() {
+                pdRenderClinicalStates();
+                var container = document.getElementById('pd-clinical-state-ranges-container');
+                var hid = document.getElementById('pd_clinical_state_data');
+                if (!container) return;
+                container.innerHTML = '';
+                try {
+                    var data = hid && hid.value ? JSON.parse(hid.value) : [];
+                    var byState = {};
+                    data.forEach(function(item) { if (!byState[item.state]) byState[item.state] = []; byState[item.state].push(item); });
+                    Object.keys(byState).forEach(function(state) {
+                        if (pdCustomStates.indexOf(state) === -1) pdCustomStates.push(state);
+                    });
+                    pdRenderClinicalStates();
+                    data.forEach(function(item) {
+                        var safeId = 'csr-input-' + item.state.replace(/[^a-zA-Z0-9]/g, '');
+                        var div = document.getElementById(safeId);
+                        if (!div) {
+                            var html = '<div id="' + safeId + '" style="background:#f8f9fa; padding:10px; border-radius:5px; border:1px solid #ddd; margin-bottom:10px;"><strong style="font-size:13px; color:#333;">' + item.state.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</strong><div class="csr-range-row" style="display:flex; gap:10px; margin-top:5px; align-items:center;"><label>Start: <input type="date" class="range-start" value="' + (item.start || '') + '"></label><label>End: <input type="date" class="range-end" value="' + (item.end || '') + '"></label></div><button type="button" class="btn" style="margin-top:6px; padding:4px 10px; font-size:11px; background:#7ab8e0; color:#fff;" onclick="pdAddExtraClinicalRange(this)">+ Range</button></div>';
+                            container.insertAdjacentHTML('beforeend', html);
+                            var cb = document.querySelector('#pdClinicalStateModal .clinical-state-checkbox[value="' + item.state.replace(/"/g, '&quot;') + '"]'); if (cb) cb.checked = true;
+                        } else {
+                            var row = document.createElement('div'); row.className = 'csr-range-row'; row.style.cssText = 'display:flex; gap:10px; margin-top:5px; align-items:center;';
+                            row.innerHTML = '<label>Start: <input type="date" class="range-start" value="' + (item.start || '') + '"></label><label>End: <input type="date" class="range-end" value="' + (item.end || '') + '"></label>';
+                            div.insertBefore(row, div.querySelector('button'));
+                        }
+                    });
+                } catch (e) {}
+                openPdModal('pdClinicalStateModal');
+            }
+            document.getElementById('pdClinicalStateForm').addEventListener('submit', function() {
+                var data = [];
+                document.querySelectorAll('#pd-clinical-state-ranges-container div[id^="csr-input-"]').forEach(function(div) {
+                    var strong = div.querySelector('strong'); if (!strong) return;
+                    var stateName = strong.innerText;
+                    div.querySelectorAll('.csr-range-row').forEach(function(row) {
+                        var s = row.querySelector('.range-start'); var e = row.querySelector('.range-end');
+                        if (s && e) data.push({ state: stateName, start: s.value || null, end: e.value || null });
+                    });
+                });
+                document.getElementById('pd_clinical_state_data').value = JSON.stringify(data);
+            });
+            window.deleteAllPdAdherenceRanges = function() { document.querySelectorAll('#pdAdherenceModal .adherence-checkbox').forEach(function(cb) { cb.checked = false; }); document.getElementById('pd-adherence-ranges-container').innerHTML = ''; document.getElementById('pd_adherence_data').value = '[]'; };
+            window.deleteAllPdClinicalStateRanges = function() { document.querySelectorAll('#pdClinicalStateModal .clinical-state-checkbox').forEach(function(cb) { cb.checked = false; }); document.getElementById('pd-clinical-state-ranges-container').innerHTML = ''; document.getElementById('pd_clinical_state_data').value = '[]'; };
+        })();
+        </script>
+
         <div class="badge-card" style="margin-bottom: 20px;">
             <h2>Contact &amp; reminder settings</h2>
             <form method="POST" action="{{ url_for('update_patient_contact', patient_id=patient.id) }}" style="display: grid; gap: 12px; max-width: 480px;">

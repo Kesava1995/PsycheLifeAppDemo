@@ -673,7 +673,10 @@
 
                     <div id="adherenceRangesModal" class="modal" onclick="if(event.target === this) closeAdherenceRangesModal()">
                         <div class="modal-content" style="width: 480px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; margin-top: 5vh;">
-                            <h4 style="margin-top: 0;">Adherence Ranges (with dates)</h4>
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                <h4 style="margin-top: 0;">Adherence Ranges (with dates)</h4>
+                                <button type="button" class="btn" style="padding:6px 12px; font-size:12px; background:#dc3545; color:#fff;" onclick="event.stopPropagation(); deleteAllAdherenceRanges();">Delete</button>
+                            </div>
                             <div style="overflow-y: auto; flex-grow: 1; padding-right: 10px;">
                                 <div class="checklist-group">
                                     <label><input type="checkbox" class="adherence-checkbox" value="Complete"> Complete</label>
@@ -690,7 +693,10 @@
 
                     <div id="clinicalStateRangesModal" class="modal" onclick="if(event.target === this) closeClinicalStateRangesModal()">
                         <div class="modal-content" style="width: 520px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; margin-top: 5vh;">
-                            <h4 style="margin-top: 0; color: #333;">Clinical State Ranges</h4>
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                <h4 style="margin-top: 0; color: #333;">Clinical State Ranges</h4>
+                                <button type="button" class="btn" style="padding:6px 12px; font-size:12px; background:#dc3545; color:#fff;" onclick="event.stopPropagation(); deleteAllClinicalStateRanges();">Delete</button>
+                            </div>
                             <div style="margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #eee;">
                                 <strong style="font-size: 12px; color: #555;">States based on Provisional diagnosis:</strong>
                                 <div id="clinical-state-diagnosis-ref" style="font-size: 12px; color: #333; margin-top: 4px;"></div>
@@ -1184,12 +1190,35 @@
             const data = [];
             document.querySelectorAll('#clinical-state-ranges-container > div[id^="csr-input-"]').forEach(div => {
                 const strong = div.querySelector('strong');
-                const s = div.querySelector('.range-start');
-                const e = div.querySelector('.range-end');
-                if (strong && s && e) data.push({ state: strong.innerText, start: s.value || null, end: e.value || null });
+                if (!strong) return;
+                const stateName = strong.innerText;
+                div.querySelectorAll('.csr-range-row').forEach(row => {
+                    const s = row.querySelector('.range-start');
+                    const e = row.querySelector('.range-end');
+                    if (s && e) data.push({ state: stateName, start: s.value || null, end: e.value || null });
+                });
             });
             document.getElementById('clinical_state_data').value = JSON.stringify(data);
             closeModal('clinicalStateRangesModal');
+        }
+        function addExtraClinicalRange(btn) {
+            var block = btn.previousElementSibling;
+            if (!block || !block.classList.contains('csr-range-row')) block = btn.parentElement.querySelector('.csr-range-row');
+            var row = document.createElement('div');
+            row.className = 'csr-range-row';
+            row.style.cssText = 'display: flex; gap: 10px; margin-top: 5px; align-items:center;';
+            row.innerHTML = '<label>Start: <input type="date" class="range-start"></label><label>End: <input type="date" class="range-end"></label>';
+            btn.parentElement.insertBefore(row, btn);
+        }
+        function deleteAllClinicalStateRanges() {
+            document.querySelectorAll('.clinical-state-checkbox').forEach(cb => { cb.checked = false; });
+            document.getElementById('clinical-state-ranges-container').innerHTML = '';
+            document.getElementById('clinical_state_data').value = '[]';
+        }
+        function deleteAllAdherenceRanges() {
+            document.querySelectorAll('.adherence-checkbox').forEach(cb => { cb.checked = false; });
+            document.getElementById('adherence-ranges-container').innerHTML = '';
+            document.getElementById('adherence_data').value = '[]';
         }
         function openClinicalStateRangesModal() { document.getElementById('clinicalStateRangesModal').style.display = 'block'; renderClinicalStates(); }
 
@@ -1245,7 +1274,7 @@
             var container = document.getElementById('clinical-state-ranges-container');
             var safeId = 'csr-input-' + cb.value.replace(/[^a-zA-Z0-9]/g, '');
             if (cb.checked) {
-                var html = '<div id="' + safeId + '" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 10px;"><strong style="font-size: 13px; color: #333;">' + cb.value.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</strong><div style="display: flex; gap: 10px; margin-top: 5px; align-items:center;"><label>Start: <input type="date" class="range-start"></label><label>End: <input type="date" class="range-end"></label></div></div>';
+                var html = '<div id="' + safeId + '" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 10px;"><strong style="font-size: 13px; color: #333;">' + cb.value.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</strong><div class="csr-range-row" style="display: flex; gap: 10px; margin-top: 5px; align-items:center;"><label>Start: <input type="date" class="range-start"></label><label>End: <input type="date" class="range-end"></label></div><button type="button" class="btn" style="margin-top:6px; padding:4px 10px; font-size:11px; background:#7ab8e0; color:#fff;" onclick="addExtraClinicalRange(this)">+ Range</button></div>';
                 container.insertAdjacentHTML('beforeend', html);
             } else { var el = document.getElementById(safeId); if (el) el.remove(); }
         }
