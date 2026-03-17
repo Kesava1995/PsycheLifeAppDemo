@@ -179,7 +179,6 @@
         <main class="main-content">
             <div class="visit-card">
                 <form method="POST" id="visitForm" onsubmit="return validateDurationRequired(this);">
-                    <input type="hidden" id="is_first_visit_flag" value="false">
                     <h3>Follow-up Visit - {{ patient.name }}</h3>
                     <div style="margin-bottom:20px;">
                         <label>Visit Date</label>
@@ -1632,27 +1631,6 @@
             if (hiddenInput) hiddenInput.value = values.join('-');
         }
 
-        function expandToNewSymptom(btn) {
-            const wrapper = btn.closest('.row-flex');
-            const slidersContainer = wrapper.querySelector('.sliders-container');
-            const durationWrap = wrapper.querySelector('.duration-adjust-wrap');
-
-            // 1. Swap to 3 sliders
-            slidersContainer.innerHTML = `
-                <div class="slider-group"><label>Severity at Onset</label><div class="slider-wrapper"><input type="range" name="symptom_onset[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div>
-                <div class="slider-group"><label>Severity during Course</label><div class="slider-wrapper"><input type="range" name="symptom_progression[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div>
-                <div class="slider-group"><label>Current Severity</label><div class="slider-wrapper"><input type="range" name="symptom_current[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div>
-            `;
-
-            // 2. Reveal Duration Input and the Template Checkbox
-            durationWrap.innerHTML = `
-                <label class="symptom-select-label" style="display:flex; align-items:center; gap:4px; font-size:12px; white-space:nowrap;"><input type="checkbox" class="symptom-apply-select" title="Select for Apply Selected"> Select</label>
-                <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
-                <input type="text" list="duration-options-list" name="symptom_duration[]" placeholder="Duration (req)" required style="flex:1; min-width:70px;" oninput="updateDurationOptions(this)">
-                <button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
-            `;
-        }
-
         function createRowHTML(type, cat='') {
             const isMSE = type === 'mse';
             const prefix = isMSE ? 'mse' : type; 
@@ -1696,57 +1674,24 @@
                     </div>
                 </div>`;
             } else {
-                const isSymptom = type === 'symptom';
-
-                // Check if we are in a First Visit
-                let isFirstVisit = false;
-                const flagEl = document.getElementById('is_first_visit_flag');
-                if (flagEl) {
-                    isFirstVisit = (flagEl.value === 'true');
-                } else {
-                    isFirstVisit = document.title.includes('First');
-                }
-
-                let inputName = isMSE ? `<input type="hidden" name="mse_category[]" value="${cat}"><input type="text" name="mse_finding_name[]" placeholder="Finding..." style="flex:1.5;">` : `<input type="text" name="${prefix}_name[]" placeholder="Name" style="flex:1.5;">`;
-
-                if (isMSE) {
-                    // MSE is always 1 slider
-                    let slidersHTML = `<div class="sliders-container"><div class="slider-group" style="grid-column: span 3;"><label>Current Severity</label><div class="slider-wrapper"><input type="range" name="mse_current[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div></div>`;
-                    let durationHTML = `<input type="hidden" name="mse_onset[]" value=""><input type="hidden" name="mse_progression[]" value=""><input type="hidden" name="mse_duration[]" value="">`;
-                    contentHTML = `<div class="row-flex" style="align-items:center;">${inputName}${slidersHTML}${durationHTML}<button type="button" class="note-btn" onclick="toggleNote(this)">📝</button><button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button></div>`;
-                } else if (isSymptom) {
-                    if (isFirstVisit) {
-                        // First Visit Symptom: 3 Sliders + Duration
-                        let slidersHTML = `<div class="sliders-container">
-                        <div class="slider-group"><label>Severity at Onset</label><div class="slider-wrapper"><input type="range" name="symptom_onset[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div>
-                        <div class="slider-group"><label>Severity during Course</label><div class="slider-wrapper"><input type="range" name="symptom_progression[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div>
-                        <div class="slider-group"><label>Current Severity</label><div class="slider-wrapper"><input type="range" name="symptom_current[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div>
-                    </div>`;
-                        let durationHTML = `<label class="symptom-select-label" style="display:flex; align-items:center; gap:4px; font-size:12px; white-space:nowrap;"><input type="checkbox" class="symptom-apply-select" title="Select for Apply Selected"> Select</label><div class="duration-adjust-wrap" style="display:flex; align-items:center; gap:2px; flex:1; min-width:100px;"><button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button><input type="text" list="duration-options-list" name="symptom_duration[]" placeholder="Duration (req)" required style="flex:1; min-width:70px;" oninput="updateDurationOptions(this)"><button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button></div>`;
-                        contentHTML = `<div class="row-flex" style="align-items:center;">${inputName}${slidersHTML}${durationHTML}<button type="button" class="note-btn" onclick="toggleNote(this)">📝</button><button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button></div>`;
-                    } else {
-                        // Follow-up Symptom: 1 Slider + Mark as New Button
-                        let slidersHTML = `<div class="sliders-container">
-                        <input type="hidden" name="symptom_onset[]" value="">
-                        <input type="hidden" name="symptom_progression[]" value="">
-                        <div class="slider-group" style="grid-column: span 3;"><label>Current Severity</label><div class="slider-wrapper"><input type="range" name="symptom_current[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div>
-                    </div>`;
-                        let durationHTML = `<div class="duration-adjust-wrap" style="display:flex; align-items:center; gap:2px; flex:1; min-width:100px;">
-                        <input type="hidden" name="symptom_duration[]" value="">
-                        <button type="button" class="btn btn-sm" onclick="expandToNewSymptom(this)" style="padding:4px 8px; font-size:11px; background:#e0e0e0; color:#333; margin:0; line-height:1; border-radius:4px;">+ Mark as New </button>
-                    </div>`;
-                        contentHTML = `<div class="row-flex" style="align-items:center;">${inputName}${slidersHTML}${durationHTML}<button type="button" class="note-btn" onclick="toggleNote(this)">📝</button><button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button></div>`;
-                    }
-                } else {
-                    // Side Effect
-                    let slidersHTML = `<div class="sliders-container">
+                // MSE: cross-sectional — only Current Severity, no onset/progression/duration
+                let slidersHTML = isMSE ?
+                    `<div class="sliders-container"><div class="slider-group" style="grid-column: span 3;"><label>Current Severity</label><div class="slider-wrapper"><input type="range" name="${prefix}_current[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div></div>` :
+                    `<div class="sliders-container">
                     <div class="slider-group"><label>Severity at Onset</label><div class="slider-wrapper"><input type="range" name="${prefix}_onset[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div>
                     <div class="slider-group"><label>Severity during Course</label><div class="slider-wrapper"><input type="range" name="${prefix}_progression[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div>
                     <div class="slider-group"><label>Current Severity</label><div class="slider-wrapper"><input type="range" name="${prefix}_current[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div>
                 </div>`;
-                    let durationHTML = `<input type="text" list="duration-options-list" name="${prefix}_duration[]" placeholder="Duration (req)" required style="flex:0.5; min-width:100px;" oninput="updateDurationOptions(this)">`;
-                    contentHTML = `<div class="row-flex" style="align-items:center;">${inputName}${slidersHTML}${durationHTML}<button type="button" class="note-btn" onclick="toggleNote(this)">📝</button><button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button></div>`;
+                let inputName = isMSE ? `<input type="hidden" name="mse_category[]" value="${cat}"><input type="text" name="mse_finding_name[]" placeholder="Finding..." style="flex:1.5;">` : `<input type="text" name="${prefix}_name[]" placeholder="Name" style="flex:1.5;">`;
+                let durationHTML;
+                if (isMSE) {
+                    durationHTML = `<input type="hidden" name="mse_onset[]" value=""><input type="hidden" name="mse_progression[]" value=""><input type="hidden" name="mse_duration[]" value="">`;
+                } else if (prefix === 'symptom') {
+                    durationHTML = `<label class="symptom-select-label" style="display:flex; align-items:center; gap:4px; font-size:12px; white-space:nowrap;"><input type="checkbox" class="symptom-apply-select" title="Select for Apply Selected"> Select</label><div class="duration-adjust-wrap" style="display:flex; align-items:center; gap:2px; flex:1; min-width:100px;"><button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button><input type="text" list="duration-options-list" name="symptom_duration[]" placeholder="Duration (required)" required style="flex:1; min-width:70px;" oninput="updateDurationOptions(this)"><button type="button" onclick="adjustDuration(this.closest('.duration-adjust-wrap').querySelector('input'), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button></div>`;
+                } else {
+                    durationHTML = `<input type="text" list="duration-options-list" name="${prefix}_duration[]" placeholder="Duration (required)" required style="flex:0.5; min-width:100px;" oninput="updateDurationOptions(this)">`;
                 }
+                contentHTML = `<div class="row-flex" style="align-items:center;">${inputName}${slidersHTML}${durationHTML}<button type="button" class="note-btn" onclick="toggleNote(this)">📝</button><button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button></div>`;
             }
             return `<div class="entry-wrapper">${contentHTML}<input type="text" class="note-input" name="${prefix}_note[]" placeholder="Notes..."></div>`;
         }

@@ -87,12 +87,20 @@ from werkzeug.utils import secure_filename
 import base64
 import uuid
 import json
+from difflib import SequenceMatcher
 from sqlalchemy import text
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
 basedir = os.path.abspath(os.path.dirname(__file__))
 serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+
+# Lifechart: consider symptom "same" if case-insensitive partial match >= threshold (default 0.85)
+def _symptom_name_matches(name1, name2, threshold=0.85):
+    if not (name1 and name2):
+        return False
+    a, b = name1.lower().strip(), name2.lower().strip()
+    return SequenceMatcher(None, a, b).ratio() >= threshold
 
 # Use absolute path for DB
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'psychelife.db')
@@ -2631,6 +2639,7 @@ def prepare_chart_data(patient_id: int) -> dict:
 
     # --- 1. Process Symptoms ---
     symptom_data = {}
+    previous_symptom_names = set()  # names from earlier visits; if current symptom matches, skip onset/progression
     for visit in visits:
         visit_date = datetime.combine(visit.date, datetime.min.time())
         visit_date_str = visit_date.isoformat() # Store original visit date string
@@ -2641,48 +2650,60 @@ def prepare_chart_data(patient_id: int) -> dict:
             
             points = []
             if visit.visit_type == 'First':
-                duration = parse_duration(entry.duration_text or '') or timedelta(0)
-                onset = visit_date - duration
-                mid = calculate_midpoint_date(onset, visit_date)
-                
-                # Add metadata: phase, specific symptom name, and the original visit date
-                points = [
-                    {
-                        'x': onset.isoformat(), 
-                        'y': entry.score_onset, 
-                        'phase': 'Onset', 
-                        'symptom_name': name,
-                        'reported_on': visit_date_str 
-                    },
-                    {
-                        'x': mid.isoformat(), 
-                        'y': entry.score_progression, 
-                        'phase': 'Progression',
-                        'symptom_name': name,
-                        'reported_on': visit_date_str
-                    },
-                    {
-                        'x': visit_date.isoformat(), 
-                        'y': entry.score_current, 
+                # Only plot onset and progression if this symptom did not exist in a previous visit (case-insensitive, partial match > 85%)
+                seen_in_previous = any(_symptom_name_matches(name, prev) for prev in previous_symptom_names)
+                if not seen_in_previous:
+                    duration = parse_duration(entry.duration_text or '') or timedelta(0)
+                    onset = visit_date - duration
+                    mid = calculate_midpoint_date(onset, visit_date)
+                    points = [
+                        {
+                            'x': onset.isoformat(),
+                            'y': entry.score_onset,
+                            'phase': 'Onset',
+                            'symptom_name': name,
+                            'reported_on': visit_date_str
+                        },
+                        {
+                            'x': mid.isoformat(),
+                            'y': entry.score_progression,
+                            'phase': 'Progression',
+                            'symptom_name': name,
+                            'reported_on': visit_date_str
+                        },
+                        {
+                            'x': visit_date.isoformat(),
+                            'y': entry.score_current,
+                            'phase': 'Current',
+                            'symptom_name': name,
+                            'reported_on': visit_date_str
+                        }
+                    ]
+                else:
+                    points = [{
+                        'x': visit_date_str,
+                        'y': entry.score_current,
                         'phase': 'Current',
                         'symptom_name': name,
                         'reported_on': visit_date_str
-                    }
-                ]
+                    }]
             else:
                 points = [{
-                    'x': visit_date_str, 
-                    'y': entry.score_current, 
+                    'x': visit_date_str,
+                    'y': entry.score_current,
                     'phase': 'Current',
                     'symptom_name': name,
                     'reported_on': visit_date_str
                 }]
-                
+
             for p in points:
                 if p['y'] is not None:
                     p['visit_id'] = visit.id
                     p['detail'] = entry.note or ''
                     symptom_data[name].append(p)
+
+        for entry in visit.symptom_entries:
+            previous_symptom_names.add(entry.symptom_name)
     symptom_datasets = []
     for name, points in symptom_data.items():
         symptom_datasets.append({
@@ -2959,7 +2980,7 @@ def life_chart(patient_id):
         d = parse_duration(dur_str)
         return d.days if d else 0
 
-    def build_clinical_points(entry, v_date, type_lbl):
+    def build_clinical_points(entry, v_date, type_lbl, skip_onset_progression=False):
         pts = []
         dur_text = getattr(entry, 'duration_text', None) or getattr(entry, 'duration', None) or ''
         days = get_days(dur_text)
@@ -2967,7 +2988,7 @@ def life_chart(patient_id):
         has_onset_or_prog = (entry.score_onset is not None) or (entry.score_progression is not None)
         if days <= 0 and has_onset_or_prog:
             days = 14  # default duration in days so onset/progression get a date range
-        if days > 0:
+        if not skip_onset_progression and days > 0:
             start = v_date - timedelta(days=days)  # Onset = visit date - duration (e.g. 12 days ago)
             if entry.score_onset is not None:
                 pts.append({'x': start.strftime('%Y-%m-%d'), 'y': entry.score_onset, 'detail': f"{type_lbl} Onset", 'phase': 'Onset'})
@@ -3025,6 +3046,7 @@ def life_chart(patient_id):
     se = {}
     mse = {}
     scales = {}
+    previous_symptom_names_lc = set()  # symptom names from earlier visits (for skipping onset/progression if same symptom)
 
     # Visit Details for Modal
     visit_details = {}
@@ -3100,10 +3122,14 @@ def life_chart(patient_id):
             'events': [{'type': me.event_type, 'duration': me.duration, 'note': me.note} for me in getattr(v, 'major_events', [])]
         }
 
+        # Symptom: skip onset/progression if this symptom already existed in a previous visit (case-insensitive, partial match > 85%)
         for s in v.symptom_entries:
             if s.symptom_name not in symptoms: symptoms[s.symptom_name] = []
-            symptoms[s.symptom_name].extend(build_clinical_points(s, v.date, 'Symptom'))
-            
+            seen_in_previous = any(_symptom_name_matches(s.symptom_name, prev) for prev in previous_symptom_names_lc)
+            symptoms[s.symptom_name].extend(build_clinical_points(s, v.date, 'Symptom', skip_onset_progression=seen_in_previous))
+        for s in v.symptom_entries:
+            previous_symptom_names_lc.add(s.symptom_name)
+
         for m in v.medication_entries:
             if m.drug_name not in meds: meds[m.drug_name] = []
             meds[m.drug_name].extend(build_med_points(m, v.date))
