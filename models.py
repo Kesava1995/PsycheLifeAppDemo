@@ -54,7 +54,7 @@ class Patient(db.Model):
     attender_name = db.Column(db.String(100))
     attender_relation = db.Column(db.String(50))
     attender_reliability = db.Column(db.String(10))  # 'Yes' or 'No'
-    personal_notes = db.Column(db.Text)  # Doctor's personal ID notes
+    personal_notes = db.Column(db.Text)  # Patient recall cue (private, doctor-only)
 
     # Patient-specific reminder days override (e.g. "7,3,1"). If empty, doctor's appointment_reminder_days is used.
     appointment_reminder_days = db.Column(db.String(50), nullable=True)

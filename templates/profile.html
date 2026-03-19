@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Doctor Profile - Continuum Psychiatry</title>
     <style>
-        :root { --primary-blue: #A5DCFE; --primary-dark: #7ab8e0; --text-color: #333; --border-color: #e0e0e0; --bg-color: #f4f8fb; }
+        :root { --primary-blue: #9BD8FB; --primary-dark: #003366; --text-color: #333; --border-color: #e0e0e0; --bg-color: #f4f8fb; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: var(--bg-color); padding: 30px; }
+        body { background-color: var(--bg-color); padding: 90px 30px 30px 30px; }
         .container { max-width: 700px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         h2 { color: #333; margin-bottom: 10px; }
         .subtitle { color: #666; margin-bottom: 30px; font-size: 0.95rem; }
@@ -56,9 +56,30 @@
         body.dark-mode .container { background-color: #1e1e1e; color: #ffffff; box-shadow: 0 4px 15px rgba(255,255,255,0.05); }
         body.dark-mode h2, body.dark-mode label, body.dark-mode .subtitle { color: #ddd; }
         body.dark-mode input[type="text"], body.dark-mode input[type="email"], body.dark-mode input[type="password"], body.dark-mode textarea, body.dark-mode input[type="file"] { background-color: #333; color: white; border: 1px solid #555; }
+        body.dark-mode input[type="time"], body.dark-mode input[type="number"] { background-color: #333; color: #fff; border: 1px solid #555; }
+        body.dark-mode select { background-color: #333; color: #fff; border: 1px solid #555; }
+        body.dark-mode .btn-secondary { background-color: #2b3740; color: #d7e3eb; border-color: #3d3d3d; }
+        body.dark-mode .btn-secondary:hover { background-color: #232323; color: #d7e3eb; }
+
+        body.dark-mode .active-template-group {
+            background-color: #1e1e1e !important;
+            border-color: var(--primary-dark) !important;
+        }
+        body.dark-mode #active_template {
+            background-color: #333 !important;
+            color: #fff !important;
+            border-color: #555 !important;
+        }
+        body.dark-mode .appointment-template-card {
+            background: #1e1e1e !important;
+            border: 1px solid var(--primary-dark) !important;
+        }
+        body.dark-mode .appointment-template-card h4 { color: #ddd !important; }
+        body.dark-mode .appointment-template-card .working-hours-container { color: #fff; }
     </style>
 </head>
 <body>
+{% include 'partials/app_chrome.html' %}
     <div class="container">
         <h2>Doctor Profile & Settings</h2>
         <p class="subtitle">Manage your details for prescriptions and patient records.</p>
@@ -125,7 +146,7 @@
                 <input type="text" id="social_handle" name="social_handle" value="{{ doctor.social_handle or '' }}" placeholder="@username">
             </div>
 
-            <div class="form-group" style="padding: 15px; background-color: #f0f8ff; border-radius: 8px; border: 1px solid var(--primary-blue);">
+            <div class="form-group active-template-group" style="padding: 15px; background-color: #f0f8ff; border-radius: 8px; border: 1px solid var(--primary-blue);">
                 <label for="active_template" style="color: var(--primary-dark);">Active Appointment Template</label>
                 <select id="active_template" name="active_template" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; background-color: white;">
                     <option value="default">Default Template</option>
@@ -156,7 +177,7 @@
                 <p class="subtitle" style="margin-bottom: 20px;">Manage your working hours and slot durations.</p>
                 
                 <div id="schedule-templates-container">
-                    <div class="card" style="border: 1px solid #A5DCFE; padding: 20px; margin-bottom: 20px; border-radius: 8px; background: #fafcff;">
+                        <div class="card appointment-template-card" style="border: 1px solid #A5DCFE; padding: 20px; margin-bottom: 20px; border-radius: 8px; background: #fafcff;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                             <input type="text" name="template_name[]" value="Default Template" class="form-control" style="width: 50%; font-weight: bold; border: none; background: transparent; font-size: 1.1em;" readonly>
                             <div class="template-actions">
@@ -206,11 +227,13 @@
             function cloneTemplate(btn) {
                 var card = btn.closest('.card');
                 var clone = card.cloneNode(true);
+                var isDark = document.body.classList.contains('dark-mode');
                 var nameInput = clone.querySelector('input[name="template_name[]"]');
                 nameInput.value = nameInput.value + " (Copy)";
                 nameInput.readOnly = false;
-                nameInput.style.border = "1px solid #ccc";
-                nameInput.style.background = "white";
+                nameInput.style.border = isDark ? "1px solid #555" : "1px solid #ccc";
+                nameInput.style.background = isDark ? "#333" : "white";
+                nameInput.style.color = isDark ? "#fff" : "";
                 
                 var actionDiv = clone.querySelector('.template-actions');
                 actionDiv.innerHTML = '<button type="button" class="btn btn-secondary btn-sm" onclick="cloneTemplate(this)">[+] Copy</button> <button type="button" class="btn btn-secondary btn-sm" onclick="this.closest(\'.card\').remove()" style="background: #ff4d4d; color: white;">Delete</button>';
@@ -219,11 +242,13 @@
             
             function addNewTemplate() {
                 var clone = document.querySelector('#schedule-templates-container .card').cloneNode(true);
+                var isDark = document.body.classList.contains('dark-mode');
                 var nameInput = clone.querySelector('input[name="template_name[]"]');
                 nameInput.value = "Custom Template";
                 nameInput.readOnly = false;
-                nameInput.style.border = "1px solid #ccc";
-                nameInput.style.background = "white";
+                nameInput.style.border = isDark ? "1px solid #555" : "1px solid #ccc";
+                nameInput.style.background = isDark ? "#333" : "white";
+                nameInput.style.color = isDark ? "#fff" : "";
                 
                 var actionDiv = clone.querySelector('.template-actions');
                 actionDiv.innerHTML = '<button type="button" class="btn btn-secondary btn-sm" onclick="cloneTemplate(this)">[+] Copy</button> <button type="button" class="btn btn-secondary btn-sm" onclick="this.closest(\'.card\').remove()" style="background: #ff4d4d; color: white;">Delete</button>';

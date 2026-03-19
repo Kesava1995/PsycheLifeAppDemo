@@ -20,7 +20,7 @@
         }
         
         /* Layout for Screen */
-        .action-bar { max-width: 210mm; margin: 20px auto; display: flex; justify-content: space-between; }
+        .action-bar { max-width: 210mm; margin: 90px auto 20px; display: flex; justify-content: space-between; }
         .btn {
             padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;
             text-decoration: none; display: inline-block; font-size: 14px; transition: 0.2s;
@@ -116,6 +116,7 @@
     </style>
 </head>
 <body>
+{% include 'partials/app_chrome.html' %}
 
     <div class="action-bar">
         <a href="{{ url_for('first_visit') }}" class="btn btn-secondary">← Back to First Visit</a>
@@ -239,7 +240,7 @@
         {% if visit.provisional_diagnosis %}
         <div style="margin-bottom: 20px; font-weight: bold;">
             <span style="font-size: 12pt;">Dx:</span> 
-            <span style="font-size: 11pt; margin-left: 10px;">{{ visit.provisional_diagnosis }}</span>
+            <span style="font-size: 11pt; margin-left: 10px;">{{ visit.provisional_diagnosis|diagnosis_display }}</span>
         </div>
         {% endif %}
 

@@ -102,6 +102,81 @@ def _symptom_name_matches(name1, name2, threshold=0.85):
     a, b = name1.lower().strip(), name2.lower().strip()
     return SequenceMatcher(None, a, b).ratio() >= threshold
 
+
+def parse_diagnosis_values(value):
+    """Return a de-duplicated list of diagnosis items from legacy text or JSON."""
+    if value is None:
+        return []
+
+    raw_items = value
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return []
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, list):
+                raw_items = parsed
+            elif isinstance(parsed, dict):
+                raw_items = [parsed]
+            elif isinstance(parsed, str):
+                raw_items = [parsed]
+            else:
+                raw_items = [text]
+        except (TypeError, ValueError):
+            raw_items = [part.strip() for part in re.split(r'[\r\n,]+', text) if part.strip()]
+    elif isinstance(value, dict):
+        raw_items = [value]
+    elif not isinstance(value, list):
+        raw_items = [value]
+
+    normalized = []
+    seen = set()
+    for item in raw_items:
+        if isinstance(item, dict):
+            label = str(item.get('label') or item.get('title') or item.get('name') or item.get('value') or '').strip()
+            code = str(item.get('code') or '').strip()
+            system = str(item.get('system') or '').strip()
+        else:
+            label = str(item).strip()
+            code = ''
+            system = ''
+
+        if not label:
+            continue
+
+        key = (label.lower(), code.lower(), system.lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append({
+            'label': label,
+            'code': code,
+            'system': system,
+        })
+
+    return normalized
+
+
+def serialize_diagnosis_values(value):
+    return json.dumps(parse_diagnosis_values(value), ensure_ascii=True)
+
+
+def format_diagnosis_values(value):
+    return ', '.join(item['label'] for item in parse_diagnosis_values(value))
+
+
+def diagnosis_json_filter(value):
+    return parse_diagnosis_values(value)
+
+
+def diagnosis_display_filter(value):
+    return format_diagnosis_values(value)
+
+
+app.add_template_filter(diagnosis_json_filter, 'diagnosis_json')
+app.add_template_filter(diagnosis_display_filter, 'diagnosis_display')
+
 # Use absolute path for DB
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'psychelife.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -275,7 +350,14 @@ def cron_send_reminders():
 @app.context_processor
 def utility_processor():
     """Register utility functions for use in templates."""
-    return dict(format_frequency=format_frequency)
+    current_doctor = None
+    try:
+        if session.get('logged_in') and session.get('doctor_id'):
+            current_doctor = Doctor.query.get(session.get('doctor_id'))
+    except Exception:
+        current_doctor = None
+
+    return dict(format_frequency=format_frequency, current_doctor=current_doctor)
 
 
 @app.template_filter('format_comorbidities')
@@ -496,8 +578,9 @@ def guest_lifechart():
         durations = request.form.getlist('duration_text[]')
 
         for i, name in enumerate(names):
-            if not name.strip(): continue
-            
+            dur_text = durations[i] if i < len(durations) else ""
+            if not (name or "").strip() and not (dur_text or "").strip():
+                continue
             # Helper for safe integers
             def safe_int(val_list, idx, default=5):
                 try: return int(val_list[idx]) if idx < len(val_list) else default
@@ -509,7 +592,6 @@ def guest_lifechart():
             note = sym_notes[i] if i < len(sym_notes) else ""
             
             # Date Calculation
-            dur_text = durations[i] if i < len(durations) else ""
             try:
                 delta = parse_duration(dur_text) if dur_text else timedelta(days=14)
             except:
@@ -542,24 +624,25 @@ def guest_lifechart():
         mse_durs = request.form.getlist('mse_duration[]')
 
         for i, cat in enumerate(mse_cats):
-            if cat:
-                onset = safe_float(mse_onsets, i)
-                prog = safe_float(mse_progs, i)
-                curr = safe_float(mse_currs, i, 0.0)
-                finding_name = mse_findings[i] if i < len(mse_findings) else ""
-                note = mse_notes[i] if i < len(mse_notes) else ""
-                dur_text = mse_durs[i] if i < len(mse_durs) else ""
-                try:
-                    delta = parse_duration(dur_text) if dur_text else timedelta(days=14)
-                except Exception:
-                    delta = timedelta(days=14)
-                d_onset = now_ist - delta
-                d_prog = d_onset + timedelta(days=(now_ist - d_onset).days // 2)
-                if onset is not None:
-                    mse.append({"cat": cat, "name": finding_name, "score": onset, "phase": "Onset", "note": note, "date": d_onset.isoformat()})
-                if prog is not None:
-                    mse.append({"cat": cat, "name": finding_name, "score": prog, "phase": "Progression", "note": note, "date": d_prog.isoformat()})
-                mse.append({"cat": cat, "name": finding_name, "score": curr, "phase": "Current", "note": note, "date": today_iso})
+            finding_name = (mse_findings[i] if i < len(mse_findings) else "").strip()
+            if not cat or not finding_name:
+                continue
+            onset = safe_float(mse_onsets, i)
+            prog = safe_float(mse_progs, i)
+            curr = safe_float(mse_currs, i, 0.0)
+            note = mse_notes[i] if i < len(mse_notes) else ""
+            dur_text = mse_durs[i] if i < len(mse_durs) else ""
+            try:
+                delta = parse_duration(dur_text) if dur_text else timedelta(days=14)
+            except Exception:
+                delta = timedelta(days=14)
+            d_onset = now_ist - delta
+            d_prog = d_onset + timedelta(days=(now_ist - d_onset).days // 2)
+            if onset is not None:
+                mse.append({"cat": cat, "name": finding_name, "score": onset, "phase": "Onset", "note": note, "date": d_onset.isoformat()})
+            if prog is not None:
+                mse.append({"cat": cat, "name": finding_name, "score": prog, "phase": "Progression", "note": note, "date": d_prog.isoformat()})
+            mse.append({"cat": cat, "name": finding_name, "score": curr, "phase": "Current", "note": note, "date": today_iso})
 
         # 3. Medications (Upgraded for Tapering & Duration support)
         meds_chart = []
@@ -572,17 +655,21 @@ def guest_lifechart():
 
         last_med = None
         for i, name in enumerate(drug_names):
-            if name.strip():
-                dose_str = dose_mgs[i] if i < len(dose_mgs) else ""
-                freq = d_freqs[i] if i < len(d_freqs) else ""
-                dur = d_durs[i] if i < len(d_durs) else ""
-                note = med_notes[i] if i < len(med_notes) else ""
-                score_val = 0.0
-                if dose_str:
-                    nums = re.findall(r"[-+]?\d*\.\d+|\d+", dose_str)
-                    if nums:
-                        score_val = float(nums[0])
-                if last_med and last_med["name"].strip().lower() == name.strip().lower():
+            dose_str = dose_mgs[i] if i < len(dose_mgs) else ""
+            dur = d_durs[i] if i < len(d_durs) else ""
+            if not (name or "").strip() and not (dose_str or "").strip() and not (dur or "").strip():
+                continue
+            dose_str = dose_str or ""
+            dur = dur or ""
+            freq = d_freqs[i] if i < len(d_freqs) else ""
+            note = med_notes[i] if i < len(med_notes) else ""
+            score_val = 0.0
+            if dose_str:
+                nums = re.findall(r"[-+]?\d*\.\d+|\d+", dose_str)
+                if nums:
+                    score_val = float(nums[0])
+            if last_med and last_med["name"].strip().lower() == (name or "").strip().lower():
+                if (dose_str.strip() or dur.strip()):
                     last_med["is_tapering"] = True
                     if not last_med.get("taper_plan"):
                         last_med["taper_plan"] = [{
@@ -597,16 +684,22 @@ def guest_lifechart():
                         "duration_text": dur,
                         "note": note
                     })
-                else:
-                    new_med = {
-                        "name": name, "score": score_val, "phase": "Current",
-                        "dose": dose_str, "frequency": freq, "duration": dur,
-                        "note": note, "date": today_iso,
-                        "is_tapering": False, "taper_plan": None,
-                        "form_type": d_forms[i] if i < len(d_forms) else 'Tablet'
-                    }
-                    meds_chart.append(new_med)
-                    last_med = new_med
+            elif (name or "").strip():
+                new_med = {
+                    "name": (name or "").strip(),
+                    "score": score_val,
+                    "phase": "Current",
+                    "dose": dose_str,
+                    "frequency": freq,
+                    "duration": dur,
+                    "note": note,
+                    "date": today_iso,
+                    "is_tapering": False,
+                    "taper_plan": None,
+                    "form_type": d_forms[i] if i < len(d_forms) else 'Tablet'
+                }
+                meds_chart.append(new_med)
+                last_med = new_med
 
         # 4. Side Effects (Onset & Progression)
         se_chart = []
@@ -618,7 +711,11 @@ def guest_lifechart():
         se_durs = request.form.getlist('side_effect_duration[]')
 
         for i, name in enumerate(se_names):
-            if name.strip():
+            dur_text = se_durs[i] if i < len(se_durs) else ""
+            if not (name or "").strip() and not (dur_text or "").strip():
+                continue
+            name = (name or "").strip() or ""
+            if name:
                 onset = safe_float(se_onsets, i)
                 prog = safe_float(se_progs, i)
                 curr = safe_float(se_currs, i, 0.0)
@@ -856,7 +953,7 @@ def dashboard():
     for p in patients:
         visits = Visit.query.filter_by(patient_id=p.id).order_by(Visit.date.desc()).all()
         latest_visit = visits[0] if visits else None
-        diagnosis = latest_visit.provisional_diagnosis if latest_visit else "N/A"
+        diagnosis = format_diagnosis_values(latest_visit.provisional_diagnosis) if latest_visit else "N/A"
         last_visit_date = latest_visit.date.strftime("%d %b %y") if latest_visit and getattr(latest_visit, 'date', None) else "—"
         patient_data.append({
             'id': p.id,
@@ -1189,8 +1286,8 @@ def first_visit():
             patient_id=patient.id,
             date=visit_date,
             visit_type='First',
-            provisional_diagnosis=request.form.get('provisional_diagnosis', ''),
-            differential_diagnosis=request.form.get('differential_diagnosis', ''),
+            provisional_diagnosis=serialize_diagnosis_values(request.form.get('provisional_diagnosis', '')),
+            differential_diagnosis=serialize_diagnosis_values(request.form.get('differential_diagnosis', '')),
             next_visit_date=parse_date(request.form.get('next_visit_date'))
         )
         db.session.add(visit)
@@ -1733,6 +1830,9 @@ def process_visit_form_data(visit, form_data):
     s_notes = form_data.getlist('symptom_note[]')
     
     for i, name in enumerate(s_names):
+        s_dur = get_duration(i, 'symptom')
+        if not (name or '').strip() and not (s_dur or '').strip():
+            continue
         if name.strip():
             entry = SymptomEntry(
                 visit_id=visit.id,
@@ -1756,31 +1856,35 @@ def process_visit_form_data(visit, form_data):
 
     last_med = None
     for i, name in enumerate(d_names):
-        if not name.strip():
+        dose = (d_full_doses[i] if i < len(d_full_doses) else '').strip()
+        dur = (d_durs[i] if i < len(d_durs) else '').strip()
+        if not (name or '').strip() and not dose and not dur:
             continue
+        name = (name or '').strip()
         dose = d_full_doses[i] if i < len(d_full_doses) else ''
         freq = d_freqs[i] if i < len(d_freqs) else ''
         dur = d_durs[i] if i < len(d_durs) else ''
         note = d_notes[i] if i < len(d_notes) else ''
 
         if last_med and last_med.drug_name.strip().lower() == name.strip().lower():
-            last_med.is_tapering = True
-            taper_plan = json.loads(last_med.taper_plan) if last_med.taper_plan else []
-            if not taper_plan:
+            if (dose or '').strip() or (dur or '').strip():
+                last_med.is_tapering = True
+                taper_plan = json.loads(last_med.taper_plan) if last_med.taper_plan else []
+                if not taper_plan:
+                    taper_plan.append({
+                        "dose_mg": last_med.dose_mg or '',
+                        "frequency": last_med.frequency or '',
+                        "duration_text": last_med.duration_text or '',
+                        "note": last_med.note or ''
+                    })
                 taper_plan.append({
-                    "dose_mg": last_med.dose_mg or '',
-                    "frequency": last_med.frequency or '',
-                    "duration_text": last_med.duration_text or '',
-                    "note": last_med.note or ''
+                    "dose_mg": dose,
+                    "frequency": freq,
+                    "duration_text": dur,
+                    "note": note
                 })
-            taper_plan.append({
-                "dose_mg": dose,
-                "frequency": freq,
-                "duration_text": dur,
-                "note": note
-            })
-            last_med.taper_plan = json.dumps(taper_plan)
-        else:
+                last_med.taper_plan = json.dumps(taper_plan)
+        elif name:
             entry = MedicationEntry(
                 visit_id=visit.id,
                 drug_name=name,
@@ -1809,6 +1913,9 @@ def process_visit_form_data(visit, form_data):
         se_currs = se_scores_old
 
     for i, name in enumerate(se_names):
+        se_dur = get_duration(i, 'side_effect')
+        if not (name or '').strip() and not (se_dur or '').strip():
+            continue
         if name.strip():
             # Handle float/int conversion safely
             curr_val = _safe_float(se_currs[i], default=0) if i < len(se_currs) else 0
@@ -2306,8 +2413,10 @@ def add_visit(patient_id):
             next_visit_date=parse_date(request.form.get('next_visit_date'))
         )
         # Save diagnosis if provided (from life chart or add visit)
-        if request.form.get('provisional_diagnosis'): visit.provisional_diagnosis = request.form.get('provisional_diagnosis')
-        if request.form.get('differential_diagnosis'): visit.differential_diagnosis = request.form.get('differential_diagnosis')
+        if request.form.get('provisional_diagnosis'):
+            visit.provisional_diagnosis = serialize_diagnosis_values(request.form.get('provisional_diagnosis'))
+        if request.form.get('differential_diagnosis'):
+            visit.differential_diagnosis = serialize_diagnosis_values(request.form.get('differential_diagnosis'))
         
         db.session.add(visit)
         db.session.flush()
@@ -2395,8 +2504,8 @@ def edit_visit(visit_id):
         visit.date = parse_date(request.form.get('date')) or visit.date
         visit.next_visit_date = parse_date(request.form.get('next_visit_date'))  # NEW
         
-        visit.provisional_diagnosis = request.form.get('provisional_diagnosis', '')
-        visit.differential_diagnosis = request.form.get('differential_diagnosis', '')
+        visit.provisional_diagnosis = serialize_diagnosis_values(request.form.get('provisional_diagnosis', ''))
+        visit.differential_diagnosis = serialize_diagnosis_values(request.form.get('differential_diagnosis', ''))
         
         # --- 3. Replace Entries (Delete Old -> Add New) ---
         SymptomEntry.query.filter_by(visit_id=visit.id).delete()
@@ -2499,8 +2608,8 @@ def update_clinical(visit_id):
     
     # 1. Update Basic Visit Fields
     visit.note = request.form.get('visit_note', '')
-    visit.provisional_diagnosis = request.form.get('provisional_diagnosis', '')
-    visit.differential_diagnosis = request.form.get('differential_diagnosis', '')
+    visit.provisional_diagnosis = serialize_diagnosis_values(request.form.get('provisional_diagnosis', ''))
+    visit.differential_diagnosis = serialize_diagnosis_values(request.form.get('differential_diagnosis', ''))
     visit.clinical_state = request.form.get('clinical_state', '')
     visit.medication_adherence = request.form.get('medication_adherence', '')
     
@@ -2568,31 +2677,35 @@ def update_clinical(visit_id):
 
     last_med = None
     for i, name in enumerate(d_names):
-        if not name.strip():
+        dose = (d_full_doses[i] if i < len(d_full_doses) else '').strip()
+        dur = (d_durs[i] if i < len(d_durs) else '').strip()
+        if not (name or '').strip() and not dose and not dur:
             continue
+        name = (name or '').strip()
         dose = d_full_doses[i] if i < len(d_full_doses) else ''
         freq = d_freqs[i] if i < len(d_freqs) else ''
         dur = d_durs[i] if i < len(d_durs) else ''
         note = d_notes[i] if i < len(d_notes) else ''
 
         if last_med and last_med.drug_name.strip().lower() == name.strip().lower():
-            last_med.is_tapering = True
-            taper_plan = json.loads(last_med.taper_plan) if last_med.taper_plan else []
-            if not taper_plan:
+            if (dose or '').strip() or (dur or '').strip():
+                last_med.is_tapering = True
+                taper_plan = json.loads(last_med.taper_plan) if last_med.taper_plan else []
+                if not taper_plan:
+                    taper_plan.append({
+                        "dose_mg": last_med.dose_mg or '',
+                        "frequency": last_med.frequency or '',
+                        "duration_text": last_med.duration_text or '',
+                        "note": last_med.note or ''
+                    })
                 taper_plan.append({
-                    "dose_mg": last_med.dose_mg or '',
-                    "frequency": last_med.frequency or '',
-                    "duration_text": last_med.duration_text or '',
-                    "note": last_med.note or ''
+                    "dose_mg": dose,
+                    "frequency": freq,
+                    "duration_text": dur,
+                    "note": note
                 })
-            taper_plan.append({
-                "dose_mg": dose,
-                "frequency": freq,
-                "duration_text": dur,
-                "note": note
-            })
-            last_med.taper_plan = json.dumps(taper_plan)
-        else:
+                last_med.taper_plan = json.dumps(taper_plan)
+        elif name:
             entry = MedicationEntry(
                 visit_id=visit.id,
                 drug_type=d_types[i] if i < len(d_types) else 'Generic',
@@ -2963,7 +3076,7 @@ def prepare_chart_data(patient_id: int) -> dict:
         visit_details_map[visit.id] = {
             'date': visit.date.strftime('%Y-%m-%d'),
             'type': visit.visit_type,
-            'diagnosis': visit.provisional_diagnosis,
+            'diagnosis': format_diagnosis_values(visit.provisional_diagnosis),
             'symptoms': [{'name': s.symptom_name, 'score': s.score_current, 'note': s.note} for s in visit.symptom_entries],
             'meds': [{'name': m.drug_name, 'dose': m.dose_mg, 'note': m.note} for m in visit.medication_entries],
             'se': [{'name': s.side_effect_name, 'score': s.score, 'note': s.note} for s in visit.side_effect_entries],
@@ -3863,6 +3976,8 @@ def guest_prescription():
         "provisional_diagnosis": request.form.get('provisional_diagnosis', ''),
         "differential_diagnosis": request.form.get('differential_diagnosis', ''),
         "next_visit_date": fu_date,
+        "type_of_next_follow_up": request.form.get('type_of_next_follow_up', ''),
+        "safety_profile": None,
         "note": request.form.get('visit_note') or request.form.get('note', ''),
         "symptom_entries": [],
         "side_effect_entries": [],
@@ -3878,9 +3993,14 @@ def guest_prescription():
     d_forms = request.form.getlist('med_form[]')
 
     for i, name in enumerate(drug_names):
-        if name.strip():
+        name_s = (name or '').strip()
+        dose_s = (dose_mgs[i] if i < len(dose_mgs) else '').strip()
+        dur_s = (durations[i] if i < len(durations) else '').strip()
+        if not name_s and not dose_s and not dur_s:
+            continue
+        if name_s:
             visit["medication_entries"].append({
-                'drug_name': name,
+                'drug_name': name_s,
                 'drug_type': 'Generic',
                 'dose_mg': dose_mgs[i] if i < len(dose_mgs) else '',
                 'frequency': d_freqs[i] if i < len(d_freqs) else '',
@@ -3959,7 +4079,9 @@ def guest_both():
     durations = request.form.getlist('duration_text[]') or request.form.getlist('symptom_duration[]')
 
     for i, name in enumerate(names):
-        if not name.strip(): continue
+        dur_text = durations[i] if i < len(durations) else ""
+        if not (name or "").strip() and not (dur_text or "").strip():
+            continue
         
         # 1. Scores
         def safe_int(val_list, idx, default=5):
@@ -3972,7 +4094,6 @@ def guest_both():
         note = sym_notes[i] if i < len(sym_notes) else ""
         
         # 2. Date Calculation (Crucial for Unified Charts)
-        dur_text = durations[i] if i < len(durations) else ""
         # Use existing utility or default to 14 days
         try:
             delta = parse_duration(dur_text) if dur_text else timedelta(days=14)
@@ -4016,24 +4137,25 @@ def guest_both():
     mse_durs = request.form.getlist('mse_duration[]')
 
     for i, cat in enumerate(mse_cats):
-        if cat:
-            onset = safe_float(mse_onsets, i)
-            prog = safe_float(mse_progs, i)
-            curr = safe_float(mse_currs, i, 0.0)
-            finding_name = mse_findings[i] if i < len(mse_findings) else ""
-            note = mse_notes[i] if i < len(mse_notes) else ""
-            dur_text = mse_durs[i] if i < len(mse_durs) else ""
-            try:
-                delta = parse_duration(dur_text) if dur_text else timedelta(days=14)
-            except Exception:
-                delta = timedelta(days=14)
-            d_onset = now_ist - delta
-            d_prog = d_onset + timedelta(days=(now_ist - d_onset).days // 2)
-            if onset is not None:
-                mse.append({"cat": cat, "name": finding_name, "score": onset, "phase": "Onset", "note": note, "date": d_onset.isoformat()})
-            if prog is not None:
-                mse.append({"cat": cat, "name": finding_name, "score": prog, "phase": "Progression", "note": note, "date": d_prog.isoformat()})
-            mse.append({"cat": cat, "name": finding_name, "score": curr, "phase": "Current", "note": note, "date": today_iso})
+        finding_name = (mse_findings[i] if i < len(mse_findings) else "").strip()
+        if not cat or not finding_name:
+            continue
+        onset = safe_float(mse_onsets, i)
+        prog = safe_float(mse_progs, i)
+        curr = safe_float(mse_currs, i, 0.0)
+        note = mse_notes[i] if i < len(mse_notes) else ""
+        dur_text = mse_durs[i] if i < len(mse_durs) else ""
+        try:
+            delta = parse_duration(dur_text) if dur_text else timedelta(days=14)
+        except Exception:
+            delta = timedelta(days=14)
+        d_onset = now_ist - delta
+        d_prog = d_onset + timedelta(days=(now_ist - d_onset).days // 2)
+        if onset is not None:
+            mse.append({"cat": cat, "name": finding_name, "score": onset, "phase": "Onset", "note": note, "date": d_onset.isoformat()})
+        if prog is not None:
+            mse.append({"cat": cat, "name": finding_name, "score": prog, "phase": "Progression", "note": note, "date": d_prog.isoformat()})
+        mse.append({"cat": cat, "name": finding_name, "score": curr, "phase": "Current", "note": note, "date": today_iso})
 
     # C. Medications (Upgraded for Tapering & Duration support)
     meds_chart = []
@@ -4046,17 +4168,21 @@ def guest_both():
 
     last_med = None
     for i, name in enumerate(drug_names):
-        if name.strip():
-            dose_str = dose_mgs[i] if i < len(dose_mgs) else ""
-            freq = d_freqs[i] if i < len(d_freqs) else ""
-            dur = d_durs[i] if i < len(d_durs) else ""
-            note = med_notes[i] if i < len(med_notes) else ""
-            score_val = 0.0
-            if dose_str:
-                nums = re.findall(r"[-+]?\d*\.\d+|\d+", dose_str)
-                if nums:
-                    score_val = float(nums[0])
-            if last_med and last_med["name"].strip().lower() == name.strip().lower():
+        dose_str = dose_mgs[i] if i < len(dose_mgs) else ""
+        dur = d_durs[i] if i < len(d_durs) else ""
+        if not (name or "").strip() and not (dose_str or "").strip() and not (dur or "").strip():
+            continue
+        dose_str = dose_str or ""
+        dur = dur or ""
+        freq = d_freqs[i] if i < len(d_freqs) else ""
+        note = med_notes[i] if i < len(med_notes) else ""
+        score_val = 0.0
+        if dose_str:
+            nums = re.findall(r"[-+]?\d*\.\d+|\d+", dose_str)
+            if nums:
+                score_val = float(nums[0])
+        if last_med and last_med["name"].strip().lower() == (name or "").strip().lower():
+            if (dose_str.strip() or dur.strip()):
                 last_med["is_tapering"] = True
                 if not last_med.get("taper_plan"):
                     last_med["taper_plan"] = [{
@@ -4071,16 +4197,22 @@ def guest_both():
                     "duration_text": dur,
                     "note": note
                 })
-            else:
-                new_med = {
-                    "name": name, "score": score_val, "phase": "Current",
-                    "dose": dose_str, "frequency": freq, "duration": dur,
-                    "note": note, "date": today_iso,
-                    "is_tapering": False, "taper_plan": None,
-                    "form_type": d_forms[i] if i < len(d_forms) else 'Tablet'
-                }
-                meds_chart.append(new_med)
-                last_med = new_med
+        elif (name or "").strip():
+            new_med = {
+                "name": (name or "").strip(),
+                "score": score_val,
+                "phase": "Current",
+                "dose": dose_str,
+                "frequency": freq,
+                "duration": dur,
+                "note": note,
+                "date": today_iso,
+                "is_tapering": False,
+                "taper_plan": None,
+                "form_type": d_forms[i] if i < len(d_forms) else 'Tablet'
+            }
+            meds_chart.append(new_med)
+            last_med = new_med
 
     # D. Side Effects (Onset & Progression)
     se_chart = []
@@ -4092,7 +4224,11 @@ def guest_both():
     se_durs = request.form.getlist('side_effect_duration[]')
 
     for i, name in enumerate(se_names):
-        if name.strip():
+        dur_text = se_durs[i] if i < len(se_durs) else ""
+        if not (name or "").strip() and not (dur_text or "").strip():
+            continue
+        name = (name or "").strip()
+        if name:
             onset = safe_float(se_onsets, i)
             prog = safe_float(se_progs, i)
             curr = safe_float(se_currs, i, 0.0)
@@ -4202,6 +4338,8 @@ def guest_both():
         "provisional_diagnosis": request.form.get('provisional_diagnosis', ''),
         "differential_diagnosis": request.form.get('differential_diagnosis', ''),
         "next_visit_date": fu_date,
+        "type_of_next_follow_up": request.form.get('type_of_next_follow_up', ''),
+        "safety_profile": None,
         "note": request.form.get('visit_note') or request.form.get('note', ''),
         "symptom_entries": current_symps,
         "side_effect_entries": current_ses,

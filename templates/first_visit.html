@@ -4,13 +4,92 @@
     <meta charset="UTF-8">
     <title>First Visit - Continuum Psychiatry</title>
     <style>
-        :root { --primary-blue: #A5DCFE; --primary-dark: #7ab8e0; --bg-color: #f4f8fb; --sidebar-width: 280px; }
+        :root { 
+            --primary-blue: #9BD8FB; 
+            --primary-dark: #9BD8FB; 
+            --bg-color: #f4f8fb; 
+            --sidebar-width: 280px; 
+            --form-box-bg: #ffffff;
+            --form-box-border: #eee;
+            --form-soft-bg: #f9fafb;
+            --accent-soft-bg: rgba(155,216,251,0.18);
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
         body { background-color: var(--bg-color); height: 100vh; overflow: hidden; display: flex; }
         .app-container { display: flex; width: 100%; height: 100%; } 
         .sidebar { width: var(--sidebar-width); background: #fff; border-right: 1px solid #eaecf0; padding: 32px 24px; display: flex; flex-direction: column; flex-shrink: 0; }
-        .main-content { flex: 1; overflow-y: auto; padding: 30px; background: var(--primary-blue); }
+        .main-content { flex: 1; overflow-y: auto; padding: 90px 30px 30px 30px; background: var(--primary-blue); }
         .visit-card { background: white; border-radius: 12px; padding: 25px; width: 95%; max-width: 1400px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+
+        /* Dashboard-style topbar + overlay sidebar */
+        .topbar {
+            position: fixed;
+            width: 100%;
+            top: 0;
+            left: 0;
+            z-index: 3000;
+            height: 60px;
+            background: white;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .top-left { display: flex; align-items: center; gap: 15px; }
+        .logo { height: 40px; }
+        .hamburger { font-size: 24px; cursor: pointer; padding: 5px; }
+        .top-center { flex: 1; text-align: center; font-weight: 600; color: #374151; }
+        .top-right { display: flex; align-items: center; gap: 16px; }
+        .topbar-dark-toggle { background: none; border: none; cursor: pointer; padding: 6px; color: #555; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+        .topbar-dark-toggle:hover { color: #2c7be5; background: #f0f4f9; }
+        .topbar-dark-toggle .icon-sun { display: none; }
+
+        .side-menu {
+            position: fixed;
+            left: -260px;
+            top: 60px;
+            width: 260px;
+            height: calc(100vh - 60px);
+            background: #fff;
+            border-right: 1px solid #eaeaea;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+            padding: 20px;
+            transition: left 0.3s ease;
+            z-index: 2900;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .side-menu.active { left: 0; }
+
+        .overlay {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            width: 100vw;
+            height: calc(100vh - 60px);
+            background: rgba(0,0,0,0.4);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 2800;
+        }
+        .overlay.active { opacity: 1; pointer-events: auto; }
+
+        .menu-item { padding: 12px 10px; cursor: pointer; font-weight: 500; border-radius: 5px; margin-bottom: 5px; }
+        .menu-item:hover { background: #f4f6f9; color: #2c7be5; }
+        .menu-item.logout { color: #c0392b; font-weight: bold; }
+        .menu-item.logout:hover { background: #fdeaea; color: #a93226; }
+        .menu-bottom { margin-top: auto; padding-top: 20px; border-top: 1px solid #eee; }
+
+        body.dark-mode .topbar { background-color: #1E252E; box-shadow: 0 2px 5px rgba(0,0,0,0.4); }
+        body.dark-mode .top-center { color: #ddd; }
+        body.dark-mode .topbar-dark-toggle { color: #ddd; }
+        body.dark-mode .topbar-dark-toggle .icon-sun { display: block !important; }
+        body.dark-mode .topbar-dark-toggle .icon-moon { display: none; }
+        body.dark-mode .side-menu { background-color: #1E252E; color: #fff; border-right-color: #333; }
+        body.dark-mode .menu-item:hover { background: #232323; color: #2c7be5; }
         
         .section-header { display: flex; align-items: center; gap: 15px; margin-top: 25px; margin-bottom: 15px; border-bottom: 2px solid var(--bg-color); padding-bottom: 8px; }
         .section-title { font-size: 1.1rem; font-weight: 600; color: #555; }
@@ -112,13 +191,53 @@
         .tag-chip .tag-remove:hover { color: #c00; }
         .datalist-input-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
         .datalist-input-wrap input[list] { width: 200px; min-width: 160px; padding: 4px 8px; }
+        .diagnosis-picker-shell { position: relative; display: flex; flex-direction: column; gap: 8px; }
+        .diagnosis-chip-list { display: flex; flex-wrap: wrap; gap: 8px; min-height: 22px; }
+        .diagnosis-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid #b9d8ea; border-radius: 999px; background: #eef8fd; font-size: 12px; }
+        .diagnosis-chip-label { color: #234; }
+        .diagnosis-chip-remove { border: none; background: transparent; color: #566; cursor: pointer; font-size: 16px; line-height: 1; padding: 0; }
+        .diagnosis-input-row { display: flex; gap: 10px; }
+        .diagnosis-picker-input { width: 100%; padding: 10px 12px; border: 1px solid #d6dee4; border-radius: 8px; font-size: 14px; }
+        .diagnosis-options { position: absolute; top: 100%; left: 0; right: 0; z-index: 20; display: none; max-height: 240px; overflow-y: auto; background: #fff; border: 1px solid #d6dee4; border-radius: 10px; box-shadow: 0 12px 28px rgba(0,0,0,0.1); }
+        .diagnosis-option { width: 100%; display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border: none; border-bottom: 1px solid #eef2f5; background: #fff; text-align: left; cursor: pointer; }
+        .diagnosis-option:hover { background: #f5fbff; }
+        .diagnosis-option:last-child { border-bottom: none; }
+        .diagnosis-option-empty { color: #667; cursor: default; }
+        .diagnosis-option-label { color: #223; }
+        .diagnosis-option-system { color: #678; font-size: 12px; white-space: nowrap; }
+        .diagnosis-action-row { margin-top: 8px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .diagnosis-modal-shell { width: min(960px, 92vw); max-height: 82vh; margin: 5vh auto; padding: 0; overflow: hidden; border-radius: 14px; }
+        .diagnosis-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px 12px; border-bottom: 1px solid #edf1f4; }
+        .diagnosis-modal-close { border: none; background: transparent; color: #667; font-size: 24px; cursor: pointer; line-height: 1; }
+        .diagnosis-modal-tabs { display: flex; gap: 2px; padding: 0 14px; overflow-x: auto; background: #f5f8fb; border-bottom: 1px solid #e4ebf0; }
+        .diagnosis-tab-button { border: none; background: #dfe7ee; color: #455; padding: 10px 16px; border-radius: 12px 12px 0 0; cursor: pointer; white-space: nowrap; margin-top: 8px; }
+        .diagnosis-tab-button.active { background: #fff; color: #111; border: 1px solid #e4ebf0; border-bottom-color: #fff; }
+        .diagnosis-modal-panels { padding: 18px 20px 22px; overflow-y: auto; max-height: calc(82vh - 110px); background: #fff; }
+        .diagnosis-tab-panel { display: none; }
+        .diagnosis-tab-panel.active { display: block; }
+        .diagnosis-criteria-body { color: #334; line-height: 1.6; white-space: normal; }
+        .diagnosis-icd11-results { display: grid; gap: 10px; }
+        .diagnosis-icd11-result { padding: 12px; border: 1px solid #e4ebf0; border-radius: 10px; background: #fafcfe; }
+        .diagnosis-icd11-code { font-size: 12px; font-weight: 700; color: #486; margin-bottom: 4px; }
+        .diagnosis-icd11-title { color: #223; line-height: 1.5; }
+        .diagnosis-icd11-title .icd11-found { background: #fff3bf; color: #1a1a1a; font-weight: 600; padding: 0 3px; border-radius: 3px; font-style: normal; }
+        body.dark-mode .diagnosis-icd11-title .icd11-found { background: #5c4d00; color: #fffbeb; }
         .dev-notes-popover { display: none; margin-top: 6px; padding: 8px; background: #fafafa; border: 1px solid #eee; border-radius: 6px; }
         .dev-notes-popover.visible { display: block; }
         .note-icon-btn { background: none; border: none; cursor: pointer; padding: 2px 6px; font-size: 1.1em; opacity: 0.8; }
         .note-icon-btn:hover { opacity: 1; }
         
         /* Dark Mode */
-        body.dark-mode { background-color: #121212; color: #ffffff; }
+        body.dark-mode { 
+            background-color: #121212; 
+            color: #ffffff; 
+            --primary-blue: #003366; 
+            --primary-dark: #003366; 
+            --form-box-bg: #1e1e1e;
+            --form-box-border: #333;
+            --form-soft-bg: #1e1e1e;
+            --accent-soft-bg: rgba(0,51,102,0.55);
+        }
         body.dark-mode .sidebar, body.dark-mode .visit-card, body.dark-mode .entry-wrapper, body.dark-mode .patient-grid, body.dark-mode .modal-content, body.dark-mode .click-trigger, body.dark-mode .diagnosis-grid, body.dark-mode .patient-edit-grid { background-color: #1e1e1e; color: #ffffff; border-color: #333; }
         body.dark-mode .section-title, body.dark-mode .subsection-title, body.dark-mode label, body.dark-mode h2, body.dark-mode h3, body.dark-mode h4, body.dark-mode span, body.dark-mode div, body.dark-mode b { color: #ddd; }
         body.dark-mode input, body.dark-mode select, body.dark-mode textarea { background-color: #333; color: white; border: 1px solid #555; }
@@ -126,27 +245,123 @@
         body.dark-mode .click-trigger { border-color: #555; background-color: #2a2a2a; }
         body.dark-mode .click-trigger:hover { background-color: #333; border-color: #777; }
         body.dark-mode .slider-val { color: #ddd; }
+        body.dark-mode .diagnosis-picker-input, body.dark-mode .diagnosis-options, body.dark-mode .diagnosis-option, body.dark-mode .diagnosis-modal-panels { background: #232323; color: #fff; border-color: #3d3d3d; }
+        body.dark-mode .diagnosis-chip { background: #1f3542; border-color: #2f556a; }
+        body.dark-mode .diagnosis-tab-button { background: #2b3740; color: #d7e3eb; }
+        body.dark-mode .diagnosis-tab-button.active { background: #1f1f1f; color: #fff; border-color: #3d3d3d; }
+        body.dark-mode .diagnosis-modal-tabs, body.dark-mode .diagnosis-modal-header { background: #1b1b1b; border-color: #333; }
+
+        /* Elements with hardcoded light backgrounds/borders */
+        body.dark-mode .tag-chip { background: #1f3542; border-color: var(--primary-dark); color: #d7e3eb; }
+        body.dark-mode .tag-chip .tag-remove { color: #cbd5e1; }
+        body.dark-mode .tag-chip .tag-remove:hover { color: #ff8080; }
+        body.dark-mode .diagnosis-icd11-result { background: #1b1b1b; border-color: #333; }
+        body.dark-mode .diagnosis-icd11-code { color: #d7e3eb; }
+        body.dark-mode #symptom-duration-apply-bar { background: #1b1b1b !important; border-color: var(--primary-dark) !important; }
+        body.dark-mode #symptom-duration-apply-bar .btn { background: var(--primary-dark) !important; color: #fff !important; }
+        body.dark-mode #eq_result_dose { background: #1b1b1b !important; border: 1px dashed var(--primary-dark) !important; color: #fff !important; }
+        body.dark-mode .diagnosis-chip-label { color: #d7e3eb !important; }
+        body.dark-mode .diagnosis-chip-remove { color: #a0aec0 !important; }
+        body.dark-mode .diagnosis-chip-remove:hover { color: #ff8080 !important; }
+        body.dark-mode .diagnosis-action-row .btn { 
+            background: #2b3740 !important; 
+            color: #d7e3eb !important; 
+            border: 1px solid #3d3d3d !important; 
+        }
+        body.dark-mode .click-trigger { border-color: var(--primary-dark) !important; background-color: #2a2a2a !important; }
+        body.dark-mode #scales-count-badge { background: var(--primary-dark) !important; }
+        body.dark-mode #scalesModal strong { color: #fff !important; }
+        body.dark-mode #scale-live-severity { color: #d7e3eb !important; }
+        /* Current Clinical State panel */
+        body.dark-mode .clinical-state-section {
+            background-color: #1e1e1e !important;
+            border: 1px solid #333 !important;
+        }
+        body.dark-mode .clinical-state-section h4 {
+            color: #ddd !important;
+        }
+        body.dark-mode .clinical-state-toggle {
+            background: var(--primary-dark) !important;
+            color: #fff !important;
+        }
+        body.dark-mode #clinical-state-ranges-container {
+            border-top: 1px dashed var(--primary-dark) !important;
+        }
+
+        .med-entry-block .drug-name-wrap { position: relative; flex: 0 0 auto; width: 100%; min-width: 150px; align-self: stretch; box-sizing: border-box; }
+        .drug-name-wrap .drug-name-input { width: 100%; box-sizing: border-box; margin: 0; padding: 10px 108px 10px 12px; }
+        .taper-btn {
+            position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+            font-size: 10px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; z-index: 2;
+            border: 1px dashed #7ab8e0; background: rgba(240, 248, 255, 0.96); color: #555; cursor: pointer; line-height: 1.2;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+        }
+        .drug-name-wrap:hover .taper-btn { opacity: 1; pointer-events: auto; }
+        body.dark-mode .taper-btn { background: rgba(31, 53, 66, 0.96); border-color: #4a7a99; color: #d4ebf8; }
+
+        .med-entry-block .med-block-inner { display: flex; flex-wrap: nowrap; align-items: stretch; gap: 14px; width: 100%; }
+        .med-ident-col {
+            flex: 0 0 auto; align-self: flex-start; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch;
+            gap: 8px; min-width: 150px; max-width: 220px; padding-right: 0; border-right: none;
+        }
+        .med-schedule-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+        .med-schedule-step { display: flex; flex-direction: column; gap: 4px; }
+        .med-entry-block .med-step-main-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; box-sizing: border-box; }
+        .med-step-main-trail { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-shrink: 0; flex-wrap: nowrap; }
+        .med-freq-inline { display: flex; align-items: center; gap: 8px; flex: 0 1 auto; flex-wrap: wrap; }
+        .med-freq-label { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; white-space: nowrap; }
+        body.dark-mode .med-freq-label { color: #aaa; }
+        .med-global-actions { flex: 0 0 auto; display: flex; flex-direction: column; justify-content: center; gap: 6px; align-items: center; }
+        body.dark-mode .med-ident-col { border-color: #444; }
     </style>
 </head>
 <body>
-    <div class="app-container">
-        <aside class="sidebar">
-            <div style="font-weight:bold; margin-bottom:20px;">Dr. {{ doctor.full_name if doctor and doctor.full_name else 'Doctor' }}</div>
-			<div style="display: flex; gap: 15px; margin-bottom: 20px;">
-				<a href="{{ url_for('profile') }}" style="text-decoration:none; color:#333; margin-bottom:8px; margin-right:10px;">👤 Profile</a>
-				<a href="{{ url_for('dashboard') }}" style="text-decoration:none; color:#333; margin-bottom:8px;">🏠 Dashboard</a>
-			</div>
-            <input type="text" id="search" placeholder="Search Patients..." onkeyup="filterPatients()" style="width:100%; padding:8px; margin-bottom:10px;">
-            <div id="patientList" style="flex:1; overflow-y:auto;">
-                {% for p in patients %}
-                <a href="{{ url_for('patient_detail', patient_id=p.id) }}" class="patient-item" style="display:block; padding:10px; border-bottom:1px solid #eee; text-decoration:none; color:#333;">
-                    <b>{{ p.name }}</b><br><span style="font-size:12px; color:#666;">{{ p.sex }}, {{ p.age }}y</span>
-                </a>
-                {% endfor %}
-            </div>
-            <a href="{{ url_for('logout') }}" style="color:red; margin-top:20px; display:block;">Log Out</a>
-        </aside>
+    <div id="sideMenu" class="side-menu">
+        <div class="menu-item" onclick='window.location.href={{ url_for('dashboard')|tojson }}'>Dashboard</div>
+        <div class="menu-item" onclick='window.location.href={{ url_for('dashboard')|tojson }}'>My Patients</div>
+        <div class="menu-item" onclick='window.location.href={{ url_for('dashboard')|tojson }}'>Appointments</div>
+        <div class="menu-item" onclick='window.location.href={{ url_for('dashboard')|tojson }}'>Scales</div>
 
+        <div class="menu-bottom">
+            <div class="menu-item" onclick='window.location.href={{ url_for('profile')|tojson }}'>My Profile</div>
+            <div class="menu-item" onclick="alert('Settings are available in My Profile.');">Settings</div>
+            <div class="menu-item" onclick="alert('Help page not available yet.');">Help</div>
+            <div class="menu-item logout" onclick='window.location.href={{ url_for('logout')|tojson }}'>Logout</div>
+        </div>
+    </div>
+
+    <div id="overlay" class="overlay" onclick="toggleSidebar()"></div>
+
+    <div class="topbar">
+        <div class="top-left">
+            <div class="hamburger" onclick="toggleSidebar()">☰</div>
+            <div style="display:flex; align-items:center; cursor:pointer;" onclick="window.location.href='/'">
+                <img src="{{ url_for('static', filename='logo.png') }}" class="logo" alt="Logo" style="height:45px;">
+                <div style="margin-left: 10px; line-height: 1.1;">
+                    <div style="font-size: 22px; font-weight: bold; color: #2c7be5; margin-bottom: 2px;">Continuum</div>
+                    <div style="font-size: 13px; color: #7ab8e0; letter-spacing: 1px; text-transform: lowercase;">psychiatry</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="top-center">
+            {% if doctor and doctor.clinic_name %}{{ doctor.clinic_name }}{% endif %}
+        </div>
+
+        <div class="top-right">
+            <button type="button" class="topbar-dark-toggle" id="topbar-dark-toggle" onclick="toggleDarkMode(!document.body.classList.contains('dark-mode'))" title="Toggle Dark Mode" aria-label="Toggle dark mode">
+                <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+                <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="app-container">
         <main class="main-content">
             <div class="visit-card">
                 <form method="POST" id="visitForm" enctype="multipart/form-data" action="{{ url_for('first_visit') }}" onsubmit="return validateDurationRequired(this);">
@@ -200,7 +415,11 @@
                             <div><label>Reliability</label><select name="attender_reliability"><option>Yes</option><option>No</option></select></div>
                         </div>
                         
-                        <div><label>Identification Notes (Doctor Only)</label><textarea name="personal_notes" rows="1" style="resize: none;"></textarea></div>
+                        <div>
+                            <label>Patient Recall Cue</label>
+                            <p style="font-size: 12px; color: #888; margin: 4px 0 6px;">Private note visible only to the doctor.</p>
+                            <textarea name="personal_notes" rows="2" style="resize: vertical; min-height: 2.5em;" placeholder="Short phrase to help you recognize the patient (e.g., Teacher with bipolar, Tall man with tremor)"></textarea>
+                        </div>
                     </div>
 
                     <div class="section-header"><span class="section-title">Background Factors</span></div>
@@ -346,8 +565,8 @@
 
                     <div class="section-header"><span class="section-title">Psychiatric Scales</span></div>
                     <div class="click-trigger-row" style="margin-bottom: 20px;">
-                        <div class="click-trigger" onclick="openScalesModal()" style="border-color: #9966FF; background: #fdfdfd;">
-                            <span>📋 Select &amp; Mark Scales</span><span id="scales-count-badge" style="background: #9966FF; color: white; border-radius: 10px; padding: 2px 8px; font-size: 12px; display: none;">0 Applied</span><span>▼</span>
+                        <div class="click-trigger" onclick="openScalesModal()" style="border-color: var(--primary-dark); background: transparent;">
+                            <span>📋 Select &amp; Mark Scales</span><span id="scales-count-badge" style="background: var(--primary-dark); color: white; border-radius: 10px; padding: 2px 8px; font-size: 12px; display: none;">0 Applied</span><span>▼</span>
                         </div>
                     </div>
                     <input type="hidden" name="scales_data" id="scales_data" value="">
@@ -386,35 +605,34 @@
 
                     <div class="section-header"><span class="section-title">Diagnosis</span></div>
 
-                    <div style="margin-top:20px; background:#fff; padding:15px; border:1px solid #eee; border-radius:8px; min-height: 100px;">
+                    <div style="margin-top:20px; background:var(--form-box-bg); padding:15px; border:1px solid var(--form-box-border); border-radius:8px; min-height: 100px;">
                         <div class="row-2-col">
                             <div>
                                 <label>Provisional Diagnosis</label>
-                                <input type="text" name="provisional_diagnosis" list="diagnosis-list" placeholder="Type or select..." style="width:100%; padding: 8px; min-height: 36px; box-sizing: border-box;">
-                                <div style="margin-top: 5px; display: flex; gap: 10px;">
-                                    <button type="button" class="btn" onclick="showCriteria('ICD')" style="background: #e0e0e0; color: #333; font-size: 11px; padding: 4px 10px; width: auto; border: 1px solid #ccc;">
-                                        Show ICD-10
-                                    </button>
-                                    <button type="button" class="btn" onclick="showCriteria('DSM')" style="background: #e0e0e0; color: #333; font-size: 11px; padding: 4px 10px; width: auto; border: 1px solid #ccc;">
-                                        Show DSM-5
-                                    </button>
-                                    <button type="button" class="btn" onclick="openICD11Modal()" style="background: #e0e0e0; color: #333; font-size: 11px; padding: 4px 10px; width: auto; border: 1px solid #ccc;">
-                                        Show ICD-11
-                                    </button>
+                                <div id="provisional-diagnosis-picker"></div>
+                                <input type="hidden" name="provisional_diagnosis" id="provisionalDiagnosisHidden" value="[]">
+                                <div class="diagnosis-action-row">
+                                    <button type="button" class="btn" onclick="showIcd10CriteriaTabs()" style="background: #e0e0e0; color: #333; font-size: 11px; padding: 4px 10px; width: auto; border: 1px solid #ccc;">Show ICD-10</button>
+                                    <button type="button" class="btn" onclick="showDsm5CriteriaTabs()" style="background: #e0e0e0; color: #333; font-size: 11px; padding: 4px 10px; width: auto; border: 1px solid #ccc;">Show DSM-5</button>
+                                    <button type="button" class="btn" onclick="showIcd11CriteriaTabs()" style="background: #e0e0e0; color: #333; font-size: 11px; padding: 4px 10px; width: auto; border: 1px solid #ccc;">Show ICD-11</button>
                                 </div>
-                                <input type="hidden" name="provisional_diagnosis_icd11" id="icd11SelectedText">
-                                <input type="hidden" name="icd11_code" id="icd11Code">
                             </div>
-                            <div><label>Differential Diagnosis</label><textarea name="differential_diagnosis" rows="4" style="resize: none; width: 100%; min-height: 88px; box-sizing: border-box;"></textarea></div>
+                            <div>
+                                <label>Differential Diagnosis</label>
+                                <div id="differential-diagnosis-picker"></div>
+                                <input type="hidden" name="differential_diagnosis" id="differentialDiagnosisHidden" value="[]">
+                                <div class="diagnosis-action-row">
+                                    <button type="button" class="btn" onclick="showIcd10CriteriaTabs()" style="background: #e0e0e0; color: #333; font-size: 11px; padding: 4px 10px; width: auto; border: 1px solid #ccc;">Show ICD-10</button>
+                                    <button type="button" class="btn" onclick="showDsm5CriteriaTabs()" style="background: #e0e0e0; color: #333; font-size: 11px; padding: 4px 10px; width: auto; border: 1px solid #ccc;">Show DSM-5</button>
+                                    <button type="button" class="btn" onclick="showIcd11CriteriaTabs()" style="background: #e0e0e0; color: #333; font-size: 11px; padding: 4px 10px; width: auto; border: 1px solid #ccc;">Show ICD-11</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <datalist id="diagnosis-list">
-                        <option value="F32.0 Mild depressive episode"><option value="F32.1 Moderate depressive episode"><option value="F32.2 Severe depressive episode"><option value="F31 Bipolar affective disorder"><option value="F20 Schizophrenia"><option value="F41.1 Generalised anxiety disorder"><option value="F41.0 Panic disorder"><option value="F43.1 Post-traumatic stress disorder"><option value="F40.1 Social phobia"><option value="F42 Obsessive-compulsive disorder"><option value="F10–F19 Mental and behavioural disorders due to substance use"><option value="F90.0 Attention deficit hyperactivity disorder"><option value="F84.0 Autism spectrum disorder"><option value="F60.0 Paranoid personality disorder"><option value="F60.3 Emotionally unstable personality disorder"><option value="F32.3 Severe depressive episode with psychotic symptoms">
-                    </datalist>
 
-                    <div style="margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
+                    <div class="clinical-state-section" style="margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
                         <h4 style="margin:0 0 10px 0; color:#555;">Current Clinical State</h4>
-                        <button type="button" class="btn" style="margin-top:0; padding:8px 14px; font-size:12px; background:#666; color:#fff;" onclick="openClinicalStateRangesModal()">Manage Clinical State Ranges (dates)</button>
+                        <button type="button" class="btn clinical-state-toggle" style="margin-top:0; padding:8px 14px; font-size:12px; background:#666; color:#fff;" onclick="openClinicalStateRangesModal()">Manage Clinical State Ranges (dates)</button>
                         <input type="hidden" name="clinical_state_data" id="clinical_state_data" value="">
                     </div>
 					
@@ -430,7 +648,7 @@
                 </div>
                     <div id="meds-container"></div>
                     
-                    <div style="margin-top: 20px; background:#f9fafb; padding:15px; border-radius:8px; display:flex; gap:20px; align-items:center; flex-wrap: wrap;">
+                    <div style="margin-top: 20px; background:var(--form-soft-bg); padding:15px; border-radius:8px; display:flex; gap:20px; align-items:center; flex-wrap: wrap;">
                         <div>
                             <label>Next Follow-up Date</label>
                             <input type="date" name="next_visit_date" id="nextVisitDate">
@@ -454,8 +672,8 @@
 
                     <div style="display: flex; gap: 15px; margin-top: 30px;">
                         {% if is_guest %}
-                            <button type="button" onclick="openGuestDoctorModal('{{ url_for('guest_prescription') }}')" class="btn" style="flex:1; background:#7BC4F0; color:#000;">💊 Prescription (Guest)</button>
-                            <button type="button" onclick="openGuestDoctorModal('{{ url_for('guest_both') }}')" class="btn" style="flex:1; background:#4facfe; color:#fff;">Generate Both (Guest)</button>
+                            <button type="button" onclick="openGuestDoctorModal({{ url_for('guest_prescription')|tojson }})" class="btn" style="flex:1; background:#7BC4F0; color:#000;">💊 Prescription (Guest)</button>
+                            <button type="button" onclick="openGuestDoctorModal({{ url_for('guest_both')|tojson }})" class="btn" style="flex:1; background:#4facfe; color:#fff;">Generate Both (Guest)</button>
                         {% else %}
                             <button type="submit" name="submit_action" value="prescription" class="btn" style="flex:1; background:#7BC4F0; color:#000;">💊 Prescription</button>
                             <button type="submit" name="submit_action" value="both" class="btn" style="flex:1; background:#4facfe; color:#fff;">Generate Both</button>
@@ -660,7 +878,7 @@
                                     <h4 id="active-scale-title" style="margin: 0; color: #4facfe;"></h4>
                                 </div>
                                 <div id="active-scale-form" style="overflow-y: auto; max-height: 50vh; padding-right: 10px; font-size: 14px; border-bottom: 1px solid #eee;"></div>
-                                <div style="margin-top:15px; padding:15px; background: #f0f8ff; border-radius: 6px; text-align: center; border: 1px dashed #7ab8e0;">
+                                <div style="margin-top:15px; padding:15px; background: var(--accent-soft-bg); border-radius: 6px; text-align: center; border: 1px dashed var(--primary-blue);">
                                     <strong style="font-size: 1.2rem; color: #333;">Total Score: <span id="scale-live-score" style="color: #e6194b;">0</span></strong><br>
                                     <span id="scale-live-severity" style="color: #666; font-weight: bold; font-size: 1.1rem;">-</span>
                                 </div>
@@ -857,7 +1075,10 @@
 
     <script>
         function toggleNote(btn) {
-            const el = btn.closest('.entry-wrapper').querySelector('.note-input');
+            var step = btn.closest('.med-schedule-step');
+            var el = step ? step.querySelector('.note-input') : null;
+            if (!el) el = btn.closest('.entry-wrapper').querySelector('.note-input');
+            if (!el) return;
             el.style.display = el.style.display === 'block' ? 'none' : 'block';
         }
         function updVal(slider) { slider.nextElementSibling.innerText = slider.value; }
@@ -1242,8 +1463,12 @@
         }
         let customStates = [];
         function renderClinicalStates() {
-            var diagnosisInput = document.querySelector('input[name="provisional_diagnosis"]');
-            var diagnosisText = diagnosisInput ? diagnosisInput.value.trim() : '';
+            var diagnosisText = (typeof window.getDiagnosisFieldText === 'function')
+                ? window.getDiagnosisFieldText('provisional').trim()
+                : (function() {
+                    var diagnosisInput = document.querySelector('input[name="provisional_diagnosis"]');
+                    return diagnosisInput ? diagnosisInput.value.trim() : '';
+                })();
             var refEl = document.getElementById('clinical-state-diagnosis-ref');
             if (refEl) refEl.textContent = diagnosisText || '— Enter provisional diagnosis above to see diagnosis-specific states —';
             var selectedDiags = getStateDBKeysFromProvisionalDiagnosis(diagnosisText);
@@ -1573,38 +1798,102 @@
             }
         }
 
-        function duplicateTaperRow(btn) {
-            var currentRow = btn.closest('.entry-wrapper');
-            var newRow = currentRow.cloneNode(true);
-            var uniqueId = Date.now() + Math.random().toString().slice(2, 6);
-            var inputs = newRow.querySelectorAll('input, select, textarea');
-            inputs.forEach(function(input) {
-                var name = input.getAttribute('name');
-                if (name === 'drug_name[]' || name === 'drug_type[]' || name === 'med_form[]') {
-                    if (name === 'drug_name[]') {
-                        input.readOnly = true;
-                        input.style.backgroundColor = '#f0f8ff';
-                        input.style.border = '1px dashed #7ab8e0';
-                    }
-                } else if (name === 'frequency[]') {
-                    input.value = '1-0-1';
-                } else if (name === 'dose_full[]') {
-                    input.value = '';
-                    input.setAttribute('list', 'dose-list-' + uniqueId);
-                } else {
-                    if (input.type === 'text' || input.type === 'hidden' || input.tagName === 'TEXTAREA') input.value = '';
-                }
+        function medEscapeAttr(s) {
+            return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+        }
+        function syncMedFollowIdentity(block) {
+            if (!block) return;
+            var t = block.querySelector('.med-ident-col select[name="drug_type[]"]');
+            var f = block.querySelector('.med-ident-col select[name="med_form[]"]');
+            var n = block.querySelector('.med-ident-col input[name="drug_name[]"]');
+            if (!t || !f || !n) return;
+            var tv = t.value, fv = f.value, nv = n.value;
+            block.querySelectorAll('.med-schedule-step--follow').forEach(function(st) {
+                var ht = st.querySelector('input[type="hidden"][name="drug_type[]"]');
+                var hf = st.querySelector('input[type="hidden"][name="med_form[]"]');
+                var hn = st.querySelector('input[type="hidden"][name="drug_name[]"]');
+                if (ht) ht.value = tv;
+                if (hf) hf.value = fv;
+                if (hn) hn.value = nv;
             });
-            var datalist = newRow.querySelector('datalist[id^="dose-list-"]');
-            if (datalist) {
-                datalist.id = 'dose-list-' + uniqueId;
-                datalist.innerHTML = '';
+        }
+        function removeMedScheduleStep(btn) {
+            var step = btn.closest('.med-schedule-step');
+            var col = step && step.closest('.med-schedule-col');
+            var block = step && step.closest('.med-entry-block');
+            var entry = block && block.closest('.entry-wrapper');
+            if (!step || !col || !block || !entry) return;
+            var steps = Array.prototype.filter.call(col.children, function(el) {
+                return el.classList && el.classList.contains('med-schedule-step');
+            });
+            if (steps.length <= 1) {
+                entry.remove();
+                if (typeof syncDurationRequired === 'function') syncDurationRequired();
+                return;
             }
-            var freqContainer = newRow.querySelector('.freq-container');
-            if (freqContainer) {
-                freqContainer.innerHTML = '<input type="text" class="freq-box" value="1" style="width:25px; text-align:center; padding:5px 2px;" oninput="handleFreqInput(this)"><span style="margin:0 2px">-</span><input type="text" class="freq-box" value="0" style="width:25px; text-align:center; padding:5px 2px;" oninput="handleFreqInput(this)"><span style="margin:0 2px">-</span><input type="text" class="freq-box" value="1" style="width:25px; text-align:center; padding:5px 2px;" oninput="handleFreqInput(this)">';
+            step.remove();
+            var first = col.querySelector('.med-schedule-step');
+            if (first) {
+                first.classList.remove('med-schedule-step--follow');
+                first.querySelectorAll('input[type="hidden"][name="drug_type[]"], input[type="hidden"][name="med_form[]"], input[type="hidden"][name="drug_name[]"]').forEach(function(h) { h.remove(); });
             }
-            currentRow.parentNode.insertBefore(newRow, currentRow.nextSibling);
+            var remaining = col.querySelectorAll('.med-schedule-step').length;
+            if (remaining === 1) {
+                var masterName = block.querySelector('.med-ident-col input[name="drug_name[]"]');
+                if (masterName) {
+                    masterName.readOnly = false;
+                    masterName.style.backgroundColor = '';
+                    masterName.style.border = '';
+                }
+            }
+            syncMedFollowIdentity(block);
+            if (typeof syncDurationRequired === 'function') syncDurationRequired();
+        }
+        function duplicateTaperRow(btn) {
+            var block = btn.closest('.med-entry-block');
+            if (!block) return;
+            var scheduleCol = block.querySelector('.med-schedule-col');
+            var masterType = block.querySelector('.med-ident-col select[name="drug_type[]"]');
+            var masterForm = block.querySelector('.med-ident-col select[name="med_form[]"]');
+            var masterName = block.querySelector('.med-ident-col input[name="drug_name[]"]');
+            if (!scheduleCol || !masterType || !masterForm || !masterName) return;
+            masterName.readOnly = true;
+            const isDark = document.body.classList.contains('dark-mode');
+            masterName.style.backgroundColor = isDark ? '#333' : '#f0f8ff';
+            masterName.style.border = isDark ? '1px dashed #003366' : '1px dashed #9BD8FB';
+            var uniqueId = Date.now() + Math.random().toString().slice(2, 8);
+            var dt = medEscapeAttr(masterType.value);
+            var df = medEscapeAttr(masterForm.value);
+            var dn = medEscapeAttr(masterName.value);
+            var html = '<div class="med-schedule-step med-schedule-step--follow">' +
+                '<input type="hidden" name="drug_type[]" value="' + dt + '">' +
+                '<input type="hidden" name="med_form[]" value="' + df + '">' +
+                '<input type="hidden" name="drug_name[]" value="' + dn + '">' +
+                '<div class="med-step-main-row">' +
+                '<div class="dose-adjust-wrap" style="display:flex;align-items:center;gap:2px;flex:0 0 auto;min-width:100px;">' +
+                '<button type="button" onclick="adjustDose(this.closest(\'.dose-adjust-wrap\').querySelector(&quot;input[name=\'dose_full[]\']&quot;), -1)" style="width:24px;height:28px;padding:0;line-height:1;font-size:14px;cursor:pointer;">−</button>' +
+                '<input type="text" name="dose_full[]" value="" list="dose-list-' + uniqueId + '" placeholder="Dose" style="flex:1;min-width:70px;" oninput="updateDoseOptions(this)">' +
+                '<button type="button" onclick="adjustDose(this.closest(\'.dose-adjust-wrap\').querySelector(&quot;input[name=\'dose_full[]\']&quot;), 1)" style="width:24px;height:28px;padding:0;line-height:1;font-size:14px;cursor:pointer;">+</button>' +
+                '<datalist id="dose-list-' + uniqueId + '"></datalist></div>' +
+                '<div class="duration-adjust-wrap" style="display:flex;align-items:center;flex:1;min-width:100px;">' +
+                '<input type="text" list="duration-options-list" name="med_duration[]" placeholder="Duration (required)" required style="flex:1;min-width:70px;" oninput="updateDurationOptions(this)"></div>' +
+                '<div class="med-freq-inline">' +
+                '<span class="med-freq-label">Frequency</span>' +
+                '<input type="hidden" name="frequency[]" value="1-0-1">' +
+                '<div class="freq-container" style="display:flex;align-items:center;">' +
+                '<input type="text" class="freq-box" value="1" style="width:25px;text-align:center;padding:5px 2px;" oninput="handleFreqInput(this)"><span style="margin:0 2px">-</span>' +
+                '<input type="text" class="freq-box" value="0" style="width:25px;text-align:center;padding:5px 2px;" oninput="handleFreqInput(this)"><span style="margin:0 2px">-</span>' +
+                '<input type="text" class="freq-box" value="1" style="width:25px;text-align:center;padding:5px 2px;" oninput="handleFreqInput(this)"></div>' +
+                '<div style="display:flex;flex-direction:column;margin-left:2px;">' +
+                '<button type="button" class="add-freq-btn" onclick="addFreqBox(this)" style="font-size:10px;line-height:10px;padding:0 2px;cursor:pointer;margin-bottom:1px;">+</button>' +
+                '<button type="button" onclick="removeFreqBox(this)" style="font-size:10px;line-height:10px;padding:0 2px;cursor:pointer;">-</button></div></div>' +
+                '<div class="med-step-main-trail"><button type="button" class="note-btn" onclick="toggleNote(this)">📝</button>' +
+                '<button type="button" class="remove-btn" onclick="removeMedScheduleStep(this)" style="margin:0;font-size:16px;" title="Remove this step">✕</button></div></div>' +
+                '<input type="text" class="note-input" name="med_note[]" value="" style="display:none;width:100%;padding:6px 8px;font-size:13px;"></div>';
+            var wrap = document.createElement('div');
+            wrap.innerHTML = html.trim();
+            scheduleCol.appendChild(wrap.firstElementChild);
+            syncDurationRequired();
         }
 
         // --- DYNAMIC FREQUENCY BOXES ---
@@ -1628,7 +1917,8 @@
             }
         }
         function addFreqBox(btn) {
-            const wrapper = btn.closest('.entry-wrapper').querySelector('.freq-container');
+            const step = btn.closest('.med-schedule-step');
+            const wrapper = step ? step.querySelector('.freq-container') : btn.closest('.entry-wrapper').querySelector('.freq-container');
             const sep = document.createElement('span');
             sep.innerText = '-';
             sep.style.margin = '0 2px';
@@ -1642,7 +1932,8 @@
             updateHiddenFreq(wrapper);
         }
         function removeFreqBox(btn) {
-            const wrapper = btn.closest('.entry-wrapper').querySelector('.freq-container');
+            const step = btn.closest('.med-schedule-step');
+            const wrapper = step ? step.querySelector('.freq-container') : btn.closest('.entry-wrapper').querySelector('.freq-container');
             const boxes = wrapper.querySelectorAll('.freq-box');
             const seps = wrapper.querySelectorAll('span');
             if (boxes.length > 1) {
@@ -1665,56 +1956,53 @@
             let contentHTML = '';
             
             if (type === 'med') {
-                const uniqueId = Date.now() + Math.random(); 
-                
-                contentHTML = `
-                <div style="display:flex; align-items:center; gap:10px; width:100%; flex-wrap:nowrap;">
-                    <select name="drug_type[]" style="width:120px; flex:none;">
-                        <option value="Gen">Generic</option><option value="Brand">Brand</option>
-                    </select>
-
-                    <select name="med_form[]" style="width:120px; flex:none;">
-                        <option value="Tablet">Tablet</option>
-                        <option value="Capsule">Capsule</option>
-                        <option value="Injection">Injection</option>
-                    </select>
-
-                    <input type="text" name="drug_name[]" placeholder="Drug Name" style="flex:2; min-width:150px;">
-                    
-                    <div class="dose-adjust-wrap" style="display:flex; align-items:center; gap:2px; flex:0 0 auto; min-width:100px;">
-                        <button type="button" onclick="adjustDose(this.closest('.dose-adjust-wrap').querySelector(&quot;input[name='dose_full[]']&quot;), -1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">−</button>
-                        <input type="text" name="dose_full[]" list="dose-list-${uniqueId}" placeholder="Dose" style="flex:1; min-width:70px;" oninput="updateDoseOptions(this)">
-                        <button type="button" onclick="adjustDose(this.closest('.dose-adjust-wrap').querySelector(&quot;input[name='dose_full[]']&quot;), 1)" style="width:24px; height:28px; padding:0; line-height:1; font-size:14px; cursor:pointer;">+</button>
-                        <datalist id="dose-list-${uniqueId}"></datalist>
+                const uniqueId = Date.now() + Math.random();
+                return `<div class="entry-wrapper med-entry-block">
+                <div class="med-block-inner">
+                    <div class="med-ident-col">
+                        <select name="drug_type[]" style="width:120px;flex:none;" onchange="syncMedFollowIdentity(this.closest('.med-entry-block'))"><option value="Gen" selected>Generic</option><option value="Brand">Brand</option></select>
+                        <select name="med_form[]" style="width:120px;flex:none;" onchange="syncMedFollowIdentity(this.closest('.med-entry-block'))"><option value="Tablet">Tablet</option><option value="Capsule">Capsule</option><option value="Injection">Injection</option></select>
+                        <div class="drug-name-wrap">
+                            <input type="text" name="drug_name[]" placeholder="Drug Name" class="drug-name-input" oninput="syncMedFollowIdentity(this.closest('.med-entry-block'))">
+                            <button type="button" class="taper-btn" onclick="duplicateTaperRow(this)">+ Taper Step</button>
+                        </div>
                     </div>
-                    <div class="duration-adjust-wrap" style="display:flex; align-items:center; flex:1; min-width:100px;">
-                        <input type="text" list="duration-options-list" name="med_duration[]" placeholder="Duration (required)" required style="flex:1; min-width:70px;" oninput="updateDurationOptions(this)">
-                    </div>
-                    
-                    <div style="display:flex; gap:5px; flex:none;">
-                        <button type="button" class="btn btn-sm" onclick="duplicateTaperRow(this)" style="padding:5px 10px; border-radius:4px; border:1px dashed #7ab8e0; background:#f0f8ff; color:#555;">+ Taper Step</button>
-                        <button type="button" class="note-btn" onclick="toggleNote(this)">📝</button>
-                        <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button>
+                    <div class="med-schedule-col">
+                        <div class="med-schedule-step">
+                            <div class="med-step-main-row">
+                                <div class="dose-adjust-wrap" style="display:flex;align-items:center;gap:2px;flex:0 0 auto;min-width:100px;">
+                                    <button type="button" onclick="adjustDose(this.closest('.dose-adjust-wrap').querySelector(&quot;input[name='dose_full[]']&quot;), -1)" style="width:24px;height:28px;padding:0;line-height:1;font-size:14px;cursor:pointer;">−</button>
+                                    <input type="text" name="dose_full[]" list="dose-list-${uniqueId}" placeholder="Dose" style="flex:1;min-width:70px;" oninput="updateDoseOptions(this)">
+                                    <button type="button" onclick="adjustDose(this.closest('.dose-adjust-wrap').querySelector(&quot;input[name='dose_full[]']&quot;), 1)" style="width:24px;height:28px;padding:0;line-height:1;font-size:14px;cursor:pointer;">+</button>
+                                    <datalist id="dose-list-${uniqueId}"></datalist>
+                                </div>
+                                <div class="duration-adjust-wrap" style="display:flex;align-items:center;flex:1;min-width:100px;">
+                                    <input type="text" list="duration-options-list" name="med_duration[]" placeholder="Duration (required)" required style="flex:1;min-width:70px;" oninput="updateDurationOptions(this)">
+                                </div>
+                                <div class="med-freq-inline">
+                                    <span class="med-freq-label">Frequency</span>
+                                    <input type="hidden" name="frequency[]" value="1-0-1">
+                                    <div class="freq-container" style="display:flex;align-items:center;">
+                                        <input type="text" class="freq-box" value="1" style="width:25px;text-align:center;padding:5px 2px;" oninput="handleFreqInput(this)">
+                                        <span style="margin:0 2px">-</span>
+                                        <input type="text" class="freq-box" value="0" style="width:25px;text-align:center;padding:5px 2px;" oninput="handleFreqInput(this)">
+                                        <span style="margin:0 2px">-</span>
+                                        <input type="text" class="freq-box" value="1" style="width:25px;text-align:center;padding:5px 2px;" oninput="handleFreqInput(this)">
+                                    </div>
+                                    <div style="display:flex;flex-direction:column;margin-left:2px;">
+                                        <button type="button" class="add-freq-btn" onclick="addFreqBox(this)" style="font-size:10px;line-height:10px;padding:0 2px;cursor:pointer;margin-bottom:1px;">+</button>
+                                        <button type="button" onclick="removeFreqBox(this)" style="font-size:10px;line-height:10px;padding:0 2px;cursor:pointer;">-</button>
+                                    </div>
+                                </div>
+                                <div class="med-step-main-trail">
+                                    <button type="button" class="note-btn" onclick="toggleNote(this)">📝</button>
+                                    <button type="button" class="remove-btn" onclick="removeMedScheduleStep(this)" style="margin:0;font-size:16px;" title="Remove this step">✕</button>
+                                </div>
+                            </div>
+                            <input type="text" class="note-input" name="med_note[]" value="" style="display:none;width:100%;padding:6px 8px;font-size:13px;">
+                        </div>
                     </div>
                 </div>
-
-                <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:8px; gap:8px;">
-                    <span style="font-size:11px; font-weight:600; color:#888; text-transform:uppercase;">Frequency</span>
-                    
-                    <input type="hidden" name="frequency[]" value="1-0-1"> 
-                    
-                    <div class="freq-container" style="display:flex; align-items:center;">
-                        <input type="text" class="freq-box" value="1" style="width:25px; text-align:center; padding:5px 2px;" oninput="handleFreqInput(this)">
-                        <span style="margin:0 2px">-</span>
-                        <input type="text" class="freq-box" value="0" style="width:25px; text-align:center; padding:5px 2px;" oninput="handleFreqInput(this)">
-                        <span style="margin:0 2px">-</span>
-                        <input type="text" class="freq-box" value="1" style="width:25px; text-align:center; padding:5px 2px;" oninput="handleFreqInput(this)">
-                    </div>
-                    
-                    <div style="display:flex; flex-direction:column; margin-left:2px;">
-                        <button type="button" class="add-freq-btn" onclick="addFreqBox(this)" style="font-size:10px; line-height:10px; padding:0 2px; cursor:pointer; margin-bottom:1px;">+</button>
-                        <button type="button" onclick="removeFreqBox(this)" style="font-size:10px; line-height:10px; padding:0 2px; cursor:pointer;">-</button>
-                    </div>
                 </div>`;
             } else {
                 // --- OTHER ROWS (Symptoms, SE, MSE) ---
@@ -1754,6 +2042,7 @@
             return `<div class="entry-wrapper">${contentHTML}<input type="text" class="note-input" name="${prefix}_note[]" placeholder="History Notes (e.g. After Failure)..."></div>`;
         }
 
+
         function toggleSymptomApplyBarVisibility() {
             var bar = document.getElementById('symptom-duration-apply-bar');
             if (!bar) return;
@@ -1777,21 +2066,49 @@
                 if (cb && cb.checked) { var inp = wrap.querySelector('input[name="symptom_duration[]"]'); if (inp) inp.value = val; }
             });
         }
+        function syncDurationRequired() {
+            function sync(containerId, nameField, durField) {
+                var container = document.getElementById(containerId);
+                if (!container) return;
+                container.querySelectorAll('.entry-wrapper').forEach(function(wrap) {
+                    var nameInp = wrap.querySelector('[name="' + nameField + '"]');
+                    var durInp = wrap.querySelector('input[name="' + durField + '"]');
+                    if (!durInp || durInp.type !== 'text') return;
+                    var shouldRequire = !!(nameInp && (nameInp.value || '').trim());
+                    durInp.required = shouldRequire;
+                });
+            }
+            sync('symptoms-container', 'symptom_name[]', 'symptom_duration[]');
+            (function syncMedsContainer() {
+                var mc = document.getElementById('meds-container');
+                if (!mc) return;
+                mc.querySelectorAll('.entry-wrapper').forEach(function(wrap) {
+                    var nameEl = wrap.querySelector('.med-ident-col input[name="drug_name[]"]') || wrap.querySelector('input[name="drug_name[]"]');
+                    var shouldRequire = !!(nameEl && (nameEl.value || '').trim());
+                    wrap.querySelectorAll('input[name="med_duration[]"]').forEach(function(durInp) {
+                        if (durInp.type === 'text') durInp.required = shouldRequire;
+                    });
+                });
+            })();
+            sync('side-effects-container', 'side_effect_name[]', 'side_effect_duration[]');
+        }
         function validateDurationRequired(form) {
+            // Keep browser validation aligned with our UX rules
+            syncDurationRequired();
             var missing = [];
             var hasEmpty = false;
             form.querySelectorAll('input[name="symptom_duration[]"]').forEach(function(inp) {
-                if (inp.type === 'text' && inp.offsetParent && !(inp.value || '').trim()) hasEmpty = true;
+                if (inp.type === 'text' && inp.required && inp.offsetParent && !(inp.value || '').trim()) hasEmpty = true;
             });
             if (hasEmpty) missing.push('Symptoms');
             hasEmpty = false;
             form.querySelectorAll('input[name="med_duration[]"]').forEach(function(inp) {
-                if (inp.offsetParent && !(inp.value || '').trim()) hasEmpty = true;
+                if (inp.required && inp.offsetParent && !(inp.value || '').trim()) hasEmpty = true;
             });
             if (hasEmpty) missing.push('Medications');
             hasEmpty = false;
             form.querySelectorAll('input[name="side_effect_duration[]"]').forEach(function(inp) {
-                if (inp.offsetParent && !(inp.value || '').trim()) hasEmpty = true;
+                if (inp.required && inp.offsetParent && !(inp.value || '').trim()) hasEmpty = true;
             });
             if (hasEmpty) missing.push('Side effects');
             if (missing.length) { alert('Please fill Duration (required) for: ' + missing.join(', ')); return false; }
@@ -1800,13 +2117,26 @@
         function addSymptom() {
             document.getElementById('symptoms-container').insertAdjacentHTML('beforeend', createRowHTML('symptom'));
             toggleSymptomApplyBarVisibility();
+            syncDurationRequired();
         }
-        function addMedication() { document.getElementById('meds-container').insertAdjacentHTML('beforeend', createRowHTML('med')); }
-        function addSideEffect() { document.getElementById('side-effects-container').insertAdjacentHTML('beforeend', createRowHTML('side_effect')); }
+        function addMedication() { document.getElementById('meds-container').insertAdjacentHTML('beforeend', createRowHTML('med')); syncDurationRequired(); }
+        function addSideEffect() { document.getElementById('side-effects-container').insertAdjacentHTML('beforeend', createRowHTML('side_effect')); syncDurationRequired(); }
         function addMSE(cat) { 
             const containerId = 'mse-' + cat.toLowerCase() + '-container';
             document.getElementById(containerId).insertAdjacentHTML('beforeend', createRowHTML('mse', cat)); 
         }
+        document.addEventListener('input', function(e) {
+            if (!e || !e.target) return;
+            var n = e.target.name;
+            if (n === 'symptom_name[]' || n === 'drug_name[]' || n === 'side_effect_name[]') {
+                syncDurationRequired();
+            }
+            if ((n === 'drug_name[]' || n === 'drug_type[]' || n === 'med_form[]') && e.target.closest && e.target.closest('.med-ident-col')) {
+                var mb = e.target.closest('.med-entry-block');
+                if (mb && typeof syncMedFollowIdentity === 'function') syncMedFollowIdentity(mb);
+            }
+        });
+        window.addEventListener('DOMContentLoaded', syncDurationRequired);
         
         function filterPatients() {
             var filter = document.getElementById("search").value.toUpperCase();
@@ -1817,84 +2147,36 @@
         }
     </script>
 
-<div id="criteriaModal" class="modal" style="z-index: 9999;" onclick="if(event.target === this) this.style.display='none'">
-    <div class="modal-content" style="max-width: 700px; max-height: 60vh; overflow-y: auto; text-align: center; margin: 10% auto;">
-        <span class="close-btn" onclick="document.getElementById('criteriaModal').style.display='none'">&times;</span>
-        <h3 id="criteriaTitle" style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:10px;">Diagnostic Criteria</h3>
-        <div id="criteriaBody" style="font-family: 'Segoe UI', sans-serif; font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap; text-align: left;"></div>
-    </div>
-</div>
-
-<div id="icd11Modal" class="modal" onclick="if(event.target === this) this.style.display='none'">
-    <div class="modal-content" style="width: 480px; max-height: 80vh; display: flex; flex-direction: column; margin: 8% auto; border-radius: 10px;">
-        <h4 style="margin: 0 0 12px 0; color: #333;">ICD-11 Search</h4>
-        <input type="text" id="icd11SearchInput" placeholder="Searching..."
-               style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
-        <div id="icd11Results" style="margin-top: 10px; overflow-y: auto; max-height: 45vh; border: 1px solid #eee; border-radius: 6px; padding: 8px; background: #fafafa; min-height: 40px;">
-            <span style="color: #aaa; font-size: 13px;">Results will appear here...</span>
+<div id="icd10CriteriaModal" class="modal" onclick="if(event.target === this) closeDiagnosisModal('icd10CriteriaModal')" style="z-index: 10001;">
+    <div class="modal-content diagnosis-modal-shell">
+        <div class="diagnosis-modal-header">
+            <h3 class="diagnosis-modal-title" style="margin:0;">ICD-10 Diagnostic View</h3>
+            <button type="button" class="diagnosis-modal-close" onclick="closeDiagnosisModal('icd10CriteriaModal')">&times;</button>
         </div>
-        <button type="button" class="btn" style="margin-top: 12px; background: #888; color: #fff;" onclick="document.getElementById('icd11Modal').style.display='none'">Close</button>
+        <div class="diagnosis-modal-tabs"></div>
+        <div class="diagnosis-modal-panels"></div>
     </div>
 </div>
-
-<script>
-    // --- TEXTBOOK DATA DICTIONARY ---
-    // Sources: Kaplan & Sadock (DSM-5), Neeraj Ahuja (ICD-10)
-    const diagnosisDB = {
-        "depression": {
-            "DSM": "DSM-5 Criteria for Major Depressive Disorder:\n\nA. Five (or more) of the following during the same 2-week period; at least one is (1) depressed mood or (2) loss of interest/pleasure:\n1. Depressed mood most of the day, nearly every day.\n2. Markedly diminished interest or pleasure in all, or almost all, activities.\n3. Significant weight loss/gain or decrease/increase in appetite.\n4. Insomnia or hypersomnia nearly every day.\n5. Psychomotor agitation or retardation.\n6. Fatigue or loss of energy.\n7. Feelings of worthlessness or excessive/inappropriate guilt.\n8. Diminished ability to think/concentrate, or indecisiveness.\n9. Recurrent thoughts of death, suicidal ideation.\n\nB. Symptoms cause clinically significant distress or impairment.",
-            "ICD": "ICD-10 Criteria for Depressive Episode (F32):\n\nKey Symptoms (At least 2 required):\n1. Depressed mood.\n2. Loss of interest and enjoyment.\n3. Reduced energy leading to increased fatiguability and diminished activity.\n\nAssociated Symptoms (At least 2 others):\n- Reduced concentration and attention\n- Reduced self-esteem and self-confidence\n- Ideas of guilt and unworthiness\n- Bleak and pessimistic views of the future\n- Ideas or acts of self-harm or suicide\n- Disturbed sleep\n- Diminished appetite"
-        },
-        "schizophrenia": {
-            "DSM": "DSM-5 Criteria for Schizophrenia:\n\nA. Two (or more) of the following for 1 month (at least one must be 1, 2, or 3):\n1. Delusions\n2. Hallucinations\n3. Disorganized speech (e.g., frequent derailment or incoherence)\n4. Grossly disorganized or catatonic behavior\n5. Negative symptoms (i.e., diminished emotional expression or avolition)\n\nB. Level of functioning is markedly below the level achieved prior to onset.\nC. Continuous signs of disturbance persist for at least 6 months.",
-            "ICD": "ICD-10 Criteria for Schizophrenia (F20):\n\nAt least one very clear symptom from group (a) to (d), OR two from group (e) to (h):\n\n(a) Thought echo, thought insertion or withdrawal, thought broadcasting.\n(b) Delusions of control, influence, or passivity; delusional perception.\n(c) Hallucinatory voices giving a running commentary or discussing the patient.\n(d) Persistent delusions of other kinds that are culturally inappropriate.\n(e) Persistent hallucinations in any modality + fleeting delusions/overvalued ideas.\n(f) Breaks in the train of thought (incoherence/neologisms).\n(g) Catatonic behaviour.\n(h) 'Negative' symptoms (apathy, paucity of speech, blunting of affect)."
-        },
-        "bipolar": {
-            "DSM": "DSM-5 Criteria for Manic Episode (Bipolar I):\n\nA. A distinct period of abnormally and persistently elevated, expansive, or irritable mood and increased activity/energy (lasting at least 1 week).\n\nB. Three (or more) of the following (4 if mood is only irritable):\n1. Inflated self-esteem or grandiosity.\n2. Decreased need for sleep (e.g., feels rested after 3 hours).\n3. More talkative than usual or pressure to keep talking.\n4. Flight of ideas or subjective experience that thoughts are racing.\n5. Distractibility.\n6. Increase in goal-directed activity or psychomotor agitation.\n7. Excessive involvement in activities with painful consequences (e.g., buying sprees).",
-            "ICD": "ICD-10 Criteria for Manic Episode (F30):\n\n1. Mood must be predominantly elevated, expansive, or irritable.\n2. At least three symptoms must be present (four if mood is irritable):\n- Increased activity or physical restlessness\n- Increased talkativeness ('pressure of speech')\n- Flight of ideas or subjective experience that thoughts are racing\n- Loss of normal social inhibitions\n- Decreased need for sleep\n- Inflated self-esteem or grandiosity\n- Distractibility or constant changes in activity\n- Foolish or reckless behaviour"
-        },
-        "anxiety": {
-            "DSM": "DSM-5 Criteria for Generalized Anxiety Disorder (GAD):\n\nA. Excessive anxiety and worry occurring more days than not for at least 6 months.\nB. The individual finds it difficult to control the worry.\nC. Associated with three (or more) of the following:\n1. Restlessness or feeling keyed up or on edge.\n2. Being easily fatigued.\n3. Difficulty concentrating or mind going blank.\n4. Irritability.\n5. Muscle tension.\n6. Sleep disturbance.",
-            "ICD": "ICD-10 Criteria for Generalized Anxiety Disorder (F41.1):\n\nPrimary symptoms of anxiety most days for at least several weeks/months:\n1. Apprehension (worries about future misfortune, feeling 'on edge', difficulty concentrating).\n2. Motor tension (restless fidgeting, tension headaches, trembling, inability to relax).\n3. Autonomic overactivity (lightheadedness, sweating, tachycardia, tachypnea, epigastric discomfort)."
-        }
-    };
-
-    function showCriteria(type) {
-        // 1. Get the Diagnosis Text
-        const textInputs = document.getElementsByName('provisional_diagnosis');
-        if (!textInputs.length) return;
-        
-        // Use the first found input's value
-        const rawText = textInputs[0].value.toLowerCase();
-        
-        if (!rawText.trim()) {
-            alert("Please type a diagnosis first (e.g., 'Schizophrenia', 'Depression').");
-            return;
-        }
-
-        // 2. Simple Keyword Matching
-        let matchKey = null;
-        if (rawText.includes("depress") || rawText.includes("mdd")) matchKey = "depression";
-        else if (rawText.includes("schizo") || rawText.includes("f20")) matchKey = "schizophrenia";
-        else if (rawText.includes("bipolar") || rawText.includes("mania") || rawText.includes("manic")) matchKey = "bipolar";
-        else if (rawText.includes("anxiet") || rawText.includes("gad") || rawText.includes("panic")) matchKey = "anxiety";
-        
-        // 3. Populate Modal
-        const modal = document.getElementById('criteriaModal');
-        const title = document.getElementById('criteriaTitle');
-        const body = document.getElementById('criteriaBody');
-        
-        if (matchKey && diagnosisDB[matchKey]) {
-            title.innerText = `${type} Verification: ${matchKey.charAt(0).toUpperCase() + matchKey.slice(1)}`;
-            body.innerText = diagnosisDB[matchKey][type];
-        } else {
-            title.innerText = `${type} Criteria Not Found`;
-            body.innerText = "Automatic criteria lookup failed for: '" + rawText + "'.\n\n(This demo supports: Depression, Schizophrenia, Bipolar, Anxiety)";
-        }
-        
-        modal.style.display = 'block';
-    }
-</script>
+<div id="dsm5CriteriaModal" class="modal" onclick="if(event.target === this) closeDiagnosisModal('dsm5CriteriaModal')" style="z-index: 10001;">
+    <div class="modal-content diagnosis-modal-shell">
+        <div class="diagnosis-modal-header">
+            <h3 class="diagnosis-modal-title" style="margin:0;">DSM-5 Diagnostic View</h3>
+            <button type="button" class="diagnosis-modal-close" onclick="closeDiagnosisModal('dsm5CriteriaModal')">&times;</button>
+        </div>
+        <div class="diagnosis-modal-tabs"></div>
+        <div class="diagnosis-modal-panels"></div>
+    </div>
+</div>
+<div id="icd11CriteriaModal" class="modal" onclick="if(event.target === this) closeDiagnosisModal('icd11CriteriaModal')" style="z-index: 10001;">
+    <div class="modal-content diagnosis-modal-shell">
+        <div class="diagnosis-modal-header">
+            <h3 class="diagnosis-modal-title" style="margin:0;">ICD-11 Diagnostic View</h3>
+            <button type="button" class="diagnosis-modal-close" onclick="closeDiagnosisModal('icd11CriteriaModal')">&times;</button>
+        </div>
+        <div class="diagnosis-modal-tabs"></div>
+        <div class="diagnosis-modal-panels"></div>
+    </div>
+</div>
 
 <div id="modalTemplates" class="modal" onclick="if(event.target == this) this.style.display='none'">
     <div class="modal-content" style="width: 550px; margin: 5vh auto; max-height: 70vh; overflow-y: auto; padding: 25px;">
@@ -2466,79 +2748,61 @@ function updateScalesBadge() {
 {% endif %}
 
     <script>
+        function toggleSidebar() {
+            const sideMenu = document.getElementById('sideMenu');
+            const overlay = document.getElementById('overlay');
+            if (!sideMenu || !overlay) return;
+            const isActive = sideMenu.classList.toggle('active');
+            overlay.classList.toggle('active', isActive);
+        }
+
+        function toggleDarkMode(isDark) {
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.body.classList.remove('dark-mode');
+                localStorage.setItem('theme', 'light');
+            }
+        }
+    </script>
+
+    <script>
         window.addEventListener('DOMContentLoaded', function() {
             if(localStorage.getItem('theme') === 'dark') {
                 document.body.classList.add('dark-mode');
             }
         });
     </script>
+    <script src="{{ url_for('static', filename='js/diagnosis-multiselect.js') }}"></script>
     <script>
-        function openICD11Modal() {
-            const diagnosisInput = document.querySelector('input[name="provisional_diagnosis"]');
-            const query = diagnosisInput ? diagnosisInput.value.trim() : '';
-
-            document.getElementById('icd11Modal').style.display = 'block';
-            document.getElementById('icd11Results').innerHTML = '<span style="color:#aaa; font-size:13px;">Searching...</span>';
-
-            const searchBox = document.getElementById('icd11SearchInput');
-            searchBox.value = query;
-
-            if (query) searchICD11(query);
-
-            searchBox.oninput = function() {
-                searchICD11(this.value.trim());
-            };
-        }
-
-        async function searchICD11(query) {
-            if (!query) {
-                document.getElementById('icd11Results').innerHTML = '<span style="color:#aaa; font-size:13px;">Type to search...</span>';
-                return;
+        document.addEventListener('diagnosis-picker:changed', function(ev) {
+            if (ev && ev.detail && ev.detail.key === 'provisional' && typeof renderClinicalStates === 'function') {
+                renderClinicalStates();
             }
-            document.getElementById('icd11Results').innerHTML = '<span style="color:#aaa; font-size:13px;">Searching...</span>';
-            try {
-                const tokenRes = await fetch('/icd11token');
-                const tokenData = await tokenRes.json();
-                if (tokenData.error) {
-                    document.getElementById('icd11Results').innerHTML = `<span style="color:red; font-size:13px;">${tokenData.error}</span>`;
-                    return;
+        });
+        document.addEventListener('diagnosis-picker:initialized', function() {
+            if (typeof renderClinicalStates === 'function') renderClinicalStates();
+        });
+        window.addEventListener('DOMContentLoaded', function() {
+            if (typeof initializeDiagnosisPickers !== 'function') return;
+            initializeDiagnosisPickers({
+                provisional: {
+                    key: 'provisional',
+                    rootId: 'provisional-diagnosis-picker',
+                    hiddenInputId: 'provisionalDiagnosisHidden',
+                    initialItems: [],
+                    placeholder: 'Type or select…'
+                },
+                differential: {
+                    key: 'differential',
+                    rootId: 'differential-diagnosis-picker',
+                    hiddenInputId: 'differentialDiagnosisHidden',
+                    initialItems: [],
+                    placeholder: 'Type or select…'
                 }
-                const token = tokenData.access_token;
-
-                const res = await fetch(`https://id.who.int/icd/release/11/2024-01/mms/search?q=${encodeURIComponent(query)}&flatResults=true`, {
-                    headers: {
-                        'Authorization': 'Bearer ' + token,
-                        'Accept': 'application/json',
-                        'Accept-Language': 'en',
-                        'API-Version': 'v2'
-                    }
-                });
-                const data = await res.json();
-
-                const resultsDiv = document.getElementById('icd11Results');
-                if (!data.destinationEntities || data.destinationEntities.length === 0) {
-                    resultsDiv.innerHTML = '<span style="color:#aaa; font-size:13px;">No results found.</span>';
-                    return;
-                }
-
-                resultsDiv.innerHTML = '';
-                data.destinationEntities.forEach(entity => {
-                    const div = document.createElement('div');
-                    div.style = 'padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px;';
-                    div.innerHTML = `<strong style="color:#333;">${entity.theCode || ''}</strong> — ${entity.title}`;
-                    div.onmouseenter = () => div.style.background = '#f0f8ff';
-                    div.onmouseleave = () => div.style.background = 'white';
-                    div.onclick = () => {
-                        document.getElementById('icd11SelectedText').value = entity.title;
-                        document.getElementById('icd11Code').value = entity.theCode || '';
-                        document.getElementById('icd11Modal').style.display = 'none';
-                    };
-                    resultsDiv.appendChild(div);
-                });
-            } catch(e) {
-                document.getElementById('icd11Results').innerHTML = '<span style="color:red; font-size:13px;">Error fetching results. Try again.</span>';
-            }
-        }
+            });
+        });
     </script>
 </body>
 </html>

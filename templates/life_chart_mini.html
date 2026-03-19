@@ -12,9 +12,10 @@
 	  width: 100%;
 	  height: 100%;
 	}
+    body { padding-top: 60px; box-sizing: border-box; }
 	#chart-container {
 	  width: 100%;
-	  height: 100%;
+	  height: calc(100% - 60px);
 	}
 	canvas {
 	  background: transparent;
@@ -23,6 +24,7 @@
 </head>
 
 <body>
+{% include 'partials/app_chrome.html' %}
 <div id="chart-container">
   <canvas id="lifeChart"></canvas>
 </div>

@@ -1,0 +1,147 @@
+<style>
+    /* Shared app chrome (top bar + hamburger overlay sidebar) */
+    .app-chrome-topbar {
+        position: fixed;
+        width: 100%;
+        top: 0;
+        left: 0;
+        z-index: 3000;
+        height: 60px;
+        background: white;
+        padding: 0 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .app-chrome-top-left { display: flex; align-items: center; gap: 15px; }
+    .app-chrome-logo { height: 40px; }
+    .app-chrome-hamburger { font-size: 24px; cursor: pointer; padding: 5px; user-select: none; }
+    .app-chrome-top-center { flex: 1; text-align: center; font-weight: 600; color: #374151; padding: 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .app-chrome-top-right { display: flex; align-items: center; gap: 16px; }
+
+    .app-chrome-dark-toggle { background: none; border: none; cursor: pointer; padding: 6px; color: #555; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+    .app-chrome-dark-toggle:hover { color: #2c7be5; background: #f0f4f9; }
+    .app-chrome-dark-toggle .icon-sun { display: none; }
+
+    .app-chrome-side-menu {
+        position: fixed;
+        left: -260px;
+        top: 60px;
+        width: 260px;
+        height: calc(100vh - 60px);
+        background: #fff;
+        border-right: 1px solid #eaeaea;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+        padding: 20px;
+        transition: left 0.3s ease;
+        z-index: 2900;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+    }
+    .app-chrome-side-menu.active { left: 0; }
+
+    .app-chrome-overlay {
+        position: fixed;
+        top: 60px;
+        left: 0;
+        width: 100vw;
+        height: calc(100vh - 60px);
+        background: rgba(0,0,0,0.4);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+        z-index: 2800;
+    }
+    .app-chrome-overlay.active { opacity: 1; pointer-events: auto; }
+
+    .app-chrome-menu-item { padding: 12px 10px; cursor: pointer; font-weight: 500; border-radius: 5px; margin-bottom: 5px; }
+    .app-chrome-menu-item:hover { background: #f4f6f9; color: #2c7be5; }
+    .app-chrome-menu-item.logout { color: #c0392b; font-weight: bold; }
+    .app-chrome-menu-item.logout:hover { background: #fdeaea; color: #a93226; }
+    .app-chrome-menu-bottom { margin-top: auto; padding-top: 20px; border-top: 1px solid #eee; }
+
+    body.dark-mode .app-chrome-topbar { background-color: #1E252E; box-shadow: 0 2px 5px rgba(0,0,0,0.4); }
+    body.dark-mode .app-chrome-top-center { color: #ddd; }
+    body.dark-mode .app-chrome-dark-toggle { color: #ddd; }
+    body.dark-mode .app-chrome-dark-toggle .icon-sun { display: block !important; }
+    body.dark-mode .app-chrome-dark-toggle .icon-moon { display: none; }
+    body.dark-mode .app-chrome-side-menu { background-color: #1E252E; color: #fff; border-right-color: #333; }
+    body.dark-mode .app-chrome-menu-item:hover { background: #232323; color: #2c7be5; }
+
+    @media print {
+        .app-chrome-topbar,
+        .app-chrome-side-menu,
+        .app-chrome-overlay { display: none !important; }
+    }
+</style>
+
+<div id="appChromeSideMenu" class="app-chrome-side-menu">
+    <div class="app-chrome-menu-item" onclick='window.location.href={{ url_for('dashboard')|tojson }}'>Dashboard</div>
+    <div class="app-chrome-menu-item" onclick='window.location.href={{ url_for('dashboard')|tojson }}'>My Patients</div>
+    <div class="app-chrome-menu-item" onclick='window.location.href={{ url_for('dashboard')|tojson }}'>Appointments</div>
+    <div class="app-chrome-menu-item" onclick='window.location.href={{ url_for('dashboard')|tojson }}'>Scales</div>
+
+    <div class="app-chrome-menu-bottom">
+        <div class="app-chrome-menu-item" onclick='window.location.href={{ url_for('profile')|tojson }}'>My Profile</div>
+        <div class="app-chrome-menu-item" onclick="alert('Settings are available in My Profile.');">Settings</div>
+        <div class="app-chrome-menu-item" onclick="alert('Help page not available yet.');">Help</div>
+        <div class="app-chrome-menu-item logout" onclick='window.location.href={{ url_for('logout')|tojson }}'>Logout</div>
+    </div>
+</div>
+
+<div id="appChromeOverlay" class="app-chrome-overlay" onclick="appChromeToggleSidebar()"></div>
+
+<div class="app-chrome-topbar">
+    <div class="app-chrome-top-left">
+        <div class="app-chrome-hamburger" onclick="appChromeToggleSidebar()">☰</div>
+        <div style="display:flex; align-items:center; cursor:pointer;" onclick="window.location.href='/'">
+            <img src="{{ url_for('static', filename='logo.png') }}" class="app-chrome-logo" alt="Logo" style="height:45px;">
+            <div style="margin-left: 10px; line-height: 1.1;">
+                <div style="font-size: 22px; font-weight: bold; color: #2c7be5; margin-bottom: 2px;">Continuum</div>
+                <div style="font-size: 13px; color: #7ab8e0; letter-spacing: 1px; text-transform: lowercase;">psychiatry</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-chrome-top-center">
+        {% if current_doctor and current_doctor.clinic_name %}
+            {{ current_doctor.clinic_name }}
+        {% elif clinic_name is defined and clinic_name %}
+            {{ clinic_name }}
+        {% endif %}
+    </div>
+
+    <div class="app-chrome-top-right">
+        <button type="button" class="app-chrome-dark-toggle" onclick="appChromeToggleDarkMode(!document.body.classList.contains('dark-mode'))" title="Toggle Dark Mode" aria-label="Toggle dark mode">
+            <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5"></circle>
+                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+            </svg>
+        </button>
+    </div>
+</div>
+
+<script>
+    function appChromeToggleSidebar() {
+        var sideMenu = document.getElementById('appChromeSideMenu');
+        var overlay = document.getElementById('appChromeOverlay');
+        if (!sideMenu || !overlay) return;
+        var isActive = sideMenu.classList.toggle('active');
+        overlay.classList.toggle('active', isActive);
+    }
+
+    function appChromeToggleDarkMode(isDark) {
+        if (isDark) {
+            document.body.classList.add('dark-mode');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.body.classList.remove('dark-mode');
+            localStorage.setItem('theme', 'light');
+        }
+    }
+</script>

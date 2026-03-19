@@ -1,0 +1,722 @@
+[
+  {
+    "label": "F00 Organic dementia",
+    "code": "F00",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F01 Vascular dementia",
+    "code": "F01",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F03 Unspecified dementia",
+    "code": "F03",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F06 Other mental disorders due to brain damage",
+    "code": "F06",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F07 Personality disorder due to brain disease",
+    "code": "F07",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F10 Mental disorders due to alcohol",
+    "code": "F10",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F11 Opioids",
+    "code": "F11",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F12 Cannabinoids",
+    "code": "F12",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F13 Sedatives",
+    "code": "F13",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F14 Cocaine",
+    "code": "F14",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F15 Stimulants",
+    "code": "F15",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F17 Tobacco",
+    "code": "F17",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F20 Schizophrenia",
+    "code": "F20",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F21 Schizotypal disorder",
+    "code": "F21",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F22 Persistent delusional",
+    "code": "F22",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F23 Acute psychotic",
+    "code": "F23",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F25 Schizoaffective",
+    "code": "F25",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F30 Manic episode",
+    "code": "F30",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F31 Bipolar",
+    "code": "F31",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F32 Depressive episode",
+    "code": "F32",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F33 Recurrent depression",
+    "code": "F33",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F34 Persistent mood",
+    "code": "F34",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F40 Phobic anxiety",
+    "code": "F40",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F41 Other anxiety",
+    "code": "F41",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F42 OCD",
+    "code": "F42",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F43 Stress reactions",
+    "code": "F43",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F44 Dissociative",
+    "code": "F44",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F45 Somatoform",
+    "code": "F45",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F48 Other neurotic",
+    "code": "F48",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F50 Eating disorders",
+    "code": "F50",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F51 Nonorganic sleep",
+    "code": "F51",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F52 Sexual dysfunction",
+    "code": "F52",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F53 Mental disorders associated with childbirth",
+    "code": "F53",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F60 Specific personality",
+    "code": "F60",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F61 Mixed personality",
+    "code": "F61",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F62 Enduring personality change",
+    "code": "F62",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F63 Habit and impulse",
+    "code": "F63",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F64 Gender identity",
+    "code": "F64",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F65 Paraphilias",
+    "code": "F65",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F68 Production of symptoms",
+    "code": "F68",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F69 Unspecified adult behavior",
+    "code": "F69",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F70 Mild intellectual disability",
+    "code": "F70",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F71 Moderate",
+    "code": "F71",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F72 Severe",
+    "code": "F72",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F73 Profound",
+    "code": "F73",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F84 Autism spectrum",
+    "code": "F84",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F90 ADHD",
+    "code": "F90",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F91 Conduct disorder",
+    "code": "F91",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F92 Mixed disruptive",
+    "code": "F92",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F93 Emotional disorders childhood",
+    "code": "F93",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F94 Social functioning",
+    "code": "F94",
+    "system": "ICD-10"
+  },
+  {
+    "label": "F95 Tic disorders",
+    "code": "F95",
+    "system": "ICD-10"
+  },
+  {
+    "label": "Major Depressive Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Persistent Depressive Disorder (Dysthymia)",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Bipolar I Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Bipolar II Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Schizophrenia",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Schizoaffective Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Delusional Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Brief Psychotic Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Schizophreniform Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Schizotypal Personality Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Generalized Anxiety Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Panic Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Agoraphobia",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Social Anxiety Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Specific Phobia",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Separation Anxiety Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Selective Mutism",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Obsessive-Compulsive Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Body Dysmorphic Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Hoarding Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Trichotillomania",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "PTSD",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Acute Stress Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Adjustment Disorders",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Dissociative Identity Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Somatic Symptom Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Illness Anxiety Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Conversion Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Anorexia Nervosa",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Bulimia Nervosa",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Binge-Eating Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Insomnia Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Hypersomnolence Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Narcolepsy",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Alcohol Use Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Tobacco Use Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Stimulant Use Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Cannabis Use Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Opioid Use Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Sedative Use Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Antisocial Personality Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Borderline Personality Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Narcissistic Personality Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Schizoid Personality Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Avoidant Personality Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Autism Spectrum Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "ADHD",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Conduct Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Oppositional Defiant Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "Intermittent Explosive Disorder",
+    "code": "",
+    "system": "DSM-5"
+  },
+  {
+    "label": "6A70 Single episode depressive disorder",
+    "code": "6A70",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6A71 Recurrent depressive disorder",
+    "code": "6A71",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6A72 Dysthymic disorder",
+    "code": "6A72",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6A80 Manic episode",
+    "code": "6A80",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6A81 Bipolar type I disorder",
+    "code": "6A81",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6A82 Bipolar type II disorder",
+    "code": "6A82",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6A84 Cyclothymic disorder",
+    "code": "6A84",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6A20 Schizophrenia",
+    "code": "6A20",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6A21 Schizoaffective disorder",
+    "code": "6A21",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6A22 Acute and transient psychotic disorder",
+    "code": "6A22",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6A23 Schizotypal disorder",
+    "code": "6A23",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6A24 Delusional disorder",
+    "code": "6A24",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6B00 Generalised anxiety disorder",
+    "code": "6B00",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6B01 Panic disorder",
+    "code": "6B01",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6B02 Agoraphobia",
+    "code": "6B02",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6B03 Specific phobia",
+    "code": "6B03",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6B04 Social anxiety disorder",
+    "code": "6B04",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6B05 Separation anxiety disorder",
+    "code": "6B05",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6B06 Selective mutism",
+    "code": "6B06",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6B20 Obsessive-compulsive disorder",
+    "code": "6B20",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6B21 Body dysmorphic disorder",
+    "code": "6B21",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6B22 Olfactory reference disorder",
+    "code": "6B22",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6B23 Hoarding disorder",
+    "code": "6B23",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6B24 Trichotillomania",
+    "code": "6B24",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6B25 Excoriation disorder",
+    "code": "6B25",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6B40 Post traumatic stress disorder",
+    "code": "6B40",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6B41 Complex PTSD",
+    "code": "6B41",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6B42 Prolonged grief disorder",
+    "code": "6B42",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6B43 Adjustment disorder",
+    "code": "6B43",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6B44 Acute stress reaction",
+    "code": "6B44",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6C00 Anorexia nervosa",
+    "code": "6C00",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6C01 Bulimia nervosa",
+    "code": "6C01",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6C02 Binge eating disorder",
+    "code": "6C02",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6C03 Avoidant restrictive food intake disorder",
+    "code": "6C03",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6D30 Insomnia disorder",
+    "code": "6D30",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6D31 Hypersomnia disorder",
+    "code": "6D31",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6D32 Narcolepsy",
+    "code": "6D32",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6D41 Autism spectrum disorder",
+    "code": "6D41",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6D90 ADHD",
+    "code": "6D90",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6D91 Conduct-dissocial disorder",
+    "code": "6D91",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6D92 Oppositional defiant disorder",
+    "code": "6D92",
+    "system": "ICD-11"
+  },
+  {
+    "label": "6D93 Intermittent explosive disorder",
+    "code": "6D93",
+    "system": "ICD-11"
+  }
+]
