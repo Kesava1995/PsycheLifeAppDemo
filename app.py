@@ -2170,6 +2170,15 @@ def save_patient_ranges(patient_id):
     if patient.doctor_id != session.get('doctor_id'):
         abort(403)
     range_type = request.form.get('range_type')  # 'clinical_state' or 'adherence'
+
+    # PythonAnywhere SQLite may already have older NOT NULL constraints on visit_id.
+    # Always attach ranges to the patient's latest visit.
+    latest_visit = Visit.query.filter_by(patient_id=patient_id).order_by(Visit.date.desc()).first()
+    if not latest_visit:
+        flash('Add at least one visit (e.g. New Patient Registration or Follow-up) before saving ranges.', 'error')
+        return redirect(url_for('patient_detail', patient_id=patient_id))
+    v_id = latest_visit.id
+
     if range_type == 'adherence':
         for ar in AdherenceRange.query.filter_by(patient_id=patient_id).all():
             db.session.delete(ar)
@@ -2180,7 +2189,15 @@ def save_patient_ranges(patient_id):
                     if isinstance(item, dict) and item.get('status'):
                         start_d = parse_date(item.get('start')) if item.get('start') else None
                         end_d = parse_date(item.get('end')) if item.get('end') else None
-                        db.session.add(AdherenceRange(patient_id=patient_id, status=item['status'], start_date=start_d, end_date=end_d))
+                        db.session.add(
+                            AdherenceRange(
+                                patient_id=patient_id,
+                                visit_id=v_id,
+                                status=item['status'],
+                                start_date=start_d,
+                                end_date=end_d
+                            )
+                        )
             except (json.JSONDecodeError, TypeError):
                 pass
         db.session.commit()
@@ -2195,7 +2212,15 @@ def save_patient_ranges(patient_id):
                     if isinstance(item, dict) and item.get('state'):
                         start_d = parse_date(item.get('start')) if item.get('start') else None
                         end_d = parse_date(item.get('end')) if item.get('end') else None
-                        db.session.add(ClinicalStateRange(patient_id=patient_id, state=item['state'], start_date=start_d, end_date=end_d))
+                        db.session.add(
+                            ClinicalStateRange(
+                                patient_id=patient_id,
+                                visit_id=v_id,
+                                state=item['state'],
+                                start_date=start_d,
+                                end_date=end_d
+                            )
+                        )
             except (json.JSONDecodeError, TypeError):
                 pass
         db.session.commit()
