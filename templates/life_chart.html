@@ -1545,8 +1545,8 @@
                 (backendClinicalStates || []).forEach(state => {
                     if (!state.start || !state.end) return;
 
-                    const startVal = new Date(state.start).valueOf();
-                    const endVal = new Date(state.end).valueOf();
+                    const startVal = typeof state.start === 'string' && state.start.length >= 10 ? state.start : new Date(state.start).valueOf();
+                    const endVal = typeof state.end === 'string' && state.end.length >= 10 ? state.end : new Date(state.end).valueOf();
                     let xMin = xScale.getPixelForValue(startVal);
                     let xMax = xScale.getPixelForValue(endVal);
                     if (!Number.isFinite(xMin)) xMin = xScale.getPixelForValue(new Date(state.start).valueOf());
@@ -1578,8 +1578,8 @@
             (backendAdherences || []).forEach(ad => {
                 if (!ad.start || !ad.end) return;
 
-                const startVal = new Date(ad.start).valueOf();
-                const endVal = new Date(ad.end).valueOf();
+                const startVal = typeof ad.start === 'string' && ad.start.length >= 10 ? ad.start : new Date(ad.start).valueOf();
+                const endVal = typeof ad.end === 'string' && ad.end.length >= 10 ? ad.end : new Date(ad.end).valueOf();
                 let xMin = xScale.getPixelForValue(startVal);
                 let xMax = xScale.getPixelForValue(endVal);
                 if (!Number.isFinite(xMin)) xMin = xScale.getPixelForValue(new Date(ad.start).valueOf());
@@ -1646,8 +1646,8 @@
                     (rawData.substances || [])
                         .filter(s => s.substance === sub)
                         .forEach(su => {
-                            const startVal = new Date(su.start_date).valueOf();
-                            const endVal = new Date(su.end_date).valueOf();
+                            const startVal = typeof su.start_date === 'string' && su.start_date.length >= 10 ? su.start_date : new Date(su.start_date).valueOf();
+                            const endVal = typeof su.end_date === 'string' && su.end_date.length >= 10 ? su.end_date : new Date(su.end_date).valueOf();
                             let xMin = xScale.getPixelForValue(startVal);
                             let xMax = xScale.getPixelForValue(endVal);
                             if (!Number.isFinite(xMin)) xMin = xScale.getPixelForValue(new Date(su.start_date).valueOf());
