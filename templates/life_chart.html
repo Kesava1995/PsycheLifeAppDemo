@@ -1545,14 +1545,8 @@
                 (backendClinicalStates || []).forEach(state => {
                     if (!state.start || !state.end) return;
 
-                    // Always normalize to numeric timestamps for time-scale safety.
-                    // Passing raw date strings can produce full-width bands when parsing fails.
-                    const startVal = (typeof state.start === 'number' && Number.isFinite(state.start))
-                        ? state.start
-                        : new Date(state.start).valueOf();
-                    const endVal = (typeof state.end === 'number' && Number.isFinite(state.end))
-                        ? state.end
-                        : new Date(state.end).valueOf();
+                    const startVal = typeof state.start === 'string' && state.start.length >= 10 ? state.start : new Date(state.start).valueOf();
+                    const endVal = typeof state.end === 'string' && state.end.length >= 10 ? state.end : new Date(state.end).valueOf();
                     let xMin = xScale.getPixelForValue(startVal);
                     let xMax = xScale.getPixelForValue(endVal);
                     if (!Number.isFinite(xMin)) xMin = xScale.getPixelForValue(new Date(state.start).valueOf());
@@ -1584,13 +1578,8 @@
             (backendAdherences || []).forEach(ad => {
                 if (!ad.start || !ad.end) return;
 
-                // Keep adherence aligned with the same timestamp normalization strategy.
-                const startVal = (typeof ad.start === 'number' && Number.isFinite(ad.start))
-                    ? ad.start
-                    : new Date(ad.start).valueOf();
-                const endVal = (typeof ad.end === 'number' && Number.isFinite(ad.end))
-                    ? ad.end
-                    : new Date(ad.end).valueOf();
+                const startVal = typeof ad.start === 'string' && ad.start.length >= 10 ? ad.start : new Date(ad.start).valueOf();
+                const endVal = typeof ad.end === 'string' && ad.end.length >= 10 ? ad.end : new Date(ad.end).valueOf();
                 let xMin = xScale.getPixelForValue(startVal);
                 let xMax = xScale.getPixelForValue(endVal);
                 if (!Number.isFinite(xMin)) xMin = xScale.getPixelForValue(new Date(ad.start).valueOf());
