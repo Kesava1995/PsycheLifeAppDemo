@@ -1,0 +1,80 @@
+{# Expects: personality_traits = list of stored trait strings #}
+{% set t = personality_traits or [] %}
+<select class="form-select premorbid-personality-select2" id="premorbid_personality" name="personality[]" multiple="multiple" data-placeholder="Select personality traits..." aria-label="Premorbid personality traits" style="width:100%;max-width:100%;">
+
+    <optgroup label="Temperament">
+        <option value="Introverted" {% if 'Introverted' in t %}selected{% endif %}>Introverted</option>
+        <option value="Extroverted" {% if 'Extroverted' in t %}selected{% endif %}>Extroverted</option>
+        <option value="Emotionally reactive" {% if 'Emotionally reactive' in t %}selected{% endif %}>Emotionally reactive</option>
+        <option value="Irritable" {% if 'Irritable' in t %}selected{% endif %}>Irritable</option>
+        <option value="Anxious" {% if 'Anxious' in t %}selected{% endif %}>Anxious</option>
+        <option value="Cyclothymic traits" {% if 'Cyclothymic traits' in t %}selected{% endif %}>Cyclothymic traits</option>
+        <option value="Hyperthymic traits" {% if 'Hyperthymic traits' in t %}selected{% endif %}>Hyperthymic traits</option>
+    </optgroup>
+
+    <optgroup label="Social Style">
+        <option value="Socially withdrawn" {% if 'Socially withdrawn' in t %}selected{% endif %}>Socially withdrawn</option>
+        <option value="Few close relationships" {% if 'Few close relationships' in t and 'Few close relationships (Cluster A)' not in t and 'Few close relationships (Cluster A-like)' not in t %}selected{% endif %}>Few close relationships</option>
+        <option value="Dependent on others" {% if 'Dependent on others' in t %}selected{% endif %}>Dependent on others</option>
+        <option value="Interpersonally sensitive" {% if 'Interpersonally sensitive' in t %}selected{% endif %}>Interpersonally sensitive</option>
+        <option value="Conflict-prone" {% if 'Conflict-prone' in t %}selected{% endif %}>Conflict-prone</option>
+    </optgroup>
+
+    <optgroup label="Work / Functioning Pattern">
+        <option value="Highly driven / Overachiever" {% if 'Highly driven / Overachiever' in t %}selected{% endif %}>Highly driven / Overachiever</option>
+        <option value="Perfectionistic" {% if 'Perfectionistic' in t %}selected{% endif %}>Perfectionistic</option>
+        <option value="Procrastinating" {% if 'Procrastinating' in t %}selected{% endif %}>Procrastinating</option>
+        <option value="Poor initiative" {% if 'Poor initiative' in t %}selected{% endif %}>Poor initiative</option>
+        <option value="Rigid / black-and-white thinking" {% if 'Rigid / black-and-white thinking' in t %}selected{% endif %}>Rigid / black-and-white thinking</option>
+    </optgroup>
+
+    <optgroup label="Emotional Regulation Style">
+        <option value="Avoidant coping" {% if 'Avoidant coping' in t %}selected{% endif %}>Avoidant coping</option>
+        <option value="Ruminative" {% if 'Ruminative' in t %}selected{% endif %}>Ruminative</option>
+        <option value="Emotionally expressive" {% if 'Emotionally expressive' in t %}selected{% endif %}>Emotionally expressive</option>
+        <option value="Emotionally inhibited" {% if 'Emotionally inhibited' in t %}selected{% endif %}>Emotionally inhibited</option>
+        <option value="Difficulty handling criticism" {% if 'Difficulty handling criticism' in t %}selected{% endif %}>Difficulty handling criticism</option>
+        <option value="Poor stress tolerance" {% if 'Poor stress tolerance' in t %}selected{% endif %}>Poor stress tolerance</option>
+    </optgroup>
+
+    <optgroup label="Impulse / Behavioral Regulation">
+        <option value="Impulsive" {% if 'Impulsive' in t %}selected{% endif %}>Impulsive</option>
+        <option value="Risk-taking" {% if 'Risk-taking' in t %}selected{% endif %}>Risk-taking</option>
+        <option value="Sensation-seeking" {% if 'Sensation-seeking' in t %}selected{% endif %}>Sensation-seeking</option>
+        <option value="Poor frustration tolerance" {% if 'Poor frustration tolerance' in t and 'Poor frustration tolerance (Cluster B)' not in t and 'Poor frustration tolerance (Cluster B-like)' not in t %}selected{% endif %}>Poor frustration tolerance</option>
+        <option value="Aggressive tendencies" {% if 'Aggressive tendencies' in t and 'Aggressive tendencies (Cluster B)' not in t and 'Aggressive tendencies (Cluster B-like)' not in t %}selected{% endif %}>Aggressive tendencies</option>
+    </optgroup>
+
+    <optgroup label="Cluster A-like Traits">
+        <option value="Suspicious / mistrustful style" {% if 'Suspicious / mistrustful style' in t %}selected{% endif %}>Suspicious / mistrustful style</option>
+        <option value="Social withdrawal / detachment (Cluster A)" {% if 'Social withdrawal / detachment (Cluster A)' in t or 'Social withdrawal / detachment' in t %}selected{% endif %}>Social withdrawal / detachment</option>
+        <option value="Few close relationships (Cluster A)" {% if 'Few close relationships (Cluster A)' in t or 'Few close relationships (Cluster A-like)' in t %}selected{% endif %}>Few close relationships</option>
+        <option value="Odd or eccentric thinking style" {% if 'Odd or eccentric thinking style' in t %}selected{% endif %}>Odd or eccentric thinking style</option>
+    </optgroup>
+
+    <optgroup label="Cluster B-like Traits">
+        <option value="Impulsivity (Cluster B)" {% if 'Impulsivity (Cluster B)' in t or 'Impulsivity' in t %}selected{% endif %}>Impulsivity</option>
+        <option value="Emotional instability" {% if 'Emotional instability' in t %}selected{% endif %}>Emotional instability</option>
+        <option value="Poor frustration tolerance (Cluster B)" {% if 'Poor frustration tolerance (Cluster B)' in t or 'Poor frustration tolerance (Cluster B-like)' in t %}selected{% endif %}>Poor frustration tolerance</option>
+        <option value="Aggressive tendencies (Cluster B)" {% if 'Aggressive tendencies (Cluster B)' in t or 'Aggressive tendencies (Cluster B-like)' in t %}selected{% endif %}>Aggressive tendencies</option>
+        <option value="Attention-seeking / dramatic interpersonal style" {% if 'Attention-seeking / dramatic interpersonal style' in t %}selected{% endif %}>Attention-seeking / dramatic interpersonal style</option>
+        <option value="Risk-taking behavior" {% if 'Risk-taking behavior' in t %}selected{% endif %}>Risk-taking behavior</option>
+    </optgroup>
+
+    <optgroup label="Cluster C-like Traits">
+        <option value="Excessive dependency in relationships" {% if 'Excessive dependency in relationships' in t %}selected{% endif %}>Excessive dependency in relationships</option>
+        <option value="Avoidant interpersonal style" {% if 'Avoidant interpersonal style' in t %}selected{% endif %}>Avoidant interpersonal style</option>
+        <option value="Perfectionism / overcontrol" {% if 'Perfectionism / overcontrol' in t %}selected{% endif %}>Perfectionism / overcontrol</option>
+        <option value="Interpersonal hypersensitivity" {% if 'Interpersonal hypersensitivity' in t %}selected{% endif %}>Interpersonal hypersensitivity</option>
+        <option value="High anxiety-proneness" {% if 'High anxiety-proneness' in t %}selected{% endif %}>High anxiety-proneness</option>
+    </optgroup>
+
+    <optgroup label="OCEAN Model Traits (Big Five)">
+        <option value="Openness" {% if 'Openness' in t %}selected{% endif %}>Openness</option>
+        <option value="Conscientiousness" {% if 'Conscientiousness' in t %}selected{% endif %}>Conscientiousness</option>
+        <option value="Extraversion" {% if 'Extraversion' in t %}selected{% endif %}>Extraversion</option>
+        <option value="Agreeableness" {% if 'Agreeableness' in t %}selected{% endif %}>Agreeableness</option>
+        <option value="Neuroticism" {% if 'Neuroticism' in t %}selected{% endif %}>Neuroticism</option>
+    </optgroup>
+
+</select>

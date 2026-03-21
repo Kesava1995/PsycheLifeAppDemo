@@ -66,7 +66,7 @@ def get_clinic_hours(doctor):
     }
 
 
-from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry, ScaleAssessment, Appointment, DashboardNote, Notification, ScheduleTemplate
+from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry, ScaleAssessment, Appointment, DashboardNote, Notification, ScheduleTemplate, Feedback
 from medical_utils import get_unified_dose, compute_med_chart_value, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency, process_scale_submission, duration_to_days, format_timedelta_as_duration
 from email_utils import send_dynamic_email, send_system_email
 from encryption_utils import encrypt_smtp_password, decrypt_smtp_password
@@ -82,11 +82,13 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 import qrcode
-from urllib.parse import urljoin, unquote
+from urllib.parse import urljoin, unquote, quote_plus
 from werkzeug.utils import secure_filename
 import base64
 import uuid
 import json
+import time
+import requests
 from difflib import SequenceMatcher
 from sqlalchemy import text
 
@@ -195,6 +197,105 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(os.path.join(basedir, 'instance'), exist_ok=True)
 db.init_app(app)
 
+# --- WHO ICD-11 API (token cache + search proxy; use ICD11_CLIENT_ID / ICD11_CLIENT_SECRET in .env) ---
+_who_token_cache = {'token': None, 'expires_at': 0}
+
+
+def get_who_access_token():
+    """Return OAuth access token for WHO ICD API (in-memory cache, ~60s before expiry)."""
+    now = time.time()
+    if _who_token_cache['token'] and now < _who_token_cache['expires_at']:
+        return _who_token_cache['token']
+    client_id = os.environ.get('ICD11_CLIENT_ID')
+    client_secret = os.environ.get('ICD11_CLIENT_SECRET')
+    if not client_id or client_id == 'your_client_id_here' or not client_secret:
+        return None
+    try:
+        r = requests.post(
+            'https://icdaccessmanagement.who.int/connect/token',
+            data={
+                'client_id': client_id,
+                'client_secret': client_secret,
+                'scope': 'icdapi_access',
+                'grant_type': 'client_credentials',
+            },
+            timeout=30,
+        )
+        if r.status_code != 200:
+            return None
+        data = r.json()
+        token = data.get('access_token')
+        if not token:
+            return None
+        expires_in = int(data.get('expires_in', 3600))
+        _who_token_cache['token'] = token
+        _who_token_cache['expires_at'] = now + max(expires_in - 60, 60)
+        return token
+    except (requests.exceptions.RequestException, ValueError, TypeError):
+        return None
+
+
+@app.route('/icd11token')
+def icd11_token():
+    client_id = os.environ.get('ICD11_CLIENT_ID')
+    client_secret = os.environ.get('ICD11_CLIENT_SECRET')
+    if not client_id or client_id == 'your_client_id_here' or not client_secret:
+        return jsonify({'error': 'ICD-11 API credentials not configured. Set ICD11_CLIENT_ID and ICD11_CLIENT_SECRET in .env'}), 503
+    token = get_who_access_token()
+    if not token:
+        return jsonify({'error': 'Cannot obtain WHO access token. Check credentials and network.'}), 503
+    return jsonify({'access_token': token, 'token_type': 'Bearer', 'expires_in': 3600})
+
+
+@app.route('/api/search_icd11')
+def search_icd11():
+    """Proxy search to WHO ICD-11 MMS (no API keys in the browser)."""
+    query = (request.args.get('q') or '').strip()
+    if len(query) < 2:
+        return jsonify([])
+
+    token = get_who_access_token()
+    if not token:
+        return jsonify([])
+
+    search_url = (
+        'https://id.who.int/icd/release/11/2024-01/mms/search?q='
+        + quote_plus(query)
+        + '&flatResults=true'
+    )
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Accept': 'application/json',
+        'Accept-Language': 'en',
+        'API-Version': 'v2',
+    }
+    try:
+        res = requests.get(search_url, headers=headers, timeout=30)
+        if res.status_code == 401:
+            _who_token_cache['token'] = None
+            _who_token_cache['expires_at'] = 0
+            token = get_who_access_token()
+            if token:
+                headers['Authorization'] = f'Bearer {token}'
+                res = requests.get(search_url, headers=headers, timeout=30)
+        if res.status_code != 200:
+            return jsonify([])
+        data = res.json()
+        results = []
+        for item in data.get('destinationEntities') or []:
+            code = item.get('theCode')
+            title = item.get('title') or ''
+            if not code:
+                continue
+            clean_title = re.sub(r'<[^>]+>', '', str(title)).strip()
+            results.append({'code': code, 'name': clean_title, 'system': 'ICD-11'})
+            if len(results) >= 25:
+                break
+        return jsonify(results)
+    except (requests.exceptions.RequestException, ValueError, TypeError):
+        return jsonify([])
+
+
 # Ensure tables are created (especially new Phase 2 tables)
 with app.app_context():
     db.create_all()
@@ -216,6 +317,13 @@ with app.app_context():
         db.session.rollback()
     # Doctor: SMTP app password and reminder days
     for col, spec in [('smtp_app_password', 'VARCHAR(255)'), ('appointment_reminder_days', 'VARCHAR(50)')]:
+        try:
+            db.session.execute(text(f'ALTER TABLE doctors ADD COLUMN {col} {spec}'))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+    # Doctor: profile picture (BLOB in DB)
+    for col, spec in [('profile_photo', 'BLOB'), ('profile_photo_mimetype', 'VARCHAR(80)'), ('designation', 'VARCHAR(255)')]:
         try:
             db.session.execute(text(f'ALTER TABLE doctors ADD COLUMN {col} {spec}'))
             db.session.commit()
@@ -860,6 +968,32 @@ def logout():
     return redirect(url_for('landing'))
 
 
+DESIGNATION_MAX_LEN = 255
+DESIGNATION_CHOICES = (
+    'Junior Resident (JR)',
+    'Senior Resident (SR)',
+    'Assistant Professor / Consultant',
+    'Associate Professor / Associate Consultant',
+    'Senior Consultant / Professor',
+    'Head of Department (HOD)',
+    'Medical Director / Chief Medical Officer',
+)
+
+
+@app.route('/profile/picture')
+@doctor_required
+def serve_profile_picture():
+    """Serve the logged-in doctor's profile photo from DB (BLOB)."""
+    doctor = Doctor.query.get(session.get('doctor_id'))
+    if not doctor or not doctor.profile_photo:
+        abort(404)
+    return send_file(
+        io.BytesIO(doctor.profile_photo),
+        mimetype=doctor.profile_photo_mimetype or 'image/jpeg',
+        max_age=3600,
+    )
+
+
 @app.route('/profile', methods=['GET', 'POST'])
 @doctor_required
 def profile():
@@ -870,7 +1004,30 @@ def profile():
         return redirect(url_for('first_visit'))
     
     if request.method == 'POST':
+        uploaded_photo = False
+        if 'profile_photo' in request.files:
+            pfile = request.files['profile_photo']
+            if pfile and pfile.filename:
+                ext = os.path.splitext(pfile.filename)[1].lower()
+                if ext not in PROFILE_PHOTO_ALLOWED_EXT:
+                    flash('Profile photo must be JPG, PNG, GIF, or WebP.', 'error')
+                else:
+                    pdata = pfile.read()
+                    if len(pdata) > PROFILE_PHOTO_MAX_BYTES:
+                        flash('Profile photo must be 2MB or smaller.', 'error')
+                    else:
+                        doctor.profile_photo = pdata
+                        doctor.profile_photo_mimetype = (pfile.mimetype or 'image/jpeg')[:80]
+                        uploaded_photo = True
+        if not uploaded_photo and request.form.get('remove_profile_photo'):
+            doctor.profile_photo = None
+            doctor.profile_photo_mimetype = None
+
         doctor.full_name = request.form.get('full_name', '').strip()
+        desig = (request.form.get('designation') or '').strip()
+        if len(desig) > DESIGNATION_MAX_LEN:
+            desig = desig[:DESIGNATION_MAX_LEN]
+        doctor.designation = desig if desig else None
         doctor.clinic_name = request.form.get('clinic_name', '').strip()
         doctor.kmc_code = request.form.get('kmc_code', '').strip()
         doctor.address_text = request.form.get('address_text', '').strip()
@@ -912,7 +1069,12 @@ def profile():
         return redirect(next_url)
 
     schedule_templates = ScheduleTemplate.query.filter_by(doctor_id=doctor.id).all() if doctor else []
-    return render_template('profile.html', doctor=doctor, schedule_templates=schedule_templates)
+    return render_template(
+        'profile.html',
+        doctor=doctor,
+        schedule_templates=schedule_templates,
+        designation_choices=DESIGNATION_CHOICES,
+    )
 
 
 # Root route is now handled by landing()
@@ -970,6 +1132,7 @@ def dashboard():
     clinic_hours = get_clinic_hours(doctor)
 
     return render_template('dashboard.html',
+                           doctor=doctor,
                            patients=patient_data,
                            num_patients=num_patients,
                            today=today,
@@ -981,6 +1144,73 @@ def dashboard():
                            clinic_name=clinic_name,
                            clinic_hours=clinic_hours,
                            getattr=getattr)
+
+
+FEEDBACK_MAX_BYTES = 5 * 1024 * 1024
+FEEDBACK_ALLOWED_EXT = frozenset({'.pdf', '.jpg', '.jpeg', '.png'})
+
+PROFILE_PHOTO_MAX_BYTES = 2 * 1024 * 1024
+PROFILE_PHOTO_ALLOWED_EXT = frozenset({'.jpg', '.jpeg', '.png', '.gif', '.webp'})
+
+
+@app.route('/submit_feedback', methods=['POST'])
+@doctor_required
+def submit_feedback():
+    doctor_id = session.get('doctor_id')
+    if not doctor_id:
+        flash('Please sign in as a doctor to submit feedback.', 'error')
+        return redirect(url_for('landing'))
+
+    issue_type = (request.form.get('issue_type') or '').strip()
+    if not issue_type:
+        flash('Please select an issue type.', 'error')
+        return redirect(url_for('dashboard'))
+
+    other_issue_type = None
+    if issue_type.lower() == 'others':
+        other_issue_type = (request.form.get('other_issue_type') or '').strip() or None
+        if not other_issue_type:
+            flash('Please specify the issue type.', 'error')
+            return redirect(url_for('dashboard'))
+
+    priority = (request.form.get('priority') or 'Minor').strip()
+    if priority not in ('Minor', 'Important', 'Urgent'):
+        priority = 'Minor'
+
+    description = (request.form.get('description') or '').strip()
+    if not description:
+        flash('Please describe the issue.', 'error')
+        return redirect(url_for('dashboard'))
+
+    screenshot_data = None
+    screenshot_name = None
+    screenshot_mimetype = None
+    file = request.files.get('screenshot_file')
+    if file and file.filename:
+        ext = os.path.splitext(file.filename)[1].lower()
+        if ext not in FEEDBACK_ALLOWED_EXT:
+            flash('Please upload a PDF, JPG, or PNG file (max 5MB).', 'error')
+            return redirect(url_for('dashboard'))
+        screenshot_name = secure_filename(file.filename) or 'upload'
+        screenshot_mimetype = (file.mimetype or 'application/octet-stream')[:80]
+        screenshot_data = file.read()
+        if len(screenshot_data) > FEEDBACK_MAX_BYTES:
+            flash('File is too large (max 5MB).', 'error')
+            return redirect(url_for('dashboard'))
+
+    db.session.add(Feedback(
+        doctor_id=doctor_id,
+        issue_type=issue_type,
+        other_issue_type=other_issue_type,
+        priority=priority,
+        description=description,
+        screenshot=screenshot_data,
+        screenshot_name=screenshot_name,
+        screenshot_mimetype=screenshot_mimetype,
+    ))
+    db.session.commit()
+    flash('Thank you! Your feedback has been submitted.', 'success')
+    return redirect(url_for('dashboard'))
 
 
 @app.route('/api/clinic_hours', methods=['POST'])
@@ -4687,29 +4917,6 @@ def guest_share_view(token):
 
         visit_details={visit_id_str: dummy_visit_js}
     )
-
-
-@app.route('/icd11token')
-def icd11_token():
-    import requests as _requests
-    client_id = os.environ.get('ICD11_CLIENT_ID')
-    client_secret = os.environ.get('ICD11_CLIENT_SECRET')
-    if not client_id or client_id == 'your_client_id_here':
-        return jsonify({'error': 'ICD-11 API credentials not configured. Set ICD11_CLIENT_ID and ICD11_CLIENT_SECRET in .env'}), 503
-    try:
-        r = _requests.post('https://icdaccessmanagement.who.int/connect/token', data={
-            'client_id': client_id,
-            'client_secret': client_secret,
-            'scope': 'icdapi_access',
-            'grant_type': 'client_credentials'
-        }, timeout=10)
-        return jsonify(r.json())
-    except _requests.exceptions.ConnectionError:
-        return jsonify({'error': 'Cannot reach WHO identity server. Check internet/firewall.'}), 503
-    except _requests.exceptions.Timeout:
-        return jsonify({'error': 'WHO identity server timed out.'}), 503
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':

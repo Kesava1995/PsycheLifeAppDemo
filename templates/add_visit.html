@@ -273,8 +273,7 @@
             border-top: 1px dashed var(--primary-dark) !important;
         }
 
-        /* flex: 0 0 auto: in .med-ident-col (column flex) flex:2 was growing this box vertically with taper rows */
-        .med-entry-block .drug-name-wrap { position: relative; flex: 0 0 auto; width: 100%; min-width: 150px; align-self: stretch; box-sizing: border-box; }
+        .med-entry-block .drug-name-wrap { position: relative; flex: 1 1 auto; width: auto; min-width: 150px; align-self: stretch; box-sizing: border-box; }
         .drug-name-wrap .drug-name-input { width: 100%; box-sizing: border-box; margin: 0; padding: 8px 108px 8px 8px; }
         .taper-btn {
             position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
@@ -286,10 +285,10 @@
         body.dark-mode .taper-btn { background: rgba(31, 53, 66, 0.96); border-color: #4a7a99; color: #d4ebf8; }
 
         /* One grey card per drug; identity left, stacked dose/duration/frequency right */
-        .med-entry-block .med-block-inner { display: flex; flex-wrap: nowrap; align-items: stretch; gap: 14px; width: 100%; }
+        .med-entry-block .med-block-inner { display: flex; flex-wrap: nowrap; align-items: flex-start; gap: 14px; width: 100%; }
         .med-ident-col {
-            flex: 0 0 auto; align-self: flex-start; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch;
-            gap: 8px; min-width: 150px; max-width: 220px; padding-right: 0; border-right: none;
+            flex: 0 0 auto; align-self: flex-start; display: flex; flex-direction: row; justify-content: flex-start; align-items: center;
+            gap: 6px; min-width: 0; max-width: none; padding-right: 0; border-right: none; flex-wrap: nowrap;
         }
         .med-schedule-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
         .med-schedule-step { display: flex; flex-direction: column; gap: 4px; }
@@ -596,7 +595,13 @@
                                     <div class="entry-wrapper">
                                         <div class="row-flex" style="align-items:center;">
                                             <input type="hidden" name="mse_category[]" value="{{ cat }}">
-                                            <input type="text" name="mse_finding_name[]" value="{{ entry.finding_name }}" style="flex:1.5;">
+                                            <select name="mse_finding_name[]" class="mse-finding-select form-control" data-category="{{ cat }}" style="flex:1.5;">
+                                                {% if entry.finding_name %}
+                                                    <option value="{{ entry.finding_name }}" selected>{{ entry.finding_name }}</option>
+                                                {% else %}
+                                                    <option value=""></option>
+                                                {% endif %}
+                                            </select>
                                             <input type="hidden" name="mse_onset[]" value="">
                                             <input type="hidden" name="mse_progression[]" value="">
                                             <div class="sliders-container">
@@ -980,72 +985,10 @@
                     <div id="modalPers" class="modal" onclick="if(event.target == this) this.style.display='none'">
                         <div class="modal-content">
                             <h3>Premorbid personality traits</h3>
-                            <div class="checklist-group" style="height:260px; overflow-y:auto;">
-                                <div><strong>Temperament</strong></div>
-                                <label><input type="checkbox" name="personality[]" value="Introverted" {% if 'Introverted' in last_traits %}checked{% endif %}> Introverted</label>
-                                <label><input type="checkbox" name="personality[]" value="Extroverted" {% if 'Extroverted' in last_traits %}checked{% endif %}> Extroverted</label>
-                                <label><input type="checkbox" name="personality[]" value="Emotionally reactive" {% if 'Emotionally reactive' in last_traits %}checked{% endif %}> Emotionally reactive</label>
-                                <label><input type="checkbox" name="personality[]" value="Irritable" {% if 'Irritable' in last_traits %}checked{% endif %}> Irritable</label>
-                                <label><input type="checkbox" name="personality[]" value="Anxious" {% if 'Anxious' in last_traits %}checked{% endif %}> Anxious</label>
-                                <label><input type="checkbox" name="personality[]" value="Cyclothymic traits" {% if 'Cyclothymic traits' in last_traits %}checked{% endif %}> Cyclothymic traits</label>
-                                <label><input type="checkbox" name="personality[]" value="Hyperthymic traits" {% if 'Hyperthymic traits' in last_traits %}checked{% endif %}> Hyperthymic traits</label>
-
-                                <div style="margin-top:8px;"><strong>Social Style</strong></div>
-                                <label><input type="checkbox" name="personality[]" value="Socially withdrawn" {% if 'Socially withdrawn' in last_traits %}checked{% endif %}> Socially withdrawn</label>
-                                <label><input type="checkbox" name="personality[]" value="Few close relationships" {% if 'Few close relationships' in last_traits %}checked{% endif %}> Few close relationships</label>
-                                <label><input type="checkbox" name="personality[]" value="Dependent on others" {% if 'Dependent on others' in last_traits %}checked{% endif %}> Dependent on others</label>
-                                <label><input type="checkbox" name="personality[]" value="Interpersonally sensitive" {% if 'Interpersonally sensitive' in last_traits %}checked{% endif %}> Interpersonally sensitive</label>
-                                <label><input type="checkbox" name="personality[]" value="Conflict-prone" {% if 'Conflict-prone' in last_traits %}checked{% endif %}> Conflict-prone</label>
-
-                                <div style="margin-top:8px;"><strong>Work / Functioning Pattern</strong></div>
-                                <label><input type="checkbox" name="personality[]" value="Highly driven / Overachiever" {% if 'Highly driven / Overachiever' in last_traits %}checked{% endif %}> Highly driven / Overachiever</label>
-                                <label><input type="checkbox" name="personality[]" value="Perfectionistic" {% if 'Perfectionistic' in last_traits %}checked{% endif %}> Perfectionistic</label>
-                                <label><input type="checkbox" name="personality[]" value="Procrastinating" {% if 'Procrastinating' in last_traits %}checked{% endif %}> Procrastinating</label>
-                                <label><input type="checkbox" name="personality[]" value="Poor initiative" {% if 'Poor initiative' in last_traits %}checked{% endif %}> Poor initiative</label>
-                                <label><input type="checkbox" name="personality[]" value="Rigid / black-and-white thinking" {% if 'Rigid / black-and-white thinking' in last_traits %}checked{% endif %}> Rigid / black-and-white thinking</label>
-
-                                <div style="margin-top:8px;"><strong>Emotional Regulation Style</strong></div>
-                                <label><input type="checkbox" name="personality[]" value="Avoidant coping" {% if 'Avoidant coping' in last_traits %}checked{% endif %}> Avoidant coping</label>
-                                <label><input type="checkbox" name="personality[]" value="Ruminative" {% if 'Ruminative' in last_traits %}checked{% endif %}> Ruminative</label>
-                                <label><input type="checkbox" name="personality[]" value="Emotionally expressive" {% if 'Emotionally expressive' in last_traits %}checked{% endif %}> Emotionally expressive</label>
-                                <label><input type="checkbox" name="personality[]" value="Emotionally inhibited" {% if 'Emotionally inhibited' in last_traits %}checked{% endif %}> Emotionally inhibited</label>
-                                <label><input type="checkbox" name="personality[]" value="Difficulty handling criticism" {% if 'Difficulty handling criticism' in last_traits %}checked{% endif %}> Difficulty handling criticism</label>
-                                <label><input type="checkbox" name="personality[]" value="Poor stress tolerance" {% if 'Poor stress tolerance' in last_traits %}checked{% endif %}> Poor stress tolerance</label>
-
-                                <div style="margin-top:8px;"><strong>Impulse / Behavioral Regulation</strong></div>
-                                <label><input type="checkbox" name="personality[]" value="Impulsive" {% if 'Impulsive' in last_traits %}checked{% endif %}> Impulsive</label>
-                                <label><input type="checkbox" name="personality[]" value="Risk-taking" {% if 'Risk-taking' in last_traits %}checked{% endif %}> Risk-taking</label>
-                                <label><input type="checkbox" name="personality[]" value="Sensation-seeking" {% if 'Sensation-seeking' in last_traits %}checked{% endif %}> Sensation-seeking</label>
-                                <label><input type="checkbox" name="personality[]" value="Poor frustration tolerance" {% if 'Poor frustration tolerance' in last_traits %}checked{% endif %}> Poor frustration tolerance</label>
-                                <label><input type="checkbox" name="personality[]" value="Aggressive tendencies" {% if 'Aggressive tendencies' in last_traits %}checked{% endif %}> Aggressive tendencies</label>
-
-                                <div style="margin-top:8px;"><strong>Cluster A-like Traits</strong></div>
-                                <label><input type="checkbox" name="personality[]" value="Suspicious / mistrustful style" {% if 'Suspicious / mistrustful style' in last_traits %}checked{% endif %}> Suspicious / mistrustful style</label>
-                                <label><input type="checkbox" name="personality[]" value="Social withdrawal / detachment" {% if 'Social withdrawal / detachment' in last_traits %}checked{% endif %}> Social withdrawal / detachment</label>
-                                <label><input type="checkbox" name="personality[]" value="Few close relationships (Cluster A-like)" {% if 'Few close relationships (Cluster A-like)' in last_traits %}checked{% endif %}> Few close relationships</label>
-                                <label><input type="checkbox" name="personality[]" value="Odd or eccentric thinking style" {% if 'Odd or eccentric thinking style' in last_traits %}checked{% endif %}> Odd or eccentric thinking style</label>
-
-                                <div style="margin-top:8px;"><strong>Cluster B-like Traits</strong></div>
-                                <label><input type="checkbox" name="personality[]" value="Impulsivity" {% if 'Impulsivity' in last_traits %}checked{% endif %}> Impulsivity</label>
-                                <label><input type="checkbox" name="personality[]" value="Emotional instability" {% if 'Emotional instability' in last_traits %}checked{% endif %}> Emotional instability</label>
-                                <label><input type="checkbox" name="personality[]" value="Poor frustration tolerance (Cluster B-like)" {% if 'Poor frustration tolerance (Cluster B-like)' in last_traits %}checked{% endif %}> Poor frustration tolerance</label>
-                                <label><input type="checkbox" name="personality[]" value="Aggressive tendencies (Cluster B-like)" {% if 'Aggressive tendencies (Cluster B-like)' in last_traits %}checked{% endif %}> Aggressive tendencies</label>
-                                <label><input type="checkbox" name="personality[]" value="Attention-seeking / dramatic interpersonal style" {% if 'Attention-seeking / dramatic interpersonal style' in last_traits %}checked{% endif %}> Attention-seeking / dramatic interpersonal style</label>
-                                <label><input type="checkbox" name="personality[]" value="Risk-taking behavior" {% if 'Risk-taking behavior' in last_traits %}checked{% endif %}> Risk-taking behavior</label>
-
-                                <div style="margin-top:8px;"><strong>Cluster C-like Traits</strong></div>
-                                <label><input type="checkbox" name="personality[]" value="Excessive dependency in relationships" {% if 'Excessive dependency in relationships' in last_traits %}checked{% endif %}> Excessive dependency in relationships</label>
-                                <label><input type="checkbox" name="personality[]" value="Avoidant interpersonal style" {% if 'Avoidant interpersonal style' in last_traits %}checked{% endif %}> Avoidant interpersonal style</label>
-                                <label><input type="checkbox" name="personality[]" value="Perfectionism / overcontrol" {% if 'Perfectionism / overcontrol' in last_traits %}checked{% endif %}> Perfectionism / overcontrol</label>
-                                <label><input type="checkbox" name="personality[]" value="Interpersonal hypersensitivity" {% if 'Interpersonal hypersensitivity' in last_traits %}checked{% endif %}> Interpersonal hypersensitivity</label>
-                                <label><input type="checkbox" name="personality[]" value="High anxiety-proneness" {% if 'High anxiety-proneness' in last_traits %}checked{% endif %}> High anxiety-proneness</label>
-
-                                <div style="margin-top:8px;"><strong>OCEAN Model Traits</strong></div>
-                                <label><input type="checkbox" name="personality[]" value="Openness" {% if 'Openness' in last_traits %}checked{% endif %}> Openness</label>
-                                <label><input type="checkbox" name="personality[]" value="Conscientiousness" {% if 'Conscientiousness' in last_traits %}checked{% endif %}> Conscientiousness</label>
-                                <label><input type="checkbox" name="personality[]" value="Extraversion" {% if 'Extraversion' in last_traits %}checked{% endif %}> Extraversion</label>
-                                <label><input type="checkbox" name="personality[]" value="Agreeableness" {% if 'Agreeableness' in last_traits %}checked{% endif %}> Agreeableness</label>
-                                <label><input type="checkbox" name="personality[]" value="Neuroticism" {% if 'Neuroticism' in last_traits %}checked{% endif %}> Neuroticism</label>
+                            <div class="premorbid-personality-wrap" style="margin-bottom:12px;">
+                                {% with personality_traits=last_traits %}
+                                {% include 'partials/premorbid_personality_select.html' %}
+                                {% endwith %}
                             </div>
                             <textarea name="personality_note" placeholder="Notes on personality..." rows="2" style="margin-top:10px;">{{ last_pers_note }}</textarea>
                             <button type="button" class="btn" style="margin-top:15px; background-color:#a5dcfe; color:#333;" onclick="document.getElementById('modalPers').style.display='none'">Done</button>
@@ -2041,7 +1984,7 @@
                     <div class="slider-group"><label>Severity during Course</label><div class="slider-wrapper"><input type="range" name="${prefix}_progression[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div>
                     <div class="slider-group"><label>Current Severity</label><div class="slider-wrapper"><input type="range" name="${prefix}_current[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div>
                 </div>`;
-                let inputName = isMSE ? `<input type="hidden" name="mse_category[]" value="${cat}"><input type="text" name="mse_finding_name[]" placeholder="Finding..." style="flex:1.5;">` : `<input type="text" name="${prefix}_name[]" placeholder="Name" style="flex:1.5;">`;
+                let inputName = isMSE ? `<input type="hidden" name="mse_category[]" value="${cat}"><select name="mse_finding_name[]" class="mse-finding-select form-control" data-category="${cat}" style="flex:1.5;"><option value=""></option></select>` : `<input type="text" name="${prefix}_name[]" placeholder="Name" style="flex:1.5;">`;
                 let durationHTML;
                 if (isMSE) {
                     durationHTML = `<input type="hidden" name="mse_onset[]" value=""><input type="hidden" name="mse_progression[]" value=""><input type="hidden" name="mse_duration[]" value="">`;
@@ -2230,7 +2173,10 @@
         }
         function addMedication() { document.getElementById('meds-container').insertAdjacentHTML('beforeend', createRowHTML('med')); syncDurationRequired(); }
         function addSideEffect() { document.getElementById('side-effects-container').insertAdjacentHTML('beforeend', createRowHTML('side_effect')); syncDurationRequired(); }
-        function addMSE(cat) { document.getElementById('mse-' + cat.toLowerCase() + '-container').insertAdjacentHTML('beforeend', createRowHTML('mse', cat)); }
+        function addMSE(cat) {
+            document.getElementById('mse-' + cat.toLowerCase() + '-container').insertAdjacentHTML('beforeend', createRowHTML('mse', cat));
+            if (typeof initMSEDropdowns === 'function') initMSEDropdowns();
+        }
         document.addEventListener('input', function(e) {
             if (!e || !e.target) return;
             var n = e.target.name;
@@ -2892,5 +2838,10 @@ function updateScalesBadge() {
             });
         });
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="{{ url_for('static', filename='js/mse-dropdowns.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/premorbid-personality-select2.js') }}"></script>
 </body>
 </html>

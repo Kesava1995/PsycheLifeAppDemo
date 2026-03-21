@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Doctor Profile - Continuum Psychiatry</title>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
         :root { --primary-blue: #9BD8FB; --primary-dark: #003366; --text-color: #333; --border-color: #e0e0e0; --bg-color: #f4f8fb; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -13,10 +14,10 @@
         .subtitle { color: #666; margin-bottom: 30px; font-size: 0.95rem; }
         .form-group { margin-bottom: 20px; }
         label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; font-size: 0.9rem; }
-        input[type="text"], input[type="email"], input[type="password"], textarea, input[type="file"] {
+        input[type="text"], input[type="email"], input[type="password"], textarea, input[type="file"], select {
             width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; transition: border 0.2s;
         }
-        input:focus, textarea:focus { border-color: var(--primary-dark); outline: none; }
+        input:focus, textarea:focus, select:focus { border-color: var(--primary-dark); outline: none; }
         textarea { resize: vertical; min-height: 80px; }
         .btn { background-color: var(--primary-dark); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: background 0.2s; font-weight: 600; }
         .btn:hover { background-color: #5fa4d6; }
@@ -76,15 +77,61 @@
         }
         body.dark-mode .appointment-template-card h4 { color: #ddd !important; }
         body.dark-mode .appointment-template-card .working-hours-container { color: #fff; }
+
+        .profile-header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 28px; flex-wrap: wrap; }
+        .profile-header-text { flex: 1; min-width: 200px; }
+        .profile-header-text h2 { margin-bottom: 10px; }
+        .profile-photo-block { flex-shrink: 0; text-align: center; max-width: 140px; }
+        .profile-photo-frame {
+            width: 120px; height: 120px; border-radius: 12px; border: 2px dashed #c5d4e0;
+            overflow: hidden; background: #f0f5f9; display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 10px;
+        }
+        .profile-photo-frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .profile-photo-placeholder { color: #8a9aaa; font-size: 0.75rem; text-align: center; padding: 8px; line-height: 1.3; }
+        .profile-photo-placeholder svg { display: block; margin: 0 auto 6px; opacity: 0.6; }
+        .profile-photo-actions { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+        .profile-photo-actions label.btn-link-photo {
+            font-size: 0.85rem; font-weight: 600; color: var(--primary-dark); cursor: pointer; text-decoration: underline;
+        }
+        .profile-photo-actions label.btn-link-photo:hover { color: #5fa4d6; }
+        .profile-photo-remove { font-size: 0.8rem; color: #888; }
+        .profile-photo-remove input { margin-right: 4px; vertical-align: middle; }
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+        body.dark-mode .profile-photo-frame { border-color: #555; background: #2a2a2a; }
+        body.dark-mode .profile-photo-placeholder { color: #aaa; }
+        body.dark-mode .profile-photo-actions label.btn-link-photo { color: #7ab8e0; }
     </style>
 </head>
 <body>
 {% include 'partials/app_chrome.html' %}
     <div class="container">
-        <h2>Doctor Profile & Settings</h2>
-        <p class="subtitle">Manage your details for prescriptions and patient records.</p>
-        
         <form method="POST" enctype="multipart/form-data" action="{{ request.path }}?next={{ request.args.get('next') or request.referrer or url_for('dashboard') }}">
+            <div class="profile-header-row">
+                <div class="profile-header-text">
+                    <h2>Doctor Profile & Settings</h2>
+                    <p class="subtitle">Manage your details for prescriptions and patient records.</p>
+                </div>
+                <div class="profile-photo-block">
+                    <div class="profile-photo-frame" id="profilePhotoFrame">
+                        {% if doctor.profile_photo_mimetype %}
+                        <img src="{{ url_for('serve_profile_picture') }}" alt="Your profile photo" width="120" height="120">
+                        {% else %}
+                        <div class="profile-photo-placeholder">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            <span>Profile photo</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="profile-photo-actions">
+                        <input type="file" id="profile_photo" name="profile_photo" class="sr-only" accept="image/jpeg,image/png,image/gif,image/webp">
+                        <label for="profile_photo" class="btn-link-photo">Upload photo</label>
+                        {% if doctor.profile_photo_mimetype %}
+                        <label class="profile-photo-remove"><input type="checkbox" name="remove_profile_photo" value="1"> Remove photo</label>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
             <div class="form-group">
                 <label for="full_name">Full Name (as on Prescription)</label>
                 <input type="text" id="full_name" name="full_name" value="{{ doctor.full_name or '' }}" placeholder="Dr. First Last">
@@ -93,6 +140,20 @@
             <div class="form-group">
                 <label for="qualification">Qualification (Optional - for future use)</label>
                 <input type="text" id="qualification" name="qualification" value="" placeholder="MBBS, MD (Psychiatry)">
+            </div>
+
+            <div class="form-group">
+                <label for="designation">Designation</label>
+                <select id="designation" name="designation" class="profile-designation-select2" data-placeholder="Select or type designation...">
+                    <option value=""></option>
+                    {% for label in designation_choices %}
+                    <option value="{{ label }}" {% if doctor.designation == label %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                    {% if doctor.designation and doctor.designation not in designation_choices %}
+                    <option value="{{ doctor.designation }}" selected>{{ doctor.designation }}</option>
+                    {% endif %}
+                </select>
+                <div class="file-info">Search the list or type your own if your designation is not listed.</div>
             </div>
 
             <div class="form-group">
@@ -269,6 +330,16 @@
             }
             var helpBtn = document.getElementById('smtp-help-btn');
             if (helpBtn) helpBtn.addEventListener('click', openSmtpHelp);
+            var profileInput = document.getElementById('profile_photo');
+            var profileFrame = document.getElementById('profilePhotoFrame');
+            if (profileInput && profileFrame) {
+                profileInput.addEventListener('change', function() {
+                    var f = profileInput.files && profileInput.files[0];
+                    if (!f || !f.type.match(/^image\//)) return;
+                    var url = URL.createObjectURL(f);
+                    profileFrame.innerHTML = '<img src="' + url + '" alt="Preview" width="120" height="120" style="width:100%;height:100%;object-fit:cover;display:block">';
+                });
+            }
         });
         var smtpHelpContent = {
             gmail: {
@@ -324,5 +395,8 @@
             document.getElementById('smtp-help-overlay').classList.remove('show');
         }
     </script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="{{ url_for('static', filename='js/profile-designation-select2.js') }}"></script>
 </body>
 </html>

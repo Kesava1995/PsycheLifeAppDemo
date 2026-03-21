@@ -40,7 +40,10 @@ def migrate():
                 # Ensure previous fields exist too just in case
                 ('full_name', 'TEXT'), ('clinic_name', 'TEXT'),
                 ('kmc_code', 'TEXT'), ('address_text', 'TEXT'),
-                ('social_handle', 'TEXT'), ('signature_filename', 'TEXT')
+                ('social_handle', 'TEXT'), ('signature_filename', 'TEXT'),
+                ('profile_photo', 'BLOB'),
+                ('profile_photo_mimetype', 'TEXT'),
+                ('designation', 'TEXT'),
             ]
             for col, dtype in doctor_cols:
                 if not column_exists(cursor, 'doctors', col):

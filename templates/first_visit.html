@@ -288,7 +288,7 @@
             border-top: 1px dashed var(--primary-dark) !important;
         }
 
-        .med-entry-block .drug-name-wrap { position: relative; flex: 0 0 auto; width: 100%; min-width: 150px; align-self: stretch; box-sizing: border-box; }
+        .med-entry-block .drug-name-wrap { position: relative; flex: 1 1 auto; width: auto; min-width: 150px; align-self: stretch; box-sizing: border-box; }
         .drug-name-wrap .drug-name-input { width: 100%; box-sizing: border-box; margin: 0; padding: 10px 108px 10px 12px; }
         .taper-btn {
             position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
@@ -299,10 +299,10 @@
         .drug-name-wrap:hover .taper-btn { opacity: 1; pointer-events: auto; }
         body.dark-mode .taper-btn { background: rgba(31, 53, 66, 0.96); border-color: #4a7a99; color: #d4ebf8; }
 
-        .med-entry-block .med-block-inner { display: flex; flex-wrap: nowrap; align-items: stretch; gap: 14px; width: 100%; }
+        .med-entry-block .med-block-inner { display: flex; flex-wrap: nowrap; align-items: flex-start; gap: 14px; width: 100%; }
         .med-ident-col {
-            flex: 0 0 auto; align-self: flex-start; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch;
-            gap: 8px; min-width: 150px; max-width: 220px; padding-right: 0; border-right: none;
+            flex: 0 0 auto; align-self: flex-start; display: flex; flex-direction: row; justify-content: flex-start; align-items: center;
+            gap: 6px; min-width: 0; max-width: none; padding-right: 0; border-right: none; flex-wrap: nowrap;
         }
         .med-schedule-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
         .med-schedule-step { display: flex; flex-direction: column; gap: 4px; }
@@ -941,72 +941,10 @@
                     <div id="modalPers" class="modal" onclick="if(event.target == this) this.style.display='none'">
                         <div class="modal-content">
                             <h3>Premorbid personality traits</h3>
-                            <div class="checklist-group" style="height:260px; overflow-y:auto;">
-                                <div><strong>Temperament</strong></div>
-                                <label><input type="checkbox" name="personality[]" value="Introverted"> Introverted</label>
-                                <label><input type="checkbox" name="personality[]" value="Extroverted"> Extroverted</label>
-                                <label><input type="checkbox" name="personality[]" value="Emotionally reactive"> Emotionally reactive</label>
-                                <label><input type="checkbox" name="personality[]" value="Irritable"> Irritable</label>
-                                <label><input type="checkbox" name="personality[]" value="Anxious"> Anxious</label>
-                                <label><input type="checkbox" name="personality[]" value="Cyclothymic traits"> Cyclothymic traits</label>
-                                <label><input type="checkbox" name="personality[]" value="Hyperthymic traits"> Hyperthymic traits</label>
-
-                                <div style="margin-top:8px;"><strong>Social Style</strong></div>
-                                <label><input type="checkbox" name="personality[]" value="Socially withdrawn"> Socially withdrawn</label>
-                                <label><input type="checkbox" name="personality[]" value="Few close relationships"> Few close relationships</label>
-                                <label><input type="checkbox" name="personality[]" value="Dependent on others"> Dependent on others</label>
-                                <label><input type="checkbox" name="personality[]" value="Interpersonally sensitive"> Interpersonally sensitive</label>
-                                <label><input type="checkbox" name="personality[]" value="Conflict-prone"> Conflict-prone</label>
-
-                                <div style="margin-top:8px;"><strong>Work / Functioning Pattern</strong></div>
-                                <label><input type="checkbox" name="personality[]" value="Highly driven / Overachiever"> Highly driven / Overachiever</label>
-                                <label><input type="checkbox" name="personality[]" value="Perfectionistic"> Perfectionistic</label>
-                                <label><input type="checkbox" name="personality[]" value="Procrastinating"> Procrastinating</label>
-                                <label><input type="checkbox" name="personality[]" value="Poor initiative"> Poor initiative</label>
-                                <label><input type="checkbox" name="personality[]" value="Rigid / black-and-white thinking"> Rigid / black-and-white thinking</label>
-
-                                <div style="margin-top:8px;"><strong>Emotional Regulation Style</strong></div>
-                                <label><input type="checkbox" name="personality[]" value="Avoidant coping"> Avoidant coping</label>
-                                <label><input type="checkbox" name="personality[]" value="Ruminative"> Ruminative</label>
-                                <label><input type="checkbox" name="personality[]" value="Emotionally expressive"> Emotionally expressive</label>
-                                <label><input type="checkbox" name="personality[]" value="Emotionally inhibited"> Emotionally inhibited</label>
-                                <label><input type="checkbox" name="personality[]" value="Difficulty handling criticism"> Difficulty handling criticism</label>
-                                <label><input type="checkbox" name="personality[]" value="Poor stress tolerance"> Poor stress tolerance</label>
-
-                                <div style="margin-top:8px;"><strong>Impulse / Behavioral Regulation</strong></div>
-                                <label><input type="checkbox" name="personality[]" value="Impulsive"> Impulsive</label>
-                                <label><input type="checkbox" name="personality[]" value="Risk-taking"> Risk-taking</label>
-                                <label><input type="checkbox" name="personality[]" value="Sensation-seeking"> Sensation-seeking</label>
-                                <label><input type="checkbox" name="personality[]" value="Poor frustration tolerance"> Poor frustration tolerance</label>
-                                <label><input type="checkbox" name="personality[]" value="Aggressive tendencies"> Aggressive tendencies</label>
-
-                                <div style="margin-top:8px;"><strong>Cluster A-like Traits</strong></div>
-                                <label><input type="checkbox" name="personality[]" value="Suspicious / mistrustful style"> Suspicious / mistrustful style</label>
-                                <label><input type="checkbox" name="personality[]" value="Social withdrawal / detachment"> Social withdrawal / detachment</label>
-                                <label><input type="checkbox" name="personality[]" value="Few close relationships (Cluster A-like)"> Few close relationships</label>
-                                <label><input type="checkbox" name="personality[]" value="Odd or eccentric thinking style"> Odd or eccentric thinking style</label>
-
-                                <div style="margin-top:8px;"><strong>Cluster B-like Traits</strong></div>
-                                <label><input type="checkbox" name="personality[]" value="Impulsivity"> Impulsivity</label>
-                                <label><input type="checkbox" name="personality[]" value="Emotional instability"> Emotional instability</label>
-                                <label><input type="checkbox" name="personality[]" value="Poor frustration tolerance (Cluster B-like)"> Poor frustration tolerance</label>
-                                <label><input type="checkbox" name="personality[]" value="Aggressive tendencies (Cluster B-like)"> Aggressive tendencies</label>
-                                <label><input type="checkbox" name="personality[]" value="Attention-seeking / dramatic interpersonal style"> Attention-seeking / dramatic interpersonal style</label>
-                                <label><input type="checkbox" name="personality[]" value="Risk-taking behavior"> Risk-taking behavior</label>
-
-                                <div style="margin-top:8px;"><strong>Cluster C-like Traits</strong></div>
-                                <label><input type="checkbox" name="personality[]" value="Excessive dependency in relationships"> Excessive dependency in relationships</label>
-                                <label><input type="checkbox" name="personality[]" value="Avoidant interpersonal style"> Avoidant interpersonal style</label>
-                                <label><input type="checkbox" name="personality[]" value="Perfectionism / overcontrol"> Perfectionism / overcontrol</label>
-                                <label><input type="checkbox" name="personality[]" value="Interpersonal hypersensitivity"> Interpersonal hypersensitivity</label>
-                                <label><input type="checkbox" name="personality[]" value="High anxiety-proneness"> High anxiety-proneness</label>
-
-                                <div style="margin-top:8px;"><strong>OCEAN Model Traits</strong></div>
-                                <label><input type="checkbox" name="personality[]" value="Openness"> Openness</label>
-                                <label><input type="checkbox" name="personality[]" value="Conscientiousness"> Conscientiousness</label>
-                                <label><input type="checkbox" name="personality[]" value="Extraversion"> Extraversion</label>
-                                <label><input type="checkbox" name="personality[]" value="Agreeableness"> Agreeableness</label>
-                                <label><input type="checkbox" name="personality[]" value="Neuroticism"> Neuroticism</label>
+                            <div class="premorbid-personality-wrap" style="margin-bottom:12px;">
+                                {% with personality_traits=[] %}
+                                {% include 'partials/premorbid_personality_select.html' %}
+                                {% endwith %}
                             </div>
                             <textarea name="personality_note" placeholder="History Notes on personality..." rows="2" style="margin-top:10px;"></textarea>
                             <button type="button" class="btn" style="margin-top:15px; background-color:#a5dcfe; color:#333;" onclick="document.getElementById('modalPers').style.display='none'">Done</button>
@@ -2015,8 +1953,8 @@
                     <div class="slider-group"><label>Current Severity</label><div class="slider-wrapper"><input type="range" name="${prefix}_current[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div>
                 </div>`;
                 
-                let inputName = isMSE ? 
-                    `<input type="hidden" name="mse_category[]" value="${cat}"><input type="text" name="mse_finding_name[]" placeholder="Finding..." style="flex:1.5;">` :
+                let inputName = isMSE ?
+                    `<input type="hidden" name="mse_category[]" value="${cat}"><select name="mse_finding_name[]" class="mse-finding-select form-control" data-category="${cat}" style="flex:1.5;"><option value=""></option></select>` :
                     `<input type="text" name="${prefix}_name[]" placeholder="Name" style="flex:1.5;">`;
 
                 // MSE: no duration (cross-sectional); backend still expects mse_onset[], mse_progression[], mse_duration[] per row
@@ -2121,9 +2059,10 @@
         }
         function addMedication() { document.getElementById('meds-container').insertAdjacentHTML('beforeend', createRowHTML('med')); syncDurationRequired(); }
         function addSideEffect() { document.getElementById('side-effects-container').insertAdjacentHTML('beforeend', createRowHTML('side_effect')); syncDurationRequired(); }
-        function addMSE(cat) { 
+        function addMSE(cat) {
             const containerId = 'mse-' + cat.toLowerCase() + '-container';
-            document.getElementById(containerId).insertAdjacentHTML('beforeend', createRowHTML('mse', cat)); 
+            document.getElementById(containerId).insertAdjacentHTML('beforeend', createRowHTML('mse', cat));
+            if (typeof initMSEDropdowns === 'function') initMSEDropdowns();
         }
         document.addEventListener('input', function(e) {
             if (!e || !e.target) return;
@@ -2804,5 +2743,10 @@ function updateScalesBadge() {
             });
         });
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="{{ url_for('static', filename='js/mse-dropdowns.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/premorbid-personality-select2.js') }}"></script>
 </body>
 </html>

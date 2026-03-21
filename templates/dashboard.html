@@ -41,12 +41,13 @@
     * { box-sizing: border-box; }
     body { margin: 0; font-family: Arial, sans-serif; background-color: #f5f5f5; overflow-x: hidden; transition: 0.3s; }
 
-    .topbar { position: fixed; width: 100%; top: 0; left: 0; z-index: 3000; height: 60px; background: white; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .topbar { position: fixed; width: 100%; top: 0; left: 0; z-index: 3000; height: 60px; background: white; padding: 0 16px 0 20px; display: flex; align-items: center; gap: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .topbar-start { display: flex; align-items: center; gap: 10px 14px; flex: 1; min-width: 0; }
+    .topbar-end { display: flex; align-items: center; gap: 10px 12px; margin-left: auto; flex-shrink: 0; }
     .top-left { display: flex; align-items: center; gap: 15px; }
     .logo { height: 40px; }
     .hamburger { font-size: 24px; cursor: pointer; padding: 5px; }
-    .top-right { display: flex; align-items: center; gap: 16px; }
-    .top-search-wrap { position: relative; display: flex; align-items: center; }
+    .top-search-wrap { position: relative; display: flex; align-items: center; flex: 0 1 220px; min-width: 120px; max-width: 260px; }
     .top-search-icon { position: absolute; left: 12px; pointer-events: none; color: #888; }
     .top-search { padding: 8px 12px 8px 38px; width: 220px; border-radius: 20px; border: 1px solid #e0e0e0; background: #fafafa; font-size: 14px; transition: border-color 0.2s, background 0.2s; }
     .top-search:focus { outline: none; border-color: #2c7be5; background: #fff; }
@@ -101,7 +102,7 @@
     .appt-age-sex { font-size: 12px; color: #666; margin-top: 2px; }
     .available-slot { background: #e6f7ff; color: #0c4a6e; font-weight: 600; }
 
-    .side-menu { position: fixed; left: -260px; top: 60px; width: 260px; height: calc(100vh - 60px); background: white; border-right: 1px solid #eaeaea; box-shadow: 2px 0 10px rgba(0,0,0,0.05); padding: 20px; transition: left 0.3s ease; z-index: 2900; display: flex; flex-direction: column; overflow-y: auto; }
+    .side-menu { position: fixed; left: -260px; top: 75px; width: 260px; height: calc(100vh - 75px); background: white; border-right: 1px solid #eaeaea; box-shadow: 2px 0 10px rgba(0,0,0,0.05); padding: 20px; transition: left 0.3s ease; z-index: 2900; display: flex; flex-direction: column; overflow-y: auto; }
     .side-menu.active { left: 0; }
     .side-search input { width: 100%; padding: 10px; margin-bottom: 20px; border-radius: 6px; border: 1px solid #ccc; }
     .menu-item { padding: 12px 10px; cursor: pointer; font-weight: 500; border-radius: 5px; margin-bottom: 5px; }
@@ -110,7 +111,7 @@
     .logout { color: #c0392b; font-weight: bold; }
     .logout:hover { background: #fdeaea; color: #a93226; }
 
-    .overlay { position: fixed; top: 60px; left: 0; width: 100vw; height: calc(100vh - 60px); background: rgba(0,0,0,0.4); opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 2800; }
+    .overlay { position: fixed; top: 75px; left: 0; width: 100vw; height: calc(100vh - 75px); background: rgba(0,0,0,0.4); opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 2800; }
     .overlay.active { opacity: 1; pointer-events: auto; }
 
     .card { background: white; padding: 15px; margin-bottom: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -293,8 +294,25 @@
     /* Topbar sizing and centering */
     .topbar { height: 75px; }
     .container { margin-top: 75px; }
-    .top-center { position: absolute; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: bold; color: #2c3e50; white-space: nowrap; }
-    body.dark-mode .top-center { color: #ffffff; }
+    .topbar-clinic { font-size: 18px; font-weight: 700; color: #1e293b; white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+    body.dark-mode .topbar-clinic { color: #f1f5f9; }
+    .topbar-profile {
+        display: inline-flex; align-items: center; gap: 10px; padding: 6px 8px 6px 12px; border: 1px solid #e2e8f0; border-radius: 10px;
+        background: #fff; text-decoration: none; color: inherit; max-width: 260px; flex-shrink: 0; transition: border-color 0.2s, background 0.2s;
+    }
+    .topbar-profile:hover { border-color: #cbd5e1; background: #f8fafc; }
+    .topbar-profile-text { display: flex; flex-direction: column; align-items: flex-end; text-align: right; min-width: 0; }
+    .topbar-profile-name { font-size: 14px; font-weight: 700; color: #0f172a; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+    .topbar-profile-role { font-size: 12px; color: #64748b; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+    .topbar-profile-avatar { width: 40px; height: 40px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: #e2e8f0; display: flex; align-items: center; justify-content: center; }
+    .topbar-profile-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .topbar-profile-initials { font-size: 13px; font-weight: 700; color: #475569; }
+    body.dark-mode .topbar-profile { background: #1E252E; border-color: #374151; }
+    body.dark-mode .topbar-profile:hover { background: #252d38; border-color: #4b5563; }
+    body.dark-mode .topbar-profile-name { color: #f1f5f9; }
+    body.dark-mode .topbar-profile-role { color: #94a3b8; }
+    body.dark-mode .topbar-profile-avatar { background: #334155; }
+    body.dark-mode .topbar-profile-initials { color: #e2e8f0; }
 
     /* Invisible scrollbar by default, visible on hover (Req 6 & 7) */
     .scrollable-card {
@@ -367,8 +385,8 @@
     .plus-menu-wrap { position: relative; display: inline-block; }
     .plus-menu-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 4px 10px; line-height: 1; color: #2c3e50; }
     /* Top app bar '+' button (light mode): default light shade, hover dark shade (override .plus-menu-btn) */
-    .top-right .plus-menu-wrap .topbar-plus-btn { background: #ccfbf1 !important; color: #0d9488 !important; }
-    .top-right .plus-menu-wrap .topbar-plus-btn:hover { background: #0d9488 !important; color: #fff !important; }
+    .topbar .plus-menu-wrap .topbar-plus-btn { background: #ccfbf1 !important; color: #0d9488 !important; }
+    .topbar .plus-menu-wrap .topbar-plus-btn:hover { background: #0d9488 !important; color: #fff !important; }
     .plus-menu-dropdown { display: none; position: absolute; top: 100%; right: 0; margin-top: 4px; min-width: 200px; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 3100; padding: 6px 0; border: 1px solid #eee; }
     .plus-menu-dropdown.show { display: block; }
     .plus-menu-dropdown a, .plus-menu-dropdown button { display: block; width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px; color: #333; }
@@ -542,7 +560,76 @@
     .btn-lifechart:hover, .btn-followup:hover { background: #e0f0fe; }
     .btn-view-details { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; border: 1px solid #ddd; background: #fafafa; color: #555; text-decoration: none; font-size: 14px; }
     .btn-view-details:hover { background: #f0f0f0; color: #2c7be5; }
+
+    /* Feedback drawer — no dimming overlay (user can read dashboard while typing) */
+    .feedback-drawer {
+        position: fixed; right: 0; top: 75px;
+        height: calc(100vh - 75px); height: calc(100dvh - 75px);
+        /* Pic 2: ~20–25% of viewport; narrower than previous 420px cap */
+        width: min(360px, max(240px, 22vw), 100vw);
+        background: #fff; box-shadow: -4px 0 24px rgba(0,0,0,0.08);
+        z-index: 4100; transform: translateX(105%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex; flex-direction: column; border-left: 1px solid #e8ecf0;
+    }
+    .feedback-drawer.open { transform: translateX(0); }
+    .feedback-drawer-inner { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+    .feedback-drawer-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid #eef1f4; flex-shrink: 0; background: #fafbfc; }
+    .feedback-drawer-title { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 18px; font-weight: 700; color: #111827; letter-spacing: -0.02em; }
+    .feedback-drawer-body { flex: 1; overflow-y: auto; padding: 22px; display: flex; flex-direction: column; gap: 24px; }
+    .feedback-label { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 6px; }
+    .feedback-select, .feedback-textarea, .feedback-input { width: 100%; margin-top: 4px; border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; box-sizing: border-box; }
+    .feedback-textarea { resize: vertical; min-height: 100px; }
+    .feedback-priority-row { display: flex; margin-top: 6px; background: #f3f4f6; padding: 4px; border-radius: 8px; gap: 2px; }
+    .feedback-priority-row button { flex: 1; border: none; background: transparent; padding: 8px 6px; border-radius: 6px; font-size: 12px; cursor: pointer; color: #6b7280; transition: background 0.15s, color 0.15s, box-shadow 0.15s; }
+    .feedback-priority-row button.is-active { background: #fff; font-weight: 700; color: #111827; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+    .feedback-upload-zone { margin-top: 12px; border: 2px dashed #d1d5db; border-radius: 12px; padding: 24px; text-align: center; cursor: pointer; transition: background 0.15s; }
+    .feedback-upload-zone:hover { background: #f9fafb; }
+    .feedback-drawer-footer { padding: 18px 22px; border-top: 1px solid #eef1f4; display: flex; gap: 12px; align-items: center; justify-content: flex-end; flex-shrink: 0; background: #fff; }
+    .feedback-btn-cancel { padding: 10px 16px; border: none; border-radius: 8px; background: transparent; font-size: 14px; cursor: pointer; color: #6b7280; font-weight: 500; margin-right: auto; }
+    .feedback-btn-cancel:hover { color: #111827; background: #f3f4f6; }
+    .feedback-btn-submit { padding: 11px 22px; border: none; border-radius: 8px; background: #0f766e; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; min-width: 140px; box-shadow: 0 1px 2px rgba(15,118,110,0.2); }
+    .feedback-btn-submit:hover { background: #0d9488; }
+    .topbar-feedback-btn {
+        display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px; border: none; border-radius: 999px;
+        background: #0f766e; color: #fff; font-weight: 700; font-size: 14px; cursor: pointer;
+        box-shadow: 0 2px 8px rgba(15, 118, 110, 0.35); transition: background 0.2s, box-shadow 0.2s; font-family: inherit; flex-shrink: 0;
+    }
+    .topbar-feedback-btn:hover { background: #0d9488; box-shadow: 0 4px 12px rgba(15, 118, 110, 0.45); }
+    .topbar-feedback-btn svg { flex-shrink: 0; }
+    body.dark-mode .topbar-feedback-btn { background: #0d9488; }
+    .feedback-upload-box { background: #f3f4f6; border-radius: 12px; padding: 16px; }
+    .feedback-screenshot-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px; }
+    .feedback-screenshot-row .feedback-screenshot-title { margin: 0; font-weight: 600; font-size: 14px; color: #111827; }
+    .feedback-screenshot-row .feedback-screenshot-sub { margin: 4px 0 0; font-size: 12px; color: #6b7280; line-height: 1.35; max-width: min(280px, 100%); }
+    .feedback-switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; cursor: pointer; }
+    .feedback-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .feedback-switch-slider {
+        position: absolute; cursor: pointer; inset: 0; background: #d1d5db; border-radius: 26px; transition: background 0.25s;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
+    }
+    .feedback-switch-slider::before {
+        position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%;
+        transition: transform 0.25s; box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .feedback-switch input:checked + .feedback-switch-slider { background: #0f766e; }
+    .feedback-switch input:checked + .feedback-switch-slider::before { transform: translateX(20px); }
+    .feedback-upload-zone.feedback-upload-disabled { opacity: 0.45; pointer-events: none; }
+    .feedback-hidden { display: none !important; }
+    body.dark-mode .feedback-drawer { background: #1E252E; color: #e5e7eb; border-left-color: #333; }
+    body.dark-mode .feedback-drawer-header { background: #252d38; }
+    body.dark-mode .feedback-drawer-header, body.dark-mode .feedback-drawer-footer { border-color: #333; }
+    body.dark-mode .feedback-drawer-title { color: #f3f4f6; }
+    body.dark-mode .feedback-screenshot-title { color: #f3f4f6; }
+    body.dark-mode .feedback-screenshot-sub { color: #9ca3af; }
+    body.dark-mode .feedback-snapshot-hint { color: #9ca3af !important; }
+    body.dark-mode .feedback-select, body.dark-mode .feedback-textarea, body.dark-mode .feedback-input { background: #2a3440; border-color: #444; color: #fff; }
+    body.dark-mode .feedback-priority-row { background: #2a3440; }
+    body.dark-mode .feedback-priority-row button.is-active { background: #374151; color: #fff; }
+    body.dark-mode .feedback-upload-box { background: #2a3440; }
+    body.dark-mode .feedback-upload-zone { border-color: #555; }
+    body.dark-mode .feedback-upload-zone:hover { background: #333; }
 </style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
 </head>
 <body>
 
@@ -569,35 +656,30 @@
 <div id="overlay" class="overlay" onclick="toggleSidebar()"></div>
 
 <div class="topbar">
-    <div class="top-left">
+    <div class="topbar-start">
         <div class="hamburger" onclick="toggleSidebar()">☰</div>
-        <div style="display:flex; align-items:center; cursor:pointer;" onclick="window.location.href='/'">
+        <div class="top-left" style="display:flex; align-items:center; cursor:pointer;" onclick="window.location.href='/'">
             <img src="{{ url_for('static', filename='logo.png') }}" class="logo" alt="Logo" style="height:45px;">
             <div style="margin-left: 10px; line-height: 1.1;">
                 <div style="font-size: 22px; font-weight: bold; color: #2c7be5; margin-bottom: 2px;">Continuum</div>
                 <div style="font-size: 13px; color: #7ab8e0; letter-spacing: 1px; text-transform: lowercase;">psychiatry</div>
             </div>
         </div>
-    </div>
 
-    <div class="top-center">
-        {% if current_user is defined and current_user.clinic_name %}
-            {{ current_user.clinic_name }}
-        {% elif clinic_name is defined and clinic_name %}
-            {{ clinic_name }}
+        {% if (current_user is defined and current_user.clinic_name) or (clinic_name is defined and clinic_name) %}
+        <div class="topbar-clinic" title="{% if current_user is defined and current_user.clinic_name %}{{ current_user.clinic_name }}{% else %}{{ clinic_name }}{% endif %}">
+            {% if current_user is defined and current_user.clinic_name %}
+                {{ current_user.clinic_name }}
+            {% else %}
+                {{ clinic_name }}
+            {% endif %}
+        </div>
         {% endif %}
-    </div>
 
-    <div class="top-right">
         <div class="top-search-wrap">
             <svg class="top-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
             <input type="text" class="top-search" placeholder="Search patients..." list="patient-list" onchange="handlePatientSearch(this.value)" id="topbar-patient-search">
         </div>
-
-        <button type="button" class="topbar-dark-toggle" id="topbar-dark-toggle" onclick="toggleDarkMode(!document.body.classList.contains('dark-mode'))" title="Toggle Dark Mode" aria-label="Toggle dark mode">
-            <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-            <svg class="icon-sun hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-        </button>
 
         <div class="plus-menu-wrap">
             <button type="button" class="plus-menu-btn topbar-plus-btn" id="topbar-plus-btn" title="Add">+</button>
@@ -606,9 +688,19 @@
                 <a href="{{ url_for('first_visit') }}">New patient Registration</a>
                 <button type="button" onclick="document.getElementById('appointmentModal').style.display='block'; document.getElementById('topbar-plus-menu').classList.remove('show');">Schedule Appointment</button>
                 <button type="button" onclick="document.getElementById('editClinicHoursModal').style.display='block'; document.getElementById('topbar-plus-menu').classList.remove('show');">Edit Clinic Hours</button>
-    </div>
-</div>
+            </div>
+        </div>
 
+        <button type="button" class="topbar-feedback-btn" onclick="toggleFeedbackDrawer()" title="Submit feedback" aria-label="Feedback">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                <line x1="4" y1="22" x2="4" y2="15"/>
+            </svg>
+            Feedback
+        </button>
+    </div>
+
+    <div class="topbar-end">
         <div id="bell-btn" class="notification-wrapper notif-icon-wrapper" title="Notifications">
             <button type="button" class="bell-btn" style="padding: 0; border: none; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                 <svg id="notif-bell" width="22" height="22" viewBox="0 0 448 512" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -623,11 +715,34 @@
                 </table>
             </div>
         </div>
+
+        <button type="button" class="topbar-dark-toggle" id="topbar-dark-toggle" onclick="toggleDarkMode(!document.body.classList.contains('dark-mode'))" title="Toggle Dark Mode" aria-label="Toggle dark mode">
+            <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <svg class="icon-sun hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+
+        {% if doctor %}
+        <a href="{{ url_for('profile') }}" class="topbar-profile" title="My profile" id="topbar-profile-link">
+            <div class="topbar-profile-text">
+                <span class="topbar-profile-name">{{ doctor.full_name or doctor.username }}</span>
+                <span class="topbar-profile-role">{{ doctor.designation or 'Clinician' }}</span>
+            </div>
+            <span class="topbar-profile-avatar" aria-hidden="true">
+                {% if doctor.profile_photo_mimetype %}
+                <img src="{{ url_for('serve_profile_picture') }}" alt="" width="40" height="40">
+                {% else %}
+                {% set _pn = (doctor.full_name or doctor.username or 'Dr') %}
+                {% set _pp = _pn.split() %}
+                <span class="topbar-profile-initials">{% if _pp|length >= 2 %}{{ (_pp[0][0] ~ _pp[-1][0])|upper }}{% else %}{{ _pn[:2]|upper }}{% endif %}</span>
+                {% endif %}
+            </span>
+        </a>
+        {% endif %}
     </div>
 </div>
 
 <div class="container">
-    <div class="main-content">
+    <div class="main-content" id="feedbackCaptureTarget" aria-label="Dashboard main content">
         <div class="dashboard-boxes">
             <div class="box box-with-icon" onclick='window.location.href={{ url_for('first_visit')|tojson }}'>
                 <span class="box-icon box-icon-register" aria-hidden="true">
@@ -1925,6 +2040,225 @@ document.addEventListener('click', function(e) {
 });
 
 </script>
+
+<div id="feedbackDrawer" class="feedback-drawer">
+  <form id="feedbackForm" action="{{ url_for('submit_feedback') }}" method="POST" enctype="multipart/form-data" class="feedback-drawer-inner" onsubmit="return handleFeedbackSubmit(event);">
+    <div class="feedback-drawer-header">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="material-symbols-outlined" style="font-size:26px;color:#0f766e;">description</span>
+        <h2 class="feedback-drawer-title">Submit Feedback</h2>
+      </div>
+      <button type="button" onclick="toggleFeedbackDrawer()" style="border:none;background:transparent;cursor:pointer;padding:4px;line-height:1;" aria-label="Close">
+        <span class="material-symbols-outlined" style="color:#6b7280;font-size:24px;">close</span>
+      </button>
+    </div>
+
+    <div class="feedback-drawer-body">
+      <div>
+        <label class="feedback-label" for="issueTypeSelect">Issue Type</label>
+        <select name="issue_type" id="issueTypeSelect" class="feedback-select" onchange="handleIssueTypeChange()">
+          <option value="Bug">Something not working (Bug)</option>
+          <option value="Feature Suggestion">Feature Suggestion</option>
+          <option value="UI / Usability">UI / Usability Issue</option>
+          <option value="Performance">Performance Issue (Slow/Lag)</option>
+          <option value="Data Issue">Data Issue</option>
+          <option value="others">Others</option>
+        </select>
+        <input type="text" name="other_issue_type" id="otherIssueTypeInput" class="feedback-input feedback-hidden" placeholder="Please specify the issue...">
+      </div>
+
+      <div>
+        <span class="feedback-label">Priority</span>
+        <input type="hidden" name="priority" id="priorityInput" value="Minor">
+        <div class="feedback-priority-row" id="priorityButtons">
+          <button type="button" class="is-active" onclick="setPriority('Minor', this)">Minor</button>
+          <button type="button" onclick="setPriority('Important', this)">Important</button>
+          <button type="button" onclick="setPriority('Urgent', this)">Urgent</button>
+        </div>
+      </div>
+
+      <div>
+        <label class="feedback-label" for="feedbackDescription">Describe the Issue</label>
+        <textarea name="description" id="feedbackDescription" class="feedback-textarea" required rows="4" placeholder="Briefly describe what happened or what you'd like to see..."></textarea>
+      </div>
+
+      <div class="feedback-upload-box">
+        <div class="feedback-screenshot-row">
+          <div style="display:flex;align-items:flex-start;gap:8px;">
+            <span class="material-symbols-outlined" style="font-size:22px;color:#0f766e;margin-top:2px;flex-shrink:0;" aria-hidden="true">dashboard</span>
+            <div>
+            <p class="feedback-screenshot-title">Capture Screenshot</p>
+            <p class="feedback-screenshot-sub">Include current screen view for context</p>
+            </div>
+          </div>
+          <label class="feedback-switch" title="Include attachment">
+            <input type="checkbox" id="feedbackScreenshotToggle" checked onchange="toggleFeedbackScreenshot(this)">
+            <span class="feedback-switch-slider" aria-hidden="true"></span>
+          </label>
+        </div>
+        <input type="file" name="screenshot_file" id="screenshotFileInput" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" class="feedback-hidden" onchange="updateFileName(this)">
+        <div id="feedbackUploadSection">
+          <div class="feedback-upload-zone" id="feedbackUploadZone" onclick="if(document.getElementById('feedbackScreenshotToggle').checked) document.getElementById('screenshotFileInput').click()">
+            <span class="material-symbols-outlined" style="font-size:36px;color:#9ca3af;">cloud_upload</span>
+            <p id="fileNameDisplay" style="margin:10px 0 0;font-size:14px;font-weight:600;color:#374151;">Click to upload file</p>
+            <p style="margin:6px 0 0;font-size:12px;color:#6b7280;">PDF, JPG, PNG (Max 5MB)</p>
+            <p class="feedback-snapshot-hint" style="margin:10px 0 0;font-size:11px;color:#9ca3af;line-height:1.35;">Auto snapshot on Send captures only the central dashboard (cards and schedule), not the top bar, menu, calendar, or this panel.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feedback-drawer-footer">
+      <button type="button" class="feedback-btn-cancel" onclick="toggleFeedbackDrawer()">Cancel</button>
+      <button type="submit" class="feedback-btn-submit">Send Feedback</button>
+    </div>
+  </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" crossorigin="anonymous"></script>
+<script>
+  function toggleFeedbackDrawer() {
+    var drawer = document.getElementById('feedbackDrawer');
+    if (!drawer) return;
+    drawer.classList.toggle('open');
+  }
+
+  /** Auto-captures #feedbackCaptureTarget (main dashboard: cards + table; excludes topbar, sidebar, feedback drawer). */
+  function handleFeedbackSubmit(e) {
+    e.preventDefault();
+    var form = e.target;
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return false;
+    }
+    var toggle = document.getElementById('feedbackScreenshotToggle');
+    var fileInput = document.getElementById('screenshotFileInput');
+    var submitBtn = form.querySelector('.feedback-btn-submit');
+    var hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+    var wantShot = toggle && toggle.checked && fileInput && !fileInput.disabled;
+    if (!wantShot || hasFile) {
+      form.submit();
+      return false;
+    }
+    if (typeof html2canvas === 'undefined') {
+      alert('Screenshot helper is still loading. Please wait a second and try again, or attach a file manually.');
+      return false;
+    }
+    var target = document.getElementById('feedbackCaptureTarget');
+    if (!target) {
+      form.submit();
+      return false;
+    }
+    var prevText = submitBtn ? submitBtn.textContent : '';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Capturing…';
+    }
+    var maxBytes = 5 * 1024 * 1024;
+    html2canvas(target, {
+      useCORS: true,
+      scale: Math.min(1.5, window.devicePixelRatio || 1),
+      backgroundColor: '#ffffff',
+      logging: false
+    }).then(function (canvas) {
+      return new Promise(function (resolve, reject) {
+        canvas.toBlob(function (blob) {
+          if (blob && blob.size <= maxBytes) {
+            resolve({ blob: blob, name: 'dashboard-context.png', mime: 'image/png' });
+            return;
+          }
+          canvas.toBlob(function (blob2) {
+            if (blob2 && blob2.size <= maxBytes) {
+              resolve({ blob: blob2, name: 'dashboard-context.jpg', mime: 'image/jpeg' });
+              return;
+            }
+            canvas.toBlob(function (blob3) {
+              if (blob3 && blob3.size <= maxBytes) {
+                resolve({ blob: blob3, name: 'dashboard-context.jpg', mime: 'image/jpeg' });
+              } else {
+                reject(new Error('too large'));
+              }
+            }, 'image/jpeg', 0.65);
+          }, 'image/jpeg', 0.82);
+        }, 'image/png');
+      });
+    }).then(function (result) {
+      var dt = new DataTransfer();
+      dt.items.add(new File([result.blob], result.name, { type: result.mime }));
+      fileInput.disabled = false;
+      fileInput.files = dt.files;
+      updateFileName(fileInput);
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = prevText;
+      }
+      form.submit();
+    }).catch(function (err) {
+      console.error(err);
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = prevText;
+      }
+      alert('Could not capture the dashboard area (max 5MB). Attach a file manually or turn off “Include current screen view”.');
+    });
+    return false;
+  }
+
+  function toggleFeedbackScreenshot(cb) {
+    var section = document.getElementById('feedbackUploadSection');
+    var input = document.getElementById('screenshotFileInput');
+    var zone = document.getElementById('feedbackUploadZone');
+    if (!section || !input || !zone) return;
+    if (cb.checked) {
+      section.classList.remove('feedback-hidden');
+      zone.classList.remove('feedback-upload-disabled');
+      input.disabled = false;
+    } else {
+      section.classList.add('feedback-hidden');
+      input.value = '';
+      input.disabled = true;
+      updateFileName(input);
+    }
+  }
+
+  function handleIssueTypeChange() {
+    var select = document.getElementById('issueTypeSelect');
+    var input = document.getElementById('otherIssueTypeInput');
+    if (!select || !input) return;
+    if (select.value === 'others') {
+      input.classList.remove('feedback-hidden');
+      input.setAttribute('required', 'required');
+    } else {
+      input.classList.add('feedback-hidden');
+      input.removeAttribute('required');
+      input.value = '';
+    }
+  }
+
+  function setPriority(level, btnElement) {
+    var hidden = document.getElementById('priorityInput');
+    if (hidden) hidden.value = level;
+    var row = document.getElementById('priorityButtons');
+    if (!row) return;
+    row.querySelectorAll('button').forEach(function (btn) {
+      btn.classList.remove('is-active');
+    });
+    btnElement.classList.add('is-active');
+  }
+
+  function updateFileName(input) {
+    var display = document.getElementById('fileNameDisplay');
+    if (!display) return;
+    if (input.files && input.files.length > 0) {
+      display.textContent = input.files[0].name;
+      display.style.color = '#0f766e';
+    } else {
+      display.textContent = 'Click to upload file';
+      display.style.color = '';
+    }
+  }
+</script>
+
 <div id="toast-container"></div>
 </body>
 </html>

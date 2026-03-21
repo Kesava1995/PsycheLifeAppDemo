@@ -18,7 +18,10 @@ class Doctor(db.Model):
     address_text = db.Column(db.Text)
     social_handle = db.Column(db.String(100)) # e.g. "@drjohnpsych"
     signature_filename = db.Column(db.String(200)) # Path to uploaded image
-    
+    profile_photo = db.Column(db.LargeBinary, nullable=True)
+    profile_photo_mimetype = db.Column(db.String(80), nullable=True)
+    designation = db.Column(db.String(255), nullable=True)
+
     # Phase 1: New Contact Details
     phone = db.Column(db.String(20))
     email = db.Column(db.String(120))
@@ -368,3 +371,20 @@ class ScheduleTemplate(db.Model):
 
     # Stored as JSON dict: {"New Registration": 45, "Extended Follow-up": 30, "Follow-up": 15, ...}
     slot_durations = db.Column(db.JSON, nullable=False)
+
+
+class Feedback(db.Model):
+    __tablename__ = 'feedback'
+
+    id = db.Column(db.Integer, primary_key=True)
+    doctor_id = db.Column(db.Integer, db.ForeignKey('doctors.id'), nullable=False)
+    issue_type = db.Column(db.String(100), nullable=False)
+    other_issue_type = db.Column(db.String(255), nullable=True)
+    priority = db.Column(db.String(20), nullable=False, default='Minor')
+    description = db.Column(db.Text, nullable=False)
+    screenshot = db.Column(db.LargeBinary, nullable=True)
+    screenshot_name = db.Column(db.String(255), nullable=True)
+    screenshot_mimetype = db.Column(db.String(80), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    doctor = db.relationship('Doctor', backref=db.backref('feedbacks', lazy=True))

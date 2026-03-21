@@ -1,9 +1,4 @@
 (function () {
-  const catalogState = {
-    promise: null,
-    items: [],
-  };
-
   const criteriaDB = {
     depression: {
       "DSM-5": "DSM-5 Criteria for Major Depressive Disorder:\n\nA. Five (or more) symptoms during the same 2-week period; at least one is depressed mood or loss of interest/pleasure.\n1. Depressed mood most of the day.\n2. Markedly diminished interest or pleasure.\n3. Weight or appetite change.\n4. Insomnia or hypersomnia.\n5. Psychomotor agitation or retardation.\n6. Fatigue or loss of energy.\n7. Worthlessness or excessive guilt.\n8. Poor concentration or indecisiveness.\n9. Recurrent thoughts of death or suicide.\n\nB. Symptoms cause clinically significant distress or impairment.",
@@ -72,7 +67,7 @@
 
     return {
       label,
-      code: "",
+      code,
       system: String(item.system || "Custom").trim() || "Custom"
     };
   }
@@ -133,59 +128,35 @@
     return s;
   }
 
-  async function loadCatalog() {
-    if (!catalogState.promise) {
-      catalogState.promise = fetch("/static/data/diagnosis_catalog.json")
-        .then(response => response.json())
-        .then(items => {
-          catalogState.items = Array.isArray(items)
-            ? items
-              .map(entry => {
-                const label = String(entry.label || "").trim();
-                if (!label) return null;
-                return {
-                  label,
-                  code: String(entry.code || "").trim(),
-                  system: String(entry.system || "Custom").trim() || "Custom"
-                };
-              })
-              .filter(Boolean)
-            : [];
-          return catalogState.items;
-        })
-        .catch(() => {
-          catalogState.items = [];
-          return catalogState.items;
-        });
-    }
-    return catalogState.promise;
-  }
-
   function serializeItems(items) {
     return JSON.stringify(items.map(item => ({
       label: item.label,
-      code: "",
+      code: item.code || "",
       system: item.system || "Custom"
     })));
   }
 
-  function filterCatalogItems(items, query) {
-    const trimmed = (query || "").trim().toLowerCase();
-    if (!trimmed) return items.slice(0, 12);
-    return items
-      .filter(item => {
-        const haystack = [item.label, item.code, item.system].join(" ").toLowerCase();
-        return haystack.includes(trimmed);
-      })
-      .slice(0, 12);
+  function ensureDiagnosisPickerStyles() {
+    if (document.getElementById("diagnosis-picker-extras-styles")) return;
+    const style = document.createElement("style");
+    style.id = "diagnosis-picker-extras-styles";
+    style.textContent = `
+      .diagnosis-picker-shell .diagnosis-option { align-items: center; }
+      .diagnosis-option-code { font-weight: 600; color: #446688; font-size: 13px; min-width: 3.25em; flex-shrink: 0; }
+      .diagnosis-picker-shell .diagnosis-option-label { flex: 1; min-width: 0; }
+    `;
+    document.head.appendChild(style);
   }
 
   function renderPicker(picker) {
     picker.chips.innerHTML = picker.items.map((item, index) => {
       const sys = escapeHtml(item.system || "Custom");
+      const chipLabel = item.code && item.label
+        ? `${escapeHtml(item.code)} — ${escapeHtml(item.label)}`
+        : escapeHtml(item.label);
       return (
         `<span class="diagnosis-chip" title="${sys}">
-        <span class="diagnosis-chip-label">${escapeHtml(item.label)}</span>
+        <span class="diagnosis-chip-label">${chipLabel}</span>
         <button type="button" class="diagnosis-chip-remove" data-index="${index}" aria-label="Remove diagnosis">×</button>
       </span>`
       );
@@ -196,21 +167,73 @@
   }
 
   function renderSuggestions(picker, query) {
-    const matches = filterCatalogItems(catalogState.items, query);
-    if (!matches.length) {
-      picker.dropdown.innerHTML = `<div class="diagnosis-option diagnosis-option-empty">No matching diagnosis found. Press Enter to add "${escapeHtml(query.trim())}"</div>`;
-      picker.dropdown.style.display = query.trim() ? "block" : "none";
+    const trimmed = (query || "").trim();
+    if (trimmed.length < 2) {
+      picker.dropdown.innerHTML = "";
+      picker.dropdown.style.display = "none";
+      picker.visibleOptions = [];
       return;
     }
 
-    picker.dropdown.innerHTML = matches.map((item, index) => (
-      `<button type="button" class="diagnosis-option" data-index="${index}">
-        <span class="diagnosis-option-label">${escapeHtml(item.label)}</span>
-        <span class="diagnosis-option-system">${escapeHtml(item.system || "Custom")}</span>
-      </button>`
-    )).join("");
-    picker.visibleOptions = matches;
+    picker._searchSeq = (picker._searchSeq || 0) + 1;
+    const seq = picker._searchSeq;
     picker.dropdown.style.display = "block";
+    picker.dropdown.innerHTML = `<div class="diagnosis-option diagnosis-option-empty">Searching ICD-11…</div>`;
+
+    fetch(`/api/search_icd11?q=${encodeURIComponent(trimmed)}`)
+      .then(response => response.json())
+      .then(data => {
+        const results = Array.isArray(data) ? data : [];
+        if (seq !== picker._searchSeq) return;
+        if (!results.length) {
+          picker.visibleOptions = [];
+          picker.dropdown.innerHTML = `<div class="diagnosis-option diagnosis-option-empty">No matching diagnosis found. Press Enter to add "${escapeHtml(trimmed)}"</div>`;
+          picker.dropdown.style.display = "block";
+          return;
+        }
+
+        const matches = results
+          .map(r => ({
+            label: String(r.name || "").trim(),
+            code: String(r.code || "").trim(),
+            system: String(r.system || "ICD-11").trim() || "ICD-11"
+          }))
+          .filter(m => m.label);
+
+        picker.visibleOptions = matches;
+        picker.dropdown.innerHTML = matches.map((item, index) => {
+          const codeHtml = item.code
+            ? `<span class="diagnosis-option-code">${escapeHtml(item.code)}</span>`
+            : "";
+          return (
+            `<button type="button" class="diagnosis-option" data-index="${index}">
+        ${codeHtml}
+        <span class="diagnosis-option-label">${escapeHtml(item.label)}</span>
+        <span class="diagnosis-option-system">${escapeHtml(item.system || "ICD-11")}</span>
+      </button>`
+          );
+        }).join("");
+        picker.dropdown.style.display = "block";
+      })
+      .catch(() => {
+        if (seq !== picker._searchSeq) return;
+        picker.visibleOptions = [];
+        picker.dropdown.innerHTML = `<div class="diagnosis-option diagnosis-option-empty">No matching diagnosis found. Press Enter to add "${escapeHtml(trimmed)}"</div>`;
+        picker.dropdown.style.display = "block";
+      });
+  }
+
+  function scheduleSuggestions(picker, query) {
+    const trimmed = (query || "").trim();
+    if (trimmed.length < 2) {
+      if (picker._suggestTimer) clearTimeout(picker._suggestTimer);
+      picker.dropdown.innerHTML = "";
+      picker.dropdown.style.display = "none";
+      picker.visibleOptions = [];
+      return;
+    }
+    if (picker._suggestTimer) clearTimeout(picker._suggestTimer);
+    picker._suggestTimer = setTimeout(() => renderSuggestions(picker, query), 300);
   }
 
   function hideSuggestions(picker) {
@@ -221,7 +244,11 @@
   function addItem(picker, item) {
     const normalized = normalizeItem(item);
     if (!normalized) return;
-    picker.items = dedupeItems(picker.items.concat([normalized]));
+    if (picker.key === "provisional") {
+      picker.items = [normalized];
+    } else {
+      picker.items = dedupeItems(picker.items.concat([normalized]));
+    }
     renderPicker(picker);
     picker.input.value = "";
     hideSuggestions(picker);
@@ -259,6 +286,11 @@
       </div>
     `;
 
+    let initialItems = normalizeStoredItems(config.initialItems || hiddenInput.value);
+    if (config.key === "provisional" && initialItems.length > 1) {
+      initialItems = [initialItems[0]];
+    }
+
     const picker = {
       key: config.key,
       root,
@@ -266,15 +298,16 @@
       chips: root.querySelector(".diagnosis-chip-list"),
       input: root.querySelector(".diagnosis-picker-input"),
       dropdown: root.querySelector(".diagnosis-options"),
-      items: dedupeItems(normalizeStoredItems(config.initialItems || hiddenInput.value)),
+      items: dedupeItems(initialItems),
       visibleOptions: []
     };
 
     pickers[config.key] = picker;
     renderPicker(picker);
+    ensureDiagnosisPickerStyles();
 
-    picker.input.addEventListener("focus", () => renderSuggestions(picker, picker.input.value));
-    picker.input.addEventListener("input", () => renderSuggestions(picker, picker.input.value));
+    picker.input.addEventListener("focus", () => scheduleSuggestions(picker, picker.input.value));
+    picker.input.addEventListener("input", () => scheduleSuggestions(picker, picker.input.value));
     picker.input.addEventListener("keydown", event => {
       if (event.key === "Enter" || event.key === ",") {
         event.preventDefault();
@@ -477,8 +510,7 @@
     }
   }
 
-  window.initializeDiagnosisPickers = async function initializeDiagnosisPickers(config) {
-    await loadCatalog();
+  window.initializeDiagnosisPickers = function initializeDiagnosisPickers(config) {
     initPicker(config.provisional);
     initPicker(config.differential);
     document.dispatchEvent(new CustomEvent("diagnosis-picker:initialized"));
