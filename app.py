@@ -492,6 +492,21 @@ def from_json(value):
     except (TypeError, ValueError):
         return []
 
+
+@app.template_filter('abstinent_for_text')
+def abstinent_for_text(since_date, visit_date):
+    """Approximate duration text (e.g. '5 months') from calendar abstinent_since and visit date."""
+    if not since_date or not visit_date:
+        return ''
+    try:
+        td = visit_date - since_date
+        if td.days <= 0:
+            return ''
+        return format_timedelta_as_duration(td)
+    except (TypeError, ValueError):
+        return ''
+
+
 # Hardcoded credentials (for demo - replace with database lookup in production)
 VALID_CREDENTIALS = {
     'admin@hospital.com': 'doctor'
@@ -1888,7 +1903,7 @@ def process_visit_form_data(visit, form_data):
     visit.type_of_next_follow_up = t if t else None
 
     visit.note = form_data.get('visit_note', '')
-    
+
     # Helper for Duration (Single Field Now)
     def get_duration(index, prefix):
         # Prefer 'symptom_duration[]' / 'side_effect_duration[]' etc.; fallback to 'duration_text[]' for compatibility
@@ -1985,13 +2000,25 @@ def process_visit_form_data(visit, form_data):
     else:
         visit.ace_data = None
 
-    # 1e2. Family history of psychiatric illness – JSON {"present": bool, "items": [...]}
+    # 1e2. Family history of psychiatric illness
+    # Schema: {"present": bool, "items": [{"name": str, "degree": "1st"|"2nd"|"3rd"}], "consanguinity": "Yes"|"No"|"Unknown"}
     fh_json = form_data.get('family_history_psychiatric', '')
     if fh_json:
         try:
             data = json.loads(fh_json)
             if isinstance(data, dict):
-                visit.family_history_psychiatric = fh_json
+                # Normalise: if items are plain strings (legacy), convert to dicts
+                if isinstance(data.get('items'), list):
+                    normalised = []
+                    for item in data['items']:
+                        if isinstance(item, str):
+                            normalised.append({'name': item, 'degree': ''})
+                        elif isinstance(item, dict) and item.get('name'):
+                            normalised.append({'name': item['name'], 'degree': item.get('degree', '')})
+                    data['items'] = normalised
+                if 'consanguinity' not in data:
+                    data['consanguinity'] = ''
+                visit.family_history_psychiatric = json.dumps(data)
             else:
                 visit.family_history_psychiatric = None
         except (json.JSONDecodeError, TypeError):
@@ -2234,6 +2261,9 @@ def process_visit_form_data(visit, form_data):
     sub_longest_abs_unit = form_data.getlist('substance_longest_abstinence_unit[]')
     sub_abstinent_since_month = form_data.getlist('substance_abstinent_since_month[]')
     sub_abstinent_since_year = form_data.getlist('substance_abstinent_since_year[]')
+    sub_abstinent_since_text = form_data.getlist('substance_abstinent_since_text[]')
+    sub_last_use_ago = form_data.getlist('substance_last_use[]')
+    sub_abstinence_duration = form_data.getlist('substance_abstinence_duration[]')
     SubstanceUseEntry.query.filter_by(visit_id=visit.id).delete()
     visit_date = visit.date
     for i, name in enumerate(sub_names):
@@ -2281,7 +2311,7 @@ def process_visit_form_data(visit, form_data):
                 elif raw_has_abs.lower() == 'no':
                     has_abstinence_history = False
 
-            # Normalize longest abstinence to months
+            # Legacy longest abstinence (optional; UI may omit)
             longest_abs_value = _get_int(sub_longest_abs_value, i) or 0
             longest_abs_unit = (_get_str(sub_longest_abs_unit, i) or '').lower()
             longest_abs_months = None
@@ -2291,22 +2321,40 @@ def process_visit_form_data(visit, form_data):
                 else:
                     longest_abs_months = longest_abs_value
 
-            # Abstinent since: interpret Month + Year as first of month
+            last_use_ago = _get_str(sub_last_use_ago, i)
+            abstinence_duration = _get_str(sub_abstinence_duration, i)
+
+            # Abstinent since: typed duration (e.g. "5 months") from visit date, or legacy month/year
             abstinent_since = None
-            month_str = _get_str(sub_abstinent_since_month, i)
-            year_str = _get_str(sub_abstinent_since_year, i)
-            if month_str and year_str:
-                try:
-                    y = int(year_str)
-                    m = int(month_str)
-                    abstinent_since = date(y, m, 1)
-                except ValueError:
-                    abstinent_since = None
+            abs_text = _get_str(sub_abstinent_since_text, i)
+            if abs_text:
+                delta = parse_duration(abs_text)
+                if delta and visit_date:
+                    try:
+                        abstinent_since = visit_date - delta
+                    except (TypeError, OverflowError):
+                        abstinent_since = None
+            if abstinent_since is None:
+                month_str = _get_str(sub_abstinent_since_month, i)
+                year_str = _get_str(sub_abstinent_since_year, i)
+                if month_str and year_str:
+                    try:
+                        y = int(year_str)
+                        m = int(month_str)
+                        abstinent_since = date(y, m, 1)
+                    except ValueError:
+                        abstinent_since = None
+
+            pattern_val = _get_str(sub_patterns, i)
+            if current_status in ('Currently Abstinent', 'Past Use'):
+                pattern_val = None
+            elif not pattern_val:
+                pattern_val = 'Occasional'
 
             db.session.add(SubstanceUseEntry(
                 visit_id=visit.id,
                 substance_name=name,
-                pattern=sub_patterns[i] if i < len(sub_patterns) else 'Occasional',
+                pattern=pattern_val,
                 start_date=start_date,
                 end_date=end_date,
                 note=note_str,
@@ -2314,7 +2362,9 @@ def process_visit_form_data(visit, form_data):
                 current_status=current_status,
                 has_abstinence_history=has_abstinence_history,
                 longest_abstinence_months=longest_abs_months,
-                abstinent_since=abstinent_since
+                abstinent_since=abstinent_since,
+                last_use_ago=last_use_ago,
+                abstinence_duration=abstinence_duration,
             ))
 
 

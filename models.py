@@ -302,8 +302,11 @@ class SubstanceUseEntry(db.Model):
     age_at_first_use = db.Column(db.Integer, nullable=True)
     current_status = db.Column(db.String(50), nullable=True)  # 'Ongoing Use', 'Currently Abstinent', 'Past Use'
     has_abstinence_history = db.Column(db.Boolean, nullable=True)
-    longest_abstinence_months = db.Column(db.Integer, nullable=True)  # normalized months for easy graphing
+    longest_abstinence_months = db.Column(db.Integer, nullable=True)  # legacy / graphing; optional
     abstinent_since = db.Column(db.Date, nullable=True)  # interpreted from Month + Year
+    # Ongoing use: dropdown capture (e.g. "3 Months", "1 Year")
+    last_use_ago = db.Column(db.String(80), nullable=True)
+    abstinence_duration = db.Column(db.String(80), nullable=True)
 
 
 class ScaleAssessment(db.Model):

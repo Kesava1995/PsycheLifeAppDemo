@@ -211,7 +211,9 @@ def migrate():
                 ('current_status', 'TEXT'),
                 ('has_abstinence_history', 'BOOLEAN'),
                 ('longest_abstinence_months', 'INTEGER'),
-                ('abstinent_since', 'DATE')
+                ('abstinent_since', 'DATE'),
+                ('last_use_ago', 'TEXT'),
+                ('abstinence_duration', 'TEXT'),
             ]
             for col, dtype in substance_cols:
                 if not column_exists(cursor, 'substance_use_entries', col):

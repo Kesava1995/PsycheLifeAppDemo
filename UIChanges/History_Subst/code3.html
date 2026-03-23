@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+
+<html lang="en"><head></head><body class="bg-surface text-on-surface font-body selection:bg-primary-fixed selection:text-on-primary-fixed-variant min-h-screen">```html
+
+
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Clinical Clarity - Clinical Documentation</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-variant": "#dfe3e3",
+              "outline-variant": "#bec8ca",
+              "on-error": "#ffffff",
+              "on-primary-container": "#95e1ef",
+              "surface-container-highest": "#dfe3e3",
+              "on-secondary": "#ffffff",
+              "secondary": "#566060",
+              "secondary-container": "#dae5e4",
+              "on-secondary-container": "#5c6666",
+              "on-tertiary": "#ffffff",
+              "tertiary-fixed": "#ffdad6",
+              "on-primary-fixed": "#001f24",
+              "error": "#ba1a1a",
+              "surface": "#f6fafa",
+              "surface-container-lowest": "#ffffff",
+              "on-secondary-fixed-variant": "#3f4949",
+              "secondary-fixed": "#dae5e4",
+              "inverse-surface": "#2c3132",
+              "on-tertiary-fixed": "#410002",
+              "on-primary": "#ffffff",
+              "on-primary-fixed-variant": "#004f58",
+              "tertiary-fixed-dim": "#ffb4ac",
+              "inverse-on-surface": "#edf1f1",
+              "primary": "#004c56",
+              "surface-tint": "#066874",
+              "on-background": "#181c1d",
+              "inverse-primary": "#87d2e0",
+              "surface-container": "#eaefef",
+              "outline": "#6f797b",
+              "tertiary-container": "#b8141b",
+              "tertiary": "#8f000d",
+              "surface-container-high": "#e5e9e9",
+              "on-tertiary-fixed-variant": "#93000d",
+              "surface-dim": "#d7dbdb",
+              "primary-fixed-dim": "#87d2e0",
+              "primary-container": "#006672",
+              "primary-fixed": "#a3effc",
+              "error-container": "#ffdad6",
+              "surface-bright": "#f6fafa",
+              "on-tertiary-container": "#ffc9c3",
+              "surface-container-low": "#f0f4f4",
+              "on-secondary-fixed": "#141d1d",
+              "on-surface-variant": "#3f484a",
+              "on-error-container": "#93000a",
+              "background": "#f6fafa",
+              "on-surface": "#181c1d",
+              "secondary-fixed-dim": "#bec8c8"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .ghost-border { border: 1.5px solid rgba(189, 200, 203, 0.5); }
+        .ghost-border-thicker { border: 1.5px solid rgba(189, 200, 203, 0.5); }
+        .focus-ring:focus { outline: none; border-color: #006672; box-shadow: 0 0 0 3px rgba(0, 102, 114, 0.1); }
+        
+        /* Range Slider Styling */
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: #eaefef; border-radius: 3px; }
+        input[type=range]::-webkit-slider-thumb { height: 16px; width: 16px; border-radius: 50%; background: #006672; cursor: pointer; -webkit-appearance: none; margin-top: -5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        /* Modal Transitions */
+        .modal-overlay { transition: opacity 0.2s ease-out; }
+        .modal-content { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease-out; }
+
+        .negative-history-btn-group { display: flex; border-radius: 8px; overflow: hidden; border: 1.5px solid #d2dcdc; }
+        .negative-history-btn { flex: 1; padding: 8px 0; text-align: center; font-family: 'Inter'; font-weight: 500; font-size: 13px; cursor: pointer; border: none; }
+        .negative-history-btn.unknown { background: #006672; color: white; }
+        .negative-history-btn.yes { background: #22c55e; color: white; }
+        .negative-history-btn.no { background: #e4ecec; color: #3f4948; }
+
+        /* MSE Styles */
+        .mse-inner-card-label { position: relative; padding-left: 12px; margin-bottom: 20px; font-family: 'Manrope'; font-weight: 600; font-size: 14px; color: #006672; }
+        .mse-inner-card-label::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #9eefff; border-radius: 2px; }
+        .badge-group-connected { display: flex; border: 1.5px solid rgba(189,200,203,0.5); border-radius: 8px; overflow: hidden; }
+        .badge-group-connected button { flex: 1; padding: 10px; font-size: 12px; font-weight: 600; font-family: 'Inter'; transition: all 0.2s; border-right: 1.5px solid rgba(189,200,203,0.5); }
+        .badge-group-connected button:last-child { border-right: none; }
+        .badge-group-connected button.active { background: #006672; color: white; }
+        .mse-row { display: grid; grid-template-columns: 200px 1fr; align-items: center; gap: 24px; padding: 12px 0; border-bottom: 1px solid rgba(189,200,203,0.2); }
+        .mse-row:last-child { border-bottom: none; }
+
+        /* Conditional Field Transitions */
+        .expand-transition { transition: max-height 0.2s ease, opacity 0.2s ease, margin 0.2s ease; overflow: hidden; }
+    </style>
+<!-- TopNavBar -->
+<header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-sm shadow-teal-900/5 docked full-width top-0 z-50 fixed w-full">
+<div class="flex justify-between items-center px-6 py-3 w-full">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold tracking-tight text-[#006672] dark:text-teal-400 font-headline" style="">Clinical Clarity</span>
+</div>
+<!-- Patient Pill -->
+<div class="bg-surface-container-high px-4 py-1.5 rounded-full flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-primary-container animate-pulse"></div>
+<span class="text-sm font-bold text-primary-container" style="">Patient Context: John Doe, 45M</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 rounded-xl hover:bg-teal-50/50 dark:hover:bg-teal-900/20 transition-colors text-on-surface-variant" style="">
+<span class="material-symbols-outlined" style="">search</span>
+</button>
+<button class="p-2 rounded-xl hover:bg-teal-50/50 dark:hover:bg-teal-900/20 transition-colors text-on-surface-variant" style="">
+<span class="material-symbols-outlined" style="">notifications</span>
+</button>
+<button class="p-2 rounded-xl hover:bg-teal-50/50 dark:hover:bg-teal-900/20 transition-colors text-on-surface-variant" style="">
+<span class="material-symbols-outlined" style="">settings</span>
+</button>
+<button class="p-2 rounded-xl hover:bg-teal-50/50 dark:hover:bg-teal-900/20 transition-colors text-on-surface-variant" style="">
+<span class="material-symbols-outlined" style="">dark_mode</span>
+</button>
+<div class="ml-2 w-8 h-8 rounded-full overflow-hidden bg-surface-container">
+<img alt="Professional clinician profile headshot" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDH1SB9QbDAEbWD2eCJkOLVyaDT2yIwuIRXjESMfXUG36gJ28FYrbTPiRt5_2mWfjs9aJSV7IM88iQaGdVmPVT1gdftzNE945EuGZDE_vkYd95SOHhprta4itd2fTckFYwh7nz3Hv4BN4fl9kgVgix8bpHa4FuTz9rHDPElQ1oBy3kLkfYCLaDsg3kSwRy97joFAaTe8hwYwJXComBzZj4QPaNxf2Iwr1WPJSIWYmp7M6hg-4vmxf5k6TfXOWE0X7QJx1VSOdPAhs0B" style=""/>
+</div>
+</div>
+</div>
+</header>
+<!-- Navigation -->
+<nav class="fixed top-[60px] left-0 w-full z-40 bg-white border-b border-[#bdc8cb]/20 h-12 flex items-center shadow-sm">
+<div class="max-w-[1100px] mx-auto w-full flex gap-1 px-6 overflow-x-auto no-scrollbar">
+<button class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-on-surface-variant hover:bg-surface-container whitespace-nowrap" style="">Demographics</button>
+<button class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-on-surface-variant hover:bg-surface-container whitespace-nowrap" style="">Background</button>
+<button class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-primary-container text-white whitespace-nowrap" style="">Complaints</button>
+<button class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-on-surface-variant hover:bg-surface-container whitespace-nowrap" style="">History</button>
+<button class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-on-surface-variant hover:bg-surface-container whitespace-nowrap" style="">MSE</button>
+<button class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-on-surface-variant hover:bg-surface-container whitespace-nowrap" style="">Safety</button>
+<button class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-on-surface-variant hover:bg-surface-container whitespace-nowrap" style="">Diagnosis</button>
+<button class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-on-surface-variant hover:bg-surface-container whitespace-nowrap" style="">Meds</button>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="pt-[140px] pb-24 px-6 max-w-[1100px] mx-auto">
+<!-- Section Header: Registration -->
+<header class="mb-10 flex items-start gap-4">
+<div class="w-1 h-12 bg-primary-fixed rounded-full self-center"></div>
+<div>
+<h1 class="font-headline text-2xl font-semibold text-on-surface tracking-tight" style="">New Registration</h1>
+<p class="text-on-surface-variant text-sm font-medium mt-1" style="">Socio-demographic details</p>
+</div>
+</header>
+<!-- Demographics Card -->
+<div class="bg-surface-container-lowest rounded-xl p-9 md:px-10 shadow-[0_12px_32px_rgba(24,28,29,0.03)] flex flex-col gap-10 mb-12">
+<!-- Date Row -->
+<div class="flex justify-end items-center gap-3">
+<span class="text-xs font-bold uppercase text-on-surface-variant tracking-widest font-label" style="">Date</span>
+<input class="border-0 border-b border-outline-variant bg-transparent text-sm font-semibold p-1 focus:ring-0 focus:border-primary" type="date" value="2023-10-27"/>
+</div>
+<!-- Group 1: Identity -->
+<div class="grid grid-cols-12 gap-6 items-end">
+<div class="col-span-12 md:col-span-6 flex flex-col gap-2">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1" style="">Patient Name</label>
+<input class="h-[42px] px-4 rounded-xl ghost-border bg-white focus-ring text-sm font-medium" placeholder="Enter full name" type="text"/>
+</div>
+<div class="col-span-6 md:col-span-2 flex flex-col gap-2">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1" style="">Age</label>
+<input class="h-[42px] px-4 rounded-xl ghost-border bg-white focus-ring text-sm font-medium" placeholder="0" type="number"/>
+</div>
+<div class="col-span-6 md:col-span-4 flex flex-col gap-2">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1" style="">Sex</label>
+<div class="flex h-[42px] p-1 rounded-xl ghost-border bg-surface-container-low">
+<button class="flex-1 text-xs font-bold rounded-lg bg-primary text-white shadow-sm" style="">Male</button>
+<button class="flex-1 text-xs font-bold rounded-lg text-on-surface-variant hover:bg-white/50" style="">Female</button>
+<button class="flex-1 text-xs font-bold rounded-lg text-on-surface-variant hover:bg-white/50" style="">Other</button>
+</div>
+</div>
+</div>
+<!-- Group 2: Contact -->
+<div class="p-6 bg-surface-container-low rounded-xl grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="flex flex-col gap-2">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1" style="">Phone Number</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg" style="">call</span>
+<input class="w-full h-[42px] pl-10 pr-4 rounded-xl ghost-border bg-white focus-ring text-sm font-medium" placeholder="+1 (555) 000-0000" type="tel"/>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1" style="">Email Address</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg" style="">mail</span>
+<input class="w-full h-[42px] pl-10 pr-4 rounded-xl ghost-border bg-white focus-ring text-sm font-medium" placeholder="example@clinic.com" type="email"/>
+</div>
+</div>
+</div>
+<!-- Group 3: Address -->
+<div class="flex flex-col gap-2">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1" style="">Residential Address</label>
+<input class="h-[42px] px-4 rounded-xl ghost-border bg-white focus-ring text-sm font-medium" placeholder="Street, City, State, ZIP" type="text"/>
+</div>
+<!-- Group 4: Informant -->
+<div class="p-6 bg-surface-container-low rounded-xl flex flex-col gap-6">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="flex flex-col gap-2">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1" style="">Attender Name</label>
+<input class="h-[42px] px-4 rounded-xl ghost-border bg-white focus-ring text-sm font-medium" placeholder="Name of informant" type="text"/>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1" style="">Relation</label>
+<div class="relative">
+<input class="w-full h-[42px] px-4 pr-10 rounded-xl ghost-border bg-white focus-ring text-sm font-medium" placeholder="Search relation..." type="text"/>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant" style="">expand_more</span>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1" style="">Reliability</label>
+<div class="flex h-[42px] p-1 rounded-xl ghost-border bg-white/50">
+<button class="flex-1 text-xs font-bold rounded-lg bg-primary-container text-white" style="">Yes</button>
+<button class="flex-1 text-xs font-bold rounded-lg text-on-surface-variant" style="">No</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Group 5: Recall Cue -->
+<div class="p-6 bg-surface-container-low rounded-xl flex flex-col gap-2">
+<div class="flex justify-between items-end mb-1">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1" style="">Patient Recall Cue</label>
+<span class="text-[10px] text-on-surface-variant italic" style="">Helpful for identification in follow-ups</span>
+</div>
+<textarea class="p-4 rounded-xl ghost-border bg-white focus-ring text-sm font-medium resize-none" placeholder="Describe unique identifying trait or memory hook..." rows="2"></textarea>
+</div>
+<!-- Group 6: Previous Treatment -->
+<div class="p-6 bg-surface-container-low rounded-xl">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1 block mb-4" style="">Psychiatric History Status</label>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="p-4 rounded-xl bg-white border-2 border-primary-container shadow-sm flex items-start gap-3 cursor-pointer">
+<div class="mt-1 w-5 h-5 rounded-full border-4 border-primary-container bg-white flex-shrink-0"></div>
+<div>
+<p class="text-sm font-bold text-on-surface" style="">No previous treatment</p>
+<p class="text-[11px] text-on-surface-variant mt-1 leading-relaxed" style="">First-time clinical interaction for psychiatric concerns.</p>
+</div>
+</div>
+<div class="p-4 rounded-xl bg-white/50 ghost-border hover:bg-white transition-colors flex items-start gap-3 cursor-pointer group">
+<div class="mt-1 w-5 h-5 rounded-full border-2 border-outline-variant bg-transparent flex-shrink-0 group-hover:border-primary"></div>
+<div>
+<p class="text-sm font-bold text-on-surface" style="">Previously treated</p>
+<p class="text-[11px] text-on-surface-variant mt-1 leading-relaxed" style="">History of treatment but not currently under care.</p>
+</div>
+</div>
+<div class="p-4 rounded-xl bg-white/50 ghost-border hover:bg-white transition-colors flex items-start gap-3 cursor-pointer group">
+<div class="mt-1 w-5 h-5 rounded-full border-2 border-outline-variant bg-transparent flex-shrink-0 group-hover:border-primary"></div>
+<div>
+<p class="text-sm font-bold text-on-surface" style="">Currently on treatment</p>
+<p class="text-[11px] text-on-surface-variant mt-1 leading-relaxed" style="">Ongoing pharmacological or therapeutic management.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Form Actions -->
+<div class="flex justify-end items-center gap-4 mt-4">
+<button class="px-6 h-[42px] rounded-xl text-sm font-bold text-on-secondary-container bg-secondary-container hover:brightness-95 transition-all" style="">Discard Draft</button>
+<button class="px-8 h-[42px] rounded-xl text-sm font-bold text-white bg-gradient-to-br from-[#006672] to-[#16808f] shadow-lg shadow-teal-900/10 hover:scale-[1.02] transition-transform flex items-center gap-2" style="">
+                Save Demographics
+                <span class="material-symbols-outlined text-lg" style="">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Redesigned Background Section -->
+<section class="mb-12" id="background-section">
+<header class="mb-4 flex items-start gap-4">
+<div class="w-1 h-12 bg-[#9eefff] rounded-full self-center"></div>
+<div>
+<h2 class="font-headline text-[18px] font-semibold text-[#181c1d] tracking-tight" style="">Background</h2>
+<p class="text-[#3d5050] text-[13px] font-normal mt-1 font-body" style="">Personality, major events, stressors and childhood experiences</p>
+</div>
+</header>
+<div class="bg-white rounded-2xl p-[28px_32px] grid grid-cols-1 md:grid-cols-4 gap-4 shadow-sm">
+<!-- Card 1: Personality -->
+<button class="group relative flex flex-col items-start gap-4 p-4 min-h-[80px] rounded-xl ghost-border-thicker bg-white hover:border-[#006672] hover:bg-[#f4f9f9] transition-all text-left" style="">
+<div class="flex justify-between items-center w-full">
+<div class="flex items-center gap-2">
+<span class="text-lg" style="">🧠</span>
+<h3 class="font-headline text-sm font-semibold text-[#181c1d]" style="">Premorbid Personality</h3>
+</div>
+<div class="flex gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]" style="">sticky_note_2</span>
+<span class="material-symbols-outlined text-[18px]" style="">edit</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-1.5">
+<span class="px-2 py-0.5 rounded-full bg-[#006672] text-white text-[12px] font-medium font-body shadow-sm shadow-[0_2px_8px_rgba(0,102,114,0.3)]" style="">Anxious</span>
+<span class="px-2 py-0.5 rounded-full bg-[#006672] text-white text-[12px] font-medium font-body shadow-sm shadow-[0_2px_8px_rgba(0,102,114,0.3)]" style="">Introverted</span>
+</div>
+</button>
+<!-- Card 2: Events -->
+<button class="group relative flex flex-col items-start gap-4 p-4 min-h-[80px] rounded-xl ghost-border-thicker bg-white hover:border-[#006672] hover:bg-[#f4f9f9] transition-all text-left" style="">
+<div class="flex justify-between items-center w-full">
+<div class="flex items-center gap-2">
+<span class="text-lg" style="">📌</span>
+<h3 class="font-headline text-sm font-semibold text-[#181c1d]" style="">Major Events</h3>
+</div>
+<div class="flex gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]" style="">sticky_note_2</span>
+<span class="material-symbols-outlined text-[18px]" style="">edit</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-1.5">
+<span class="px-2 py-0.5 rounded-full bg-[#006672] text-white text-[12px] font-medium font-body shadow-sm shadow-[0_2px_8px_rgba(0,102,114,0.3)]" style="">Bereavement</span>
+</div>
+</button>
+<!-- Card 3: Stressors -->
+<button class="group relative flex flex-col items-start gap-4 p-4 min-h-[80px] rounded-xl ghost-border-thicker bg-white hover:border-[#006672] hover:bg-[#f4f9f9] transition-all text-left" style="">
+<div class="flex justify-between items-center w-full">
+<div class="flex items-center gap-2">
+<span class="text-lg" style="">⚠️</span>
+<h3 class="font-headline text-sm font-semibold text-[#181c1d]" style="">Stressors</h3>
+</div>
+<div class="flex gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]" style="">sticky_note_2</span>
+<span class="material-symbols-outlined text-[18px]" style="">edit</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-1.5">
+<span class="px-2 py-0.5 rounded-full bg-[#006672] text-white text-[12px] font-medium font-body shadow-sm shadow-[0_2px_8px_rgba(0,102,114,0.3)]" style="">Financial Strain (8)</span>
+</div>
+</button>
+<!-- Card 4: ACE -->
+<button class="group relative flex flex-col items-start gap-4 p-4 min-h-[80px] rounded-xl ghost-border-thicker bg-white hover:border-[#006672] hover:bg-[#f4f9f9] transition-all text-left" style="">
+<div class="flex justify-between items-center w-full">
+<div class="flex items-center gap-2">
+<span class="text-lg" style="">🌱</span>
+<h3 class="font-headline text-sm font-semibold text-[#181c1d]" style="">ACE</h3>
+</div>
+<div class="flex gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]" style="">sticky_note_2</span>
+<span class="material-symbols-outlined text-[18px]" style="">edit</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-1.5">
+<span class="px-2 py-0.5 rounded-full bg-[#006672] text-white text-[12px] font-medium font-body shadow-sm shadow-[0_2px_8px_rgba(0,102,114,0.3)]" style="">Moderate Burden</span>
+</div>
+</button>
+</div>
+</section>
+<!-- REBUILT Substance Use History Section -->
+<section class="mb-12" id="substance-use-section">
+<header class="mb-4 flex items-start gap-4">
+<div class="w-1 h-12 bg-[#9eefff] rounded-full self-center"></div>
+<div>
+<h2 class="font-headline text-[18px] font-semibold text-[#181c1d] dark:text-white tracking-tight" style="">Substance Use History</h2>
+<p class="text-[#3d5050] dark:text-[#a8bcbe] text-[13px] font-normal mt-1 font-body" style="">Document each substance used and current status</p>
+</div>
+</header>
+<div class="bg-white dark:bg-[#171e20] rounded-2xl grid grid-cols-1 md:grid-cols-[280px_1fr] min-h-[400px] overflow-hidden">
+<!-- Left Panel -->
+<aside class="bg-[#f8fafa] dark:bg-[#1a2224] py-5 border-r border-[#e4ecec] dark:border-[#263436]">
+<div class="flex items-center justify-between px-4 mb-3">
+<span class="text-[13px] font-semibold text-[#3f4948] dark:text-[#a8bcbe] uppercase tracking-wider" style="">Substances</span>
+<button class="w-[28px] h-[28px] bg-[#006672] text-white rounded-[6px] flex items-center justify-center text-[16px] font-semibold hover:brightness-110 transition-all" style="">+</button>
+</div>
+<div class="flex flex-col">
+<!-- Selected Item -->
+<div class="flex items-center justify-between px-4 bg-[#f0f9fa] dark:bg-[rgba(26,74,82,0.2)] border-l-[3px] border-[#006672] cursor-pointer transition-all duration-150 group py-1.5">
+<div class="flex flex-col">
+<span class="text-[14px] font-medium text-[#181c1d] dark:text-white" style="">Alcohol</span>
+<span class="text-[12px] font-normal" style="">Ongoing</span>
+</div>
+
+</div>
+<!-- Default Item -->
+<div class="flex items-center justify-between px-4 hover:bg-[#edf3f3] dark:hover:bg-[#1f2b2d] cursor-pointer transition-all duration-150 py-1.5">
+<div class="flex flex-col">
+<span class="text-[14px] font-medium text-[#181c1d] dark:text-white" style="">Tobacco</span>
+<span class="text-[12px] font-normal" style="">Abstinent</span>
+</div>
+
+</div>
+<!-- Empty/New Item -->
+<div class="flex items-center justify-between px-4 hover:bg-[#edf3f3] dark:hover:bg-[#1f2b2d] cursor-pointer transition-all duration-150 py-1.5">
+<div class="flex flex-col">
+<span class="text-[14px] font-medium text-[#181c1d] dark:text-white" style="">Cannabis</span>
+<span class="text-[12px] text-[#9aacae] font-normal italic" style="">Add details →</span>
+</div>
+
+</div>
+</div>
+<button class="mt-4 px-4 py-2 text-[13px] font-medium text-[#006672] dark:text-teal-400 hover:bg-[#edf3f3] dark:hover:bg-[#1f2b2d] w-full text-left transition-all" style="">+ Add substance</button>
+</aside>
+<!-- Right Panel -->
+<div class="bg-white dark:bg-[#171e20] p-7 md:p-8 animate-in fade-in duration-150">
+<div class="flex flex-col gap-6">
+<!-- Field 1: Substance -->
+<div class="flex flex-col">
+<label class="text-[13px] font-semibold text-[#3f4948] dark:text-[#a8bcbe] mb-2 font-label" style="">Substance</label>
+<div class="relative">
+<input class="w-full h-[44px] px-4 rounded-lg ghost-border bg-white dark:bg-slate-900 focus-ring text-[15px] font-normal text-[#181c1d] dark:text-white placeholder:text-[#9aacae]" placeholder="Select or type substance..." type="text" value="Alcohol"/>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#9aacae]" style="">search</span>
+</div>
+</div>
+<!-- Field 2: Age at first use -->
+<div class="flex flex-col">
+<label class="text-[13px] font-semibold text-[#3f4948] dark:text-[#a8bcbe] mb-2 font-label" style="">Age at First Use</label>
+<div class="flex items-center gap-3">
+<input class="w-[80px] h-[44px] px-4 rounded-lg ghost-border bg-white dark:bg-slate-900 focus-ring text-[15px] font-normal text-[#181c1d] dark:text-white text-center" placeholder="Age" type="number" value="18"/>
+<span class="text-[14px] text-[#3d5050] dark:text-[#a8bcbe]" style="">years</span>
+</div>
+<p class="text-[11px] text-[#9aacae] mt-1.5" style="">Used as reference for timeline graphs</p>
+</div>
+<!-- Field 3: Current Status -->
+<div class="flex flex-col">
+<label class="text-[13px] font-semibold text-[#3f4948] dark:text-[#a8bcbe] mb-2.5 font-label" style="">Current Status</label>
+<div class="grid grid-cols-3 gap-2.5">
+<button class="p-[14px_16px] rounded-[10px] border-[1.5px] border-[#d2dcdc] dark:border-[#263436] bg-[#f8fafa] dark:bg-[#1f2b2d] text-[#3f4948] dark:text-[#a8bcbe] text-[13px] font-medium hover:bg-[#edf3f3] transition-all" style="">Ongoing use</button>
+<button class="p-[14px_16px] rounded-[10px] border-[1.5px] border-[#d2dcdc] dark:border-[#263436] bg-[#f8fafa] dark:bg-[#1f2b2d] text-[#3f4948] dark:text-[#a8bcbe] text-[13px] font-medium hover:bg-[#edf3f3] transition-all" style="">Currently abstinent</button>
+<button class="p-[14px_16px] rounded-[10px] border-[1.5px] border-[#006672] bg-[#006672] text-white text-[13px] font-semibold transition-all shadow-sm" style="">Past use</button>
+</div>
+</div>
+<!-- Conditional: Ongoing Use Details -->
+<div class="flex flex-col gap-6 animate-in slide-in-from-top-2 duration-200">
+<div class="flex flex-col">
+<label class="text-[13px] font-semibold text-[#3f4948] dark:text-[#a8bcbe] mb-2.5 font-label" style="">Pattern of Use</label>
+<div class="flex flex-wrap gap-2">
+<button class="px-4 py-2 rounded-full bg-[#e4ecec] dark:bg-[#1f2b2d] text-[#3f4948] dark:text-[#a8bcbe] text-[13px] font-medium hover:bg-[#d2dcdc] transition-all" style="">Occasional</button>
+<button class="px-4 py-2 rounded-full bg-[#e4ecec] dark:bg-[#1f2b2d] text-[#3f4948] dark:text-[#a8bcbe] text-[13px] font-medium hover:bg-[#d2dcdc] transition-all" style="">Weekends</button>
+<button class="px-4 py-2 rounded-full bg-[#006672] text-white text-[13px] font-semibold shadow-sm" style="">Daily</button>
+<button class="px-4 py-2 rounded-full bg-[#e4ecec] dark:bg-[#1f2b2d] text-[#3f4948] dark:text-[#a8bcbe] text-[13px] font-medium hover:bg-[#d2dcdc] transition-all" style="">Heavy daily</button>
+<button class="px-4 py-2 rounded-full bg-[#e4ecec] dark:bg-[#1f2b2d] text-[#3f4948] dark:text-[#a8bcbe] text-[13px] font-medium hover:bg-[#d2dcdc] transition-all" style="">Binge</button>
+</div>
+</div>
+</div>
+<!-- Always visible: Notes & Footer -->
+<div class="pt-6 border-t border-[#e4ecec]/20">
+<div class="flex flex-col gap-2">
+<button class="flex items-center justify-end gap-2 text-[#3d5050] dark:text-[#a8bcbe] text-[13px] font-medium hover:text-[#006672] transition-colors group" style="">
+<span class="w-1.5 h-1.5 rounded-full bg-[#006672] transition-all"></span>
+<span class="material-symbols-outlined text-[20px]" style="">edit_note</span>
+<span class="" style="">Notes</span>
+</button>
+<textarea class="w-full p-4 rounded-lg ghost-border bg-white dark:bg-slate-900 focus-ring text-[14px] placeholder:text-[#9aacae] transition-all mt-1" placeholder="Method of use, withdrawal history, treatment history, consequences..." rows="3"></textarea>
+</div>
+<div class="flex justify-end">
+<button class="text-[#ba1a1a] text-[13px] font-medium hover:underline flex items-center gap-1" style="">
+<span class="material-symbols-outlined text-[18px]" style="">close</span>
+Remove substance
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Family History Section -->
+<section class="mb-12" id="family-history-section">
+<header class="mb-4 flex items-start gap-4">
+<div class="w-1 h-12 bg-[#9eefff] rounded-full self-center"></div>
+<div>
+<h2 class="font-headline text-[18px] font-semibold text-[#181c1d] tracking-tight" style="">Family History</h2>
+<p class="text-[#3d5050] text-[13px] font-normal mt-1 font-body" style="">Psychiatric illness in biological relatives</p>
+</div>
+</header>
+<div class="bg-white rounded-2xl p-[28px_32px] shadow-sm flex flex-col gap-8">
+<div class="flex flex-col gap-6">
+<div class="flex flex-wrap items-center justify-between gap-4">
+<label class="text-[13px] font-bold text-on-surface-variant font-label" style="">Family History of Psychiatric Illness</label>
+<div class="flex h-[44px] p-1 bg-surface-container-low rounded-xl ghost-border-thicker">
+<button class="px-8 rounded-lg text-xs font-bold text-on-surface-variant" style="">Absent</button>
+<button class="px-8 rounded-lg text-xs font-bold bg-primary text-white shadow-sm" style="">Present</button>
+</div>
+</div>
+<!-- Illness Details (Revealed on Present) -->
+<div class="p-6 bg-surface-container-low rounded-xl space-y-6">
+<div class="flex flex-col gap-2">
+<label class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant" style="">Add Diagnosis</label>
+<div class="relative">
+<input class="w-full h-[44px] px-4 rounded-lg ghost-border-thicker bg-white focus-ring text-[15px] font-medium" placeholder="Search and select diagnosis..." type="text"/>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant" style="">search</span>
+</div>
+</div>
+<div class="flex flex-col gap-4">
+<div class="flex items-center justify-between p-4 bg-white rounded-xl ghost-border-thicker">
+<div class="flex flex-col gap-1">
+<span class="px-3 py-1 rounded-full bg-primary-container text-white text-[11px] font-bold w-fit" style="">Schizophrenia</span>
+<span class="text-[11px] text-on-surface-variant" style="">Relationship degree</span>
+</div>
+<div class="flex gap-2">
+<button class="px-4 py-2 rounded-lg text-[11px] font-bold bg-primary text-white" style="">1st</button>
+<button class="px-4 py-2 rounded-lg text-[11px] font-bold border border-outline-variant text-on-surface-variant" style="">2nd</button>
+<button class="px-4 py-2 rounded-lg text-[11px] font-bold border border-outline-variant text-on-surface-variant" style="">3rd</button>
+</div>
+</div>
+<div class="flex items-center justify-between p-4 bg-white rounded-xl ghost-border-thicker">
+<div class="flex flex-col gap-1">
+<span class="px-3 py-1 rounded-full bg-primary-container text-white text-[11px] font-bold w-fit" style="">Bipolar Disorder</span>
+<span class="text-[11px] text-on-surface-variant" style="">Relationship degree</span>
+</div>
+<div class="flex gap-2">
+<button class="px-4 py-2 rounded-lg text-[11px] font-bold border border-outline-variant text-on-surface-variant" style="">1st</button>
+<button class="px-4 py-2 rounded-lg text-[11px] font-bold bg-primary text-white" style="">2nd</button>
+<button class="px-4 py-2 rounded-lg text-[11px] font-bold border border-outline-variant text-on-surface-variant" style="">3rd</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Consanguinity Row -->
+<div class="flex flex-wrap items-center justify-between gap-4 py-4 border-t border-outline-variant/20">
+<label class="text-[13px] font-bold text-on-surface-variant font-label" style="">Consanguinity</label>
+<div class="flex h-[44px] p-1 bg-surface-container-low rounded-xl ghost-border-thicker min-w-[300px]">
+<button class="flex-1 rounded-lg text-xs font-bold text-on-surface-variant hover:bg-white/50" style="">Yes</button>
+<button class="flex-1 rounded-lg text-xs font-bold text-on-surface-variant hover:bg-white/50" style="">No</button>
+<button class="flex-1 rounded-lg text-xs font-bold bg-primary text-white shadow-sm" style="">Unknown</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Developmental History Section -->
+<section class="mb-12" id="developmental-history-section">
+<header class="mb-4 flex items-start gap-4">
+<div class="w-1 h-12 bg-[#9eefff] rounded-full self-center"></div>
+<div>
+<h2 class="font-headline text-[18px] font-semibold text-[#181c1d] tracking-tight" style="">Developmental History</h2>
+<p class="text-[#3d5050] text-[13px] font-normal mt-1 font-body" style="">Developmental milestone delays in early life</p>
+</div>
+</header>
+<div class="bg-white rounded-2xl p-[28px_32px] shadow-sm">
+<div class="flex flex-col md:flex-row items-center justify-between gap-4">
+<label class="text-[13px] font-bold text-on-surface-variant font-label" style="">Global Developmental Milestone Delay</label>
+<div class="flex h-[48px] p-1 bg-surface-container-low rounded-xl ghost-border-thicker w-full md:w-[480px]">
+<button class="flex-1 rounded-lg text-xs font-bold text-on-surface-variant hover:bg-white/50" style="">No delay</button>
+<button class="flex-1 rounded-lg text-xs font-bold text-on-surface-variant hover:bg-white/50" style="">Delay reported</button>
+<button class="flex-1 rounded-lg text-xs font-bold bg-primary text-white shadow-sm" style="">Unknown</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Chief Complaints Section -->
+<section class="mb-12" id="chief-complaints-section">
+<header class="mb-6 flex items-start gap-4">
+<div class="w-1 h-12 bg-[#9eefff] rounded-full self-center"></div>
+<div>
+<h2 class="font-headline text-[18px] font-semibold text-[#181c1d] tracking-tight" style="">Chief Complaints</h2>
+<p class="text-[#3d5050] text-[13px] font-normal mt-1 font-body" style="">Presenting symptoms with severity and duration</p>
+</div>
+</header>
+<div class="flex justify-between items-center mb-4">
+<span class="text-[13px] font-medium text-[#3d5050] font-body" style="">Templates:</span>
+<button class="flex items-center gap-2 px-3 py-2 bg-[#f8fafa] border border-[#d2dcdc] rounded-lg text-[13px] font-medium text-on-surface hover:bg-surface-container transition-colors" style="">
+<span class="text-sm" style="">📋</span>
+<span class="" style="">Select a template</span>
+<span class="material-symbols-outlined text-sm" style="">expand_more</span>
+</button>
+</div>
+<div class="bg-white rounded-2xl p-[28px_32px] shadow-sm">
+<!-- Complaint Entry 1 -->
+<div class="bg-[#f8fafa] rounded-xl p-5 md:p-6 mb-4 relative">
+<div class="flex flex-wrap md:flex-nowrap items-start gap-4 mb-6">
+<div class="flex-1 min-w-[200px] relative">
+<select class="w-full h-[44px] px-4 appearance-none rounded-lg ghost-border-thicker bg-white focus-ring text-[14px] font-semibold text-on-surface">
+<option selected="">Sleep Disturbance</option>
+<option>Anxiety</option>
+<option>Low mood</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant" style="">expand_more</span>
+</div>
+<div class="w-full md:w-[260px] relative">
+<div class="flex h-[44px] items-stretch">
+<input class="w-2/3 px-4 rounded-l-lg border-y-2 border-l-2 ghost-border-thicker focus-ring text-[14px] font-semibold bg-white" placeholder="Duration" type="text" value="3"/>
+<div class="w-1/3 flex items-center justify-center bg-white border-y-2 border-r-2 ghost-border-thicker rounded-r-lg">
+<select class="bg-transparent border-0 text-[12px] font-bold text-primary focus:ring-0">
+<option>Years</option>
+<option>Months</option>
+<option selected="">Weeks</option>
+<option>Days</option>
+</select>
+</div>
+</div>
+<!-- APPLY TO ALL DURATION prompt -->
+<div class="absolute top-[calc(100%+8px)] left-0 z-10 w-full animate-in fade-in slide-in-from-top-2 duration-300">
+<div class="bg-white p-3 rounded-lg shadow-xl border border-outline-variant flex flex-col gap-2">
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider" style="">Apply duration to all complaints?</p>
+<div class="flex gap-2">
+<button class="flex-1 py-1.5 rounded bg-primary text-white text-[11px] font-bold shadow-sm hover:brightness-110" style="">Apply All</button>
+<button class="px-3 py-1.5 rounded bg-surface-container text-on-surface-variant text-[11px] font-bold hover:bg-surface-container-high" style="">Ignore</button>
+</div>
+</div>
+</div>
+</div>
+<button class="w-[44px] h-[44px] flex items-center justify-center text-error hover:bg-error/5 rounded-lg transition-colors flex-shrink-0" style="">
+<span class="material-symbols-outlined" style="">delete</span>
+</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-4">
+<div class="flex flex-col gap-3">
+<div class="flex justify-between items-center">
+<label class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant" style="">Severity at onset</label>
+<span class="text-xs font-bold text-primary" style="">Moderate (6)</span>
+</div>
+<input class="w-full h-1.5" max="10" min="1" type="range" value="6"/>
+</div>
+<div class="flex flex-col gap-3">
+<div class="flex justify-between items-center">
+<label class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant" style="">Severity during course</label>
+<span class="text-xs font-bold text-primary" style="">High (8)</span>
+</div>
+<input class="w-full h-1.5" max="10" min="1" type="range" value="8"/>
+</div>
+<div class="flex flex-col gap-3">
+<div class="flex justify-between items-center">
+<label class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant" style="">Current severity</label>
+<span class="text-xs font-bold text-primary" style="">Mild (3)</span>
+</div>
+<input class="w-full h-1.5" max="10" min="1" type="range" value="3"/>
+</div>
+</div>
+<div class="flex justify-end mt-4">
+<button class="p-2 text-primary hover:bg-primary/5 rounded-lg transition-colors" style="">
+<span class="material-symbols-outlined" style="">edit_note</span>
+</button>
+</div>
+</div>
+<!-- Complaint Entry 2 -->
+<div class="bg-[#f8fafa] rounded-xl p-5 md:p-6 mb-6">
+<div class="flex flex-wrap md:flex-nowrap items-start gap-4 mb-6">
+<div class="flex-1 min-w-[200px] relative">
+<select class="w-full h-[44px] px-4 appearance-none rounded-lg ghost-border-thicker bg-white focus-ring text-[14px] font-semibold text-on-surface">
+<option>Sleep Disturbance</option>
+<option>Anxiety</option>
+<option selected="">Persistent low mood</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant" style="">expand_more</span>
+</div>
+<div class="w-full md:w-[260px] relative">
+<div class="flex h-[44px] items-stretch">
+<input class="w-2/3 px-4 rounded-l-lg border-y-2 border-l-2 ghost-border-thicker focus-ring text-[14px] font-semibold bg-white" placeholder="Duration" type="text" value="6"/>
+<div class="w-1/3 flex items-center justify-center bg-white border-y-2 border-r-2 ghost-border-thicker rounded-r-lg">
+<select class="bg-transparent border-0 text-[12px] font-bold text-primary focus:ring-0">
+<option>Years</option>
+<option selected="">Months</option>
+<option>Weeks</option>
+<option>Days</option>
+</select>
+</div>
+</div>
+</div>
+<button class="w-[44px] h-[44px] flex items-center justify-center text-error hover:bg-error/5 rounded-lg transition-colors flex-shrink-0" style="">
+<span class="material-symbols-outlined" style="">delete</span>
+</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-4">
+<div class="flex flex-col gap-3">
+<div class="flex justify-between items-center">
+<label class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant" style="">Severity at onset</label>
+<span class="text-xs font-bold text-primary" style="">Mild (2)</span>
+</div>
+<input class="w-full h-1.5" max="10" min="1" type="range" value="2"/>
+</div>
+<div class="flex flex-col gap-3">
+<div class="flex justify-between items-center">
+<label class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant" style="">Severity during course</label>
+<span class="text-xs font-bold text-primary" style="">Moderate (5)</span>
+</div>
+<input class="w-full h-1.5" max="10" min="1" type="range" value="5"/>
+</div>
+<div class="flex flex-col gap-3">
+<div class="flex justify-between items-center">
+<label class="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant" style="">Current severity</label>
+<span class="text-xs font-bold text-primary" style="">Severe (9)</span>
+</div>
+<input class="w-full h-1.5" max="10" min="1" type="range" value="9"/>
+</div>
+</div>
+<div class="flex justify-end mt-4">
+<button class="p-2 text-primary hover:bg-primary/5 rounded-lg transition-colors" style="">
+<span class="material-symbols-outlined" style="">edit_note</span>
+</button>
+</div>
+</div>
+<button class="w-full h-[48px] border-2 border-dashed border-outline-variant rounded-xl flex items-center justify-center gap-2 text-on-surface-variant font-bold text-sm hover:bg-surface-container-low transition-colors" style="">
+<span class="material-symbols-outlined" style="">add_circle</span>
+                Add Another Complaint
+            </button></div></section></main></body></html>

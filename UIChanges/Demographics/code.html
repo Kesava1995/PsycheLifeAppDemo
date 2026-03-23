@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Clinical Clarity - Demographics &amp; Background</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-variant": "#dfe3e3",
+              "outline-variant": "#bec8ca",
+              "on-error": "#ffffff",
+              "on-primary-container": "#95e1ef",
+              "surface-container-highest": "#dfe3e3",
+              "on-secondary": "#ffffff",
+              "secondary": "#566060",
+              "secondary-container": "#dae5e4",
+              "on-secondary-container": "#5c6666",
+              "on-tertiary": "#ffffff",
+              "tertiary-fixed": "#ffdad6",
+              "on-primary-fixed": "#001f24",
+              "error": "#ba1a1a",
+              "surface": "#f6fafa",
+              "surface-container-lowest": "#ffffff",
+              "on-secondary-fixed-variant": "#3f4949",
+              "secondary-fixed": "#dae5e4",
+              "inverse-surface": "#2c3132",
+              "on-tertiary-fixed": "#410002",
+              "on-primary": "#ffffff",
+              "on-primary-fixed-variant": "#004f58",
+              "tertiary-fixed-dim": "#ffb4ac",
+              "inverse-on-surface": "#edf1f1",
+              "primary": "#004c56",
+              "surface-tint": "#066874",
+              "on-background": "#181c1d",
+              "inverse-primary": "#87d2e0",
+              "surface-container": "#eaefef",
+              "outline": "#6f797b",
+              "tertiary-container": "#b8141b",
+              "tertiary": "#8f000d",
+              "surface-container-high": "#e5e9e9",
+              "on-tertiary-fixed-variant": "#93000d",
+              "surface-dim": "#d7dbdb",
+              "primary-fixed-dim": "#87d2e0",
+              "primary-container": "#006672",
+              "primary-fixed": "#a3effc",
+              "error-container": "#ffdad6",
+              "surface-bright": "#f6fafa",
+              "on-tertiary-container": "#ffc9c3",
+              "surface-container-low": "#f0f4f4",
+              "on-secondary-fixed": "#141d1d",
+              "on-surface-variant": "#3f484a",
+              "on-error-container": "#93000a",
+              "background": "#f6fafa",
+              "on-surface": "#181c1d",
+              "secondary-fixed-dim": "#bec8c8"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .ghost-border { border: 1.5px solid rgba(189, 200, 203, 0.2); }
+        .ghost-border-thicker { border: 1.5px solid rgba(189, 200, 203, 0.5); }
+        .focus-ring:focus { outline: none; border-color: #006672; box-shadow: 0 0 0 3px rgba(0, 102, 114, 0.1); }
+        .severity-slider::-webkit-slider-runnable-track { background: linear-gradient(to right, #4ade80, #facc15, #f87171); border-radius: 999px; height: 6px; }
+        .severity-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #ffffff; border: 2px solid #006672; margin-top: -5px; cursor: pointer; }
+        
+        /* Modal Transitions */
+        .modal-overlay { transition: opacity 0.2s ease-out; }
+        .modal-content { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease-out; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary-fixed selection:text-on-primary-fixed-variant min-h-screen">
+<!-- TopNavBar -->
+<header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-sm shadow-teal-900/5 docked full-width top-0 z-50 fixed w-full">
+<div class="flex justify-between items-center px-6 py-3 w-full">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold tracking-tight text-[#006672] dark:text-teal-400 font-headline">Clinical Clarity</span>
+</div>
+<!-- Patient Pill -->
+<div class="bg-surface-container-high px-4 py-1.5 rounded-full flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-primary-container animate-pulse"></div>
+<span class="text-sm font-bold text-primary-container">Patient Context: John Doe, 45M</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 rounded-xl hover:bg-teal-50/50 dark:hover:bg-teal-900/20 transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined">search</span>
+</button>
+<button class="p-2 rounded-xl hover:bg-teal-50/50 dark:hover:bg-teal-900/20 transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 rounded-xl hover:bg-teal-50/50 dark:hover:bg-teal-900/20 transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button class="p-2 rounded-xl hover:bg-teal-50/50 dark:hover:bg-teal-900/20 transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined">dark_mode</span>
+</button>
+<div class="ml-2 w-8 h-8 rounded-full overflow-hidden bg-surface-container">
+<img alt="Professional clinician profile headshot" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDH1SB9QbDAEbWD2eCJkOLVyaDT2yIwuIRXjESMfXUG36gJ28FYrbTPiRt5_2mWfjs9aJSV7IM88iQaGdVmPVT1gdftzNE945EuGZDE_vkYd95SOHhprta4itd2fTckFYwh7nz3Hv4BN4fl9kgVgix8bpHa4FuTz9rHDPElQ1oBy3kLkfYCLaDsg3kSwRy97joFAaTe8hwYwJXComBzZj4QPaNxf2Iwr1WPJSIWYmp7M6hg-4vmxf5k6TfXOWE0X7QJx1VSOdPAhs0B"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Navigation -->
+<nav class="fixed top-[60px] left-0 w-full z-40 bg-white border-b border-[#bdc8cb]/20 h-12 flex items-center shadow-sm">
+<div class="max-w-[1100px] mx-auto w-full flex gap-1 px-6 overflow-x-auto no-scrollbar">
+<button class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-on-surface-variant hover:bg-surface-container whitespace-nowrap">Demographics</button>
+<button class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-primary-container text-white whitespace-nowrap">Background</button>
+<button class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-on-surface-variant hover:bg-surface-container whitespace-nowrap">Complaints</button>
+<button class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-on-surface-variant hover:bg-surface-container whitespace-nowrap">History</button>
+<button class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-on-surface-variant hover:bg-surface-container whitespace-nowrap">MSE</button>
+<button class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-on-surface-variant hover:bg-surface-container whitespace-nowrap">Safety</button>
+<button class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-on-surface-variant hover:bg-surface-container whitespace-nowrap">Diagnosis</button>
+<button class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-on-surface-variant hover:bg-surface-container whitespace-nowrap">Meds</button>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="pt-[140px] pb-24 px-6 max-w-[1100px] mx-auto">
+<!-- Section Header: Registration -->
+<header class="mb-10 flex items-start gap-4">
+<div class="w-1 h-12 bg-primary-fixed rounded-full self-center"></div>
+<div>
+<h1 class="font-headline text-2xl font-semibold text-on-surface tracking-tight">New Registration</h1>
+<p class="text-on-surface-variant text-sm font-medium mt-1">Socio-demographic details</p>
+</div>
+</header>
+<!-- Demographics Card -->
+<div class="bg-surface-container-lowest rounded-xl p-9 md:px-10 shadow-[0_12px_32px_rgba(24,28,29,0.03)] flex flex-col gap-10 mb-12">
+<!-- Date Row -->
+<div class="flex justify-end items-center gap-3">
+<span class="text-xs font-bold uppercase text-on-surface-variant tracking-widest font-label">Date</span>
+<input class="border-0 border-b border-outline-variant bg-transparent text-sm font-semibold p-1 focus:ring-0 focus:border-primary" type="date" value="2023-10-27"/>
+</div>
+<!-- Group 1: Identity -->
+<div class="grid grid-cols-12 gap-6 items-end">
+<div class="col-span-12 md:col-span-6 flex flex-col gap-2">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1">Patient Name</label>
+<input class="h-[42px] px-4 rounded-xl ghost-border bg-white focus-ring text-sm font-medium" placeholder="Enter full name" type="text"/>
+</div>
+<div class="col-span-6 md:col-span-2 flex flex-col gap-2">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1">Age</label>
+<input class="h-[42px] px-4 rounded-xl ghost-border bg-white focus-ring text-sm font-medium" placeholder="0" type="number"/>
+</div>
+<div class="col-span-6 md:col-span-4 flex flex-col gap-2">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1">Sex</label>
+<div class="flex h-[42px] p-1 rounded-xl ghost-border bg-surface-container-low">
+<button class="flex-1 text-xs font-bold rounded-lg bg-primary text-white shadow-sm">Male</button>
+<button class="flex-1 text-xs font-bold rounded-lg text-on-surface-variant hover:bg-white/50">Female</button>
+<button class="flex-1 text-xs font-bold rounded-lg text-on-surface-variant hover:bg-white/50">Other</button>
+</div>
+</div>
+</div>
+<!-- Group 2: Contact -->
+<div class="p-6 bg-surface-container-low rounded-xl grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="flex flex-col gap-2">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1">Phone Number</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">call</span>
+<input class="w-full h-[42px] pl-10 pr-4 rounded-xl ghost-border bg-white focus-ring text-sm font-medium" placeholder="+1 (555) 000-0000" type="tel"/>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1">Email Address</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">mail</span>
+<input class="w-full h-[42px] pl-10 pr-4 rounded-xl ghost-border bg-white focus-ring text-sm font-medium" placeholder="example@clinic.com" type="email"/>
+</div>
+</div>
+</div>
+<!-- Group 3: Address -->
+<div class="flex flex-col gap-2">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1">Residential Address</label>
+<input class="h-[42px] px-4 rounded-xl ghost-border bg-white focus-ring text-sm font-medium" placeholder="Street, City, State, ZIP" type="text"/>
+</div>
+<!-- Group 4: Informant -->
+<div class="p-6 bg-surface-container-low rounded-xl flex flex-col gap-6">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="flex flex-col gap-2">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1">Attender Name</label>
+<input class="h-[42px] px-4 rounded-xl ghost-border bg-white focus-ring text-sm font-medium" placeholder="Name of informant" type="text"/>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1">Relation</label>
+<div class="relative">
+<input class="w-full h-[42px] px-4 pr-10 rounded-xl ghost-border bg-white focus-ring text-sm font-medium" placeholder="Search relation..." type="text"/>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant">expand_more</span>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1">Reliability</label>
+<div class="flex h-[42px] p-1 rounded-xl ghost-border bg-white/50">
+<button class="flex-1 text-xs font-bold rounded-lg bg-primary-container text-white">Yes</button>
+<button class="flex-1 text-xs font-bold rounded-lg text-on-surface-variant">No</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Group 5: Recall Cue -->
+<div class="p-6 bg-surface-container-low rounded-xl flex flex-col gap-2">
+<div class="flex justify-between items-end mb-1">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1">Patient Recall Cue</label>
+<span class="text-[10px] text-on-surface-variant italic">Helpful for identification in follow-ups</span>
+</div>
+<textarea class="p-4 rounded-xl ghost-border bg-white focus-ring text-sm font-medium resize-none" placeholder="Describe unique identifying trait or memory hook..." rows="2"></textarea>
+</div>
+<!-- Group 6: Previous Treatment -->
+<div class="p-6 bg-surface-container-low rounded-xl">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1 block mb-4">Psychiatric History Status</label>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="p-4 rounded-xl bg-white border-2 border-primary-container shadow-sm flex items-start gap-3 cursor-pointer">
+<div class="mt-1 w-5 h-5 rounded-full border-4 border-primary-container bg-white flex-shrink-0"></div>
+<div>
+<p class="text-sm font-bold text-on-surface">No previous treatment</p>
+<p class="text-[11px] text-on-surface-variant mt-1 leading-relaxed">First-time clinical interaction for psychiatric concerns.</p>
+</div>
+</div>
+<div class="p-4 rounded-xl bg-white/50 ghost-border hover:bg-white transition-colors flex items-start gap-3 cursor-pointer group">
+<div class="mt-1 w-5 h-5 rounded-full border-2 border-outline-variant bg-transparent flex-shrink-0 group-hover:border-primary"></div>
+<div>
+<p class="text-sm font-bold text-on-surface">Previously treated</p>
+<p class="text-[11px] text-on-surface-variant mt-1 leading-relaxed">History of treatment but not currently under care.</p>
+</div>
+</div>
+<div class="p-4 rounded-xl bg-white/50 ghost-border hover:bg-white transition-colors flex items-start gap-3 cursor-pointer group">
+<div class="mt-1 w-5 h-5 rounded-full border-2 border-outline-variant bg-transparent flex-shrink-0 group-hover:border-primary"></div>
+<div>
+<p class="text-sm font-bold text-on-surface">Currently on treatment</p>
+<p class="text-[11px] text-on-surface-variant mt-1 leading-relaxed">Ongoing pharmacological or therapeutic management.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Form Actions -->
+<div class="flex justify-end items-center gap-4 mt-4">
+<button class="px-6 h-[42px] rounded-xl text-sm font-bold text-on-secondary-container bg-secondary-container hover:brightness-95 transition-all">Discard Draft</button>
+<button class="px-8 h-[42px] rounded-xl text-sm font-bold text-white bg-gradient-to-br from-[#006672] to-[#16808f] shadow-lg shadow-teal-900/10 hover:scale-[1.02] transition-transform flex items-center gap-2">
+                Save Demographics
+                <span class="material-symbols-outlined text-lg">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Redesigned Background Section -->
+<section id="background-section">
+<header class="mb-4 flex items-start gap-4">
+<div class="w-1 h-12 bg-[#9eefff] rounded-full self-center"></div>
+<div>
+<h2 class="font-headline text-[18px] font-semibold text-[#181c1d] tracking-tight">Background</h2>
+<p class="text-[#3d5050] text-[13px] font-normal mt-1 font-body">Personality, major events, stressors and childhood experiences</p>
+</div>
+</header>
+<div class="bg-white rounded-2xl p-[28px_32px] grid grid-cols-1 md:grid-cols-4 gap-4">
+<!-- Card 1: Personality -->
+<button class="group relative flex flex-col items-start gap-4 p-4 min-h-[80px] rounded-xl ghost-border-thicker bg-white hover:border-[#006672] hover:bg-[#f4f9f9] transition-all text-left">
+<div class="flex justify-between items-center w-full">
+<div class="flex items-center gap-2">
+<span class="text-lg">🧠</span>
+<h3 class="font-headline text-sm font-semibold text-[#181c1d]">Premorbid Personality</h3>
+</div>
+<div class="flex gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">sticky_note_2</span>
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-1.5">
+<span class="px-2 py-0.5 rounded-full bg-[#006672] text-white text-[12px] font-medium font-body shadow-sm shadow-[0_2px_8px_rgba(0,102,114,0.3)]">Anxious</span>
+<span class="px-2 py-0.5 rounded-full bg-[#006672] text-white text-[12px] font-medium font-body shadow-sm shadow-[0_2px_8px_rgba(0,102,114,0.3)]">Introverted</span>
+</div>
+</button>
+<!-- Card 2: Events -->
+<button class="group relative flex flex-col items-start gap-4 p-4 min-h-[80px] rounded-xl ghost-border-thicker bg-white hover:border-[#006672] hover:bg-[#f4f9f9] transition-all text-left">
+<div class="flex justify-between items-center w-full">
+<div class="flex items-center gap-2">
+<span class="text-lg">📌</span>
+<h3 class="font-headline text-sm font-semibold text-[#181c1d]">Major Events</h3>
+</div>
+<div class="flex gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">sticky_note_2</span>
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-1.5">
+<span class="px-2 py-0.5 rounded-full bg-[#006672] text-white text-[12px] font-medium font-body shadow-sm shadow-[0_2px_8px_rgba(0,102,114,0.3)]">Bereavement</span>
+</div>
+</button>
+<!-- Card 3: Stressors -->
+<button class="group relative flex flex-col items-start gap-4 p-4 min-h-[80px] rounded-xl ghost-border-thicker bg-white hover:border-[#006672] hover:bg-[#f4f9f9] transition-all text-left">
+<div class="flex justify-between items-center w-full">
+<div class="flex items-center gap-2">
+<span class="text-lg">⚠️</span>
+<h3 class="font-headline text-sm font-semibold text-[#181c1d]">Stressors</h3>
+</div>
+<div class="flex gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">sticky_note_2</span>
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-1.5">
+<span class="px-2 py-0.5 rounded-full bg-[#006672] text-white text-[12px] font-medium font-body shadow-sm shadow-[0_2px_8px_rgba(0,102,114,0.3)]">Financial Strain (8)</span>
+</div>
+</button>
+<!-- Card 4: ACE -->
+<button class="group relative flex flex-col items-start gap-4 p-4 min-h-[80px] rounded-xl ghost-border-thicker bg-white hover:border-[#006672] hover:bg-[#f4f9f9] transition-all text-left">
+<div class="flex justify-between items-center w-full">
+<div class="flex items-center gap-2">
+<span class="text-lg">🌱</span>
+<h3 class="font-headline text-sm font-semibold text-[#181c1d]">ACE</h3>
+</div>
+<div class="flex gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">sticky_note_2</span>
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-1.5">
+<span class="px-2 py-0.5 rounded-full bg-[#006672] text-white text-[12px] font-medium font-body shadow-sm shadow-[0_2px_8px_rgba(0,102,114,0.3)]">Moderate Burden</span>
+</div>
+</button>
+</div>
+</section>
+</main>
+<!-- Contextual FAB -->
+<button class="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-primary-container text-white shadow-2xl flex items-center justify-center hover:scale-110 transition-transform z-50">
+<span class="material-symbols-outlined text-2xl">add</span>
+</button>
+<!-- Modals Layer (Hidden by default, shown for preview purposes using fixed layout) -->
+<div class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-black/40 backdrop-blur-sm modal-overlay">
+<!-- Personality Traits Modal -->
+<div class="bg-white w-[680px] rounded-[20px] shadow-2xl flex flex-col overflow-hidden modal-content">
+<!-- Modal Header -->
+<header class="px-8 py-6 flex justify-between items-center border-b border-outline-variant/20">
+<div class="flex items-center gap-3">
+<span class="text-2xl">🧠</span>
+<h2 class="font-headline text-xl font-bold text-on-surface">Premorbid Personality Traits</h2>
+</div>
+<button class="p-2 hover:bg-surface-container rounded-full transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</header>
+<!-- Modal Body -->
+<div class="p-8 overflow-y-auto max-h-[70vh] flex flex-col gap-8 no-scrollbar">
+<p class="text-sm text-on-surface-variant font-medium">Select observed traits across clinical and social domains to build a personality profile.</p>
+<div class="space-y-6">
+<!-- Category 1 -->
+<div class="flex flex-col gap-3">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label">Temperament</label>
+<div class="flex flex-wrap gap-2">
+<button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-[#006672] text-white">Anxious</button>
+<button class="px-3 py-1.5 rounded-full text-xs font-semibold border border-outline-variant text-on-surface-variant hover:border-[#006672]">Calm</button>
+<button class="px-3 py-1.5 rounded-full text-xs font-semibold border border-outline-variant text-on-surface-variant hover:border-[#006672]">Optimistic</button>
+<button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-[#006672] text-white">Irritable</button>
+<button class="px-3 py-1.5 rounded-full text-xs font-semibold border border-outline-variant text-on-surface-variant hover:border-[#006672]">Cyclothymic</button>
+</div>
+</div>
+<!-- Category 2 -->
+<div class="flex flex-col gap-3">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label">Social Style</label>
+<div class="flex flex-wrap gap-2">
+<button class="px-3 py-1.5 rounded-full text-xs font-semibold bg-[#006672] text-white">Introverted</button>
+<button class="px-3 py-1.5 rounded-full text-xs font-semibold border border-outline-variant text-on-surface-variant hover:border-[#006672]">Extroverted</button>
+<button class="px-3 py-1.5 rounded-full text-xs font-semibold border border-outline-variant text-on-surface-variant hover:border-[#006672]">Assertive</button>
+<button class="px-3 py-1.5 rounded-full text-xs font-semibold border border-outline-variant text-on-surface-variant hover:border-[#006672]">Passive</button>
+<button class="px-3 py-1.5 rounded-full text-xs font-semibold border border-outline-variant text-on-surface-variant hover:border-[#006672]">Avoidant</button>
+</div>
+</div>
+<!-- Category 3 -->
+<div class="flex flex-col gap-3">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label">Work / Functioning</label>
+<div class="flex flex-wrap gap-2">
+<button class="px-3 py-1.5 rounded-full text-xs font-semibold border border-outline-variant text-on-surface-variant hover:border-[#006672]">Perfectionist</button>
+<button class="px-3 py-1.5 rounded-full text-xs font-semibold border border-outline-variant text-on-surface-variant hover:border-[#006672]">Workaholic</button>
+<button class="px-3 py-1.5 rounded-full text-xs font-semibold border border-outline-variant text-on-surface-variant hover:border-[#006672]">Procrastinator</button>
+<button class="px-3 py-1.5 rounded-full text-xs font-semibold border border-outline-variant text-on-surface-variant hover:border-[#006672]">Unstable Job History</button>
+</div>
+</div>
+<!-- Categories 4-7 simplified for brevity -->
+<div class="flex flex-col gap-3">
+<label class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant font-label">OCEAN Model</label>
+<div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+<button class="text-left px-4 py-3 rounded-xl border border-outline-variant text-xs font-bold text-on-surface-variant hover:bg-surface-container-low">Openness</button>
+<button class="text-left px-4 py-3 rounded-xl border border-outline-variant text-xs font-bold text-on-surface-variant hover:bg-surface-container-low">Conscientiousness</button>
+<button class="text-left px-4 py-3 rounded-xl border border-outline-variant text-xs font-bold text-on-surface-variant hover:bg-surface-container-low">Extraversion</button>
+<button class="text-left px-4 py-3 rounded-xl border border-outline-variant text-xs font-bold text-on-surface-variant hover:bg-surface-container-low">Agreeableness</button>
+<button class="text-left px-4 py-3 rounded-xl border border-outline-variant text-xs font-bold text-on-surface-variant hover:bg-surface-container-low">Neuroticism</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Modal Footer -->
+<footer class="px-8 py-6 bg-surface-container-lowest border-t border-outline-variant/20 flex justify-between items-center sticky bottom-0">
+<button class="text-sm font-bold text-on-surface-variant hover:text-error transition-colors">Cancel</button>
+<button class="px-8 h-[44px] rounded-xl text-sm font-bold text-white bg-gradient-to-br from-[#006672] to-[#16808f] shadow-lg shadow-teal-900/10 hover:scale-[1.02] transition-transform">
+                Save &amp; Close
+            </button>
+</footer>
+</div>
+</div>
+</body></html>

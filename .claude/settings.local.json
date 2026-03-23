@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find d:/0Jobs/Psychiatry-Yaswanth/PsycheLifeAppDemo -name UIChanges* -o -name Screenshot*)"
+    ]
+  }
+}
