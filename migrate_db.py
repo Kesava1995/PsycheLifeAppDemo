@@ -109,7 +109,26 @@ def migrate():
                 # New columns for Insight + Additional MSE Findings
                 ('insight_status', 'TEXT'),
                 ('insight_grade', 'INTEGER'),
-                ('addl_mse_f_note', 'TEXT')
+                ('addl_mse_f_note', 'TEXT'),
+                # Structured MSE fields (category='Structured')
+                ('consciousness', 'TEXT'),
+                ('appearance', 'TEXT'),
+                ('cooperation', 'TEXT'),
+                ('rapport', 'TEXT'),
+                ('eye_contact', 'TEXT'),
+                ('psychomotor', 'TEXT'),
+                ('involuntary_movements', 'TEXT'),
+                ('speech_reaction_time', 'TEXT'),
+                ('speech_relevance', 'TEXT'),
+                ('speech_coherence', 'TEXT'),
+                ('speech_intensity', 'TEXT'),
+                ('speech_pitch', 'TEXT'),
+                ('speech_ease', 'TEXT'),
+                ('affect_items', 'TEXT'),
+                ('affect_reactivity', 'TEXT'),
+                ('affect_range', 'TEXT'),
+                ('affect_congruence', 'TEXT'),
+                ('affect_appropriateness', 'TEXT')
             ]
             for col, dtype in mse_cols:
                 if not column_exists(cursor, 'mse_entries', col):
@@ -134,6 +153,7 @@ def migrate():
                 ('ace_data', 'TEXT'),
                 ('family_history_psychiatric', 'TEXT'),
                 ('developmental_milestone_delay', 'TEXT'),
+                ('functional_impairment', 'TEXT'),
                 ('type_of_next_follow_up', 'TEXT')
             ]
             for col, dtype in visit_cols:

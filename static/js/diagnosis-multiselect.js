@@ -18,6 +18,16 @@
     }
   };
 
+  /** Visit snapshot pills (under “Current Clinical State”) keyed by provisional label heuristics. */
+  const clinicalStateSnapshotLists = {
+    bipolar: ["Recovery", "Remission", "Partial Remission", "Depressive Episode", "Manic Episode", "Hypomanic Episode", "Mixed Episode", "Relapse", "Loss of Follow-up"],
+    depress: ["Recovery", "Remission", "Partial Remission", "Mild Depressive Episode", "Moderate Depressive Episode", "Severe Depressive Episode", "Relapse", "Loss of Follow-up"],
+    schizo: ["Recovery", "Remission", "Partial Remission", "Stable Phase", "Acute Psychotic Episode", "Residual Phase", "Relapse", "Loss of Follow-up"],
+    ocd: ["Recovery", "Remission", "Partial Remission", "Active OCD", "Severe OCD", "Treatment Resistant Phase", "Relapse", "Loss of Follow-up"],
+    anxiety: ["Recovery", "Remission", "Partial Remission", "Active Anxiety", "Acute Panic Phase", "Relapse", "Loss of Follow-up"],
+    default: ["Loss of Follow-up", "Partial Remission", "Recovery", "Relapse", "Remission"]
+  };
+
   const pickers = {};
 
   function safeJsonParse(value) {
@@ -339,6 +349,445 @@
     });
   }
 
+  /**
+   * ICD-11 MMS search results as HTML (for inline criteria / modals).
+   */
+  async function fetchIcd11CriteriaHtmlForLabel(label, preloadedToken) {
+    let token = preloadedToken || null;
+    if (!token) {
+      try {
+        const tokenResponse = await fetch("/icd11token");
+        const tokenPayload = await tokenResponse.json();
+        if (tokenPayload.error) {
+          return `<p style="margin:0;color:#c33;">${escapeHtml(tokenPayload.error)}</p>`;
+        }
+        token = tokenPayload.access_token;
+      } catch (error) {
+        return '<p style="margin:0;color:#c33;">Unable to get the ICD-11 access token.</p>';
+      }
+    }
+
+    try {
+      const response = await fetch(
+        `https://id.who.int/icd/release/11/2024-01/mms/search?q=${encodeURIComponent(label)}&flatResults=true`,
+        {
+          headers: {
+            Authorization: "Bearer " + token,
+            Accept: "application/json",
+            "Accept-Language": "en",
+            "API-Version": "v2"
+          }
+        }
+      );
+      const data = await response.json();
+      const entities = Array.isArray(data.destinationEntities) ? data.destinationEntities.slice(0, 10) : [];
+      if (!entities.length) {
+        return '<p style="margin:0;color:#666;">No ICD-11 search results for this term.</p>';
+      }
+      return (
+        `<div class="diagnosis-icd11-results">
+          ${entities.map(entity => `
+                <div class="diagnosis-icd11-result">
+                  <div class="diagnosis-icd11-code">${escapeHtml(entity.theCode || "No code")}</div>
+                  <div class="diagnosis-icd11-title">${icd11TitleToSafeHtml(entity.title || "")}</div>
+                </div>
+              `).join("")}
+        </div>`
+      );
+    } catch (error) {
+      return '<p style="margin:0;color:#c33;">Error fetching ICD-11 results for this diagnosis.</p>';
+    }
+  }
+
+  function getStatesForClinicalSnapshotLabel(label) {
+    if (!label || !String(label).trim()) {
+      return clinicalStateSnapshotLists.default.slice();
+    }
+    const lower = String(label).toLowerCase();
+    if (lower.includes("bipolar") || /\bf31\b/i.test(label)) {
+      return clinicalStateSnapshotLists.bipolar.slice();
+    }
+    if ((lower.includes("depress") || lower.includes("mdd") || /\bf32\b/i.test(label)) && !lower.includes("bipolar")) {
+      return clinicalStateSnapshotLists.depress.slice();
+    }
+    if (lower.includes("schizo") || lower.includes("psychotic") || /\bf20\b/i.test(label)) {
+      return clinicalStateSnapshotLists.schizo.slice();
+    }
+    if (lower.includes("obsess") || lower.includes("ocd") || /\bf42\b/i.test(label)) {
+      return clinicalStateSnapshotLists.ocd.slice();
+    }
+    if (lower.includes("anxiet") || lower.includes("panic") || lower.includes("gad") || /\bf41\b/i.test(label) || /\bf40\b/i.test(label)) {
+      return clinicalStateSnapshotLists.anxiety.slice();
+    }
+    return clinicalStateSnapshotLists.default.slice();
+  }
+
+  /** Parse visit snapshot clinical states from hidden input (JSON array or legacy plain string). */
+  function parseClinicalStateSnapshotRaw(raw) {
+    if (raw == null || raw === "") return [];
+    const s = String(raw).trim();
+    if (!s) return [];
+    try {
+      const parsed = JSON.parse(s);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(x => typeof x === "string" && x.trim()).map(x => x.trim());
+      }
+    } catch (e) {
+      /* legacy single label */
+    }
+    return [s];
+  }
+
+  /** Single source of truth: write JSON array to #clinicalStateInput and notify listeners. */
+  function commitClinicalStateHiddenValue(arr) {
+    const hiddenInput = document.getElementById("clinicalStateInput");
+    if (!hiddenInput) return;
+    const clean = [];
+    const seen = new Set();
+    arr.forEach(s => {
+      if (typeof s !== "string" || !s.trim()) return;
+      const t = s.trim();
+      if (seen.has(t)) return;
+      seen.add(t);
+      clean.push(t);
+    });
+    hiddenInput.value = clean.length > 0 ? JSON.stringify(clean) : "";
+    hiddenInput.dispatchEvent(new CustomEvent("stateSync", { bubbles: true }));
+    hiddenInput.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  /** Keep inline pills and modal checkboxes aligned with the hidden input. */
+  function syncClinicalStateVisualsFromHidden() {
+    const hiddenInput = document.getElementById("clinicalStateInput");
+    if (!hiddenInput) return;
+    const currentSelected = parseClinicalStateSnapshotRaw(hiddenInput.value);
+
+    document.querySelectorAll(".clinical-state-pill").forEach(btn => {
+      const val = btn.getAttribute("data-value");
+      if (!val) return;
+      btn.classList.toggle("active", currentSelected.includes(val));
+    });
+
+    document.querySelectorAll(".clinical-state-checkbox").forEach(cb => {
+      cb.checked = currentSelected.includes(cb.value);
+    });
+  }
+
+  /** Multi-select snapshot pills; hidden input stores JSON.stringify(string[]). */
+  function syncClinicalStateSnapshotPills() {
+    const container = document.getElementById("clinicalStateContainer");
+    const hiddenInput = document.getElementById("clinicalStateInput");
+    if (!container || !hiddenInput) return;
+
+    const provItems = getPickerItems("provisional");
+    const refLabel = provItems.length ? provItems[provItems.length - 1].label : null;
+    const states = getStatesForClinicalSnapshotLabel(refLabel);
+
+    let currentSelected = parseClinicalStateSnapshotRaw(hiddenInput.value);
+    currentSelected = currentSelected.filter(s => states.includes(s));
+    hiddenInput.value = currentSelected.length > 0 ? JSON.stringify(currentSelected) : "";
+
+    container.innerHTML = states.map(state => {
+      const isActive = currentSelected.includes(state);
+      return (
+        `<button type="button" class="clinical-state-pill${isActive ? " active" : ""}" data-value="${escapeHtml(state)}">${escapeHtml(state)}</button>`
+      );
+    }).join("");
+
+    container.querySelectorAll(".clinical-state-pill").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const stateValue = btn.getAttribute("data-value");
+        if (!stateValue) return;
+
+        let selectedArray = parseClinicalStateSnapshotRaw(hiddenInput.value);
+        if (selectedArray.includes(stateValue)) {
+          selectedArray = selectedArray.filter(s => s !== stateValue);
+        } else {
+          selectedArray = selectedArray.concat([stateValue]);
+        }
+
+        commitClinicalStateHiddenValue(selectedArray);
+      });
+    });
+
+    syncClinicalStateVisualsFromHidden();
+    hiddenInput.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  function initProvisionalInline(config) {
+    const root = config.rootId ? document.getElementById(config.rootId) : null;
+    const hiddenInput = document.getElementById(config.hiddenInputId);
+    const searchInput = document.getElementById("provisionalSearch");
+    const dropdown = document.getElementById("provisionalDropdown");
+    const chipsEl = document.getElementById("provisionalChips");
+    const criteriaBlock = document.getElementById("inlineCriteriaBlock");
+    const criteriaContent = document.getElementById("inlineCriteriaContent");
+    const activeLabel = document.getElementById("activeDiagnosisLabel");
+    if (!root || !hiddenInput || !searchInput || !dropdown || !chipsEl || !criteriaBlock || !criteriaContent || !activeLabel) {
+      return;
+    }
+
+    let items = dedupeItems(normalizeStoredItems(config.initialItems || hiddenInput.value));
+    let activeIndex = items.length ? items.length - 1 : -1;
+    let activeSystem = "ICD-11";
+    let visibleOptions = [];
+    let _searchSeq = 0;
+    let _criteriaSeq = 0;
+
+    function hideDropdown() {
+      dropdown.innerHTML = "";
+      dropdown.style.display = "none";
+      visibleOptions = [];
+    }
+
+    function renderInlineSuggestions(query) {
+      const trimmed = (query || "").trim();
+      if (trimmed.length < 2) {
+        hideDropdown();
+        return;
+      }
+
+      _searchSeq += 1;
+      const seq = _searchSeq;
+      dropdown.style.display = "block";
+      dropdown.innerHTML = `<div class="diagnosis-option diagnosis-option-empty">Searching ICD-11…</div>`;
+
+      fetch(`/api/search_icd11?q=${encodeURIComponent(trimmed)}`)
+        .then(response => response.json())
+        .then(data => {
+          const results = Array.isArray(data) ? data : [];
+          if (seq !== _searchSeq) return;
+          if (!results.length) {
+            visibleOptions = [];
+            dropdown.innerHTML = `<div class="diagnosis-option diagnosis-option-empty">No matching diagnosis found. Press Enter to add "${escapeHtml(trimmed)}"</div>`;
+            dropdown.style.display = "block";
+            return;
+          }
+
+          const matches = results
+            .map(r => ({
+              label: String(r.name || "").trim(),
+              code: String(r.code || "").trim(),
+              system: String(r.system || "ICD-11").trim() || "ICD-11"
+            }))
+            .filter(m => m.label);
+
+          visibleOptions = matches;
+          dropdown.innerHTML = matches.map((item, index) => {
+            const codeHtml = item.code
+              ? `<span class="diagnosis-option-code">${escapeHtml(item.code)}</span>`
+              : "";
+            return (
+              `<button type="button" class="diagnosis-option" data-index="${index}">
+        ${codeHtml}
+        <span class="diagnosis-option-label">${escapeHtml(item.label)}</span>
+        <span class="diagnosis-option-system">${escapeHtml(item.system || "ICD-11")}</span>
+      </button>`
+            );
+          }).join("");
+          dropdown.style.display = "block";
+        })
+        .catch(() => {
+          if (seq !== _searchSeq) return;
+          visibleOptions = [];
+          dropdown.innerHTML = `<div class="diagnosis-option diagnosis-option-empty">No matching diagnosis found. Press Enter to add "${escapeHtml(trimmed)}"</div>`;
+          dropdown.style.display = "block";
+        });
+    }
+
+    let _suggestTimer = null;
+    function scheduleInlineSuggestions(query) {
+      const trimmed = (query || "").trim();
+      if (trimmed.length < 2) {
+        if (_suggestTimer) clearTimeout(_suggestTimer);
+        hideDropdown();
+        return;
+      }
+      if (_suggestTimer) clearTimeout(_suggestTimer);
+      _suggestTimer = setTimeout(() => renderInlineSuggestions(query), 300);
+    }
+
+    function renderChips() {
+      chipsEl.innerHTML = items.map((item, index) => {
+        const chipLabel = item.code && item.label
+          ? `${escapeHtml(item.code)} — ${escapeHtml(item.label)}`
+          : escapeHtml(item.label);
+        const activeClass = index === activeIndex ? " provisional-chip-active" : "";
+        return (
+          `<span class="diagnosis-chip${activeClass}" data-index="${index}" role="button" tabindex="0">
+        <span class="diagnosis-chip-label">${chipLabel}</span>
+        <button type="button" class="diagnosis-chip-remove" data-index="${index}" aria-label="Remove diagnosis">×</button>
+      </span>`
+        );
+      }).join("");
+
+      hiddenInput.value = serializeItems(items);
+      pickers.provisional = { key: "provisional", items: items.slice() };
+    }
+
+    function emitProvisionalChanged() {
+      syncClinicalStateSnapshotPills();
+      document.dispatchEvent(new CustomEvent("diagnosis-picker:changed", {
+        detail: {
+          key: "provisional",
+          items: items.slice()
+        }
+      }));
+    }
+
+    async function refreshCriteriaPanel() {
+      _criteriaSeq += 1;
+      const seq = _criteriaSeq;
+
+      if (activeIndex < 0 || !items[activeIndex]) {
+        criteriaBlock.classList.add("is-hidden");
+        return;
+      }
+
+      criteriaBlock.classList.remove("is-hidden");
+      const item = items[activeIndex];
+      activeLabel.textContent = item.label;
+
+      if (activeSystem === "ICD-11") {
+        criteriaContent.innerHTML = '<p style="margin:0;color:#666;font-style:italic;">Loading ICD-11 reference…</p>';
+        let token = null;
+        try {
+          const tokenResponse = await fetch("/icd11token");
+          const tokenPayload = await tokenResponse.json();
+          if (!tokenPayload.error && tokenPayload.access_token) {
+            token = tokenPayload.access_token;
+          }
+        } catch (e) {
+          token = null;
+        }
+        const html = await fetchIcd11CriteriaHtmlForLabel(item.label, token);
+        if (seq !== _criteriaSeq) return;
+        criteriaContent.innerHTML = html;
+        return;
+      }
+
+      const key = resolveCriteriaDbKey(item.label);
+      const field = activeSystem;
+      const text = key && criteriaDB[key] && criteriaDB[key][field]
+        ? criteriaDB[key][field]
+        : null;
+      if (seq !== _criteriaSeq) return;
+      if (text) {
+        criteriaContent.innerHTML = `<div class="diagnosis-criteria-body">${escapeHtml(text).replace(/\n/g, "<br>")}</div>`;
+      } else {
+        criteriaContent.innerHTML = `<p style="margin:0;color:#888;font-style:italic;">No curated ${escapeHtml(field)} criteria for "${escapeHtml(item.label)}". Try ICD-11 or the criteria modals below.</p>`;
+      }
+    }
+
+    function setCriteriaToggleUi() {
+      root.querySelectorAll(".provisional-criteria-toggle").forEach(btn => {
+        const sys = btn.getAttribute("data-system");
+        const on = sys === activeSystem;
+        btn.classList.toggle("active", on);
+        btn.setAttribute("aria-selected", on ? "true" : "false");
+      });
+    }
+
+    function addProvisionalItem(raw) {
+      const normalized = normalizeItem(raw);
+      if (!normalized) return;
+      const isDup = items.some(d => {
+        if (normalized.code && d.code) return d.code === normalized.code;
+        return d.label.toLowerCase() === normalized.label.toLowerCase();
+      });
+      if (isDup) return;
+
+      items = dedupeItems(items.concat([normalized]));
+      activeIndex = items.length - 1;
+      searchInput.value = "";
+      hideDropdown();
+      renderChips();
+      setCriteriaToggleUi();
+      refreshCriteriaPanel();
+      emitProvisionalChanged();
+    }
+
+    searchInput.addEventListener("focus", () => scheduleInlineSuggestions(searchInput.value));
+    searchInput.addEventListener("input", () => scheduleInlineSuggestions(searchInput.value));
+    searchInput.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === ",") {
+        event.preventDefault();
+        const query = searchInput.value.trim();
+        if (!query) return;
+        const qNorm = stripLeadingCodes(query, "").toLowerCase();
+        const exactMatch = visibleOptions.find(opt => stripLeadingCodes(opt.label, opt.code).toLowerCase() === qNorm);
+        addProvisionalItem(exactMatch || { label: stripLeadingCodes(query, ""), code: "", system: "Custom" });
+      } else if (event.key === "Backspace" && !searchInput.value && items.length) {
+        items.pop();
+        activeIndex = items.length ? items.length - 1 : -1;
+        renderChips();
+        refreshCriteriaPanel();
+        emitProvisionalChanged();
+      }
+    });
+
+    dropdown.addEventListener("click", event => {
+      const option = event.target.closest(".diagnosis-option[data-index]");
+      if (!option || option.classList.contains("diagnosis-option-empty")) return;
+      const item = visibleOptions[Number(option.dataset.index)];
+      if (item) addProvisionalItem(item);
+    });
+
+    chipsEl.addEventListener("click", event => {
+      const removeBtn = event.target.closest(".diagnosis-chip-remove");
+      if (removeBtn) {
+        event.stopPropagation();
+        const removedIdx = Number(removeBtn.dataset.index);
+        items.splice(removedIdx, 1);
+        if (!items.length) activeIndex = -1;
+        else if (activeIndex > removedIdx) activeIndex -= 1;
+        else if (activeIndex === removedIdx) activeIndex = Math.min(removedIdx, items.length - 1);
+        renderChips();
+        refreshCriteriaPanel();
+        emitProvisionalChanged();
+        return;
+      }
+      const chip = event.target.closest(".diagnosis-chip[data-index]");
+      if (!chip) return;
+      activeIndex = Number(chip.dataset.index);
+      renderChips();
+      refreshCriteriaPanel();
+    });
+
+    root.querySelectorAll(".provisional-criteria-toggle").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const sys = btn.getAttribute("data-system");
+        if (!sys || sys === activeSystem) return;
+        activeSystem = sys;
+        setCriteriaToggleUi();
+        refreshCriteriaPanel();
+      });
+    });
+
+    document.addEventListener("click", event => {
+      if (!root.contains(event.target)) hideDropdown();
+    });
+
+    ensureDiagnosisPickerStyles();
+    pickers.provisional = { key: "provisional", items: items.slice() };
+    renderChips();
+    setCriteriaToggleUi();
+    refreshCriteriaPanel();
+    syncClinicalStateSnapshotPills();
+
+    window.resyncProvisionalInlineFromHidden = function resyncProvisionalInlineFromHidden() {
+      items = dedupeItems(normalizeStoredItems(hiddenInput.value));
+      activeIndex = items.length ? items.length - 1 : -1;
+      renderChips();
+      setCriteriaToggleUi();
+      refreshCriteriaPanel();
+      syncClinicalStateSnapshotPills();
+      document.dispatchEvent(new CustomEvent("diagnosis-picker:changed", {
+        detail: { key: "provisional", items: items.slice() }
+      }));
+    };
+  }
+
   function getPickerItems(key) {
     return pickers[key] ? pickers[key].items.slice() : [];
   }
@@ -364,6 +813,13 @@
     if (text.includes("bipolar") || text.includes("manic") || text.includes("mania") || text.includes("f31")) return "bipolar";
     if (text.includes("anxiet") || text.includes("gad") || text.includes("panic") || text.includes("f41") || text.includes("f40")) return "anxiety";
     return null;
+  }
+
+  function resolveCriteriaDbKey(label) {
+    const direct = getCriteriaKey(label);
+    if (direct) return direct;
+    const lower = String(label || "").toLowerCase();
+    return Object.keys(criteriaDB).find(dbk => lower.includes(dbk)) || null;
   }
 
   function openModal(modalId) {
@@ -425,7 +881,7 @@
     const selected = mergeDiagnosisItemsForCriteria();
     const fieldKey = system === "ICD-10" ? "ICD-10" : "DSM-5";
     const tabs = selected.map(item => {
-      const key = getCriteriaKey(item.label);
+      const key = resolveCriteriaDbKey(item.label);
       const text = key && criteriaDB[key] && criteriaDB[key][fieldKey]
         ? criteriaDB[key][fieldKey]
         : `No curated ${system} criteria snippet is available for "${item.label}". Use ICD-11 search or your clinical reference.`;
@@ -478,41 +934,22 @@
     for (let i = 0; i < selected.length; i += 1) {
       const item = selected[i];
       setIcd11PanelHtml("icd11CriteriaModal", i, '<p class="icd11-seq-status" style="margin:0; color:#666;">Searching ICD-11…</p>');
-      try {
-        const response = await fetch(`https://id.who.int/icd/release/11/2024-01/mms/search?q=${encodeURIComponent(item.label)}&flatResults=true`, {
-          headers: {
-            Authorization: "Bearer " + token,
-            Accept: "application/json",
-            "Accept-Language": "en",
-            "API-Version": "v2"
-          }
-        });
-        const data = await response.json();
-        const entities = Array.isArray(data.destinationEntities) ? data.destinationEntities.slice(0, 10) : [];
-        if (!entities.length) {
-          setIcd11PanelHtml("icd11CriteriaModal", i, '<p style="margin:0; color:#666;">No ICD-11 search results for this term.</p>');
-        } else {
-          const content = `
-            <div class="diagnosis-icd11-results">
-              ${entities.map(entity => `
-                <div class="diagnosis-icd11-result">
-                  <div class="diagnosis-icd11-code">${escapeHtml(entity.theCode || "No code")}</div>
-                  <div class="diagnosis-icd11-title">${icd11TitleToSafeHtml(entity.title || "")}</div>
-                </div>
-              `).join("")}
-            </div>
-          `;
-          setIcd11PanelHtml("icd11CriteriaModal", i, content);
-        }
-      } catch (error) {
-        setIcd11PanelHtml("icd11CriteriaModal", i, '<p style="margin:0; color:#c33;">Error fetching ICD-11 results for this diagnosis.</p>');
-      }
+      const html = await fetchIcd11CriteriaHtmlForLabel(item.label, token);
+      setIcd11PanelHtml("icd11CriteriaModal", i, html);
     }
   }
 
   window.initializeDiagnosisPickers = function initializeDiagnosisPickers(config) {
-    initPicker(config.provisional);
-    initPicker(config.differential);
+    if (config.provisional) {
+      if (config.provisional.inline) {
+        initProvisionalInline(config.provisional);
+      } else {
+        initPicker(config.provisional);
+      }
+    }
+    if (config.differential) {
+      initPicker(config.differential);
+    }
     document.dispatchEvent(new CustomEvent("diagnosis-picker:initialized"));
   };
 
@@ -523,4 +960,25 @@
   window.showIcd11CriteriaTabs = openIcd11Criteria;
   window.closeDiagnosisModal = closeModal;
   window.mergeDiagnosisItemsForCriteria = mergeDiagnosisItemsForCriteria;
+  window.syncClinicalStateVisualsFromHidden = syncClinicalStateVisualsFromHidden;
+  window.handleClinicalStateModalCheckbox = function handleClinicalStateModalCheckbox(cb) {
+    if (!cb || !cb.value) return;
+    const hiddenInput = document.getElementById("clinicalStateInput");
+    if (!hiddenInput) return;
+    let arr = parseClinicalStateSnapshotRaw(hiddenInput.value);
+    if (cb.checked) {
+      if (!arr.includes(cb.value)) arr = arr.concat([cb.value]);
+    } else {
+      arr = arr.filter(s => s !== cb.value);
+    }
+    commitClinicalStateHiddenValue(arr);
+  };
+  window.handlePopupCheckboxClick = window.handleClinicalStateModalCheckbox;
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const hi = document.getElementById("clinicalStateInput");
+    if (!hi) return;
+    hi.addEventListener("stateSync", syncClinicalStateVisualsFromHidden);
+    hi.addEventListener("change", syncClinicalStateVisualsFromHidden);
+  });
 })();

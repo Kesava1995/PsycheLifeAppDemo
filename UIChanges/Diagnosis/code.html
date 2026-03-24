@@ -1,0 +1,838 @@
+<html class="light" lang="en"><head></head><body class="bg-surface text-on-surface font-body selection:bg-primary-fixed selection:text-on-primary-fixed">```html
+
+
+
+    <meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Clinical Clarity - Patient File</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-primary-container": "#95e1ef",
+              "inverse-primary": "#87d2e0",
+              "secondary": "#566060",
+              "surface-tint": "#066874",
+              "on-error-container": "#93000a",
+              "inverse-on-surface": "#edf1f1",
+              "on-secondary-container": "#5c6666",
+              "primary-fixed-dim": "#87d2e0",
+              "on-tertiary-container": "#ffc9c3",
+              "on-tertiary": "#ffffff",
+              "tertiary-fixed-dim": "#ffb4ac",
+              "surface-container-low": "#f0f4f4",
+              "on-secondary-fixed": "#141d1d",
+              "error": "#ba1a1a",
+              "surface-container": "#eaefef",
+              "surface-container-high": "#e5e9e9",
+              "surface-dim": "#d7dbdb",
+              "tertiary": "#8f000d",
+              "secondary-container": "#dae5e4",
+              "error-container": "#ffdad6",
+              "primary-fixed": "#a3effc",
+              "secondary-fixed": "#dae5e4",
+              "surface": "#f6fafa",
+              "on-background": "#181c1d",
+              "background": "#f6fafa",
+              "tertiary-fixed": "#ffdad6",
+              "outline-variant": "#bec8ca",
+              "on-primary": "#ffffff",
+              "secondary-fixed-dim": "#bec8c8",
+              "on-tertiary-fixed-variant": "#93000d",
+              "on-secondary": "#ffffff",
+              "inverse-surface": "#2c3132",
+              "surface-container-highest": "#dfe3e3",
+              "surface-variant": "#dfe3e3",
+              "on-primary-fixed": "#001f24",
+              "on-surface": "#181c1d",
+              "tertiary-container": "#b8141b",
+              "on-error": "#ffffff",
+              "surface-container-lowest": "#ffffff",
+              "outline": "#6f797b",
+              "on-primary-fixed-variant": "#004f58",
+              "on-tertiary-fixed": "#410002",
+              "on-surface-variant": "#3f484a",
+              "primary-container": "#006672",
+              "surface-bright": "#f6fafa",
+              "primary": "#004c56",
+              "on-secondary-fixed-variant": "#3f4949"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            backdrop-filter: blur(20px);
+            background: rgba(246, 250, 250, 0.8);
+        }
+        .teal-gradient {
+            background: linear-gradient(135deg, #006672 0%, #16808f 100%);
+        }
+        .ghost-border {
+            border: 1px solid rgba(189, 200, 203, 0.2);
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #dfe3e3; border-radius: 10px; }
+
+        .pill-badge {
+            padding: 8px 16px;
+            border-radius: 999px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+            font-size: 13px;
+            transition: all 0.2s ease;
+        }
+        .pill-badge-default {
+            background-color: #e4ecec;
+            color: #3f4948;
+        }
+        .pill-badge-selected {
+            background-color: #006672;
+            color: #ffffff;
+        }
+
+        .impairment-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: #d2dcdc;
+            border-radius: 999px;
+            outline: none;
+        }
+        .impairment-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            transition: background 0.2s;
+        }
+        
+        .slider-low::-webkit-slider-thumb { background: #22c55e; }
+        .slider-moderate::-webkit-slider-thumb { background: #f59e0b; }
+        .slider-high::-webkit-slider-thumb { background: #ba1a1a; }
+        
+        .ghost-border-heavy { border: 1.5px solid rgba(189,200,203,0.5); }
+        .input-focus:focus { border-color: #006672; box-shadow: 0 0 0 3px rgba(0,102,114,0.10); }
+
+        .safety-badge-pill {
+            background-color: #006672;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .diagnosis-input-focus:focus-within {
+            border-color: #006672;
+            box-shadow: 0 0 0 3px rgba(0,102,114,0.10);
+        }
+
+        .adherence-btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            border: 1.5px solid #d2dcdc;
+            transition: all 0.2s;
+        }
+        .adherence-btn:first-child { border-radius: 8px 0 0 8px; }
+        .adherence-btn:not(:first-child):not(:last-child) { border-left: none; }
+        .adherence-btn:last-child { border-radius: 0 8px 8px 0; border-left: none; }
+
+        .adherent-selected { background-color: #dcfce7; color: #166534; border-color: #166534; z-index: 10; }
+        .partial-selected { background-color: #fef9c3; color: #854d0e; border-color: #854d0e; z-index: 10; }
+        .non-selected { background-color: #fee2e2; color: #991b1b; border-color: #991b1b; z-index: 10; }
+
+        /* Custom range colors for side effects */
+        .se-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .se-slider-low::-webkit-slider-thumb { background: #22c55e; }
+        .se-slider-med::-webkit-slider-thumb { background: #f59e0b; }
+        .se-slider-high::-webkit-slider-thumb { background: #ba1a1a; }
+    </style>
+<!-- TopNavBar -->
+<nav class="fixed top-0 z-50 w-full flex justify-between items-center px-10 py-3 bg-[#f6fafa] dark:bg-slate-950 backdrop-blur-md border-b border-[#e4ecec]">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold text-[#006672] dark:text-[#9eefff] tracking-tight font-headline">Clinical Clarity</span>
+<div class="hidden md:flex items-center gap-6">
+<a class="text-[#3f4948] dark:text-slate-400 font-medium hover:text-[#006672] transition-colors" href="#">Settings</a>
+<a class="text-[#3f4948] dark:text-slate-400 font-medium hover:text-[#006672] transition-colors" href="#">Dark Mode</a>
+<div class="h-4 w-px bg-outline-variant opacity-30 mx-2"></div>
+<div class="flex items-center gap-2">
+<span class="text-sm font-bold text-on-surface">Patient: Jane Doe</span>
+<span class="text-[11px] bg-surface-container px-2 py-0.5 rounded font-medium text-on-surface-variant">ID: #88210</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full hover:bg-[#dfe3e3] transition-colors">
+<span class="material-symbols-outlined text-[#3f4948]">notifications</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden bg-secondary-container">
+<img alt="Clinician professional profile portrait" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuByJ0AZjmagHdwiN3rusnGhKmOI-tKdJXxaIuZ7hS7FkOHJT_MqVHKzZC1uso8CpGyO72C6FOxBuhLkjgNxNfFBwAk0b3qusJzNOIzZbqWOEALBEoEyc_AcGJSjosOJeE8H4tTiwpyAzz4N-LOOsH4Y1mjGwhDwoOB7JgccE8h8WpiKWqY0-6jICXjmH9eTnC5gy4hGoqUvv9iZNF2xUYGGh73oWgE1vqZ_sYDYvgYISwwnDI9ZlDWmh87YBQD4cyGmx1Q-6bi1L3UD"/>
+</div>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="pt-20 pb-20 px-10 min-h-screen">
+<div class="max-w-[1200px] mx-auto space-y-12">
+<!-- SECTION NAVIGATOR (FULL WIDTH STICKY) -->
+<div class="sticky top-[64px] z-40 bg-[#f6fafa]/90 backdrop-blur-md py-4 border-b border-[#e4ecec] -mx-10 px-10 mb-8 overflow-x-auto no-scrollbar">
+<div class="max-w-[1200px] mx-auto flex items-center gap-2">
+<a class="whitespace-nowrap px-4 py-2 rounded-full bg-white border border-[#d2dcdc] text-[13px] font-bold text-[#3f4948] hover:border-[#006672] transition-colors" href="#demographics">Demographics</a>
+<a class="whitespace-nowrap px-4 py-2 rounded-full bg-[#006672] text-white text-[13px] font-bold shadow-md shadow-[#006672]/20" href="#mse-section">MSE</a>
+<a class="whitespace-nowrap px-4 py-2 rounded-full bg-white border border-[#d2dcdc] text-[13px] font-bold text-[#3f4948] hover:border-[#006672] transition-colors" href="#functional-impairment-section">Functioning</a>
+<a class="whitespace-nowrap px-4 py-2 rounded-full bg-white border border-[#d2dcdc] text-[13px] font-bold text-[#3f4948] hover:border-[#006672] transition-colors" href="#psychiatric-scales-section">Scales</a>
+<a class="whitespace-nowrap px-4 py-2 rounded-full bg-white border border-[#d2dcdc] text-[13px] font-bold text-[#3f4948] hover:border-[#006672] transition-colors" href="#safety-medical-profile">Safety</a>
+<a class="whitespace-nowrap px-4 py-2 rounded-full bg-white border border-[#d2dcdc] text-[13px] font-bold text-[#3f4948] hover:border-[#006672] transition-colors" href="#side-effects-section">Side Effects</a>
+<a class="whitespace-nowrap px-4 py-2 rounded-full bg-white border border-[#d2dcdc] text-[13px] font-bold text-[#3f4948] hover:border-[#006672] transition-colors" href="#diagnosis-section">Diagnosis</a>
+<a class="whitespace-nowrap px-4 py-2 rounded-full bg-white border border-[#d2dcdc] text-[13px] font-bold text-[#3f4948] hover:border-[#006672] transition-colors" href="#medications-section">Medications</a>
+</div>
+</div>
+<!-- Existing Sections Placeholder (Logic simulation) -->
+<div class="space-y-8 opacity-40 grayscale pointer-events-none" id="demographics">
+<section>
+<h3 class="font-headline font-bold text-2xl mb-4">Demographics, Background, Complaints...</h3>
+<div class="h-40 bg-surface-container-low rounded-xl"></div>
+</section>
+<section>
+<h3 class="font-headline font-bold text-2xl mb-4">Negative History</h3>
+<div class="h-40 bg-surface-container-low rounded-xl"></div>
+</section>
+</div>
+<!-- MSE SECTION -->
+<section class="scroll-mt-32" id="mse-section">
+<header class="mb-4">
+<div class="flex items-center gap-3">
+<div class="w-1.5 h-6 bg-[#006672] rounded-full"></div>
+<h2 class="font-headline font-bold text-[22px] text-[#181c1d]">MSE</h2>
+</div>
+<p class="font-body font-normal text-[14px] text-[#3d5050] ml-4.5">Mental state examination findings</p>
+</header>
+<div class="bg-[#f4f9f9] dark:bg-slate-900/50 rounded-[20px] p-8 space-y-8">
+<!-- 1. CONSCIOUSNESS -->
+<div class="bg-white dark:bg-slate-800 rounded-[16px] p-6 shadow-sm">
+<div class="flex items-center gap-3 mb-5">
+<div class="w-1 h-4 bg-[#9eefff] rounded-full"></div>
+<h3 class="font-headline font-semibold text-[14px] text-[#006672] uppercase tracking-wider">CONSCIOUSNESS</h3>
+</div>
+<div class="flex flex-wrap gap-2.5">
+<button class="pill-badge pill-badge-selected">Clear</button>
+<button class="pill-badge pill-badge-default">Drowsy</button>
+<button class="pill-badge pill-badge-default">Fluctuating</button>
+<button class="pill-badge pill-badge-default">Stupor</button>
+<button class="pill-badge pill-badge-default">Coma</button>
+</div>
+</div>
+<!-- 2. GENERAL APPEARANCE & BEHAVIOUR -->
+<div class="bg-white dark:bg-slate-800 rounded-[16px] p-6 shadow-sm">
+<div class="flex items-center gap-3 mb-6">
+<div class="w-1 h-4 bg-[#9eefff] rounded-full"></div>
+<h3 class="font-headline font-semibold text-[14px] text-[#006672] uppercase tracking-wider">GENERAL APPEARANCE &amp; BEHAVIOUR</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-8">
+<div class="space-y-3">
+<label class="font-bold text-[11px] text-[#3d5050] uppercase tracking-widest">Appearance</label>
+<div class="flex flex-wrap gap-2">
+<button class="pill-badge pill-badge-selected">Normal</button>
+<button class="pill-badge pill-badge-default">Over-dressed</button>
+<button class="pill-badge pill-badge-default">Unkempt</button>
+</div>
+</div>
+<div class="space-y-3">
+<label class="font-bold text-[11px] text-[#3d5050] uppercase tracking-widest">Cooperation</label>
+<div class="flex flex-wrap gap-2">
+<button class="pill-badge pill-badge-selected">Co-operative</button>
+<button class="pill-badge pill-badge-default">Not co-operative</button>
+</div>
+</div>
+<div class="space-y-3">
+<label class="font-bold text-[11px] text-[#3d5050] uppercase tracking-widest">Rapport</label>
+<div class="flex flex-wrap gap-2">
+<button class="pill-badge pill-badge-selected">Established</button>
+<button class="pill-badge pill-badge-default">Not established</button>
+<button class="pill-badge pill-badge-default">Established with difficulty</button>
+</div>
+</div>
+<div class="space-y-3">
+<label class="font-bold text-[11px] text-[#3d5050] uppercase tracking-widest">Eye Contact</label>
+<div class="flex flex-wrap gap-2">
+<button class="pill-badge pill-badge-selected">Achieved</button>
+<button class="pill-badge pill-badge-default">Not achieved</button>
+<button class="pill-badge pill-badge-selected">Sustained</button>
+<button class="pill-badge pill-badge-default">Not sustained</button>
+</div>
+</div>
+<div class="space-y-3">
+<label class="font-bold text-[11px] text-[#3d5050] uppercase tracking-widest">Psychomotor Activity</label>
+<div class="flex flex-wrap gap-2">
+<button class="pill-badge pill-badge-selected">Normal</button>
+<button class="pill-badge pill-badge-default">Decreased</button>
+<button class="pill-badge pill-badge-default">Increased</button>
+</div>
+</div>
+<div class="space-y-3">
+<label class="font-bold text-[11px] text-[#3d5050] uppercase tracking-widest">Involuntary Movements</label>
+<div class="relative">
+<div class="w-full h-[44px] px-4 rounded-[8px] ghost-border bg-surface text-sm flex items-center justify-between text-[#5c6666]">
+<span>Select movements...</span>
+<span class="material-symbols-outlined text-sm">expand_more</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 3. SPEECH -->
+<div class="bg-white dark:bg-slate-800 rounded-[16px] p-6 shadow-sm">
+<div class="flex items-center gap-3 mb-6">
+<div class="w-1 h-4 bg-[#9eefff] rounded-full"></div>
+<h3 class="font-headline font-semibold text-[14px] text-[#006672] uppercase tracking-wider">SPEECH</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-8">
+<div class="space-y-4">
+<div class="space-y-3">
+<label class="font-bold text-[11px] text-[#3d5050] uppercase tracking-widest">Reaction Time</label>
+<div class="flex flex-wrap gap-2">
+<button class="pill-badge pill-badge-selected">Normal</button>
+<button class="pill-badge pill-badge-default">Decreased</button>
+</div>
+</div>
+<div class="space-y-3">
+<label class="font-bold text-[11px] text-[#3d5050] uppercase tracking-widest">Relevance</label>
+<div class="flex flex-wrap gap-2">
+<button class="pill-badge pill-badge-selected">Relevant</button>
+<button class="pill-badge pill-badge-default">Irrelevant</button>
+</div>
+</div>
+</div>
+<div class="space-y-4">
+<div class="space-y-3">
+<label class="font-bold text-[11px] text-[#3d5050] uppercase tracking-widest">Intensity</label>
+<div class="flex flex-wrap gap-2">
+<button class="pill-badge pill-badge-selected">Audible</button>
+<button class="pill-badge pill-badge-default">Loud</button>
+<button class="pill-badge pill-badge-default">Soft</button>
+</div>
+</div>
+<div class="space-y-3">
+<label class="font-bold text-[11px] text-[#3d5050] uppercase tracking-widest">Coherence</label>
+<div class="flex flex-wrap gap-2">
+<button class="pill-badge pill-badge-selected">Coherent</button>
+<button class="pill-badge pill-badge-default">Incoherent</button>
+</div>
+</div>
+</div>
+<div class="space-y-4">
+<div class="space-y-3">
+<label class="font-bold text-[11px] text-[#3d5050] uppercase tracking-widest">Ease of Speech</label>
+<div class="flex flex-wrap gap-2">
+<button class="pill-badge pill-badge-selected">Spontaneous</button>
+<button class="pill-badge pill-badge-default">Hesitant</button>
+<button class="pill-badge pill-badge-default">Mute</button>
+</div>
+</div>
+<div class="space-y-3">
+<label class="font-bold text-[11px] text-[#3d5050] uppercase tracking-widest">Pitch</label>
+<div class="flex flex-wrap gap-2">
+<button class="pill-badge pill-badge-default">Monotonous</button>
+<button class="pill-badge pill-badge-selected">Fluctuating</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 4, 5, 6. THOUGHT, PERCEPTION, MOOD -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="bg-white dark:bg-slate-800 rounded-[16px] p-6 shadow-sm">
+<div class="flex items-center gap-3 mb-5">
+<div class="w-1 h-4 bg-[#9eefff] rounded-full"></div>
+<h3 class="font-headline font-semibold text-[14px] text-[#006672] uppercase tracking-wider">THOUGHT</h3>
+</div>
+<div class="space-y-5">
+<div class="p-4 bg-surface rounded-xl space-y-4 border border-[#e4ecec]">
+<div class="flex items-center gap-2">
+<select class="flex-1 bg-transparent border-none text-xs font-bold focus:ring-0 p-0 text-[#181c1d]"><option>Delusion of Grandeur</option></select>
+<span class="material-symbols-outlined text-[18px] text-[#006672] cursor-pointer">sticky_note_2</span>
+</div>
+<input class="w-full h-1.5 bg-secondary-container rounded-lg appearance-none cursor-pointer accent-[#006672]" type="range"/>
+<div class="flex justify-between text-[10px] text-on-surface-variant font-black uppercase"><span>Mild</span><span>Severe</span></div>
+</div>
+<button class="text-[#006672] text-[13px] font-bold flex items-center gap-2 hover:bg-[#f4f9f9] px-3 py-2 rounded-lg transition-colors w-full border border-dashed border-[#006672]/30">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                                Add thought finding
+                            </button>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-800 rounded-[16px] p-6 shadow-sm">
+<div class="flex items-center gap-3 mb-5">
+<div class="w-1 h-4 bg-[#9eefff] rounded-full"></div>
+<h3 class="font-headline font-semibold text-[14px] text-[#006672] uppercase tracking-wider">PERCEPTION</h3>
+</div>
+<div class="space-y-5">
+<div class="p-4 bg-surface rounded-xl space-y-4 border border-[#e4ecec]">
+<div class="flex items-center gap-2">
+<select class="flex-1 bg-transparent border-none text-xs font-bold focus:ring-0 p-0 text-[#181c1d]"><option>Auditory Hallucinations</option></select>
+<span class="material-symbols-outlined text-[18px] text-[#006672] cursor-pointer">sticky_note_2</span>
+</div>
+<input class="w-full h-1.5 bg-secondary-container rounded-lg appearance-none cursor-pointer accent-[#006672]" type="range"/>
+<div class="flex justify-between text-[10px] text-on-surface-variant font-black uppercase"><span>Mild</span><span>Severe</span></div>
+</div>
+<button class="text-[#006672] text-[13px] font-bold flex items-center gap-2 hover:bg-[#f4f9f9] px-3 py-2 rounded-lg transition-colors w-full border border-dashed border-[#006672]/30">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                                Add perception finding
+                            </button>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-800 rounded-[16px] p-6 shadow-sm">
+<div class="flex items-center gap-3 mb-5">
+<div class="w-1 h-4 bg-[#9eefff] rounded-full"></div>
+<h3 class="font-headline font-semibold text-[14px] text-[#006672] uppercase tracking-wider">MOOD</h3>
+</div>
+<div class="space-y-5">
+<div class="p-4 bg-surface rounded-xl space-y-4 border border-[#e4ecec]">
+<div class="flex items-center gap-2">
+<select class="flex-1 bg-transparent border-none text-xs font-bold focus:ring-0 p-0 text-[#181c1d]"><option>Euthymic</option></select>
+<span class="material-symbols-outlined text-[18px] text-[#006672] cursor-pointer">sticky_note_2</span>
+</div>
+<input class="w-full h-1.5 bg-secondary-container rounded-lg appearance-none cursor-pointer accent-[#006672]" type="range"/>
+<div class="flex justify-between text-[10px] text-on-surface-variant font-black uppercase"><span>Mild</span><span>Severe</span></div>
+</div>
+<button class="text-[#006672] text-[13px] font-bold flex items-center gap-2 hover:bg-[#f4f9f9] px-3 py-2 rounded-lg transition-colors w-full border border-dashed border-[#006672]/30">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                                Add mood finding
+                            </button>
+</div>
+</div>
+</div>
+<!-- 7. AFFECT -->
+<div class="bg-white dark:bg-slate-800 rounded-[16px] p-6 shadow-sm">
+<div class="flex items-center gap-3 mb-6">
+<div class="w-1 h-4 bg-[#9eefff] rounded-full"></div>
+<h3 class="font-headline font-semibold text-[14px] text-[#006672] uppercase tracking-wider">AFFECT</h3>
+</div>
+<div class="space-y-8">
+<div class="relative">
+<div class="w-full min-h-[50px] px-4 py-2 rounded-[10px] ghost-border-heavy bg-surface text-sm flex items-center gap-2 flex-wrap">
+<span class="bg-[#006672] text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5">
+                                    Anxious <span class="material-symbols-outlined text-[14px] cursor-pointer">close</span>
+</span>
+<span class="bg-[#006672] text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5">
+                                    Irritable <span class="material-symbols-outlined text-[14px] cursor-pointer">close</span>
+</span>
+<input class="flex-1 bg-transparent border-none focus:ring-0 p-0 text-sm font-medium" placeholder="Search affect..." type="text"/>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+<div class="space-y-3">
+<label class="font-bold text-[11px] text-[#3d5050] uppercase tracking-widest">Reactivity</label>
+<div class="flex flex-wrap gap-2">
+<button class="pill-badge pill-badge-selected">Present</button>
+<button class="pill-badge pill-badge-default">Absent</button>
+</div>
+</div>
+<div class="space-y-3">
+<label class="font-bold text-[11px] text-[#3d5050] uppercase tracking-widest">Range</label>
+<div class="flex flex-wrap gap-2">
+<button class="pill-badge pill-badge-selected">Normal</button>
+<button class="pill-badge pill-badge-default">Restricted</button>
+<button class="pill-badge pill-badge-default">Labile</button>
+</div>
+</div>
+<div class="space-y-3">
+<label class="font-bold text-[11px] text-[#3d5050] uppercase tracking-widest">Congruence</label>
+<div class="flex flex-wrap gap-2">
+<button class="pill-badge pill-badge-selected">Congruent</button>
+<button class="pill-badge pill-badge-default">Incongruent</button>
+</div>
+</div>
+<div class="space-y-3">
+<label class="font-bold text-[11px] text-[#3d5050] uppercase tracking-widest">Appropriateness</label>
+<div class="flex flex-wrap gap-2">
+<button class="pill-badge pill-badge-selected">Appropriate</button>
+<button class="pill-badge pill-badge-default">Inappropriate</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 8. INSIGHT -->
+<div class="bg-white dark:bg-slate-800 rounded-[16px] p-6 shadow-sm">
+<div class="flex items-center gap-3 mb-5">
+<div class="w-1 h-4 bg-[#9eefff] rounded-full"></div>
+<h3 class="font-headline font-semibold text-[14px] text-[#006672] uppercase tracking-wider">INSIGHT</h3>
+</div>
+<div class="flex flex-wrap items-center gap-6">
+<div class="flex flex-wrap gap-2.5">
+<button class="pill-badge pill-badge-selected">Present</button>
+<button class="pill-badge pill-badge-default">Partial</button>
+<button class="pill-badge pill-badge-default">Absent</button>
+</div>
+<button class="h-[44px] px-8 rounded-[999px] teal-gradient text-white text-sm font-bold shadow-lg shadow-[#006672]/20 active:scale-[0.98] transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+                            GRADE INSIGHT
+                        </button>
+</div>
+</div>
+<!-- 9. ADDITIONAL MSE FINDINGS -->
+<div class="bg-white dark:bg-slate-800 rounded-[16px] p-6 shadow-sm">
+<div class="flex items-center gap-3 mb-5">
+<div class="w-1 h-4 bg-[#9eefff] rounded-full"></div>
+<h3 class="font-headline font-semibold text-[14px] text-[#006672] uppercase tracking-wider">ADDITIONAL MSE FINDINGS</h3>
+</div>
+<textarea class="w-full p-5 rounded-[12px] ghost-border-heavy bg-surface text-sm focus:border-[#006672] focus:ring-0 outline-none transition-all resize-none min-h-[120px]" placeholder="Enter clinical notes, specific observations, or cognitive testing results..."></textarea>
+</div>
+</div>
+</section>
+<!-- FUNCTIONAL IMPAIRMENT SECTION -->
+<section class="scroll-mt-32" id="functional-impairment-section">
+<header class="mb-4">
+<div class="flex items-center gap-3">
+<div class="w-1.5 h-6 bg-[#006672] rounded-full"></div>
+<h2 class="font-headline font-bold text-[22px] text-[#181c1d]">Functional Impairment</h2>
+</div>
+<p class="font-body font-normal text-[14px] text-[#3d5050] ml-4.5">Rate domain impact</p>
+</header>
+<div class="bg-white dark:bg-slate-800 rounded-[20px] p-8 space-y-2 shadow-sm">
+<!-- Question 1 -->
+<div class="grid grid-cols-[1fr_400px_60px] items-center gap-10 py-5 border-b border-[#e4ecec]">
+<span class="font-body font-medium text-[15px] text-[#181c1d]">Work or academic functioning</span>
+<input class="impairment-slider slider-low" max="10" min="1" step="1" type="range" value="2"/>
+<span class="font-body font-bold text-[18px] text-[#22c55e] text-right">2</span>
+</div>
+<!-- Question 2 -->
+<div class="grid grid-cols-[1fr_400px_60px] items-center gap-10 py-5 border-b border-[#e4ecec]">
+<span class="font-body font-medium text-[15px] text-[#181c1d]">Social interactions &amp; Networking</span>
+<input class="impairment-slider slider-moderate" max="10" min="1" step="1" type="range" value="5"/>
+<span class="font-body font-bold text-[18px] text-[#f59e0b] text-right">5</span>
+</div>
+<!-- Question 3 -->
+<div class="grid grid-cols-[1fr_400px_60px] items-center gap-10 py-5 border-b border-[#e4ecec]">
+<span class="font-body font-medium text-[15px] text-[#181c1d]">Relationships and home responsibilities</span>
+<input class="impairment-slider slider-high" max="10" min="1" step="1" type="range" value="8"/>
+<span class="font-body font-bold text-[18px] text-[#ba1a1a] text-right">8</span>
+</div>
+<!-- Question 4 -->
+<div class="grid grid-cols-[1fr_400px_60px] items-center gap-10 py-5 border-b border-[#e4ecec]">
+<span class="font-body font-medium text-[15px] text-[#181c1d]">Personal care and daily needs</span>
+<input class="impairment-slider slider-low" max="10" min="1" step="1" type="range" value="1"/>
+<span class="font-body font-bold text-[18px] text-[#22c55e] text-right">1</span>
+</div>
+<!-- Question 5 -->
+<div class="grid grid-cols-[1fr_400px_60px] items-center gap-10 py-5">
+<span class="font-body font-medium text-[15px] text-[#181c1d]">Leisure and enjoyable activities</span>
+<input class="impairment-slider slider-moderate" max="10" min="1" step="1" type="range" value="4"/>
+<span class="font-body font-bold text-[18px] text-[#f59e0b] text-right">4</span>
+</div>
+<!-- Overall Impairment Summary -->
+<div class="flex justify-end items-center gap-6 pt-8 mt-4 border-t border-[#e4ecec]">
+<div class="flex items-center gap-3">
+<span class="font-bold text-[11px] text-[#3d5050] uppercase tracking-widest">Global Score</span>
+<div class="flex items-center gap-4 bg-[#f8fafa] px-5 py-3 rounded-xl border border-[#d2dcdc]">
+<span class="font-body font-black text-[24px] text-[#f59e0b]">4.0</span>
+<span class="bg-[#fef9c3] text-[#854d0e] px-4 py-1.5 rounded-full text-[13px] font-bold uppercase tracking-wider">Moderate</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- PSYCHIATRIC SCALES SECTION -->
+<section class="scroll-mt-32" id="psychiatric-scales-section">
+<header class="mb-4">
+<div class="flex items-center gap-3">
+<div class="w-1.5 h-6 bg-[#006672] rounded-full"></div>
+<h2 class="font-headline font-bold text-[22px] text-[#181c1d]">Psychiatric Scales</h2>
+</div>
+<p class="font-body font-normal text-[14px] text-[#3d5050] ml-4.5">Standardised assessment history</p>
+</header>
+<div class="bg-white dark:bg-slate-800 rounded-[20px] p-8 shadow-sm">
+<!-- Scale Instance -->
+<div class="flex justify-between items-center bg-[#f8fafa] dark:bg-slate-900/40 rounded-[16px] p-6 mb-6 border border-[#e4ecec]">
+<div class="space-y-1">
+<h4 class="font-headline font-bold text-[18px] text-[#181c1d]">YBOCS (Yale-Brown Obsessive Compulsive Scale)</h4>
+<p class="font-body font-medium text-[12px] text-[#3d5050] flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+                            Administered 21 Mar 2026
+                        </p>
+</div>
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-4">
+<span class="font-body font-black text-[22px] text-[#181c1d]">18</span>
+<span class="bg-[#fef9c3] text-[#854d0e] px-4 py-1.5 rounded-full text-[12px] font-bold uppercase tracking-wider">Moderate OCD</span>
+</div>
+<div class="h-10 w-px bg-outline-variant opacity-30"></div>
+<a class="font-body font-bold text-[14px] text-[#006672] hover:underline cursor-pointer flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">open_in_new</span>
+                            Details
+                        </a>
+</div>
+</div>
+<button class="flex items-center gap-2 font-body font-bold text-[15px] text-[#006672] hover:bg-[#f4f9f9] px-6 py-3 rounded-full border-2 border-[#006672] transition-all">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+                    New Assessment Scale
+                </button>
+</div>
+</section>
+<!-- SAFETY & MEDICAL PROFILE SECTION -->
+<section class="scroll-mt-32" id="safety-medical-profile">
+<header class="mb-4">
+<div class="flex items-center gap-3">
+<div class="w-1.5 h-6 bg-[#006672] rounded-full"></div>
+<h2 class="font-headline font-bold text-[22px] text-[#181c1d]">Safety &amp; Medical Profile</h2>
+</div>
+<p class="font-body font-normal text-[14px] text-[#3d5050] ml-4.5">Health background</p>
+</header>
+<div class="bg-white dark:bg-slate-800 rounded-[20px] p-8 shadow-sm">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Drug Allergies -->
+<div class="group relative">
+<div class="min-h-[100px] p-5 rounded-[16px] ghost-border-heavy bg-white dark:bg-slate-800 hover:border-[#006672] hover:bg-[#f4f9f9] transition-all cursor-pointer shadow-sm">
+<div class="flex justify-between items-start mb-4">
+<span class="text-xs font-black flex items-center gap-2 text-[#181c1d] dark:text-white uppercase tracking-widest">🚨 Drug Allergies</span>
+<span class="material-symbols-outlined text-[18px] text-[#006672] opacity-0 group-hover:opacity-100 transition-opacity">edit</span>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="safety-badge-pill">Penicillin <span class="material-symbols-outlined text-[14px]">close</span></span>
+<span class="safety-badge-pill">Sulfa <span class="material-symbols-outlined text-[14px]">close</span></span>
+</div>
+</div>
+</div>
+<!-- Medical Comorbidities -->
+<div class="group relative">
+<div class="min-h-[100px] p-5 rounded-[16px] ghost-border-heavy bg-white dark:bg-slate-800 hover:border-[#006672] hover:bg-[#f4f9f9] transition-all cursor-pointer shadow-sm">
+<div class="flex justify-between items-start mb-4">
+<span class="text-xs font-black flex items-center gap-2 text-[#181c1d] dark:text-white uppercase tracking-widest">🏥 Comorbidities</span>
+<span class="material-symbols-outlined text-[18px] text-[#006672] opacity-0 group-hover:opacity-100 transition-opacity">edit</span>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="safety-badge-pill">Hypertension <span class="material-symbols-outlined text-[14px]">close</span></span>
+<span class="safety-badge-pill">Type 2 Diabetes <span class="material-symbols-outlined text-[14px]">close</span></span>
+</div>
+</div>
+</div>
+<!-- Non-Psychiatric Medications -->
+<div class="group relative">
+<div class="min-h-[100px] p-5 rounded-[16px] ghost-border-heavy bg-white dark:bg-slate-800 hover:border-[#006672] hover:bg-[#f4f9f9] transition-all cursor-pointer shadow-sm">
+<div class="flex justify-between items-start mb-4">
+<span class="text-xs font-black flex items-center gap-2 text-[#181c1d] dark:text-white uppercase tracking-widest">💊 Concurrent Meds</span>
+<span class="material-symbols-outlined text-[18px] text-[#006672] opacity-0 group-hover:opacity-100 transition-opacity">edit</span>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="safety-badge-pill">Metformin 500mg <span class="material-symbols-outlined text-[14px]">close</span></span>
+<span class="safety-badge-pill">Amlodipine 5mg <span class="material-symbols-outlined text-[14px]">close</span></span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- SIDE EFFECTS SECTION -->
+<section class="scroll-mt-32" id="side-effects-section">
+<header class="mb-4">
+<div class="flex items-center gap-3">
+<div class="w-1 h-4 bg-[#9eefff] rounded-full"></div>
+<h2 class="font-headline font-semibold text-[18px] text-[#181c1d] dark:text-white leading-tight">Side Effects</h2>
+</div>
+<p class="font-body font-normal text-[13px] text-[#3d5050] dark:text-slate-400 ml-4">Medication-related adverse effects with severity and duration</p>
+</header>
+<div class="bg-white dark:bg-slate-800 rounded-[16px] p-7 md:p-8 md:px-10 space-y-4">
+<!-- Entry Template -->
+<div class="bg-[#f8fafa] dark:bg-slate-900/40 rounded-[12px] p-5 md:p-6 space-y-6">
+<!-- Row 1: Basic Info -->
+<div class="flex flex-wrap items-center gap-4">
+<div class="flex-1 min-w-[240px]">
+<div class="relative">
+<select class="w-full h-[48px] px-4 bg-white dark:bg-slate-800 ghost-border-heavy rounded-[10px] text-[14px] font-bold text-[#181c1d] dark:text-white focus:ring-2 focus:ring-[#006672]/10 focus:border-[#006672] outline-none appearance-none">
+<option>Weight gain</option>
+<option>Sedation</option>
+<option>Tremors</option>
+<option>Dry mouth</option>
+<option>Nausea</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+</div>
+<div class="flex items-center bg-white dark:bg-slate-800 ghost-border-heavy rounded-[10px] h-[48px] overflow-hidden">
+<button class="px-3 text-[#006672] hover:bg-[#f4f9f9] dark:hover:bg-[#006672]/10 transition-colors"><span class="material-symbols-outlined text-[20px]">remove</span></button>
+<input class="w-10 text-center border-none bg-transparent focus:ring-0 text-[15px] font-bold text-[#181c1d] dark:text-white" type="text" value="3"/>
+<button class="px-3 text-[#006672] hover:bg-[#f4f9f9] dark:hover:bg-[#006672]/10 transition-colors"><span class="material-symbols-outlined text-[20px]">add</span></button>
+<div class="w-px h-6 bg-[#d2dcdc] dark:bg-slate-700 mx-1"></div>
+<select class="px-3 border-none bg-transparent text-[13px] font-bold text-[#3f4948] dark:text-slate-400 focus:ring-0 appearance-none pr-8 relative">
+<option>months</option>
+<option>weeks</option>
+<option>days</option>
+</select>
+</div>
+<button class="text-[#ba1a1a] p-2.5 hover:bg-error-container/20 rounded-full transition-colors border-2 border-transparent hover:border-[#ba1a1a]/20">
+<span class="material-symbols-outlined text-[22px]">delete</span>
+</button>
+</div>
+<!-- Row 2: Severities -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<div class="space-y-3">
+<div class="flex justify-between">
+<label class="text-[11px] font-black uppercase tracking-widest text-[#3d5050] dark:text-slate-400">Severity at onset</label>
+<span class="text-[13px] font-black text-[#f59e0b]">6</span>
+</div>
+<input class="w-full impairment-slider se-slider se-slider-med" max="10" min="1" step="1" type="range" value="6"/>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between">
+<label class="text-[11px] font-black uppercase tracking-widest text-[#3d5050] dark:text-slate-400">Severity during course</label>
+<span class="text-[13px] font-black text-[#ba1a1a]">8</span>
+</div>
+<input class="w-full impairment-slider se-slider se-slider-high" max="10" min="1" step="1" type="range" value="8"/>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between">
+<label class="text-[11px] font-black uppercase tracking-widest text-[#3d5050] dark:text-slate-400">Current severity</label>
+<span class="text-[13px] font-black text-[#22c55e]">2</span>
+</div>
+<input class="w-full impairment-slider se-slider se-slider-low" max="10" min="1" step="1" type="range" value="2"/>
+</div>
+</div>
+<!-- Row 3: Notes Expansion -->
+<div class="flex flex-col items-end gap-3 pt-2">
+<button class="flex items-center gap-2 text-[#006672] font-bold text-[13px] hover:bg-white dark:hover:bg-slate-800 px-3 py-1.5 rounded-lg transition-all">
+<span class="material-symbols-outlined text-[18px]">edit_note</span>
+                    Add Notes
+                </button>
+<textarea class="w-full p-4 rounded-[10px] ghost-border bg-white dark:bg-slate-800 text-[14px] focus:border-[#006672] focus:ring-0 outline-none transition-all resize-none min-h-[100px]" placeholder="Specific clinical observations regarding this side effect..."></textarea>
+</div>
+</div>
+<!-- Empty State & Add Button -->
+<div class="pt-2 flex flex-col items-center gap-6">
+<div class="flex items-center gap-3 py-6 text-on-surface-variant/60 font-medium">
+<span class="material-symbols-outlined">warning</span>
+<span>No other side effects recorded</span>
+</div>
+<button class="flex items-center gap-2 font-body font-bold text-[14px] text-[#006672] hover:bg-[#f4f9f9] dark:hover:bg-[#006672]/10 px-6 py-3 rounded-full border-2 border-[#006672] transition-all">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+                Add Side Effect
+            </button>
+</div>
+</div>
+</section>
+<!-- DIAGNOSIS SECTION -->
+<section class="scroll-mt-32" id="diagnosis-section">
+<header class="mb-4">
+<div class="flex items-center gap-3">
+<div class="w-1.5 h-6 bg-[#006672] rounded-full"></div>
+<h2 class="font-headline font-bold text-[22px] text-[#181c1d]">Diagnosis</h2>
+</div>
+<p class="font-body font-normal text-[14px] text-[#3d5050] ml-4.5">Classification &amp; current state</p>
+</header>
+<div class="bg-white dark:bg-slate-800 rounded-[20px] p-10 space-y-10 shadow-sm">
+<!-- SUBSECTION 1 — PROVISIONAL DIAGNOSIS -->
+<div class="space-y-5">
+<h3 class="font-headline font-bold text-[16px] text-[#181c1d] uppercase tracking-wider">Provisional Diagnosis</h3>
+<div class="diagnosis-input-focus transition-all rounded-xl">
+<div class="relative w-full h-[54px] px-6 rounded-[12px] ghost-border-heavy bg-surface flex items-center gap-4">
+<span class="material-symbols-outlined text-[#9aacae]">search</span>
+<input class="w-full bg-transparent border-none focus:ring-0 text-[16px] font-body text-[#181c1d] placeholder-[#9aacae]" placeholder="Search codes (ICD-11)..." type="text"/>
+</div>
+</div>
+<div class="flex flex-wrap gap-3 mt-4">
+<span class="safety-badge-pill py-2.5 px-5 text-[14px] shadow-sm">F20 Schizophrenia <span class="material-symbols-outlined text-[18px] cursor-pointer">close</span></span>
+</div>
+<div class="flex gap-3 mt-6">
+<button class="bg-[#f8fafa] border-2 border-[#d2dcdc] rounded-[10px] px-[18px] py-[10px] text-[13px] font-bold text-[#3f4948] font-label hover:border-[#006672] transition-colors">ICD-11</button>
+<button class="bg-[#f8fafa] border-2 border-[#006672] rounded-[10px] px-[18px] py-[10px] text-[13px] font-black text-[#006672] font-label">ICD-10</button>
+<button class="bg-[#f8fafa] border-2 border-[#d2dcdc] rounded-[10px] px-[18px] py-[10px] text-[13px] font-bold text-[#3f4948] font-label hover:border-[#006672] transition-colors">DSM-5</button>
+
+</div>
+<div class="bg-[#f8fafa] rounded-[16px] p-6 mt-4 border border-[#e4ecec] overflow:scroll">
+<div class="text-[14px] font-body text-[#181c1d] leading-[1.8] font-medium ">
+<span class="text-[#006672] font-bold">Key Criteria Met:</span><br/>
+                            • Thought echo, insertion/withdrawal, or broadcasting.<br/>
+                            • Delusions of control or passivity referred to body/limbs.<br/>
+                            • Hallucinatory voices providing running commentary.
+                        </div>
+</div>
+</div>
+<div class="h-px bg-[#e4ecec]"></div>
+<!-- SUBSECTION 2 — DIFFERENTIAL DIAGNOSIS -->
+<div class="space-y-5">
+<h3 class="font-headline font-bold text-[16px] text-[#181c1d] uppercase tracking-wider">Differential Diagnosis</h3>
+<div class="diagnosis-input-focus transition-all rounded-xl">
+<div class="relative w-full h-[54px] px-6 rounded-[12px] ghost-border-heavy bg-surface flex items-center gap-4">
+<span class="material-symbols-outlined text-[#9aacae]">search</span>
+<input class="w-full bg-transparent border-none focus:ring-0 text-[16px] font-body text-[#181c1d] placeholder-[#9aacae]" placeholder="Search codes (ICD-11)..." type="text"/>
+</div>
+</div>
+<div class="flex flex-wrap gap-3 mt-4">
+
+<span class="bg-[#e4ecec] text-[#006672] font-bold text-[13px] px-5 py-2.5 rounded-full border-2 border-[#006672] font-label flex items-center gap-2">
+F25 Schizoaffective disorder
+                             <span class="material-symbols-outlined text-[16px] cursor-pointer">close</span>
+</span>
+<span class="bg-[#e4ecec] text-[#006672] font-bold text-[13px] px-5 py-2.5 rounded-full border-2 border-[#006672] font-label flex items-center gap-2">
+                            F31 Bipolar disorder <span class="material-symbols-outlined text-[16px] cursor-pointer">close</span>
+</span>
+</div>
+<div class="flex gap-3 mt-6">
+<button class="bg-[#f8fafa] border-2 border-[#d2dcdc] rounded-[10px] px-[18px] py-[10px] text-[13px] font-bold text-[#3f4948] font-label hover:border-[#006672] transition-colors">ICD-11</button>
+<button class="bg-[#f8fafa] border-2 border-[#006672] rounded-[10px] px-[18px] py-[10px] text-[13px] font-black text-[#006672] font-label">ICD-10</button>
+<button class="bg-[#f8fafa] border-2 border-[#d2dcdc] rounded-[10px] px-[18px] py-[10px] text-[13px] font-bold text-[#3f4948] font-label hover:border-[#006672] transition-colors">DSM-5</button>
+
+</div>
+</div>
+<div class="h-px bg-[#e4ecec]"></div>
+<!-- SUBSECTION 3 — CURRENT CLINICAL STATE -->
+<div class="space-y-6">
+<div class="flex justify-between items-end mb-2">
+<div>
+<h3 class="font-headline font-semibold text-[15px] text-[#181c1d] mb-1">Current Clinical State</h3>
+<p class="font-body font-normal text-[12px] text-[#3d5050]">Based on provisional diagnosis</p>
+</div>
+<a class="font-label font-medium text-[12px] text-[#006672] hover:underline cursor-pointer">Manage Clinical State Ranges (dates)</a>
+</div>
+<div class="flex flex-wrap gap-2 mt-2">
+<button class="px-[18px] py-[8px] rounded-full text-[13px] font-medium font-label border-[1.5px] bg-[#e4ecec] text-[#3f4948] border-[#d2dcdc] hover:bg-[#d2dcdc] transition-colors whitespace-nowrap">
+    Loss of Follow-up
+  </button>
+<button class="px-[18px] py-[8px] rounded-full text-[13px] font-medium font-label border-[1.5px] bg-[#006672] text-white border-[#006672] hover:bg-[#004c56] transition-colors whitespace-nowrap">
+    Partial Remission
+  </button>
+<button class="px-[18px] py-[8px] rounded-full text-[13px] font-medium font-label border-[1.5px] bg-[#e4ecec] text-[#3f4948] border-[#d2dcdc] hover:bg-[#d2dcdc] transition-colors whitespace-nowrap">
+    Recovery
+  </button>
+<button class="px-[18px] py-[8px] rounded-full text-[13px] font-medium font-label border-[1.5px] bg-[#e4ecec] text-[#3f4948] border-[#d2dcdc] hover:bg-[#d2dcdc] transition-colors whitespace-nowrap">
+    Relapse
+  </button>
+<button class="px-[18px] py-[8px] rounded-full text-[13px] font-medium font-label border-[1.5px] bg-[#e4ecec] text-[#3f4948] border-[#d2dcdc] hover:bg-[#d2dcdc] transition-colors whitespace-nowrap">
+    Remission
+  </button>
+</div>
+</div>
+
+</div></section></div></main></body></html>

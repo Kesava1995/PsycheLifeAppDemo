@@ -80,11 +80,12 @@ class Visit(db.Model):
     type_of_next_follow_up = db.Column(db.String(80), nullable=True)
     note = db.Column(db.Text)
     
-    clinical_state = db.Column(db.String(50), nullable=True)
+    clinical_state = db.Column(db.Text, nullable=True)  # JSON array of snapshot labels or legacy plain string
     medication_adherence = db.Column(db.String(50), nullable=True)
     ace_data = db.Column(db.Text, nullable=True)  # Adverse childhood experiences (JSON)
     family_history_psychiatric = db.Column(db.Text, nullable=True)  # JSON: {"present": bool, "items": ["Depression", "OTHERS: ..."]}
     developmental_milestone_delay = db.Column(db.Text, nullable=True)  # JSON: {"status": "No delay reported"|"Delay reported"|"Unknown", "types": [...], "notes": ""}
+    functional_impairment = db.Column(db.Text, nullable=True)  # JSON: {"work": 0, "social": 0, "relationships": 0, "personal_care": 0, "leisure": 0}
 
     symptom_entries = db.relationship('SymptomEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
     medication_entries = db.relationship('MedicationEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
@@ -166,7 +167,7 @@ class MSEEntry(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     visit_id = db.Column(db.Integer, db.ForeignKey('visits.id'), nullable=False)
-    category = db.Column(db.String(50), nullable=False)  # 'Thought', 'Perception', 'Affect'
+    category = db.Column(db.String(50), nullable=False)  # 'Thought', 'Perception', 'Mood', 'Structured'
     finding_name = db.Column(db.String(200))
     
     # Phase 1: 3 Sliders Support
@@ -181,6 +182,26 @@ class MSEEntry(db.Model):
     insight_status = db.Column(db.String(20))  # 'Present', 'Partial', 'Absent'
     insight_grade = db.Column(db.Integer)      # 1–6, if graded
     addl_mse_f_note = db.Column(db.Text)       # Additional MSE findings (free text)
+
+    # Structured MSE fields — only populated when category == 'Structured'
+    consciousness = db.Column(db.String(50))
+    appearance = db.Column(db.String(50))
+    cooperation = db.Column(db.String(50))
+    rapport = db.Column(db.String(50))
+    eye_contact = db.Column(db.Text)  # JSON list
+    psychomotor = db.Column(db.String(50))
+    involuntary_movements = db.Column(db.Text)  # JSON list
+    speech_reaction_time = db.Column(db.String(50))
+    speech_relevance = db.Column(db.String(50))
+    speech_coherence = db.Column(db.String(50))
+    speech_intensity = db.Column(db.String(50))
+    speech_pitch = db.Column(db.String(50))
+    speech_ease = db.Column(db.String(50))
+    affect_items = db.Column(db.Text)  # JSON list
+    affect_reactivity = db.Column(db.String(20))
+    affect_range = db.Column(db.String(30))
+    affect_congruence = db.Column(db.String(20))
+    affect_appropriateness = db.Column(db.String(20))
     
     # --- FIX FOR CRASH: Explicitly map the legacy 'score' column ---
     score = db.Column(db.Integer, default=0)

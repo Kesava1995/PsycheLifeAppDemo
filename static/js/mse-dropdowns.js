@@ -65,8 +65,16 @@
             'Derealization', 'Depersonalization', 'Altered sense of time passage',
             'Metamorphopsias', 'Passivity Experiences',
         ],
-        Affect: [
-            'Appropriate', 'Inappropriate', 'Blunted', 'Restricted', 'Flat', 'Labile',
+        Mood: [
+            'Euthymic', 'Depressed', 'Low', 'Sad', 'Dysthymic', 'Dysphoric', 'Ecstatic',
+            'Anxious‑depressed', 'Irritable‑depressed', 'Hopeless', 'Helpless', 'Worthless',
+            'Anxious', 'Tense, apprehensive', 'Anxious‑irritable', 'Fearful', 'Panic‑prone',
+            'Irritable', 'Easily provoked', 'Angry', 'Hostile', 'Labile irritable',
+            'Euphoric', 'Elated', 'Expansive', 'Hypomanic', 'Unrestrained cheerful',
+            'Labile', 'Apathetic', 'Indifferent', 'Restricted/flattened',
+            'Mood congruent with content', 'Mood incongruent with content',
+            'Anhedonic', 'Empty', 'Guarded', 'Frightened', 'Childish/Regressive',
+            'Perplexed', 'Alexithymic (unable to describe mood)',
         ],
     };
 

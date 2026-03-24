@@ -1902,6 +1902,21 @@ def process_visit_form_data(visit, form_data):
     t = (form_data.get('type_of_next_follow_up') or '').strip()
     visit.type_of_next_follow_up = t if t else None
 
+    # Functional Impairment (5 domains, scores 0–10)
+    fi_raw = form_data.get('functional_impairment_data', '').strip()
+    if fi_raw:
+        visit.functional_impairment = fi_raw
+    else:
+        fi = {
+            'work': form_data.get('fi_work', '0'),
+            'social': form_data.get('fi_social', '0'),
+            'relationships': form_data.get('fi_relationships', '0'),
+            'personal_care': form_data.get('fi_personal_care', '0'),
+            'leisure': form_data.get('fi_leisure', '0'),
+        }
+        if any(int(v or 0) > 0 for v in fi.values()):
+            visit.functional_impairment = json.dumps(fi)
+
     visit.note = form_data.get('visit_note', '')
 
     # Helper for Duration (Single Field Now)
@@ -2233,6 +2248,35 @@ def process_visit_form_data(visit, form_data):
                 score=int(curr_val)
             )
             db.session.add(entry)
+
+    # 6b. Structured MSE row (one per visit, category='Structured')
+    import json as _json
+    structured_entry = MSEEntry(
+        visit_id=visit.id,
+        category='Structured',
+        finding_name='',
+        score_current=0,
+        score=0,
+        consciousness=form_data.get('mse_consciousness') or None,
+        appearance=form_data.get('mse_appearance') or None,
+        cooperation=form_data.get('mse_cooperation') or None,
+        rapport=form_data.get('mse_rapport') or None,
+        eye_contact=_json.dumps(form_data.getlist('mse_eye_contact[]')),
+        psychomotor=form_data.get('mse_psychomotor') or None,
+        involuntary_movements=_json.dumps(form_data.getlist('mse_involuntary_movements[]')),
+        speech_reaction_time=form_data.get('mse_speech_reaction_time') or None,
+        speech_relevance=form_data.get('mse_speech_relevance') or None,
+        speech_coherence=form_data.get('mse_speech_coherence') or None,
+        speech_intensity=form_data.get('mse_speech_intensity') or None,
+        speech_pitch=form_data.get('mse_speech_pitch') or None,
+        speech_ease=form_data.get('mse_speech_ease') or None,
+        affect_items=_json.dumps(form_data.getlist('mse_affect_items[]')),
+        affect_reactivity=form_data.get('mse_affect_reactivity') or None,
+        affect_range=form_data.get('mse_affect_range') or None,
+        affect_congruence=form_data.get('mse_affect_congruence') or None,
+        affect_appropriateness=form_data.get('mse_affect_appropriateness') or None,
+    )
+    db.session.add(structured_entry)
 
     # 7. Safety and Medical Profile (separate table)
     drug_alg = form_data.get('drug_allergies', '').strip()
@@ -2875,7 +2919,31 @@ def edit_visit(visit_id):
         'raw_responses': sa.raw_responses or {}
     } for sa in getattr(visit, 'scale_assessments', [])])
     ace_data = (visit.ace_data or '') if getattr(visit, 'ace_data', None) else ''
-    return render_template('edit_visit.html', visit=visit, patient=patient, previous_visit=previous_visit, doctor=doctor, major_events_data=major_events_data, stressors_data=stressors_data, adherence_data=adherence_data, clinical_state_data=clinical_state_data, substances_data=substances_data, scales_data=scales_data, ace_data=ace_data)
+    import json as _json
+    _structured = next((m for m in visit.mse_entries if m.category == 'Structured'), None)
+    mse_structured = {}
+    if _structured:
+        mse_structured = {
+            'consciousness': _structured.consciousness,
+            'appearance': _structured.appearance,
+            'cooperation': _structured.cooperation,
+            'rapport': _structured.rapport,
+            'eye_contact': _json.loads(_structured.eye_contact or '[]'),
+            'psychomotor': _structured.psychomotor,
+            'involuntary_movements': _json.loads(_structured.involuntary_movements or '[]'),
+            'speech_reaction_time': _structured.speech_reaction_time,
+            'speech_relevance': _structured.speech_relevance,
+            'speech_coherence': _structured.speech_coherence,
+            'speech_intensity': _structured.speech_intensity,
+            'speech_pitch': _structured.speech_pitch,
+            'speech_ease': _structured.speech_ease,
+            'affect_items': _json.loads(_structured.affect_items or '[]'),
+            'affect_reactivity': _structured.affect_reactivity,
+            'affect_range': _structured.affect_range,
+            'affect_congruence': _structured.affect_congruence,
+            'affect_appropriateness': _structured.affect_appropriateness,
+        }
+    return render_template('edit_visit.html', visit=visit, patient=patient, previous_visit=previous_visit, doctor=doctor, major_events_data=major_events_data, stressors_data=stressors_data, adherence_data=adherence_data, clinical_state_data=clinical_state_data, substances_data=substances_data, scales_data=scales_data, ace_data=ace_data, mse_structured=mse_structured)
 
 
 @app.route('/visit/<int:visit_id>/delete', methods=['POST'])
@@ -3276,6 +3344,8 @@ def prepare_chart_data(patient_id: int) -> dict:
     for visit in visits:
         v_date = datetime.combine(visit.date, datetime.min.time()).isoformat()
         for entry in visit.mse_entries:
+            if entry.category == 'Structured':
+                continue
             cat = entry.category
             val = entry.score
             if cat not in mse_data: mse_data[cat] = []
@@ -3385,8 +3455,9 @@ def prepare_chart_data(patient_id: int) -> dict:
             'symptoms': [{'name': s.symptom_name, 'score': s.score_current, 'note': s.note} for s in visit.symptom_entries],
             'meds': [{'name': m.drug_name, 'dose': m.dose_mg, 'note': m.note} for m in visit.medication_entries],
             'se': [{'name': s.side_effect_name, 'score': s.score, 'note': s.note} for s in visit.side_effect_entries],
-            'mse': [{'cat': m.category, 'name': m.finding_name, 'score': m.score, 'note': m.note} for m in visit.mse_entries],
+            'mse': [{'cat': m.category, 'name': m.finding_name, 'score': m.score, 'note': m.note} for m in visit.mse_entries if m.category != 'Structured'],
             'scales': [{'name': sa.scale_name, 'score': sa.total_score, 'label': sa.severity_label} for sa in getattr(visit, 'scale_assessments', [])],
+            'functional_impairment': json.loads(visit.functional_impairment) if visit.functional_impairment else None,
             'stressors': [{'type': st.stressor_type, 'duration': st.duration, 'note': st.note} for st in getattr(visit, 'stressor_entries', [])],
             'events': [{'type': me.event_type, 'duration': me.duration, 'note': me.note} for me in getattr(visit, 'major_events', [])],
             'notes': getattr(visit, 'notes', '')
@@ -3608,8 +3679,9 @@ def life_chart(patient_id):
             'symptoms': [{'name': s.symptom_name, 'score': s.score_current, 'note': s.note} for s in v.symptom_entries],
             'meds': [{'name': m.drug_name, 'dose': m.dose_mg, 'freq': m.frequency, 'is_tapering': m.is_tapering, 'taper_plan': m.taper_plan} for m in v.medication_entries],
             'se': [{'name': s.side_effect_name, 'score': s.score_current} for s in v.side_effect_entries],
-            'mse': [{'cat': m.category, 'name': m.finding_name, 'score': m.score_current} for m in v.mse_entries],
+            'mse': [{'cat': m.category, 'name': m.finding_name, 'score': m.score_current} for m in v.mse_entries if m.category != 'Structured'],
             'scales': [{'name': sa.scale_name, 'score': sa.total_score, 'label': sa.severity_label} for sa in getattr(v, 'scale_assessments', [])],
+            'functional_impairment': json.loads(v.functional_impairment) if v.functional_impairment else None,
             'stressors': [{'type': st.stressor_type, 'duration': st.duration, 'note': st.note} for st in getattr(v, 'stressor_entries', [])],
             'events': [{'type': me.event_type, 'duration': me.duration, 'note': me.note} for me in getattr(v, 'major_events', [])]
         }
@@ -3631,6 +3703,8 @@ def life_chart(patient_id):
             se[s.side_effect_name].extend(build_clinical_points(s, v.date, 'Side Effect'))
             
         for m in v.mse_entries:
+            if m.category == 'Structured':
+                continue
             # Use Finding Name as key for individual lines
             label = m.finding_name if m.finding_name else m.category
             if label not in mse: mse[label] = []
@@ -3887,6 +3961,8 @@ def preview_lifechart(patient_id):
             se[s.side_effect_name].extend(build_clinical_points(s, visit.date, 'Side Effect'))
             
         for m in visit.mse_entries:
+            if m.category == 'Structured':
+                continue
             label = m.finding_name if m.finding_name else m.category
             if label not in mse:
                 mse[label] = []

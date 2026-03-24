@@ -132,6 +132,12 @@
         /* NEW STYLES FOR PHASE 2 */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
         .modal-content { background: white; margin: 10% auto; padding: 20px; width: 400px; border-radius: 8px; }
+        /* Keep popups below fixed topbar + tab strip */
+        :root { --modal-top-offset: 120px; }
+        .modal .modal-content {
+            margin-top: var(--modal-top-offset) !important;
+            max-height: calc(100vh - var(--modal-top-offset) - 24px) !important;
+        }
         .checklist-group label { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer; }
         .checklist-group input[type="checkbox"] { width: auto; margin: 0; }
 
@@ -196,6 +202,95 @@
         .diagnosis-option-label { color: #223; }
         .diagnosis-option-system { color: #678; font-size: 12px; white-space: nowrap; }
         .diagnosis-action-row { margin-top: 8px; display: flex; gap: 10px; flex-wrap: wrap; }
+        /* Provisional diagnosis: inline search, chips, criteria */
+        .provisional-inline-root { display: flex; flex-direction: column; gap: 10px; }
+        .provisional-search-wrap { position: relative; }
+        .provisional-search-wrap .provisional-search-input { padding-left: 38px; }
+        .provisional-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 20px; color: #9aa5b1; pointer-events: none; z-index: 1; }
+        .provisional-inline-criteria { margin-top: 4px; padding: 14px; background: #f9fafb; border: 1px solid #e4ecec; border-radius: 10px; }
+        .provisional-inline-criteria.is-hidden { display: none; }
+        .provisional-criteria-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #e0e8e8; }
+        .provisional-criteria-caption { font-size: 13px; font-weight: 600; color: #3d5050; }
+        .provisional-criteria-active-name { color: #006672; font-weight: 700; }
+        .provisional-criteria-toggles { display: inline-flex; gap: 4px; padding: 4px; background: #e4ecec; border-radius: 8px; }
+        .provisional-criteria-toggle { border: none; background: transparent; padding: 6px 12px; font-size: 12px; font-weight: 600; color: #566060; border-radius: 6px; cursor: pointer; }
+        .provisional-criteria-toggle:hover { color: #006672; }
+        .provisional-criteria-toggle.active { background: #fff; color: #006672; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .provisional-criteria-content { font-size: 13px; line-height: 1.55; color: #3f4948; min-height: 2em; }
+        .diagnosis-chip.provisional-chip-active { border-color: #006672; box-shadow: 0 0 0 2px rgba(0,102,114,0.2); background: #e8f6f7; }
+        .clinical-state-pills-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; margin-bottom: 12px; }
+        .clinical-state-pill { border: 1px solid #d2dcdc; background: #e4ecec; color: #3f4948; padding: 8px 14px; border-radius: 999px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .clinical-state-pill:hover { border-color: #006672; color: #006672; }
+        .clinical-state-pill.active { background: #006672; border-color: #006672; color: #fff; }
+        /* Diagnosis: responsive two-column layout (desktop side-by-side) */
+        .diagnosis-outer-wrap {
+            margin-top: 20px;
+            background: var(--form-box-bg);
+            padding: 15px;
+            border: 1px solid var(--form-box-border);
+            border-radius: 8px;
+        }
+        .diagnosis-two-col-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+            align-items: stretch;
+        }
+        @media (min-width: 1024px) {
+            .diagnosis-two-col-grid { grid-template-columns: 1fr 1fr; }
+        }
+        .diagnosis-module-card {
+            background: var(--form-box-bg, #fff);
+            border: 1px solid var(--form-box-border, #eee);
+            border-radius: 12px;
+            padding: 18px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            display: flex;
+            flex-direction: column;
+            min-height: 100%;
+        }
+        .diagnosis-module-card h3 {
+            margin: 0 0 12px 0;
+            font-size: 15px;
+            font-weight: 700;
+            color: #2d3748;
+        }
+        .diagnosis-module-card .provisional-inline-root,
+        .diagnosis-module-card #differential-diagnosis-picker {
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+        .diagnosis-module-card .provisional-inline-root .provisional-inline-criteria { margin-top: auto; }
+        /* Differential: initPicker injects chip-list before input in DOM; flex order shows search on top */
+        #differential-diagnosis-picker .diagnosis-input-row {
+            order: 1;
+        }
+        #differential-diagnosis-picker .diagnosis-chip-list {
+            order: 2;
+        }
+        #differential-diagnosis-picker .diagnosis-options {
+            order: 3;
+        }
+        .differential-diagnosis-note {
+            margin: 14px 0 0 0;
+            font-size: 12px;
+            line-height: 1.45;
+            color: #566060;
+            background: #f8fafb;
+            padding: 12px 14px;
+            border-radius: 8px;
+            border: 1px solid #edf1f4;
+        }
+        .differential-diagnosis-note strong { color: #3d5050; }
+        .provisional-criteria-scroll.custom-scrollbar {
+            max-height: 120px;
+            overflow-y: auto;
+            padding-right: 8px;
+            white-space: normal;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #d2dcdc; border-radius: 10px; }
         .diagnosis-modal-shell { width: min(960px, 92vw); max-height: 82vh; margin: 5vh auto; padding: 0; overflow: hidden; border-radius: 14px; }
         .diagnosis-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px 12px; border-bottom: 1px solid #edf1f4; }
         .diagnosis-modal-close { border: none; background: transparent; color: #667; font-size: 24px; cursor: pointer; line-height: 1; }
@@ -274,6 +369,36 @@
         body.dark-mode #clinical-state-ranges-container {
             border-top: 1px dashed var(--primary-dark) !important;
         }
+        body.dark-mode .provisional-inline-criteria {
+            background: #1b1b1b !important;
+            border-color: #333 !important;
+        }
+        body.dark-mode .provisional-criteria-header { border-color: #333 !important; }
+        body.dark-mode .provisional-criteria-caption { color: #d0d0d0 !important; }
+        body.dark-mode .provisional-criteria-toggles { background: #2b3740 !important; }
+        body.dark-mode .provisional-criteria-toggle { color: #aebcc7 !important; }
+        body.dark-mode .provisional-criteria-toggle.active {
+            background: #1f1f1f !important;
+            color: #7fdbd4 !important;
+        }
+        body.dark-mode .provisional-criteria-content { color: #d7e3eb !important; }
+        body.dark-mode .clinical-state-pill {
+            background: #2b3740 !important;
+            border-color: #3d3d3d !important;
+            color: #d7e3eb !important;
+        }
+        body.dark-mode .clinical-state-pill.active {
+            background: #006672 !important;
+            border-color: #006672 !important;
+            color: #fff !important;
+        }
+        body.dark-mode .diagnosis-module-card h3 { color: #e2e8f0; }
+        body.dark-mode .differential-diagnosis-note {
+            background: #1b1b1b !important;
+            border-color: #333 !important;
+            color: #aebcc7 !important;
+        }
+        body.dark-mode .differential-diagnosis-note strong { color: #d7e3eb !important; }
 
         .med-entry-block .drug-name-wrap { position: relative; flex: 1 1 auto; width: auto; min-width: 150px; align-self: stretch; box-sizing: border-box; }
         .drug-name-wrap .drug-name-input { width: 100%; box-sizing: border-box; margin: 0; padding: 10px 108px 10px 12px; }
@@ -292,6 +417,7 @@
             gap: 6px; min-width: 0; max-width: none; padding-right: 0; border-right: none; flex-wrap: nowrap;
         }
         .med-schedule-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+        .med-entry-block.has-taper .med-block-inner { flex-wrap: wrap; align-items: flex-start; }
 
         /* Section 8 — medication cards (Medic1-style) */
         .entry-wrapper.med-entry-block {
@@ -302,9 +428,8 @@
             margin-bottom: 10px;
         }
         .entry-wrapper.med-entry-block.has-taper {
-            background: #f0f9fa;
-            border-color: rgba(0, 102, 114, 0.22);
             border-left: 3px solid #006672;
+            background: #f0f9fa;
         }
 
         /* Adherence pills (Past Month) */
@@ -318,14 +443,21 @@
         .cc-adherence-dates-link { margin: 10px 0 0 14px; }
         .cc-adherence-dates-link button { background: none; border: none; padding: 0; font-size: 12px; font-weight: 600; color: #006672; cursor: pointer; text-decoration: underline; font-family: inherit; }
 
-        /* Taper steps grouped card */
-        .taper-steps-card { background: #fff; border: 1px solid #e4ecec; border-radius: 12px; overflow: hidden; margin-top: 14px; }
-        .taper-steps-header-grid {
-            display: grid;
-            grid-template-columns: 72px 148px 116px 1fr;
-            align-items: center;
-            gap: 14px;
-            padding: 8px 14px 6px;
+        /* Taper: full-width card under med row; shared grid for header + rows; two lines per step */
+        .taper-steps-card {
+            width: 100%;
+            max-width: none;
+            margin-top: 14px;
+            border-radius: 12px;
+            flex: 1 1 100%;
+            box-sizing: border-box;
+            background: #fff;
+            border: 1px solid #e4ecec;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+        .taper-steps-header {
+            padding: 10px 16px 8px;
             border-bottom: 1px solid #eaefef;
             font-size: 11px;
             font-weight: 700;
@@ -333,25 +465,378 @@
             text-transform: uppercase;
             letter-spacing: 0.08em;
         }
-        .taper-step-wrap { padding: 10px 14px; border-bottom: 1px solid #eaefef; }
-        .taper-steps-card > .taper-step-wrap:last-child { border-bottom: none; }
-        .taper-step-row {
+        .taper-step-grid,
+        .taper-steps-header-line1 {
             display: grid;
-            grid-template-columns: 72px 148px 116px 1fr;
+            grid-template-columns: 80px 1.2fr 1fr;
+            gap: 10px 14px;
             align-items: center;
-            gap: 14px;
         }
+        .taper-steps-header-line1 { width: 100%; box-sizing: border-box; }
+        .taper-steps-header-line2 {
+            display: grid;
+            grid-template-columns: 80px 1.2fr 1fr;
+            gap: 10px 14px;
+            margin-top: 6px;
+            align-items: center;
+        }
+        .taper-steps-header-line2 .taper-h-freq { grid-column: 2; }
+        .taper-step-wrap {
+            padding: 12px 16px;
+            border-bottom: 1px solid #eaefef;
+        }
+        .taper-steps-card > .taper-step-wrap:last-child { border-bottom: none; }
+        .taper-step-grid {
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .taper-grid-line2 {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: 80px 1.2fr 1fr;
+            gap: 10px 14px;
+            margin-top: 2px;
+            align-items: center;
+        }
+        .taper-grid-line2-body {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+        .taper-grid-line2-body .med-freq-inline { flex: 1 1 auto; min-width: 0; }
+        .taper-step-remove-trail {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+        }
+        .taper-step-remove-trail .remove-btn { margin: 0; font-size: 16px; }
         .taper-step-label { font-size: 12px; font-weight: 700; color: #3f4948; white-space: nowrap; }
-        .taper-dose-ctrl { display: flex; align-items: center; border: 1.5px solid rgba(189,200,203,0.5); border-radius: 8px; height: 34px; overflow: hidden; padding: 0 4px; background: #fff; box-sizing: border-box; }
-        .taper-dose-ctrl input { width: 38px; text-align: center; border: none; font-size: 13px; font-weight: 700; background: transparent; padding: 0; }
-        .taper-dose-ctrl button { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 4px; color: #006672; cursor: pointer; background: none; border: none; font-size: 14px; line-height: 1; padding: 0; }
-        .taper-dose-ctrl button:hover { background: #e4ecec; }
-        .taper-dose-unit { font-size: 10px; font-weight: 700; color: #5c6666; margin: 0 3px; flex-shrink: 0; }
-        .taper-freq-boxes { display: flex; align-items: center; gap: 3px; }
-        .taper-freq-box { width: 30px; height: 30px; text-align: center; font-weight: 700; font-size: 13px; border-radius: 6px; border: 1.5px solid rgba(189,200,203,0.5); padding: 0; background: #fff; box-sizing: border-box; }
-        .taper-duration-cell { display: flex; align-items: center; gap: 8px; min-width: 0; width: 100%; }
-        .taper-duration-input { flex: 1; min-width: 0; height: 34px; padding: 0 10px; border: 1.5px solid rgba(189,200,203,0.5); border-radius: 8px; font-size: 13px; color: #3f4948; background: #fff; box-sizing: border-box; }
-        .taper-duration-input:focus { outline: none; border-color: #006672; box-shadow: 0 0 0 3px rgba(0,102,114,0.12); }
+        .taper-grid-dose .dose-adjust-wrap,
+        .taper-grid-dur .duration-adjust-wrap { width: 100%; }
+
+        /* ===== STRUCTURED MSE UI ===== */
+        .mse-section-card{background:#f4fafa;border-radius:12px;padding:16px 20px;margin-bottom:14px;border:1px solid rgba(0,102,114,.10);}
+        body.dark-mode .mse-section-card{background:#1a2629;border-color:rgba(0,180,190,.15);}
+        .mse-section-label{font-size:10px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:#006672;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+        .mse-section-label::before{content:'';display:inline-block;width:3px;height:14px;background:#006672;border-radius:2px;}
+        body.dark-mode .mse-section-label{color:#5dd4de;}
+        body.dark-mode .mse-section-label::before{background:#5dd4de;}
+        .mse-badge-group{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:4px;}
+        .mse-badge-group label{display:inline-flex;align-items:center;cursor:pointer;padding:0;}
+        .mse-badge-group input[type="radio"],.mse-badge-group input[type="checkbox"]{display:none;width:auto;}
+        .mse-badge{display:inline-flex;align-items:center;padding:5px 14px;border-radius:999px;font-size:12px;font-weight:600;font-family:'Inter',sans-serif;background:#dfe8e8;color:#3f484a;border:1.5px solid transparent;cursor:pointer;transition:all .15s ease;user-select:none;white-space:nowrap;}
+        .mse-badge:hover{background:#c8d8d8;}
+        input[type="radio"]:checked+.mse-badge,input[type="checkbox"]:checked+.mse-badge{background:#006672;color:#fff;border-color:#006672;}
+        body.dark-mode .mse-badge{background:#253235;color:#c5d0d1;}
+        body.dark-mode .mse-badge:hover{background:#2e3e41;}
+        body.dark-mode input[type="radio"]:checked+.mse-badge,body.dark-mode input[type="checkbox"]:checked+.mse-badge{background:#00828f;border-color:#00828f;color:#fff;}
+        .mse-field-label{font-size:10px;font-weight:700;color:#5c6666;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;display:block;}
+        body.dark-mode .mse-field-label{color:#8aacaf;}
+        .mse-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 20px;}
+        .mse-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px;}
+        @media(max-width:900px){.mse-3col,.mse-2col{grid-template-columns:1fr 1fr;}}
+        .mse-tpm-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+        @media(max-width:900px){.mse-tpm-grid{grid-template-columns:1fr;}}
+        .mse-tpm-col{background:#fff;border-radius:10px;padding:14px;border:1px solid rgba(0,102,114,.10);min-height:120px;}
+        body.dark-mode .mse-tpm-col{background:#1e2a2c;border-color:rgba(0,180,190,.13);}
+        .mse-tpm-col-header{font-size:11px;font-weight:700;color:#006672;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
+        body.dark-mode .mse-tpm-col-header{color:#5dd4de;}
+        .mse-tpm-add-btn{display:flex;align-items:center;gap:4px;background:none;border:1.5px dashed #9BD8FB;border-radius:8px;color:#006672;font-size:12px;font-weight:600;padding:6px 10px;cursor:pointer;width:100%;margin-top:6px;transition:background .15s;}
+        .mse-tpm-add-btn:hover{background:#eaf8fd;}
+        body.dark-mode .mse-tpm-add-btn{color:#5dd4de;border-color:#2a5a60;}
+        body.dark-mode .mse-tpm-add-btn:hover{background:#1e3235;}
+        .mse-affect-search-wrap{display:flex;flex-wrap:wrap;align-items:center;gap:6px;background:#fff;border:1px solid rgba(0,102,114,.18);border-radius:8px;padding:6px 10px;min-height:40px;cursor:text;position:relative;}
+        body.dark-mode .mse-affect-search-wrap{background:#1a2629;border-color:rgba(0,180,190,.2);}
+        .mse-affect-tag{display:inline-flex;align-items:center;gap:5px;background:#006672;color:#fff;border-radius:999px;padding:3px 10px 3px 12px;font-size:12px;font-weight:600;}
+        .mse-affect-tag .remove-tag{background:none;border:none;color:#fff;cursor:pointer;font-size:14px;line-height:1;padding:0;opacity:.75;}
+        .mse-affect-tag .remove-tag:hover{opacity:1;}
+        #mse-affect-input{flex:1;min-width:120px;border:none;outline:none;background:transparent;font-size:13px;color:inherit;}
+        .mse-affect-dropdown{position:absolute;z-index:600;background:#fff;border:1px solid rgba(0,102,114,.18);border-radius:8px;box-shadow:0 4px 16px rgba(0,80,90,.12);max-height:200px;overflow-y:auto;min-width:220px;top:100%;left:0;right:0;}
+        body.dark-mode .mse-affect-dropdown{background:#1e2a2c;border-color:#2a5a60;}
+        .mse-affect-option{padding:8px 14px;font-size:13px;cursor:pointer;color:#181c1d;}
+        .mse-affect-option:hover{background:#eaf8fd;}
+        body.dark-mode .mse-affect-option{color:#d4e2e4;}
+        body.dark-mode .mse-affect-option:hover{background:#253538;}
+        .mse-affect-props{display:grid;grid-template-columns:repeat(4,1fr);gap:12px 16px;margin-top:12px;}
+        @media(max-width:900px){.mse-affect-props{grid-template-columns:1fr 1fr;}}
+        .mse-involuntary-select{width:100%;font-size:13px;padding:7px 10px;border-radius:8px;border:1px solid rgba(0,102,114,.18);background:#fff;color:inherit;}
+        body.dark-mode .mse-involuntary-select{background:#1a2629;color:#d4e2e4;}
+
+        /* ── Functional Impairment ─────────────────────────────── */
+        .fi-section {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #e0e8ea;
+            padding: 4px 0;
+            margin-bottom: 20px;
+        }
+        body.dark-mode .fi-section {
+            background: #1e1e1e;
+            border-color: #333;
+        }
+        .fi-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 14px 24px;
+            border-bottom: 1px solid #f0f4f4;
+        }
+        .fi-row:last-child { border-bottom: none; }
+        .fi-label {
+            flex: 0 0 260px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--cc-on-surface, #1a1a1a);
+        }
+        body.dark-mode .fi-label { color: #ccc; }
+        .fi-slider-wrap {
+            flex: 1;
+            position: relative;
+        }
+        .fi-slider-wrap input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 999px;
+            background: #e5eaea;
+            outline: none;
+            cursor: pointer;
+        }
+        .fi-slider-wrap input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4caf50;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+            transition: background 0.2s;
+        }
+        .fi-slider-wrap input[type=range]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4caf50;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+            transition: background 0.2s;
+        }
+        .fi-val {
+            flex: 0 0 28px;
+            text-align: right;
+            font-size: 15px;
+            font-weight: 700;
+            color: #4caf50;
+            transition: color 0.2s;
+            min-width: 28px;
+        }
+        .fi-global-row {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 24px 10px;
+            border-top: 1px solid #e8f0f0;
+            margin-top: 4px;
+        }
+        .fi-global-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #888;
+        }
+        .fi-global-score {
+            font-size: 22px;
+            font-weight: 800;
+            color: #4caf50;
+            min-width: 40px;
+            text-align: center;
+            transition: color 0.2s;
+        }
+        .fi-severity-badge {
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 14px;
+            border-radius: 20px;
+            background: #e8f5e9;
+            color: #4caf50;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        /* Clinical Scales UI */
+        .scales-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .scale-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--form-box-bg);
+            border: 1px solid var(--form-box-border);
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .scale-left { display: flex; align-items: center; gap: 16px; }
+        .scale-icon {
+            background: var(--accent-soft-bg);
+            color: var(--primary-dark);
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .scale-info h4 { margin: 0 0 4px 0; font-size: 15px; color: #111; font-weight: 600; }
+        .scale-info p { margin: 0; font-size: 13px; color: #666; }
+
+        .scale-right { display: flex; align-items: center; gap: 24px; }
+        .severity-badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .severity-extreme { background: #fee2e2; color: #dc2626; }
+        .severity-severe { background: #ffedd5; color: #ea580c; }
+        .severity-moderate { background: #fef08a; color: #ca8a04; }
+        .severity-mild { background: #dcfce7; color: #16a34a; }
+
+        .scale-score { font-weight: 700; font-size: 16px; color: #111; }
+        .btn-outline {
+            border: 1px solid #d1d5db;
+            background: transparent;
+            padding: 6px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #374151;
+            transition: all 0.2s;
+        }
+        .btn-outline:hover { background: #f3f4f6; }
+
+        /* New Assessment bottom outline button */
+        .btn-new-assessment {
+            display: inline-flex;
+            font-weight: 600;
+            align-items: center;
+            gap: 10px;
+            color: #117A8B;
+            background-color: transparent;
+            border: 1.5px solid #117A8B;
+            padding: 6px 20px 6px 6px;
+            border-radius: 9999px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-new-assessment:hover {
+            background-color: #f0f8f9;
+            box-shadow: 0 2px 6px rgba(17, 122, 139, 0.15);
+        }
+        .btn-new-assessment .icon-circle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border: 1.5px solid #117A8B;
+            border-radius: 50%;
+            background-color: transparent;
+        }
+        .btn-new-assessment .icon-circle .material-symbols-outlined {
+            color: #117A8B;
+            font-size: 16px;
+            font-variation-settings: 'wght' 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Safety & Medical Profile cards (updated layout) */
+        .medical-profile-card {
+            background-color: var(--form-box-bg, #f8fafc);
+            border: 1px solid var(--form-box-border, #e2e8f0);
+            border-radius: 12px;
+            padding: 20px;
+            transition: box-shadow 0.2s ease;
+        }
+        .medical-profile-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        }
+        .medical-profile-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .medical-profile-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #111827;
+            margin: 0;
+        }
+        .medical-edit-btn {
+            background: transparent;
+            border: none;
+            color: #0F6D7A;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        .medical-edit-btn:hover {
+            background-color: #f0f8f9;
+        }
+        .medical-content-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 28px;
+        }
+        .medical-badge {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            padding: 6px 14px;
+            border-radius: 16px;
+            font-size: 13px;
+            font-weight: 500;
+            border: 1px solid #bae6fd;
+        }
+        .medical-card-empty {
+            color: #94a3b8;
+            font-size: 14px;
+            font-style: italic;
+        }
+        #comorbiditiesModal .modal-content,
+        #medicationsModal .modal-content,
+        #allergiesModal .modal-content {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .medical-profile-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+        }
+        @media (max-width: 1100px) {
+            .medical-profile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (max-width: 760px) {
+            .medical-profile-grid { grid-template-columns: 1fr; }
+        }
 
         body.dark-mode .entry-wrapper.med-entry-block { background: #1a2224; border-color: #2a3a3c; }
         body.dark-mode .entry-wrapper.med-entry-block.has-taper { background: #152428; border-color: rgba(0,102,114,0.45); }
@@ -362,13 +847,9 @@
         body.dark-mode .cc-adh-pill--active { background: #006672; color: #fff; }
         body.dark-mode .cc-adherence-dates-link button { color: #7bccd4; }
         body.dark-mode .taper-steps-card { background: #1e1e1e; border-color: #333; }
-        body.dark-mode .taper-steps-header-grid { border-color: #333; color: #a8bcbe; }
+        body.dark-mode .taper-steps-header { border-color: #333; color: #a8bcbe; }
         body.dark-mode .taper-step-wrap { border-color: #333; }
         body.dark-mode .taper-step-label { color: #c5d0d1; }
-        body.dark-mode .taper-dose-ctrl,
-        body.dark-mode .taper-freq-box,
-        body.dark-mode .taper-duration-input { background: #252b2c; border-color: #3a4a4c; color: #e8e8e8; }
-        body.dark-mode .taper-dose-ctrl button:hover { background: #333; }
         .med-schedule-step { display: flex; flex-direction: column; gap: 4px; }
         .med-entry-block .med-step-main-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; box-sizing: border-box; }
         .med-step-main-trail { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-shrink: 0; flex-wrap: nowrap; }
@@ -2531,43 +3012,293 @@
                         <header class="cc-section-header">
                             <div class="cc-accent-bar"></div>
                             <div>
-                                <h1 class="cc-section-title">Mental Status Examination</h1>
-                                <p class="cc-section-subtitle">Thought, perception, affect and insight assessment</p>
+                                <h1 class="cc-section-title">MSE</h1>
+                                <p class="cc-section-subtitle">Mental state examination findings</p>
                             </div>
                         </header>
                         <div class="cc-card cc-gap-8">
-                    <div class="section-header"><span class="section-title">MSE Findings</span></div>
-                    <div class="subsection-header"><span class="subsection-title">Thought</span><button type="button" class="add-btn" onclick="addMSE('Thought')">+</button></div>
-                    <div id="mse-thought-container"></div>
 
-                    <div class="subsection-header"><span class="subsection-title">Perception</span><button type="button" class="add-btn" onclick="addMSE('Perception')">+</button></div>
-                    <div id="mse-perception-container"></div>
-
-                    <div class="subsection-header"><span class="subsection-title">Affect</span><button type="button" class="add-btn" onclick="addMSE('Affect')">+</button></div>
-                    <div id="mse-affect-container"></div>
-
-                    <div class="subsection-header" style="margin-top:10px;">
-                        <span class="subsection-title">Insight</span>
-                    </div>
-                    <div class="patient-grid" style="grid-template-columns: repeat(4, minmax(0, 1fr)); align-items:center;">
-                        <div style="grid-column: span 3; display: flex; flex-wrap: wrap; align-items: center; gap: 0 16px;">
-                            <span style="font-weight:600; margin-right:4px;">Insight status</span>
-                            <label style="display:inline-flex; align-items:center; margin:0; cursor:pointer;"><input type="radio" name="insight_status" value="Present" style="margin:0 6px 0 0;"> Present</label>
-                            <label style="display:inline-flex; align-items:center; margin:0; cursor:pointer;"><input type="radio" name="insight_status" value="Partial" style="margin:0 6px 0 0;"> Partial</label>
-                            <label style="display:inline-flex; align-items:center; margin:0; cursor:pointer;"><input type="radio" name="insight_status" value="Absent" style="margin:0 6px 0 0;"> Absent</label>
-                        </div>
-                        <div style="text-align:right;">
-                            <button type="button" class="btn" onclick="openModal('insightGradeModal')" style="margin-top:0; background:#7ab8e0; color:#fff;">GRADE</button>
+                    <!-- 1. CONSCIOUSNESS -->
+                    <div class="mse-section-card">
+                        <div class="mse-section-label">Consciousness</div>
+                        <div class="mse-badge-group">
+                            <label><input type="radio" name="mse_consciousness" value="Clear"><span class="mse-badge">Clear</span></label>
+                            <label><input type="radio" name="mse_consciousness" value="Drowsy"><span class="mse-badge">Drowsy</span></label>
+                            <label><input type="radio" name="mse_consciousness" value="Fluctuating"><span class="mse-badge">Fluctuating</span></label>
+                            <label><input type="radio" name="mse_consciousness" value="Stupor"><span class="mse-badge">Stupor</span></label>
+                            <label><input type="radio" name="mse_consciousness" value="Coma"><span class="mse-badge">Coma</span></label>
                         </div>
                     </div>
 
-                    <div class="subsection-header" style="margin-top:10px;">
-                        <span class="subsection-title">Additional MSE Findings</span>
-                    </div>
-                    <textarea name="addl_mse_f_note" rows="2" style="width:100%; resize:vertical;" placeholder="Any additional MSE findings..."></textarea>
+                    <!-- 2. GENERAL APPEARANCE & BEHAVIOUR -->
+                    <div class="mse-section-card">
+                        <div class="mse-section-label">General Appearance &amp; Behaviour</div>
+                        <div class="mse-3col">
+                            <div>
+                                <span class="mse-field-label">Appearance</span>
+                                <div class="mse-badge-group">
+                                    <label><input type="radio" name="mse_appearance" value="Normal"><span class="mse-badge">Normal</span></label>
+                                    <label><input type="radio" name="mse_appearance" value="Over-dressed"><span class="mse-badge">Over-dressed</span></label>
+                                    <label><input type="radio" name="mse_appearance" value="Unkempt"><span class="mse-badge">Unkempt</span></label>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="mse-field-label">Cooperation</span>
+                                <div class="mse-badge-group">
+                                    <label><input type="radio" name="mse_cooperation" value="Co-operative" onchange="handleCooperation(this)"><span class="mse-badge">Co-operative</span></label>
+                                    <label><input type="radio" name="mse_cooperation" value="Not co-operative" onchange="handleCooperation(this)"><span class="mse-badge">Not co-operative</span></label>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="mse-field-label">Rapport</span>
+                                <div class="mse-badge-group">
+                                    <label><input type="radio" name="mse_rapport" value="Established" onchange="handleRapport(this)"><span class="mse-badge">Established</span></label>
+                                    <label><input type="radio" name="mse_rapport" value="Not established" onchange="handleRapport(this)"><span class="mse-badge">Not established</span></label>
+                                    <label><input type="radio" name="mse_rapport" value="Established with difficulty" onchange="handleRapport(this)"><span class="mse-badge">Established with difficulty</span></label>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="mse-cooperative-fields" style="margin-top:14px;">
+                            <div class="mse-3col">
+                                <div>
+                                    <span class="mse-field-label">Eye Contact</span>
+                                    <div class="mse-badge-group">
+                                        <label><input type="checkbox" name="mse_eye_contact[]" value="Achieved"><span class="mse-badge">Achieved</span></label>
+                                        <label><input type="checkbox" name="mse_eye_contact[]" value="Not achieved"><span class="mse-badge">Not achieved</span></label>
+                                        <label><input type="checkbox" name="mse_eye_contact[]" value="Sustained"><span class="mse-badge">Sustained</span></label>
+                                        <label><input type="checkbox" name="mse_eye_contact[]" value="Not sustained"><span class="mse-badge">Not sustained</span></label>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="mse-field-label">Psychomotor Activity</span>
+                                    <div class="mse-badge-group">
+                                        <label><input type="radio" name="mse_psychomotor" value="Normal"><span class="mse-badge">Normal</span></label>
+                                        <label><input type="radio" name="mse_psychomotor" value="Decreased"><span class="mse-badge">Decreased</span></label>
+                                        <label><input type="radio" name="mse_psychomotor" value="Increased"><span class="mse-badge">Increased</span></label>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="mse-field-label">Involuntary Movements</span>
+                                    <select name="mse_involuntary_movements[]" class="mse-involuntary-select" multiple size="1">
+                                        <option value="" disabled>Select movements...</option>
+                                        <option>Tremors</option>
+                                        <option>Acute Dystonia</option>
+                                        <option>Akathisia</option>
+                                        <option>Bradykinesia</option>
+                                        <option>Tardive dyskinesia</option>
+                                        <option>Chorea / choreoathetoid movements</option>
+                                        <option>Myoclonus</option>
+                                        <option>Stereotypies</option>
+                                        <option>Tics</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
+                    <!-- 3. SPEECH -->
+                    <div class="mse-section-card" id="mse-speech-section">
+                        <div class="mse-section-label">Speech</div>
+                        <div class="mse-3col">
+                            <div>
+                                <span class="mse-field-label">Reaction Time</span>
+                                <div class="mse-badge-group">
+                                    <label><input type="radio" name="mse_speech_reaction_time" value="Normal"><span class="mse-badge">Normal</span></label>
+                                    <label><input type="radio" name="mse_speech_reaction_time" value="Decreased"><span class="mse-badge">Decreased</span></label>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="mse-field-label">Intensity</span>
+                                <div class="mse-badge-group">
+                                    <label><input type="radio" name="mse_speech_intensity" value="Audible"><span class="mse-badge">Audible</span></label>
+                                    <label><input type="radio" name="mse_speech_intensity" value="Loud"><span class="mse-badge">Loud</span></label>
+                                    <label><input type="radio" name="mse_speech_intensity" value="Soft"><span class="mse-badge">Soft</span></label>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="mse-field-label">Ease of Speech</span>
+                                <div class="mse-badge-group">
+                                    <label><input type="radio" name="mse_speech_ease" value="Spontaneous"><span class="mse-badge">Spontaneous</span></label>
+                                    <label><input type="radio" name="mse_speech_ease" value="Hesitant"><span class="mse-badge">Hesitant</span></label>
+                                    <label><input type="radio" name="mse_speech_ease" value="Mute"><span class="mse-badge">Mute</span></label>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="mse-field-label">Relevance</span>
+                                <div class="mse-badge-group">
+                                    <label><input type="radio" name="mse_speech_relevance" value="Relevant"><span class="mse-badge">Relevant</span></label>
+                                    <label><input type="radio" name="mse_speech_relevance" value="Irrelevant"><span class="mse-badge">Irrelevant</span></label>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="mse-field-label">Coherence</span>
+                                <div class="mse-badge-group">
+                                    <label><input type="radio" name="mse_speech_coherence" value="Coherent"><span class="mse-badge">Coherent</span></label>
+                                    <label><input type="radio" name="mse_speech_coherence" value="Incoherent"><span class="mse-badge">Incoherent</span></label>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="mse-field-label">Pitch</span>
+                                <div class="mse-badge-group">
+                                    <label><input type="radio" name="mse_speech_pitch" value="Monotonous"><span class="mse-badge">Monotonous</span></label>
+                                    <label><input type="radio" name="mse_speech_pitch" value="Fluctuating"><span class="mse-badge">Fluctuating</span></label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. THOUGHT / PERCEPTION / MOOD -->
+                    <div class="mse-tpm-grid" id="mse-tpm-section">
+                        <div class="mse-tpm-col">
+                            <div class="mse-tpm-col-header">
+                                <span>Thought</span>
+                                <button type="button" class="add-btn" onclick="addMSE('Thought')">+</button>
+                            </div>
+                            <div id="mse-thought-container"></div>
+                            <button type="button" class="mse-tpm-add-btn" onclick="addMSE('Thought')">+ Add thought finding</button>
+                        </div>
+                        <div class="mse-tpm-col">
+                            <div class="mse-tpm-col-header">
+                                <span>Perception</span>
+                                <button type="button" class="add-btn" onclick="addMSE('Perception')">+</button>
+                            </div>
+                            <div id="mse-perception-container"></div>
+                            <button type="button" class="mse-tpm-add-btn" onclick="addMSE('Perception')">+ Add perception finding</button>
+                        </div>
+                        <div class="mse-tpm-col">
+                            <div class="mse-tpm-col-header">
+                                <span>Mood</span>
+                                <button type="button" class="add-btn" onclick="addMSE('Mood')">+</button>
+                            </div>
+                            <div id="mse-mood-container"></div>
+                            <button type="button" class="mse-tpm-add-btn" onclick="addMSE('Mood')">+ Add mood finding</button>
+                        </div>
+                    </div>
+
+                    <!-- 5. AFFECT -->
+                    <div class="mse-section-card">
+                        <div class="mse-section-label">Affect</div>
+                        <div style="position:relative;">
+                            <div class="mse-affect-search-wrap" id="mse-affect-wrap" onclick="document.getElementById('mse-affect-input').focus()">
+                                <div id="mse-affect-tags"></div>
+                                <input type="text" id="mse-affect-input" placeholder="Search affect..."
+                                    autocomplete="off" oninput="filterAffectOptions(this.value)" onkeydown="affectKeydown(event)">
+                                <div id="mse-affect-dropdown" class="mse-affect-dropdown" style="display:none;"></div>
+                            </div>
+                        </div>
+                        <div class="mse-affect-props">
+                            <div>
+                                <span class="mse-field-label">Reactivity</span>
+                                <div class="mse-badge-group">
+                                    <label><input type="radio" name="mse_affect_reactivity" value="Present"><span class="mse-badge">Present</span></label>
+                                    <label><input type="radio" name="mse_affect_reactivity" value="Absent"><span class="mse-badge">Absent</span></label>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="mse-field-label">Range</span>
+                                <div class="mse-badge-group">
+                                    <label><input type="radio" name="mse_affect_range" value="Normal"><span class="mse-badge">Normal</span></label>
+                                    <label><input type="radio" name="mse_affect_range" value="Restricted"><span class="mse-badge">Restricted</span></label>
+                                    <label><input type="radio" name="mse_affect_range" value="Labile"><span class="mse-badge">Labile</span></label>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="mse-field-label">Congruence</span>
+                                <div class="mse-badge-group">
+                                    <label><input type="radio" name="mse_affect_congruence" value="Congruent"><span class="mse-badge">Congruent</span></label>
+                                    <label><input type="radio" name="mse_affect_congruence" value="Incongruent"><span class="mse-badge">Incongruent</span></label>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="mse-field-label">Appropriateness</span>
+                                <div class="mse-badge-group">
+                                    <label><input type="radio" name="mse_affect_appropriateness" value="Appropriate"><span class="mse-badge">Appropriate</span></label>
+                                    <label><input type="radio" name="mse_affect_appropriateness" value="Inappropriate"><span class="mse-badge">Inappropriate</span></label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 6. INSIGHT -->
+                    <div class="mse-section-card">
+                        <div class="mse-section-label">Insight</div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+                            <div class="mse-badge-group">
+                                <label><input type="radio" name="insight_status" value="Present"><span class="mse-badge">Present</span></label>
+                                <label><input type="radio" name="insight_status" value="Partial"><span class="mse-badge">Partial</span></label>
+                                <label><input type="radio" name="insight_status" value="Absent"><span class="mse-badge">Absent</span></label>
+                            </div>
+                            <button type="button" onclick="openModal('insightGradeModal')"
+                                style="background:linear-gradient(135deg,#006672,#16808f);color:#fff;border:none;border-radius:20px;padding:8px 20px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                                ⊕ GRADE INSIGHT
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 7. ADDITIONAL MSE FINDINGS -->
+                    <div class="mse-section-card">
+                        <div class="mse-section-label">Additional MSE Findings</div>
+                        <textarea name="addl_mse_f_note" rows="3"
+                            style="width:100%;resize:vertical;border-radius:8px;border:1px solid rgba(0,102,114,.15);padding:10px;font-size:13px;background:#fff;color:inherit;"
+                            placeholder="Enter clinical notes, specific observations, or cognitive testing results..."></textarea>
+                    </div>
+
+                        </div>
+                    </div>
+					<!-- Functional Impairment -->
+					<header class="cc-section-header">
+						<div class="cc-accent-bar"></div>
+						<div> <h1 class="section-title">Functional Impairment</h1>
+							<p class="cc-section-subtitle">Rate domain Impact</p>
+						</div>
+					</header>
+					
+                    <input type="hidden" name="functional_impairment_data" id="functional_impairment_data"
+                        value="{{ visit.functional_impairment if visit and visit.functional_impairment else (last_visit.functional_impairment if last_visit and last_visit.functional_impairment else '') }}">
+                    <p style="font-size:12px; color:#888; margin: -12px 0 10px;">Rate domain impact &nbsp;(0 = Not affected &nbsp;·&nbsp; 10 = Severely affected)</p>
+                    <div class="fi-section" id="fi-section">
+                        <div class="fi-row">
+                            <span class="fi-label">Work or academic functioning</span>
+                            <div class="fi-slider-wrap">
+                                <input type="range" min="0" max="10" value="0" class="fi-slider" data-key="work" oninput="updateFI(this)">
+                            </div>
+                            <span class="fi-val" id="fi-val-work">0</span>
+                        </div>
+                        <div class="fi-row">
+                            <span class="fi-label">Social interactions &amp; Networking</span>
+                            <div class="fi-slider-wrap">
+                                <input type="range" min="0" max="10" value="0" class="fi-slider" data-key="social" oninput="updateFI(this)">
+                            </div>
+                            <span class="fi-val" id="fi-val-social">0</span>
+                        </div>
+                        <div class="fi-row">
+                            <span class="fi-label">Relationships and home responsibilities</span>
+                            <div class="fi-slider-wrap">
+                                <input type="range" min="0" max="10" value="0" class="fi-slider" data-key="relationships" oninput="updateFI(this)">
+                            </div>
+                            <span class="fi-val" id="fi-val-relationships">0</span>
+                        </div>
+                        <div class="fi-row">
+                            <span class="fi-label">Personal care and daily needs</span>
+                            <div class="fi-slider-wrap">
+                                <input type="range" min="0" max="10" value="0" class="fi-slider" data-key="personal_care" oninput="updateFI(this)">
+                            </div>
+                            <span class="fi-val" id="fi-val-personal_care">0</span>
+                        </div>
+                        <div class="fi-row">
+                            <span class="fi-label">Leisure and enjoyable activities</span>
+                            <div class="fi-slider-wrap">
+                                <input type="range" min="0" max="10" value="0" class="fi-slider" data-key="leisure" oninput="updateFI(this)">
+                            </div>
+                            <span class="fi-val" id="fi-val-leisure">0</span>
+                        </div>
+                        <div class="fi-global-row">
+                            <span class="fi-global-label">Global Score(AVG)</span>
+                            <span class="fi-global-score" id="fi-global-score">0.0</span>
+                            <span class="fi-severity-badge" id="fi-severity-badge">None</span>
+                        </div>
+                    </div>
+					
                     <!-- SECTION 6: SAFETY -->
                     <div class="cc-section" id="section-6" data-section="6">
                         <header class="cc-section-header">
@@ -2578,32 +3309,76 @@
                             </div>
                         </header>
                         <div class="cc-card cc-gap-8">
-                    <div class="section-header"><span class="section-title">Psychiatric Scales</span></div>
-                    <div class="click-trigger-row" style="margin-bottom: 20px;">
-                        <div class="click-trigger" onclick="openScalesModal()" style="border-color: var(--primary-dark); background: transparent;">
-                            <span>📋 Select &amp; Mark Scales</span><span id="scales-count-badge" style="background: var(--primary-dark); color: white; border-radius: 10px; padding: 2px 8px; font-size: 12px; display: none;">0 Applied</span><span>▼</span>
+                    <div class="section-container" id="scales-section">
+                        <header class="cc-section-header">
+                            <div class="cc-accent-bar"></div>
+                            <div>
+                                <h1 class="cc-section-title">Psychiatric Scales</h1>
+                                <p class="cc-section-subtitle">Standardised assessment history</p>
+                            </div>
+                        </header>
+                        <input type="hidden" name="scales_data" id="scales_data" value="">
+                        <div class="scales-list" id="completed-scales-list"></div>
+                        <div style="margin-top: 20px; text-align: left;">
+                            <button type="button" class="btn-new-assessment" onclick="openNewAssessmentModal()">
+                                <span class="icon-circle">
+                                    <span class="material-symbols-outlined">add</span>
+                                </span>
+                                New Assessment Scale
+                            </button>
                         </div>
                     </div>
-                    <input type="hidden" name="scales_data" id="scales_data" value="">
 
-                    <div class="section-header"><span class="section-title">Safety and Medical Profile</span></div>
-                    <div class="patient-grid" style="margin-bottom: 20px;">
-                        <div class="row-3-col">
+                    
+					<header class="cc-section-header">
+                            <div class="cc-accent-bar"></div>
                             <div>
-                                <label>Drug Allergies/ hypersensitivities</label>
-                                <textarea name="drug_allergies" rows="2" style="resize:none;">{{ last_visit.safety_profile.drug_allergies if last_visit and last_visit.safety_profile else (visit.safety_profile.drug_allergies if visit and visit.safety_profile else '') }}</textarea>
+                                <h1 class="cc-section-title">Safety and Medical Profile</h1>
+                                <p class="cc-section-subtitle">Health background</p>
                             </div>
-                            <div>
-                                <label>Medical Comorbidities</label>
-                                <input type="hidden" name="medical_comorbidities" id="medical_comorbidities" value="{{ last_visit.safety_profile.medical_comorbidities if last_visit and last_visit.safety_profile and last_visit.safety_profile.medical_comorbidities else (visit.safety_profile.medical_comorbidities if visit and visit.safety_profile and visit.safety_profile.medical_comorbidities else '') }}">
-                                <div class="click-trigger" onclick="openModal('comorbiditiesModal')" style="margin-top:4px;">
-                                    <span id="comorbidities-summary">Select...</span><span>▼</span>
-                                </div>
+                    </header>
+                    <div class="section-container" id="medical-profile" style="margin-bottom: 20px;">
+                        <div class="medical-profile-grid">
+						<div class="medical-profile-card">
+                            <div class="medical-profile-header">
+                                <h4 class="medical-profile-title">Drug Allergies / Hypersensitivities</h4>
+                                <button type="button" class="medical-edit-btn" onclick="openMedicalModal('allergiesModal')">
+                                    <span class="material-symbols-outlined" style="font-size:16px;">edit</span>
+                                </button>
                             </div>
-                            <div>
-                                <label>Current Non-Psychiatric Medication</label>
-                                <textarea name="non_psychiatric_meds" rows="2" style="resize:none;">{{ last_visit.safety_profile.non_psychiatric_meds if last_visit and last_visit.safety_profile else (visit.safety_profile.non_psychiatric_meds if visit and visit.safety_profile else '') }}</textarea>
+                            <div class="medical-content-area" id="display_allergies">
+                                <span class="medical-card-empty">None</span>
                             </div>
+                            <input type="hidden" name="drug_allergies" id="drug_allergies" value="{{ last_visit.safety_profile.drug_allergies if last_visit and last_visit.safety_profile else (visit.safety_profile.drug_allergies if visit and visit.safety_profile else '') }}">
+                        </div>
+						
+                        <div class="medical-profile-card">
+                            <div class="medical-profile-header">
+                                <h4 class="medical-profile-title">Medical Comorbidities</h4>
+                                <button type="button" class="medical-edit-btn" onclick="openMedicalModal('comorbiditiesModal')">
+                                    <span class="material-symbols-outlined" style="font-size:16px;">edit</span>
+                                </button>
+                            </div>
+                            <div class="medical-content-area" id="display_comorbidities">
+                                <span class="medical-card-empty">None</span>
+                            </div>
+                            <input type="hidden" name="medical_comorbidities" id="medical_comorbidities" value="{{ last_visit.safety_profile.medical_comorbidities if last_visit and last_visit.safety_profile and last_visit.safety_profile.medical_comorbidities else (visit.safety_profile.medical_comorbidities if visit and visit.safety_profile and visit.safety_profile.medical_comorbidities else '') }}">
+                            <span id="comorbidities-summary" style="display:none;">Select...</span>
+                        </div>
+
+                        <div class="medical-profile-card">
+                            <div class="medical-profile-header">
+                                <h4 class="medical-profile-title">Current Non-Psychiatric Medication</h4>
+                                <button type="button" class="medical-edit-btn" onclick="openMedicalModal('medicationsModal')">
+                                    <span class="material-symbols-outlined" style="font-size:16px;">edit</span>
+                                </button>
+                            </div>
+                            <div class="medical-content-area" id="display_medications">
+                                <span class="medical-card-empty">None</span>
+                            </div>
+                            <input type="hidden" name="non_psychiatric_meds" id="non_psychiatric_meds" value="{{ last_visit.safety_profile.non_psychiatric_meds if last_visit and last_visit.safety_profile else (visit.safety_profile.non_psychiatric_meds if visit and visit.safety_profile else '') }}">
+                        </div>
+                        
                         </div>
                     </div>
 
@@ -2632,11 +3407,29 @@
                         <div class="cc-card cc-gap-8">
                     <div class="section-header"><span class="section-title">Diagnosis</span></div>
 
-                    <div style="margin-top:20px; background:var(--form-box-bg); padding:15px; border:1px solid var(--form-box-border); border-radius:8px; min-height: 100px;">
-                        <div class="row-2-col">
-                            <div>
-                                <label>Provisional Diagnosis</label>
-                                <div id="provisional-diagnosis-picker"></div>
+                    <div class="diagnosis-outer-wrap">
+                        <div class="diagnosis-two-col-grid">
+                            <div class="diagnosis-module-card">
+                                <h3>Provisional Diagnosis</h3>
+                                <div id="provisional-diagnosis-picker" class="provisional-inline-root">
+                                    <div class="provisional-search-wrap">
+                                        <span class="material-symbols-outlined provisional-search-icon" aria-hidden="true">search</span>
+                                        <input type="text" id="provisionalSearch" class="diagnosis-picker-input provisional-search-input" placeholder="Search ICD-11 (min 2 characters), or type and press Enter…" autocomplete="off">
+                                        <div id="provisionalDropdown" class="diagnosis-options"></div>
+                                    </div>
+                                    <div id="provisionalChips" class="diagnosis-chip-list"></div>
+                                    <div id="inlineCriteriaBlock" class="provisional-inline-criteria is-hidden">
+                                        <div class="provisional-criteria-header">
+                                            <span class="provisional-criteria-caption">Criteria for: <span id="activeDiagnosisLabel" class="provisional-criteria-active-name"></span></span>
+                                            <div class="provisional-criteria-toggles" role="tablist">
+                                                <button type="button" class="provisional-criteria-toggle active" data-system="ICD-11" aria-selected="true">ICD-11</button>
+                                                <button type="button" class="provisional-criteria-toggle" data-system="ICD-10" aria-selected="false">ICD-10</button>
+                                                <button type="button" class="provisional-criteria-toggle" data-system="DSM-5" aria-selected="false">DSM-5</button>
+                                            </div>
+                                        </div>
+                                        <div id="inlineCriteriaContent" class="provisional-criteria-content diagnosis-criteria-body provisional-criteria-scroll custom-scrollbar">Select a diagnosis above, then choose a classification system.</div>
+                                    </div>
+                                </div>
                                 <input type="hidden" name="provisional_diagnosis" id="provisionalDiagnosisHidden" value="[]">
                                 <div class="diagnosis-action-row">
                                     <button type="button" class="btn" onclick="showIcd10CriteriaTabs()" style="background: #e0e0e0; color: #333; font-size: 11px; padding: 4px 10px; width: auto; border: 1px solid #ccc;">Show ICD-10</button>
@@ -2644,8 +3437,8 @@
                                     <button type="button" class="btn" onclick="showIcd11CriteriaTabs()" style="background: #e0e0e0; color: #333; font-size: 11px; padding: 4px 10px; width: auto; border: 1px solid #ccc;">Show ICD-11</button>
                                 </div>
                             </div>
-                            <div>
-                                <label>Differential Diagnosis</label>
+                            <div id="differentialShell" class="diagnosis-module-card diagnosis-module-card--differential">
+                                <h3>Differential Diagnosis</h3>
                                 <div id="differential-diagnosis-picker"></div>
                                 <input type="hidden" name="differential_diagnosis" id="differentialDiagnosisHidden" value="[]">
                                 <div class="diagnosis-action-row">
@@ -2653,12 +3446,16 @@
                                     <button type="button" class="btn" onclick="showDsm5CriteriaTabs()" style="background: #e0e0e0; color: #333; font-size: 11px; padding: 4px 10px; width: auto; border: 1px solid #ccc;">Show DSM-5</button>
                                     <button type="button" class="btn" onclick="showIcd11CriteriaTabs()" style="background: #e0e0e0; color: #333; font-size: 11px; padding: 4px 10px; width: auto; border: 1px solid #ccc;">Show ICD-11</button>
                                 </div>
+                                <p class="differential-diagnosis-note" style="margin-top:auto;"><strong>Note:</strong> Criteria and classification mapping for differentials open in the expanded selection modal.</p>
                             </div>
                         </div>
                     </div>
 
                     <div class="clinical-state-section" style="margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
                         <h4 style="margin:0 0 10px 0; color:#555;">Current Clinical State</h4>
+                        <p style="margin:0 0 6px 0; font-size:13px; color:#666;">Snapshot for previous visit</p>
+                        <div id="clinicalStateContainer" class="clinical-state-pills-row" aria-label="Current clinical state"></div>
+                        <input type="hidden" name="clinical_state" id="clinicalStateInput" value="">
                         <button type="button" class="btn clinical-state-toggle" style="margin-top:0; padding:8px 14px; font-size:12px; background:#666; color:#fff;" onclick="openClinicalStateRangesModal()">Manage Clinical State Ranges (dates)</button>
                         <input type="hidden" name="clinical_state_data" id="clinical_state_data" value="">
                     </div>
@@ -2891,25 +3688,55 @@
                         <div class="modal-content" style="width: 480px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; margin-top: 5vh;">
                             <h4 style="margin-top: 0;">Medical Comorbidities</h4>
                             <div style="overflow-y: auto; flex-grow: 1; padding-right: 10px;">
-                                <div class="checklist-group">
-                                    <label><input type="checkbox" class="comorbidity-cb" value="Diabetes mellitus"> Diabetes mellitus</label>
-                                    <label><input type="checkbox" class="comorbidity-cb" value="Hypertension"> Hypertension</label>
-                                    <label><input type="checkbox" class="comorbidity-cb" value="Hypothyroidism"> Hypothyroidism</label>
-                                    <label><input type="checkbox" class="comorbidity-cb" value="Hyperthyroidism"> Hyperthyroidism</label>
-                                    <label><input type="checkbox" class="comorbidity-cb" value="Epilepsy"> Epilepsy</label>
-                                    <label><input type="checkbox" class="comorbidity-cb" value="COPD"> COPD</label>
-                                    <label><input type="checkbox" class="comorbidity-cb" value="Asthma"> Asthma</label>
-                                    <label><input type="checkbox" class="comorbidity-cb" value="Tuberculosis"> Tuberculosis</label>
-                                    <label><input type="checkbox" class="comorbidity-cb" value="HIV"> HIV</label>
-                                    <label style="display:flex; align-items:center; gap:8px; margin-top:8px;">
-                                        <input type="checkbox" class="comorbidity-cb" value="OTHERS" id="comorbidity_others_cb"> OTHERS, specify:
-                                        <input type="text" id="comorbidity_others_text" placeholder="Specify..." style="flex:1; min-width:120px; padding:4px 8px;">
-                                    </label>
+                                <label style="font-size:12px; color:#555; font-weight:700;">Select Comorbidities</label>
+                                <select id="input_comorbidities" multiple size="8" style="width:100%;"></select>
+                                <div id="other_comorbidity_container" style="display:none; margin-top:10px;">
+                                    <label style="font-size:12px; color:#6b7280; font-weight:700;">Specify Other Comorbidities</label>
+                                    <input type="text" id="input_other_comorbidities" placeholder="Type custom comorbidities here..." style="width:100%; margin-top:4px;">
                                 </div>
                             </div>
                             <div style="margin-top:15px; padding-top:15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
                                 <button type="button" class="btn" style="margin-top:0; background:#7ab8e0; color:#fff;" onclick="saveComorbidities(); closeModal('comorbiditiesModal');">Save</button>
                                 <button type="button" class="btn" style="margin-top:0; background:#888; color:#fff;" onclick="closeModal('comorbiditiesModal')">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="medicationsModal" class="modal" onclick="if(event.target === this) closeModal('medicationsModal')">
+                        <div class="modal-content" style="width: 520px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; margin-top: 5vh;">
+                            <h4 style="margin-top: 0;">Edit Non-Psychiatric Medications</h4>
+                            <div style="overflow-y: auto; overflow-x: hidden; flex-grow: 1; min-height: 0; max-height: calc(85vh - 150px); padding-right: 10px;">
+                                <label style="font-size:12px; color:#555; font-weight:700;">Select Medications</label>
+                                <select id="input_medications" multiple size="8" style="width:100%;"></select>
+                                <div id="dynamic_dose_container" style="margin-top:10px;"></div>
+                                <div id="other_medication_container" style="display:none; margin-top:10px;">
+                                    <label style="font-size:12px; color:#6b7280; font-weight:700;">Specify Other Medication</label>
+                                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:4px;">
+                                        <input type="text" id="input_other_medications" placeholder="Medication name..." style="width:100%;">
+                                        <input type="text" class="dose-input" id="input_other_dose" placeholder="Dose (e.g., 5 mg)" list="dose_suggestions" style="width:100%;">
+                                    </div>
+                                </div>
+                                <datalist id="dose_suggestions"></datalist>
+                            </div>
+                            <div style="margin-top:15px; padding-top:15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
+                                <button type="button" class="btn" style="margin-top:0; background:#7ab8e0; color:#fff;" onclick="saveMedications()">Save</button>
+                                <button type="button" class="btn" style="margin-top:0; background:#888; color:#fff;" onclick="closeModal('medicationsModal')">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="allergiesModal" class="modal" onclick="if(event.target === this) closeModal('allergiesModal')">
+                        <div class="modal-content" style="width: 520px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; margin-top: 5vh;">
+                            <h4 style="margin-top: 0;">Edit Drug Allergies</h4>
+                            <div style="overflow-y: auto; flex-grow: 1; padding-right: 10px;">
+                                <label style="font-size:12px; color:#555; font-weight:700;">Select Allergies</label>
+                                <select id="input_allergies" multiple size="8" style="width:100%;"></select>
+                                <div id="other_allergy_container" style="display:none; margin-top:10px;">
+                                    <label style="font-size:12px; color:#6b7280; font-weight:700;">Specify Other Allergies</label>
+                                    <input type="text" id="input_other_allergies" placeholder="Type custom allergies here..." style="width:100%; margin-top:4px;">
+                                </div>
+                            </div>
+                            <div style="margin-top:15px; padding-top:15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
+                                <button type="button" class="btn" style="margin-top:0; background:#7ab8e0; color:#fff;" onclick="saveAllergies()">Save</button>
+                                <button type="button" class="btn" style="margin-top:0; background:#888; color:#fff;" onclick="closeModal('allergiesModal')">Cancel</button>
                             </div>
                         </div>
                     </div>
@@ -2923,6 +3750,7 @@
                                     <option value="">-- All Recommended Scales --</option>
                                     <option value="CIWA-Ar">Alcohol Withdrawal (CIWA-Ar)</option>
                                     <option value="Y-BOCS">OCD (Y-BOCS)</option>
+                                    <option value="whodas2">WHODAS 2.0 (36-item)</option>
                                 </select>
                                 <div id="available-scales-list" style="overflow-y: auto; max-height: 50vh; border: 1px solid #eee; padding: 10px; border-radius: 6px; margin-top: 10px;"></div>
                                 <div style="margin-top:15px; padding-top:15px; border-top: 1px solid #eee; text-align: right;">
@@ -2931,7 +3759,7 @@
                             </div>
                             <div id="scale-assessment-view" style="display: none; flex-direction: column; height: 100%;">
                                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
-                                    <button type="button" class="btn" onclick="showScalesList()" style="background: #eee; color: #333; margin: 0; padding: 5px 10px; font-size: 12px;">⬅ Back</button>
+                                    <button id="scale-modal-back-btn" type="button" class="btn" onclick="showScalesList()" style="background: #eee; color: #333; margin: 0; padding: 5px 10px; font-size: 12px;">⬅ Back</button>
                                     <h4 id="active-scale-title" style="margin: 0; color: #4facfe;"></h4>
                                 </div>
                                 <div id="active-scale-form" style="overflow-y: auto; max-height: 50vh; padding-right: 10px; font-size: 14px; border-bottom: 1px solid #eee;"></div>
@@ -2940,7 +3768,7 @@
                                     <span id="scale-live-severity" style="color: #666; font-weight: bold; font-size: 1.1rem;">-</span>
                                 </div>
                                 <div style="margin-top:15px; padding-top:15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
-                                    <button type="button" class="btn" style="margin-top:0; flex: 1; background:#7BC4F0; color:#000;" onclick="saveActiveScale()">Save &amp; Apply to Patient</button>
+                                    <button id="scale-save-btn" type="button" class="btn" style="margin-top:0; flex: 1; background:#7BC4F0; color:#000;" onclick="saveActiveScale()">Save &amp; Apply to Patient</button>
                                 </div>
                             </div>
                         </div>
@@ -3252,37 +4080,54 @@
             } catch (e) {}
         }
         function saveComorbidities() {
+            var sel = document.getElementById('input_comorbidities');
             var arr = [];
-            document.querySelectorAll('.comorbidity-cb:checked').forEach(function(cb) {
-                if (cb.value === 'OTHERS') {
-                    var spec = document.getElementById('comorbidity_others_text');
-                    arr.push('OTHERS' + (spec && spec.value.trim() ? ': ' + spec.value.trim() : ''));
-                } else { arr.push(cb.value); }
-            });
+            if (sel) {
+                if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) arr = window.jQuery(sel).val() || [];
+                else arr = Array.from(sel.selectedOptions).map(function(o) { return o.value; });
+            }
+            if (arr.indexOf('OTHERS') !== -1) {
+                arr = arr.filter(function(v) { return v !== 'OTHERS'; });
+                var spec = document.getElementById('input_other_comorbidities');
+                var customVals = splitCardValues(spec ? spec.value : '');
+                arr = arr.concat(customVals);
+            }
             var hid = document.getElementById('medical_comorbidities');
-            if (hid) hid.value = JSON.stringify(arr);
+            if (hid) hid.value = arr.join('; ');
             updateComorbiditiesSummary();
+            renderSafetyMedicalCards();
         }
         function restoreComorbiditiesFromHidden() {
-            document.querySelectorAll('.comorbidity-cb').forEach(function(cb) { cb.checked = false; });
-            var spec = document.getElementById('comorbidity_others_text');
+            var sel = document.getElementById('input_comorbidities');
+            var spec = document.getElementById('input_other_comorbidities');
             if (spec) spec.value = '';
             var hid = document.getElementById('medical_comorbidities');
             if (!hid || !hid.value) return;
-            try {
-                var arr = JSON.parse(hid.value);
-                if (!Array.isArray(arr)) return;
-                arr.forEach(function(item) {
-                    if (typeof item === 'string' && item.startsWith('OTHERS')) {
-                        document.getElementById('comorbidity_others_cb').checked = true;
-                        if (item.length > 6 && item.substring(0, 7) === 'OTHERS:') spec.value = item.substring(7).trim();
-                    } else {
-                        document.querySelectorAll('.comorbidity-cb').forEach(function(cb) { if (cb.value === item) cb.checked = true; });
-                    }
-                });
-            } catch (e) {
-                if (hid.value.trim()) { document.getElementById('comorbidity_others_cb').checked = true; if (spec) spec.value = hid.value; }
+            if (!sel) return;
+            var vals = splitCardValues(hid.value);
+            Array.from(sel.options).forEach(function(o) { o.selected = false; });
+            var custom = [];
+            vals.forEach(function(v) {
+                var found = Array.from(sel.options).find(function(o) { return o.value === v; });
+                if (found) found.selected = true;
+                else custom.push(v);
+            });
+            custom.forEach(function(v) {
+                var opt = Array.from(sel.options).find(function(o) { return o.value === v; });
+                if (!opt) {
+                    var newOpt = new Option(v, v, true, true);
+                    sel.add(newOpt);
+                }
+            });
+            if (custom.length) {
+                var otherOpt = Array.from(sel.options).find(function(o) { return o.value === 'OTHERS'; });
+                if (otherOpt) otherOpt.selected = true;
+                if (spec) spec.value = custom.join('; ');
             }
+            if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) {
+                window.jQuery(sel).trigger('change');
+            }
+            toggleOtherComorbidityInput();
         }
         // ── Family History: State ─────────────────────────────────
         var _fhPresent = false;
@@ -3498,10 +4343,364 @@
             var el = document.getElementById('comorbidities-summary');
             if (!el) return;
             var hid = document.getElementById('medical_comorbidities');
-            var n = 0;
-            if (hid && hid.value) try { var arr = JSON.parse(hid.value); n = Array.isArray(arr) ? arr.length : 0; } catch (e) { if (hid.value.trim()) n = 1; }
+            var n = splitCardValues(hid ? hid.value : '').length;
             el.textContent = n ? n + ' selected' : 'Select...';
         }
+        function splitCardValues(text) {
+            return (text || '')
+                .split(/[\n,;]+/)
+                .map(function(v) { return v.trim(); })
+                .filter(function(v) { return !!v; });
+        }
+        var medicationList = [
+            "Metformin", "Glargine (Lantus)", "Lispro (Humalog)", "Aspart (Novolog)", "Glipizide",
+            "Glimepiride", "Empagliflozin (Jardiance)", "Dapagliflozin (Farxiga)", "Semaglutide (Ozempic)",
+            "Dulaglutide (Trulicity)", "Sitagliptin (Januvia)", "Lisinopril", "Enalapril", "Losartan",
+            "Valsartan", "Metoprolol", "Atenolol", "Carvedilol", "Amlodipine", "Diltiazem",
+            "Hydrochlorothiazide", "Chlorthalidone", "Furosemide", "Levothyroxine (Synthroid, Levoxyl)",
+            "Liothyronine (Cytomel)", "Armour Thyroid", "Methimazole (Tapazole)", "Propylthiouracil (PTU)",
+            "Propranolol", "Levetiracetam (Keppra)", "Valproic Acid (Depakote)", "Lamotrigine (Lamictal)",
+            "Topiramate (Topamax)", "Phenytoin (Dilantin)", "Carbamazepine (Tegretol)", "Oxcarbazepine (Trileptal)",
+            "Albuterol", "Ipratropium", "Tiotropium (Spiriva)", "Salmeterol", "Formoterol", "Fluticasone",
+            "Budesonide", "Levalbuterol", "Montelukast (Singulair)", "Omalizumab", "Mepolizumab", "Rifampin",
+            "Isoniazid (INH)", "Pyrazinamide", "Ethambutol", "Tenofovir", "Emtricitabine", "Abacavir",
+            "Efavirenz", "Doravirine", "Dolutegravir", "Bictegravir", "Darunavir", "Atazanavir", "Others"
+        ];
+        var medicationDoses = {};
+        function renderDynamicDoseInputs(selectedMeds) {
+            var container = document.getElementById('dynamic_dose_container');
+            if (!container) return;
+            container.innerHTML = '';
+            var meds = (selectedMeds || []).filter(function(m) { return m !== 'Others'; });
+            if (!meds.length) return;
+            var html = '<label style="font-size:12px; color:#6b7280; font-weight:700;">Specify Doses (Optional)</label>';
+            meds.forEach(function(med) {
+                var dose = medicationDoses[med] || '';
+                var safeMed = String(med).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                var safeDose = String(dose).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+                html += '<div style="display:grid; grid-template-columns: 45% 1fr; gap:8px; margin-top:6px;">' +
+                    '<div style="padding:8px 10px; border:1px solid #e5e7eb; border-radius:6px; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + safeMed + '</div>' +
+                    '<input type="text" class="dose-input" data-med="' + safeMed + '" value="' + safeDose + '" placeholder="e.g., 500 mg" list="dose_suggestions" style="width:100%;">' +
+                    '</div>';
+            });
+            container.innerHTML = html;
+        }
+        function initMedicationSelect() {
+            var sel = document.getElementById('input_medications');
+            if (!sel) return;
+            sel.innerHTML = '';
+            medicationList.forEach(function(item) {
+                var opt = document.createElement('option');
+                opt.value = item;
+                opt.textContent = item;
+                sel.appendChild(opt);
+            });
+            if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) {
+                var $sel = window.jQuery(sel);
+                if ($sel.data('select2')) $sel.select2('destroy');
+                $sel.select2({
+                    width: '100%',
+                    tags: true,
+                    placeholder: 'Search medications...'
+                });
+                $sel.off('change.medicationToggle select2:select.medicationToggle select2:unselect.medicationToggle');
+                $sel.on('change.medicationToggle select2:select.medicationToggle select2:unselect.medicationToggle', function() {
+                    toggleOtherMedicationInput();
+                    renderDynamicDoseInputs(window.jQuery(sel).val() || []);
+                });
+            }
+        }
+        function toggleOtherMedicationInput() {
+            var sel = document.getElementById('input_medications');
+            var box = document.getElementById('other_medication_container');
+            if (!sel || !box) return;
+            var picked = [];
+            if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) picked = window.jQuery(sel).val() || [];
+            else picked = Array.from(sel.selectedOptions).map(function(o) { return o.value; });
+            box.style.display = picked.indexOf('Others') !== -1 ? 'block' : 'none';
+        }
+        var allergyList = [
+            "Penicillins (Amoxicillin, Ampicillin)",
+            "Sulfonamides (Sulfamethoxazole/Trimethoprim - Bactrim)",
+            "Cephalosporins (Cephalexin, Ceftriaxone)",
+            "NSAIDs (Ibuprofen, Naproxen)",
+            "Aspirin (Salicylates)",
+            "Opioids (Morphine, Codeine)",
+            "Anticonvulsants (Phenytoin, Carbamazepine, Lamotrigine)",
+            "ACE Inhibitors (Lisinopril)",
+            "Radiocontrast Media (Iodine-based IV dye)",
+            "Fluoroquinolones (Ciprofloxacin, Levofloxacin)",
+            "Macrolides (Erythromycin, Azithromycin)",
+            "Tetracyclines (Doxycycline, Minocycline)",
+            "Local Anesthetics (Lidocaine, Benzocaine)",
+            "Allopurinol",
+            "Neuromuscular Blocking Agents (Rocuronium, Succinylcholine)",
+            "Monoclonal Antibodies (Rituximab, Infliximab)",
+            "Chemotherapeutic Agents (Platinums, Taxanes)",
+            "Heparin",
+            "Proton Pump Inhibitors (Omeprazole, Pantoprazole)",
+            "Insulin",
+            "Others"
+        ];
+        var comorbidityList = [
+            "Diabetes mellitus",
+            "Hypertension",
+            "Hypothyroidism",
+            "Hyperthyroidism",
+            "Epilepsy",
+            "COPD",
+            "Asthma",
+            "Tuberculosis",
+            "HIV",
+            "OTHERS"
+        ];
+        function initComorbiditySelect() {
+            var sel = document.getElementById('input_comorbidities');
+            if (!sel) return;
+            sel.innerHTML = '';
+            comorbidityList.forEach(function(item) {
+                var opt = document.createElement('option');
+                opt.value = item;
+                opt.textContent = item;
+                sel.appendChild(opt);
+            });
+            if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) {
+                var $sel = window.jQuery(sel);
+                if ($sel.data('select2')) $sel.select2('destroy');
+                $sel.select2({
+                    width: '100%',
+                    tags: true,
+                    placeholder: 'Search comorbidities...'
+                });
+                $sel.off('change.comorbidityToggle select2:select.comorbidityToggle select2:unselect.comorbidityToggle');
+                $sel.on('change.comorbidityToggle select2:select.comorbidityToggle select2:unselect.comorbidityToggle', function() {
+                    toggleOtherComorbidityInput();
+                });
+            }
+        }
+        function toggleOtherComorbidityInput() {
+            var sel = document.getElementById('input_comorbidities');
+            var box = document.getElementById('other_comorbidity_container');
+            if (!sel || !box) return;
+            var picked = [];
+            if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) picked = window.jQuery(sel).val() || [];
+            else picked = Array.from(sel.selectedOptions).map(function(o) { return o.value; });
+            box.style.display = picked.indexOf('OTHERS') !== -1 ? 'block' : 'none';
+        }
+        function initAllergySelect() {
+            var sel = document.getElementById('input_allergies');
+            if (!sel) return;
+            sel.innerHTML = '';
+            allergyList.forEach(function(item) {
+                var opt = document.createElement('option');
+                opt.value = item;
+                opt.textContent = item;
+                sel.appendChild(opt);
+            });
+            if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) {
+                var $sel = window.jQuery(sel);
+                if ($sel.data('select2')) $sel.select2('destroy');
+                $sel.select2({
+                    width: '100%',
+                    tags: true,
+                    placeholder: 'Search allergies...'
+                });
+            }
+        }
+        function toggleOtherAllergyInput() {
+            var sel = document.getElementById('input_allergies');
+            var box = document.getElementById('other_allergy_container');
+            if (!sel || !box) return;
+            var picked = [];
+            if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) {
+                picked = window.jQuery(sel).val() || [];
+            } else {
+                picked = Array.from(sel.selectedOptions).map(function(o) { return o.value; });
+            }
+            box.style.display = picked.indexOf('Others') !== -1 ? 'block' : 'none';
+        }
+        function parseComorbiditiesHidden() {
+            var hid = document.getElementById('medical_comorbidities');
+            if (!hid || !hid.value) return [];
+            try {
+                var arr = JSON.parse(hid.value);
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) {
+                return splitCardValues(hid.value);
+            }
+        }
+        function renderMedicalBadges(containerId, values, emptyText) {
+            var container = document.getElementById(containerId);
+            if (!container) return;
+            if (!values || !values.length) {
+                container.innerHTML = '<span class="medical-card-empty">' + (emptyText || 'None') + '</span>';
+                return;
+            }
+            container.innerHTML = values.map(function(v) {
+                var safe = String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                return '<span class="medical-badge">' + safe + '</span>';
+            }).join('');
+        }
+        function renderSafetyMedicalCards() {
+            renderMedicalBadges('display_comorbidities', parseComorbiditiesHidden(), 'None');
+            var medHid = document.getElementById('non_psychiatric_meds');
+            renderMedicalBadges('display_medications', splitCardValues(medHid ? medHid.value : ''), 'None');
+            var allergyHid = document.getElementById('drug_allergies');
+            renderMedicalBadges('display_allergies', splitCardValues(allergyHid ? allergyHid.value : ''), 'None');
+        }
+        function openMedicalModal(modalId) {
+            if (modalId === 'medicationsModal') {
+                var medHid = document.getElementById('non_psychiatric_meds');
+                var medsSel = document.getElementById('input_medications');
+                var medsValues = splitCardValues(medHid ? medHid.value : '');
+                var otherInput = document.getElementById('input_other_medications');
+                var otherDoseInput = document.getElementById('input_other_dose');
+                medicationDoses = {};
+                if (medsSel) {
+                    Array.from(medsSel.options).forEach(function(o) { o.selected = false; });
+                    var custom = [];
+                    medsValues.forEach(function(v) {
+                        var parsed = String(v).match(/^(.*?)(?:\s*\(([^)]*)\))?\s*$/);
+                        var clean = parsed ? (parsed[1] || '').trim() : String(v).trim();
+                        var dose = parsed ? (parsed[2] || '').trim() : '';
+                        if (clean && dose) medicationDoses[clean] = dose;
+                        var found = Array.from(medsSel.options).find(function(o) { return o.value === clean; });
+                        if (found) found.selected = true;
+                        else if (clean) custom.push(clean);
+                    });
+                    custom.forEach(function(v) {
+                        var opt = Array.from(medsSel.options).find(function(o) { return o.value === v; });
+                        if (!opt) medsSel.add(new Option(v, v, true, true));
+                    });
+                    if (custom.length) {
+                        var otherOpt = Array.from(medsSel.options).find(function(o) { return o.value === 'Others'; });
+                        if (otherOpt) otherOpt.selected = true;
+                    }
+                    if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) {
+                        window.jQuery(medsSel).trigger('change');
+                    }
+                    if (otherInput) otherInput.value = custom.join('; ');
+                    if (otherDoseInput) otherDoseInput.value = '';
+                    toggleOtherMedicationInput();
+                    var selected = window.jQuery && window.jQuery.fn && window.jQuery.fn.select2 ? (window.jQuery(medsSel).val() || []) : Array.from(medsSel.selectedOptions).map(function(o) { return o.value; });
+                    renderDynamicDoseInputs(selected);
+                }
+            } else if (modalId === 'comorbiditiesModal') {
+                restoreComorbiditiesFromHidden();
+            } else if (modalId === 'allergiesModal') {
+                var allergyHid = document.getElementById('drug_allergies');
+                var values = splitCardValues(allergyHid ? allergyHid.value : '');
+                var sel = document.getElementById('input_allergies');
+                var otherInput = document.getElementById('input_other_allergies');
+                if (sel) {
+                    var custom = [];
+                    Array.from(sel.options).forEach(function(o) { o.selected = false; });
+                    values.forEach(function(v) {
+                        var found = Array.from(sel.options).find(function(o) { return o.value === v; });
+                        if (found) found.selected = true;
+                        else custom.push(v);
+                    });
+                    custom.forEach(function(v) {
+                        var opt = Array.from(sel.options).find(function(o) { return o.value === v; });
+                        if (!opt) {
+                            var newOpt = new Option(v, v, true, true);
+                            sel.add(newOpt);
+                        }
+                    });
+                    if (custom.length) {
+                        var otherOpt = Array.from(sel.options).find(function(o) { return o.value === 'Others'; });
+                        if (otherOpt) otherOpt.selected = true;
+                    }
+                    if (otherInput) otherInput.value = custom.join('; ');
+                    if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) {
+                        window.jQuery(sel).trigger('change');
+                    }
+                    toggleOtherAllergyInput();
+                }
+            }
+            openModal(modalId);
+        }
+        function saveMedications() {
+            var medsSel = document.getElementById('input_medications');
+            var vals = [];
+            if (medsSel) {
+                if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) vals = window.jQuery(medsSel).val() || [];
+                else vals = Array.from(medsSel.selectedOptions).map(function(o) { return o.value; });
+            }
+            var finalArr = [];
+            vals.forEach(function(v) {
+                if (v === 'Others') return;
+                var d = (medicationDoses[v] || '').trim();
+                finalArr.push(d ? (v + ' (' + d + ')') : v);
+            });
+            if (vals.indexOf('Others') !== -1) {
+                vals = vals.filter(function(v) { return v !== 'Others'; });
+                var custom = document.getElementById('input_other_medications');
+                var customDoseEl = document.getElementById('input_other_dose');
+                var customVals = splitCardValues(custom ? custom.value : '');
+                var customDose = (customDoseEl ? customDoseEl.value : '').trim();
+                customVals.forEach(function(cv) {
+                    finalArr.push(customDose ? (cv + ' (' + customDose + ')') : cv);
+                });
+            }
+            var hid = document.getElementById('non_psychiatric_meds');
+            if (hid) hid.value = finalArr.join('; ');
+            renderSafetyMedicalCards();
+            closeModal('medicationsModal');
+        }
+        function saveAllergies() {
+            var sel = document.getElementById('input_allergies');
+            var vals = [];
+            if (sel) {
+                if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) vals = window.jQuery(sel).val() || [];
+                else vals = Array.from(sel.selectedOptions).map(function(o) { return o.value; });
+            }
+            if (vals.indexOf('Others') !== -1) {
+                vals = vals.filter(function(v) { return v !== 'Others'; });
+                var custom = document.getElementById('input_other_allergies');
+                var customVals = splitCardValues(custom ? custom.value : '');
+                vals = vals.concat(customVals);
+            }
+            var hid = document.getElementById('drug_allergies');
+            if (hid) hid.value = vals.join('; ');
+            renderSafetyMedicalCards();
+            closeModal('allergiesModal');
+        }
+        function bindDoseSuggestions() {
+            var doseList = document.getElementById('dose_suggestions');
+            if (!doseList) return;
+            document.addEventListener('input', function(e) {
+                if (!e.target || !e.target.classList || !e.target.classList.contains('dose-input')) return;
+                var val = (e.target.value || '').trim();
+                var match = val.match(/^(\d+(\.\d+)?)$/);
+                doseList.innerHTML = '';
+                if (match) {
+                    var num = match[1];
+                    ['mg', 'μg', 'g', 'mL', 'units'].forEach(function(unit) {
+                        var opt = document.createElement('option');
+                        opt.value = num + ' ' + unit;
+                        doseList.appendChild(opt);
+                    });
+                }
+                var medKey = e.target.getAttribute('data-med');
+                if (medKey) medicationDoses[medKey] = val;
+            });
+        }
+        window.addEventListener('DOMContentLoaded', function() {
+            initMedicationSelect();
+            initComorbiditySelect();
+            initAllergySelect();
+            var mSel = document.getElementById('input_medications');
+            if (mSel) mSel.addEventListener('change', toggleOtherMedicationInput);
+            var cSel = document.getElementById('input_comorbidities');
+            if (cSel) cSel.addEventListener('change', toggleOtherComorbidityInput);
+            var allergySel = document.getElementById('input_allergies');
+            if (allergySel) allergySel.addEventListener('change', toggleOtherAllergyInput);
+            renderSafetyMedicalCards();
+            bindDoseSuggestions();
+            toggleOtherMedicationInput();
+            toggleOtherComorbidityInput();
+        });
         function bindAdherenceCheckboxes() { document.querySelectorAll('.adherence-checkbox').forEach(cb => { cb.addEventListener('change', function() { const c = document.getElementById('adherence-ranges-container'); const id = 'adherence-range-' + this.value.replace(/\s+/g, '_'); if (this.checked) c.insertAdjacentHTML('beforeend', '<div class="range-group" id="' + id + '" data-status="' + this.value + '"><div class="range-row"><label>Start: <input type="date" class="range-start"></label> <label>End: <input type="date" class="range-end"></label></div><button type="button" class="btn" style="margin-top:6px; padding:4px 10px; font-size:11px; background:#7ab8e0; color:#fff;" onclick="addExtraRange(this)">+ Add another range</button></div>'); else { const g = document.getElementById(id); if (g) g.remove(); } }); }); }
         function addExtraRange(btn) { const group = btn.closest('.range-group'); const row = document.createElement('div'); row.className = 'range-row'; row.innerHTML = '<label>Start: <input type="date" class="range-start"></label> <label>End: <input type="date" class="range-end"></label>'; group.insertBefore(row, btn); }
         function closeAdherenceRangesModal() { const data = []; document.querySelectorAll('#adherence-ranges-container .range-group').forEach(group => { const status = group.getAttribute('data-status'); group.querySelectorAll('.range-row').forEach(row => { const s = row.querySelector('.range-start'), e = row.querySelector('.range-end'); if (s && e) data.push({ status: status, start: s.value || null, end: e.value || null }); }); }); document.getElementById('adherence_data').value = JSON.stringify(data); closeModal('adherenceRangesModal'); }
@@ -3962,7 +5161,9 @@
             addSymptom(); addMedication(); addSideEffect(); addSubstance();
             bindAdherenceCheckboxes();
             renderClinicalStates();
-            addMSE('Thought'); addMSE('Perception'); addMSE('Affect');
+            addMSE('Thought'); addMSE('Perception'); addMSE('Mood');
+            initAffectTagInput();
+            initAffectTagInput();
             updateComorbiditiesSummary();
             setFamilyHistoryPresent(false); // default: Absent
             updateFamilyHistoryHidden();
@@ -4121,27 +5322,26 @@
         }
         function removeMedScheduleStep(btn) {
             var step = btn.closest('.med-schedule-step');
-            var col = step && step.closest('.med-schedule-col');
             var block = step && step.closest('.med-entry-block');
             var entry = block && block.closest('.entry-wrapper');
-            if (!step || !col || !block || !entry) return;
-            var steps = col.querySelectorAll('.med-schedule-step');
+            if (!step || !block || !entry) return;
+            var steps = block.querySelectorAll('.med-schedule-step');
             if (steps.length <= 1) {
                 entry.remove();
                 if (typeof syncDurationRequired === 'function') syncDurationRequired();
                 return;
             }
             step.remove();
-            var taperCard = col.querySelector('.taper-steps-card');
+            var taperCard = block.querySelector('.taper-steps-card');
             if (taperCard && taperCard.querySelectorAll('.med-schedule-step').length === 0) {
                 taperCard.remove();
             }
-            var first = col.querySelector('.med-schedule-step');
+            var first = block.querySelector('.med-schedule-step');
             if (first) {
                 first.classList.remove('med-schedule-step--follow');
                 first.querySelectorAll('input[type="hidden"][name="drug_type[]"], input[type="hidden"][name="med_form[]"], input[type="hidden"][name="drug_name[]"]').forEach(function(h) { h.remove(); });
             }
-            var remaining = col.querySelectorAll('.med-schedule-step').length;
+            var remaining = block.querySelectorAll('.med-schedule-step').length;
             if (remaining === 1) {
                 var masterName = block.querySelector('.med-ident-col input[name="drug_name[]"]');
                 if (masterName) {
@@ -4158,10 +5358,11 @@
             var block = btn.closest('.med-entry-block');
             if (!block) return;
             var scheduleCol = block.querySelector('.med-schedule-col');
+            var inner = block.querySelector('.med-block-inner');
             var masterType = block.querySelector('.med-ident-col select[name="drug_type[]"]');
             var masterForm = block.querySelector('.med-ident-col select[name="med_form[]"]');
             var masterName = block.querySelector('.med-ident-col input[name="drug_name[]"]');
-            if (!scheduleCol || !masterType || !masterForm || !masterName) return;
+            if (!scheduleCol || !inner || !masterType || !masterForm || !masterName) return;
             masterName.readOnly = true;
             block.classList.add('has-taper');
             const isDark = document.body.classList.contains('dark-mode');
@@ -4171,48 +5372,55 @@
             var dt = medEscapeAttr(masterType.value);
             var df = medEscapeAttr(masterForm.value);
             var dn = medEscapeAttr(masterName.value);
-            var existingSteps = scheduleCol.querySelectorAll('.med-schedule-step--follow').length + 1;
-            var taperCard = scheduleCol.querySelector('.taper-steps-card');
+            var existingSteps = block.querySelectorAll('.med-schedule-step--follow').length + 1;
+            var taperCard = block.querySelector('.taper-steps-card');
             if (!taperCard) {
                 taperCard = document.createElement('div');
                 taperCard.className = 'taper-steps-card';
-                taperCard.innerHTML = '<div class="taper-steps-header-grid">' +
-                    '<span>Step</span><span>Dose</span><span>Freq</span><span>Duration</span></div>';
-                scheduleCol.appendChild(taperCard);
+                taperCard.innerHTML = '<div class="taper-steps-header">' +
+                    '<div class="taper-steps-header-line1">' +
+                    '<span>STEP</span><span>DOSE</span><span>DURATION</span></div>' +
+                    '<div class="taper-steps-header-line2">' +
+                    '<span></span><span class="taper-h-freq">FREQUENCY</span><span></span></div></div>';
+                inner.appendChild(taperCard);
+            } else if (taperCard.parentElement !== inner) {
+                inner.appendChild(taperCard);
             }
             var html = '<div class="med-schedule-step med-schedule-step--follow taper-step-wrap">' +
                 '<input type="hidden" name="drug_type[]" value="' + dt + '">' +
                 '<input type="hidden" name="med_form[]" value="' + df + '">' +
                 '<input type="hidden" name="drug_name[]" value="' + dn + '">' +
-                '<div class="taper-step-row">' +
+                '<div class="taper-step-grid">' +
                 '<span class="taper-step-label">Step ' + existingSteps + '</span>' +
-                '<div class="taper-dose-ctrl">' +
-                '<button type="button" onclick="adjustDose(this.closest(\'.taper-dose-ctrl\').querySelector(&quot;input[name=\'dose_full[]\']&quot;), -1)">−</button>' +
-                '<input type="text" name="dose_full[]" value="" list="dose-list-' + uniqueId + '" placeholder="Dose" oninput="updateDoseOptions(this)">' +
-                '<span class="taper-dose-unit">mg</span>' +
-                '<button type="button" onclick="adjustDose(this.closest(\'.taper-dose-ctrl\').querySelector(&quot;input[name=\'dose_full[]\']&quot;), 1)">+</button>' +
-                '<datalist id="dose-list-' + uniqueId + '"></datalist>' +
-                '</div>' +
-                '<div class="taper-freq-boxes">' +
+                '<div class="taper-grid-dose">' +
+                '<div class="dose-adjust-wrap" style="display:flex;align-items:center;gap:4px;width:100%;min-width:100px;box-sizing:border-box;">' +
+                '<button type="button" onclick="adjustDose(this.closest(\'.dose-adjust-wrap\').querySelector(&quot;input[name=\'dose_full[]\']&quot;), -1)" style="width:24px;height:28px;padding:0;line-height:1;font-size:14px;cursor:pointer;background:#f0f4f4;border:1px solid #d2dcdc;border-radius:4px;">−</button>' +
+                '<input type="text" name="dose_full[]" value="" list="dose-list-' + uniqueId + '" placeholder="Dose" style="flex:1;min-width:70px;" oninput="updateDoseOptions(this)">' +
+                '<button type="button" onclick="adjustDose(this.closest(\'.dose-adjust-wrap\').querySelector(&quot;input[name=\'dose_full[]\']&quot;), 1)" style="width:24px;height:28px;padding:0;line-height:1;font-size:14px;cursor:pointer;background:#f0f4f4;border:1px solid #d2dcdc;border-radius:4px;">+</button>' +
+                '<datalist id="dose-list-' + uniqueId + '"></datalist></div></div>' +
+                '<div class="taper-grid-dur">' +
+                '<div class="duration-adjust-wrap" style="display:flex;align-items:center;flex:1;min-width:100px;width:100%;box-sizing:border-box;">' +
+                '<input type="text" list="duration-options-list" name="med_duration[]" placeholder="Duration (required)" required style="flex:1;min-width:70px;" oninput="updateDurationOptions(this)">' +
+                '</div></div>' +
+                '<div class="taper-grid-line2">' +
+                '<div aria-hidden="true"></div>' +
+                '<div class="med-freq-inline">' +
+                '<span class="med-freq-label" style="text-transform:uppercase;">FREQUENCY</span>' +
                 '<input type="hidden" name="frequency[]" value="1-0-1">' +
-                '<div class="freq-container" style="display:flex;align-items:center;gap:2px;">' +
-                '<input type="text" class="freq-box taper-freq-box" value="1" oninput="handleFreqInput(this)">' +
-                '<span style="font-size:11px;color:#9aacae;">-</span>' +
-                '<input type="text" class="freq-box taper-freq-box" value="0" oninput="handleFreqInput(this)">' +
-                '<span style="font-size:11px;color:#9aacae;">-</span>' +
-                '<input type="text" class="freq-box taper-freq-box" value="1" oninput="handleFreqInput(this)">' +
+                '<div class="freq-container" style="display:flex;align-items:center;">' +
+                '<input type="text" class="freq-box" value="1" style="width:25px;text-align:center;padding:5px 2px;" oninput="handleFreqInput(this)">' +
+                '<span style="margin:0 2px">-</span>' +
+                '<input type="text" class="freq-box" value="0" style="width:25px;text-align:center;padding:5px 2px;" oninput="handleFreqInput(this)">' +
+                '<span style="margin:0 2px">-</span>' +
+                '<input type="text" class="freq-box" value="1" style="width:25px;text-align:center;padding:5px 2px;" oninput="handleFreqInput(this)">' +
                 '</div>' +
                 '<div style="display:flex;flex-direction:column;margin-left:2px;">' +
-                '<button type="button" class="add-freq-btn" onclick="addFreqBox(this)" style="font-size:10px;line-height:10px;padding:0 2px;cursor:pointer;margin-bottom:1px;">+</button>' +
-                '<button type="button" onclick="removeFreqBox(this)" style="font-size:10px;line-height:10px;padding:0 2px;cursor:pointer;">-</button></div>' +
-                '</div>' +
-                '<div class="taper-duration-cell">' +
-                '<input type="text" list="duration-options-list" name="med_duration[]" placeholder="Duration (required)" required class="taper-duration-input" oninput="updateDurationOptions(this)">' +
-                '<button type="button" class="note-btn" onclick="toggleNote(this)" title="Note">📝</button>' +
-                '<button type="button" class="remove-btn" onclick="removeMedScheduleStep(this)" title="Remove this step">✕</button>' +
-                '</div>' +
-                '</div>' +
-                '<input type="text" class="note-input" name="med_note[]" value="" style="display:none;width:100%;padding:6px 8px;font-size:13px;margin-top:8px;box-sizing:border-box;">' +
+                '<button type="button" class="add-freq-btn" onclick="addFreqBox(this)" style="font-size:10px;line-height:10px;padding:0 2px;cursor:pointer;margin-bottom:1px;background:#f0f4f4;border:1px solid #d2dcdc;border-radius:2px;">+</button>' +
+                '<button type="button" onclick="removeFreqBox(this)" style="font-size:10px;line-height:10px;padding:0 2px;cursor:pointer;background:#f0f4f4;border:1px solid #d2dcdc;border-radius:2px;">-</button></div></div>' +
+                '<div class="taper-step-remove-trail">' +
+                '<button type="button" class="remove-btn" onclick="removeMedScheduleStep(this)" title="Remove this taper step" style="margin:0;font-size:16px;color:#ff6b6b;">✕</button>' +
+                '</div></div></div>' +
+                '<input type="hidden" name="med_note[]" value="">' +
                 '</div>';
             var wrap = document.createElement('div');
             wrap.innerHTML = html.trim();
@@ -4295,37 +5503,41 @@
                     </div>
                     <div class="med-schedule-col">
                         <div class="med-schedule-step">
-                            <div class="med-step-main-row">
-                                <div class="dose-adjust-wrap" style="display:flex;align-items:center;gap:2px;flex:0 0 auto;min-width:100px;">
-                                    <button type="button" onclick="adjustDose(this.closest('.dose-adjust-wrap').querySelector(&quot;input[name='dose_full[]']&quot;), -1)" style="width:24px;height:28px;padding:0;line-height:1;font-size:14px;cursor:pointer;">−</button>
-                                    <input type="text" name="dose_full[]" list="dose-list-${uniqueId}" placeholder="Dose" style="flex:1;min-width:70px;" oninput="updateDoseOptions(this)">
-                                    <button type="button" onclick="adjustDose(this.closest('.dose-adjust-wrap').querySelector(&quot;input[name='dose_full[]']&quot;), 1)" style="width:24px;height:28px;padding:0;line-height:1;font-size:14px;cursor:pointer;">+</button>
-                                    <datalist id="dose-list-${uniqueId}"></datalist>
-                                </div>
-                                <div class="duration-adjust-wrap" style="display:flex;align-items:center;flex:1;min-width:100px;">
-                                    <input type="text" list="duration-options-list" name="med_duration[]" placeholder="Duration (required)" required style="flex:1;min-width:70px;" oninput="updateDurationOptions(this)">
-                                </div>
-                                <div class="med-freq-inline">
-                                    <span class="med-freq-label">Frequency</span>
-                                    <input type="hidden" name="frequency[]" value="1-0-1">
-                                    <div class="freq-container" style="display:flex;align-items:center;">
-                                        <input type="text" class="freq-box" value="1" style="width:25px;text-align:center;padding:5px 2px;" oninput="handleFreqInput(this)">
-                                        <span style="margin:0 2px">-</span>
-                                        <input type="text" class="freq-box" value="0" style="width:25px;text-align:center;padding:5px 2px;" oninput="handleFreqInput(this)">
-                                        <span style="margin:0 2px">-</span>
-                                        <input type="text" class="freq-box" value="1" style="width:25px;text-align:center;padding:5px 2px;" oninput="handleFreqInput(this)">
+                            <div class="med-step-main-row" style="display:flex; flex-direction:column; gap:8px; width:100%;">
+                                <div style="display:flex; gap:10px; width:100%;">
+                                    <div class="dose-adjust-wrap" style="display:flex;align-items:center;gap:4px;flex:1;min-width:100px;">
+                                        <button type="button" onclick="adjustDose(this.closest('.dose-adjust-wrap').querySelector(&quot;input[name='dose_full[]']&quot;), -1)" style="width:24px;height:28px;padding:0;line-height:1;font-size:14px;cursor:pointer;background:#f0f4f4;border:1px solid #d2dcdc;border-radius:4px;">−</button>
+                                        <input type="text" name="dose_full[]" list="dose-list-${uniqueId}" placeholder="Dose" style="flex:1;min-width:70px;" oninput="updateDoseOptions(this)">
+                                        <button type="button" onclick="adjustDose(this.closest('.dose-adjust-wrap').querySelector(&quot;input[name='dose_full[]']&quot;), 1)" style="width:24px;height:28px;padding:0;line-height:1;font-size:14px;cursor:pointer;background:#f0f4f4;border:1px solid #d2dcdc;border-radius:4px;">+</button>
+                                        <datalist id="dose-list-${uniqueId}"></datalist>
                                     </div>
-                                    <div style="display:flex;flex-direction:column;margin-left:2px;">
-                                        <button type="button" class="add-freq-btn" onclick="addFreqBox(this)" style="font-size:10px;line-height:10px;padding:0 2px;cursor:pointer;margin-bottom:1px;">+</button>
-                                        <button type="button" onclick="removeFreqBox(this)" style="font-size:10px;line-height:10px;padding:0 2px;cursor:pointer;">-</button>
+                                    <div class="duration-adjust-wrap" style="display:flex;align-items:center;flex:1;min-width:100px;">
+                                        <input type="text" list="duration-options-list" name="med_duration[]" placeholder="Duration (required)" required style="flex:1;min-width:70px;" oninput="updateDurationOptions(this)">
                                     </div>
                                 </div>
-                                <div class="med-step-main-trail">
-                                    <button type="button" class="note-btn" onclick="toggleNote(this)">📝</button>
-                                    <button type="button" class="remove-btn" onclick="removeMedScheduleStep(this)" style="margin:0;font-size:16px;" title="Remove this step">✕</button>
+                                <div style="display:flex; justify-content:flex-end; align-items:center; gap:15px; width:100%;">
+                                    <div class="med-freq-inline">
+                                        <span class="med-freq-label" style="text-transform:uppercase;">FREQUENCY</span>
+                                        <input type="hidden" name="frequency[]" value="1-0-1">
+                                        <div class="freq-container" style="display:flex;align-items:center;">
+                                            <input type="text" class="freq-box" value="1" style="width:25px;text-align:center;padding:5px 2px;" oninput="handleFreqInput(this)">
+                                            <span style="margin:0 2px">-</span>
+                                            <input type="text" class="freq-box" value="0" style="width:25px;text-align:center;padding:5px 2px;" oninput="handleFreqInput(this)">
+                                            <span style="margin:0 2px">-</span>
+                                            <input type="text" class="freq-box" value="1" style="width:25px;text-align:center;padding:5px 2px;" oninput="handleFreqInput(this)">
+                                        </div>
+                                        <div style="display:flex;flex-direction:column;margin-left:2px;">
+                                            <button type="button" class="add-freq-btn" onclick="addFreqBox(this)" style="font-size:10px;line-height:10px;padding:0 2px;cursor:pointer;margin-bottom:1px;background:#f0f4f4;border:1px solid #d2dcdc;border-radius:2px;">+</button>
+                                            <button type="button" onclick="removeFreqBox(this)" style="font-size:10px;line-height:10px;padding:0 2px;cursor:pointer;background:#f0f4f4;border:1px solid #d2dcdc;border-radius:2px;">-</button>
+                                        </div>
+                                    </div>
+                                    <div class="med-step-main-trail" style="margin-left:0;display:flex;align-items:center;gap:6px;">
+                                        <button type="button" class="note-btn" onclick="toggleNote(this)" style="font-size:16px;">📝</button>
+                                        <button type="button" class="remove-btn" onclick="removeMedScheduleStep(this)" style="margin:0;font-size:16px;color:#ff6b6b;" title="Remove this step">✕</button>
+                                    </div>
                                 </div>
                             </div>
-                            <input type="text" class="note-input" name="med_note[]" value="" style="display:none;width:100%;padding:6px 8px;font-size:13px;">
+                            <input type="text" class="note-input" name="med_note[]" value="" style="display:none;width:100%;padding:6px 8px;font-size:13px;margin-top:8px;">
                         </div>
                     </div>
                 </div>
@@ -4664,8 +5876,195 @@
         function addSideEffect() { document.getElementById('side-effects-container').insertAdjacentHTML('beforeend', createRowHTML('side_effect')); syncDurationRequired(); }
         function addMSE(cat) {
             const containerId = 'mse-' + cat.toLowerCase() + '-container';
-            document.getElementById(containerId).insertAdjacentHTML('beforeend', createRowHTML('mse', cat));
+            const el = document.getElementById(containerId);
+            if (!el) return;
+            el.insertAdjacentHTML('beforeend', createRowHTML('mse', cat));
             if (typeof initMSEDropdowns === 'function') initMSEDropdowns();
+        }
+
+        // ── MSE: Cooperation → hide rest of MSE if non-cooperative ──────────
+        function handleCooperation(radio) {
+            const notCoop = radio.value === 'Not co-operative';
+            const cooperativeFields = document.getElementById('mse-cooperative-fields');
+            const speechSection    = document.getElementById('mse-speech-section');
+            const tpmSection       = document.getElementById('mse-tpm-section');
+            if (cooperativeFields) cooperativeFields.style.display = notCoop ? 'none' : '';
+            if (speechSection)     speechSection.style.display     = notCoop ? 'none' : '';
+            if (tpmSection)        tpmSection.style.display        = notCoop ? 'none' : '';
+            // Reset rapport if non-cooperative
+            if (notCoop) {
+                document.querySelectorAll('input[name="mse_rapport"]').forEach(function(r) { r.checked = false; });
+                handleRapport({ value: '' });
+            }
+        }
+
+        // ── MSE: Rapport → hide speech/tpm if rapport not established ───────
+        function handleRapport(radio) {
+            const notEstab = radio.value === 'Not established';
+            const speechSection = document.getElementById('mse-speech-section');
+            const tpmSection    = document.getElementById('mse-tpm-section');
+            if (speechSection) speechSection.style.display = notEstab ? 'none' : '';
+            if (tpmSection)    tpmSection.style.display    = notEstab ? 'none' : '';
+        }
+
+        // ── AFFECT TAG INPUT ─────────────────────────────────────────────────
+        const AFFECT_OPTIONS = [
+            'Depressed','Low','Sad','Dysthymic','Dysphoric','Ecstatic',
+            'Anxious‑depressed','Irritable‑depressed','Hopeless','Helpless','Worthless',
+            'Anxious','Tense, apprehensive','Anxious‑irritable','Fearful','Panic‑prone',
+            'Irritable','Easily provoked','Angry','Hostile','Labile irritable',
+            'Euphoric','Elated','Expansive','Hypomanic','Unrestrained cheerful',
+            'Labile','Apathetic','Indifferent','Restricted/flattened','Euthymic',
+            'Mood congruent with content','Mood incongruent with content',
+            'Anhedonic','Empty','Guarded','Frightened','Childish/Regressive',
+            'Perplexed','Alexithymic (unable to describe mood)',
+            'Appropriate','Inappropriate','Blunted','Restricted','Flat',
+        ];
+        let _affectSelected = [];
+
+        function initAffectTagInput() {
+            const input = document.getElementById('mse-affect-input');
+            const dropdown = document.getElementById('mse-affect-dropdown');
+            if (!input || !dropdown) return;
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('#mse-affect-wrap') && !e.target.closest('#mse-affect-dropdown')) {
+                    dropdown.style.display = 'none';
+                }
+            });
+            input.addEventListener('focus', function() {
+                filterAffectOptions(input.value);
+            });
+        }
+
+        function filterAffectOptions(q) {
+            const dropdown = document.getElementById('mse-affect-dropdown');
+            if (!dropdown) return;
+            const filtered = AFFECT_OPTIONS.filter(function(o) {
+                return !_affectSelected.includes(o) && o.toLowerCase().includes(q.toLowerCase());
+            });
+            if (!filtered.length) { dropdown.style.display = 'none'; return; }
+            dropdown.innerHTML = filtered.map(function(o) {
+                return `<div class="mse-affect-option" onmousedown="addAffectTag('${o.replace(/'/g,"\\'")}'); return false;">${o}</div>`;
+            }).join('');
+            // Position under the wrap
+            const wrap = document.getElementById('mse-affect-wrap');
+            if (wrap) {
+                dropdown.style.top = (wrap.offsetTop + wrap.offsetHeight) + 'px';
+                dropdown.style.left = wrap.offsetLeft + 'px';
+                dropdown.style.width = wrap.offsetWidth + 'px';
+                dropdown.style.position = 'absolute';
+            }
+            dropdown.style.display = 'block';
+        }
+
+        function affectKeydown(e) {
+            const input = document.getElementById('mse-affect-input');
+            if (!input) return;
+            if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault();
+                const val = input.value.trim();
+                if (val) addAffectTag(val);
+            } else if (e.key === 'Backspace' && !input.value && _affectSelected.length) {
+                removeAffectTag(_affectSelected[_affectSelected.length - 1]);
+            }
+        }
+
+        function addAffectTag(val) {
+            if (!val || _affectSelected.includes(val)) return;
+            _affectSelected.push(val);
+            renderAffectTags();
+            const input = document.getElementById('mse-affect-input');
+            const dropdown = document.getElementById('mse-affect-dropdown');
+            if (input) { input.value = ''; input.focus(); }
+            if (dropdown) dropdown.style.display = 'none';
+            syncAffectHidden();
+        }
+
+        function removeAffectTag(val) {
+            _affectSelected = _affectSelected.filter(function(v) { return v !== val; });
+            renderAffectTags();
+            syncAffectHidden();
+        }
+
+        function renderAffectTags() {
+            const container = document.getElementById('mse-affect-tags');
+            if (!container) return;
+            container.innerHTML = _affectSelected.map(function(v) {
+                return `<span class="mse-affect-tag">${v}<button type="button" class="remove-tag" onmousedown="removeAffectTag('${v.replace(/'/g,"\\'")}'); return false;">×</button></span>`;
+            }).join('');
+        }
+
+        function syncAffectHidden() {
+            // Write each selected affect as a separate hidden input
+            const wrap = document.getElementById('mse-affect-wrap');
+            if (!wrap) return;
+            // Remove old affect hiddens
+            document.querySelectorAll('input[name="mse_affect_items[]"]').forEach(function(el) { el.remove(); });
+            const form = document.getElementById('visitForm');
+            if (!form) return;
+            _affectSelected.forEach(function(val) {
+                const h = document.createElement('input');
+                h.type = 'hidden';
+                h.name = 'mse_affect_items[]';
+                h.value = val;
+                form.appendChild(h);
+            });
+        }
+
+        // ── MSE: Restore structured fields from existing visit data ──────────
+        function restoreMSEStructured(data) {
+            if (!data) return;
+            // Consciousness
+            if (data.consciousness) {
+                const r = document.querySelector(`input[name="mse_consciousness"][value="${data.consciousness}"]`);
+                if (r) r.checked = true;
+            }
+            // Appearance
+            if (data.appearance) {
+                const r = document.querySelector(`input[name="mse_appearance"][value="${data.appearance}"]`);
+                if (r) r.checked = true;
+            }
+            // Cooperation
+            if (data.cooperation) {
+                const r = document.querySelector(`input[name="mse_cooperation"][value="${data.cooperation}"]`);
+                if (r) { r.checked = true; handleCooperation(r); }
+            }
+            // Rapport
+            if (data.rapport) {
+                const r = document.querySelector(`input[name="mse_rapport"][value="${data.rapport}"]`);
+                if (r) { r.checked = true; handleRapport(r); }
+            }
+            // Eye contact (checkboxes)
+            if (data.eye_contact && Array.isArray(data.eye_contact)) {
+                data.eye_contact.forEach(function(v) {
+                    const cb = document.querySelector(`input[name="mse_eye_contact[]"][value="${v}"]`);
+                    if (cb) cb.checked = true;
+                });
+            }
+            // Psychomotor
+            if (data.psychomotor) {
+                const r = document.querySelector(`input[name="mse_psychomotor"][value="${data.psychomotor}"]`);
+                if (r) r.checked = true;
+            }
+            // Speech fields
+            const speechFields = ['reaction_time','relevance','coherence','intensity','pitch','ease'];
+            speechFields.forEach(function(f) {
+                if (data['speech_' + f]) {
+                    const r = document.querySelector(`input[name="mse_speech_${f}"][value="${data['speech_' + f]}"]`);
+                    if (r) r.checked = true;
+                }
+            });
+            // Affect tags
+            if (data.affect_items && Array.isArray(data.affect_items)) {
+                data.affect_items.forEach(function(v) { addAffectTag(v); });
+            }
+            // Affect sub-properties
+            ['reactivity','range','congruence','appropriateness'].forEach(function(f) {
+                if (data['affect_' + f]) {
+                    const r = document.querySelector(`input[name="mse_affect_${f}"][value="${data['affect_' + f]}"]`);
+                    if (r) r.checked = true;
+                }
+            });
         }
         document.addEventListener('input', function(e) {
             if (!e || !e.target) return;
@@ -4678,7 +6077,16 @@
                 if (mb && typeof syncMedFollowIdentity === 'function') syncMedFollowIdentity(mb);
             }
         });
-        window.addEventListener('DOMContentLoaded', syncDurationRequired);
+        function migrateTaperCardsToMedInner() {
+            document.querySelectorAll('.med-entry-block .med-schedule-col > .taper-steps-card').forEach(function(card) {
+                var inner = card.closest('.med-block-inner');
+                if (inner) inner.appendChild(card);
+            });
+        }
+        window.addEventListener('DOMContentLoaded', function() {
+            migrateTaperCardsToMedInner();
+            syncDurationRequired();
+        });
         
         function filterPatients() {
             var filter = document.getElementById("search").value.toUpperCase();
@@ -4687,6 +6095,106 @@
                 items[i].style.display = items[i].innerText.toUpperCase().indexOf(filter) > -1 ? "" : "none";
             }
         }
+
+        // ── Functional Impairment ──────────────────────────────────
+        const FI_KEYS = ['work','social','relationships','personal_care','leisure'];
+
+        function fiColor(val) {
+            if (val <= 3) return '#4caf50';
+            if (val <= 6) return '#ff9800';
+            return '#e53935';
+        }
+
+        function fiSeverity(avg) {
+            if (avg === 0)  return { label: 'None',     bg: '#f0f0f0', color: '#888' };
+            if (avg <= 3)   return { label: 'Mild',     bg: '#e8f5e9', color: '#4caf50' };
+            if (avg <= 6)   return { label: 'Moderate', bg: '#fff3e0', color: '#ff9800' };
+            return              { label: 'Severe',   bg: '#ffebee', color: '#e53935' };
+        }
+
+        function updateFI(slider) {
+            const key = slider.dataset.key;
+            const val = parseInt(slider.value);
+            const color = fiColor(val);
+
+            // Update display value + thumb color
+            const valEl = document.getElementById('fi-val-' + key);
+            if (valEl) { valEl.textContent = val; valEl.style.color = color; }
+
+            // Update thumb color via CSS custom property trick
+            slider.style.setProperty('--fi-thumb-color', color);
+            // Apply color directly to thumb via inline style on webkit
+            slider.setAttribute('data-color', color);
+            applyFIThumbColor(slider, color);
+
+            // Recalculate global score
+            let sum = 0;
+            FI_KEYS.forEach(k => {
+                const s = document.querySelector('.fi-slider[data-key="' + k + '"]');
+                if (s) sum += parseInt(s.value);
+            });
+            const avg = (sum / FI_KEYS.length).toFixed(1);
+            const sev = fiSeverity(parseFloat(avg));
+
+            const scoreEl = document.getElementById('fi-global-score');
+            const badgeEl = document.getElementById('fi-severity-badge');
+            if (scoreEl) { scoreEl.textContent = avg; scoreEl.style.color = sev.color; }
+            if (badgeEl) { badgeEl.textContent = sev.label; badgeEl.style.background = sev.bg; badgeEl.style.color = sev.color; }
+
+            // Serialize to hidden field
+            serializeFI();
+        }
+
+        function applyFIThumbColor(slider, color) {
+            // Inject or update a dynamic style rule for this specific slider
+            const id = 'fi-thumb-style-' + slider.dataset.key;
+            let el = document.getElementById(id);
+            if (!el) {
+                el = document.createElement('style');
+                el.id = id;
+                document.head.appendChild(el);
+            }
+            const sel = '.fi-slider[data-key="' + slider.dataset.key + '"]';
+            el.textContent = `
+                ${sel}::-webkit-slider-thumb { background: ${color} !important; }
+                ${sel}::-moz-range-thumb { background: ${color} !important; }
+            `;
+        }
+
+        function serializeFI() {
+            const data = {};
+            FI_KEYS.forEach(k => {
+                const s = document.querySelector('.fi-slider[data-key="' + k + '"]');
+                data[k] = s ? parseInt(s.value) : 0;
+            });
+            const hiddenEl = document.getElementById('functional_impairment_data');
+            if (hiddenEl) hiddenEl.value = JSON.stringify(data);
+        }
+
+        function loadFIData(dataJson) {
+            if (!dataJson) return;
+            let data;
+            try { data = typeof dataJson === 'string' ? JSON.parse(dataJson) : dataJson; }
+            catch(e) { return; }
+            FI_KEYS.forEach(k => {
+                const s = document.querySelector('.fi-slider[data-key="' + k + '"]');
+                if (s && data[k] !== undefined) {
+                    s.value = data[k];
+                    updateFI(s);
+                }
+            });
+        }
+
+        // On page load: restore saved values if editing an existing visit
+        document.addEventListener('DOMContentLoaded', function() {
+            // For edit mode — the hidden field will have existing JSON pre-filled by Jinja
+            const existing = document.getElementById('functional_impairment_data');
+            if (existing && existing.value) {
+                loadFIData(existing.value);
+            } else {
+                serializeFI(); // initialize with zeros
+            }
+        });
     </script>
 
 <div id="icd10CriteriaModal" class="modal" onclick="if(event.target === this) closeDiagnosisModal('icd10CriteriaModal')" style="z-index: 10001;">
@@ -5133,11 +6641,61 @@ const scalesLibrary = [
             {"min": 24, "max": 31, "label": "Severe OCD"},
             {"min": 32, "max": 40, "label": "Extreme OCD"}
         ]
+    },
+    {
+        "scaleId": "whodas2",
+        "scaleName": "WHODAS 2.0 (36-item)",
+        "questions": [
+            {"id":"D1.1","text":"Concentrating on doing something for ten minutes?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D1.2","text":"Remembering to do important things?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D1.3","text":"Analyzing and finding solutions to problems in day-to-day life?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D1.4","text":"Learning a new task, for example, learning how to get to a new place?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D1.5","text":"Generally understanding what people say?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D1.6","text":"Starting and maintaining a conversation?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D2.1","text":"Standing for long periods, such as 30 minutes?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D2.2","text":"Standing up from sitting down?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D2.3","text":"Moving around inside your home?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D2.4","text":"Getting out of your home?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D2.5","text":"Walking a long distance, such as a kilometer (or equivalent)?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D3.1","text":"Washing your whole body?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D3.2","text":"Getting dressed?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D3.3","text":"Eating?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D3.4","text":"Staying by yourself for a few days?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D4.1","text":"Dealing with people you do not know?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D4.2","text":"Maintaining a friendship?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D4.3","text":"Getting along with people who are close to you?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D4.4","text":"Making new friends?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D4.5","text":"Sexual activities?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D5.1","text":"Taking care of your household responsibilities?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D5.2","text":"Doing most important household tasks well?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D5.3","text":"Getting all of the household work done that you needed to do?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D5.4","text":"Getting your household work done as quickly as needed?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D5.5","text":"Your day-to-day work/school?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D5.6","text":"Doing your most important work/school tasks well?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D5.7","text":"Getting all of the work done that you need to do?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D5.8","text":"Getting your work done as quickly as needed?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D6.1","text":"How much of a problem did you have in joining in community activities in the same way as anyone else can?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D6.2","text":"How much of a problem did you have because of barriers or hindrances around you?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D6.3","text":"How much of a problem did you have living with dignity because of the attitudes and actions of others?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D6.4","text":"How much time did you spend on your health condition or its consequences?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D6.5","text":"How much have you been emotionally affected by your health condition?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D6.6","text":"How much has your health been a drain on the financial resources of you or your family?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D6.7","text":"How much of a problem did your family have because of your health problems?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]},
+            {"id":"D6.8","text":"How much of a problem did you have in doing things by yourself for relaxation or pleasure?","options":[{"value":1,"label":"None"},{"value":2,"label":"Mild"},{"value":3,"label":"Moderate"},{"value":4,"label":"Severe"},{"value":5,"label":"Extreme / Cannot do"}]}
+        ],
+        "interpretation": [
+            {"min": 0, "max": 53, "label": "None"},
+            {"min": 54, "max": 89, "label": "Mild"},
+            {"min": 90, "max": 125, "label": "Moderate"},
+            {"min": 126, "max": 161, "label": "Severe"},
+            {"min": 162, "max": 180, "label": "Extreme"}
+        ]
     }
 ];
 
 let appliedScales = {};
 let currentActiveScale = null;
+let currentScaleReadOnly = false;
 
 window.addEventListener('load', () => {
     const hiddenData = document.getElementById('scales_data');
@@ -5146,7 +6704,10 @@ window.addEventListener('load', () => {
             const parsed = JSON.parse(hiddenData.value);
             parsed.forEach(s => appliedScales[s.scale_id] = s);
             updateScalesBadge();
+            renderCompletedScalesCards();
         } catch (e) {}
+    } else {
+        renderCompletedScalesCards();
     }
 });
 
@@ -5154,6 +6715,14 @@ function openScalesModal() {
     document.getElementById('scalesModal').style.display = 'block';
     showScalesList();
     renderScalesList(scalesLibrary);
+}
+
+function openNewAssessmentModal() {
+    const backBtn = document.getElementById('scale-modal-back-btn');
+    if (backBtn) backBtn.style.display = 'inline-flex';
+    const saveBtn = document.getElementById('scale-save-btn');
+    if (saveBtn) saveBtn.style.display = 'block';
+    openScalesModal();
 }
 
 function showScalesList() {
@@ -5182,11 +6751,16 @@ function filterScales(recommendedVal = '') {
     renderScalesList(filtered);
 }
 
-function openScaleAssessment(scaleId) {
+function openScaleAssessment(scaleId, readOnly = false) {
     currentActiveScale = scalesLibrary.find(s => s.scaleId === scaleId);
+    currentScaleReadOnly = !!readOnly;
     document.getElementById('scales-list-view').style.display = 'none';
     document.getElementById('scale-assessment-view').style.display = 'flex';
     document.getElementById('active-scale-title').innerText = currentActiveScale.scaleName;
+    const backBtn = document.getElementById('scale-modal-back-btn');
+    if (backBtn) backBtn.style.display = readOnly ? 'none' : 'inline-flex';
+    const saveBtn = document.getElementById('scale-save-btn');
+    if (saveBtn) saveBtn.style.display = readOnly ? 'none' : 'block';
     const form = document.getElementById('active-scale-form');
     form.innerHTML = '';
     const prevAnswers = appliedScales[scaleId] ? appliedScales[scaleId].raw_responses : {};
@@ -5194,11 +6768,20 @@ function openScaleAssessment(scaleId) {
         let optionsHtml = '';
         q.options.forEach(opt => {
             const isChecked = prevAnswers[q.id] == opt.value ? 'checked' : '';
-            optionsHtml += '<label style="display: block; margin-bottom: 5px; cursor: pointer;"><input type="radio" name="' + q.id + '" value="' + opt.value + '" ' + isChecked + ' onchange="calculateLiveScore()"> <span style="margin-left: 8px;">' + opt.value + ' - ' + opt.label + '</span></label>';
+            const dis = readOnly ? 'disabled' : '';
+            const chg = readOnly ? '' : 'onchange="calculateLiveScore()"';
+            optionsHtml += '<label style="display: block; margin-bottom: 5px; cursor: pointer;"><input type="radio" name="' + q.id + '" value="' + opt.value + '" ' + isChecked + ' ' + dis + ' ' + chg + '> <span style="margin-left: 8px;">' + opt.value + ' - ' + opt.label + '</span></label>';
         });
         form.insertAdjacentHTML('beforeend', '<div style="background: #fdfdfd; padding: 15px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #e0e0e0;"><strong style="display: block; margin-bottom: 10px;">' + (idx + 1) + '. ' + q.text + '</strong>' + optionsHtml + '</div>');
     });
     calculateLiveScore();
+}
+
+function openScaleDetails(scaleId, patientData) {
+    const backBtn = document.getElementById('scale-modal-back-btn');
+    if (backBtn) backBtn.style.display = 'none';
+    document.getElementById('scalesModal').style.display = 'block';
+    openScaleAssessment(scaleId, true);
 }
 
 function calculateLiveScore() {
@@ -5240,16 +6823,19 @@ function saveActiveScale() {
         scale_name: currentActiveScale.scaleName,
         total_score: totalScore,
         severity_label: severityLabel,
-        raw_responses: rawResponses
+        raw_responses: rawResponses,
+        administered_on: new Date().toISOString()
     };
     document.getElementById('scales_data').value = JSON.stringify(Object.values(appliedScales));
     updateScalesBadge();
+    renderCompletedScalesCards();
     showScalesList();
     renderScalesList(scalesLibrary);
 }
 
 function updateScalesBadge() {
     const badge = document.getElementById('scales-count-badge');
+    if (!badge) return;
     const count = Object.keys(appliedScales).length;
     if (count > 0) {
         badge.innerText = count + ' Applied';
@@ -5257,6 +6843,58 @@ function updateScalesBadge() {
     } else {
         badge.style.display = 'none';
     }
+}
+
+function severityClass(label) {
+    const v = String(label || '').toLowerCase();
+    if (v.includes('extreme')) return 'severity-extreme';
+    if (v.includes('severe')) return 'severity-severe';
+    if (v.includes('moderate')) return 'severity-moderate';
+    return 'severity-mild';
+}
+
+function formatAdminDate(isoStr) {
+    if (!isoStr) return '';
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+}
+
+function getScaleMax(scaleId) {
+    const scale = scalesLibrary.find(s => s.scaleId === scaleId);
+    if (!scale || !scale.questions) return 0;
+    return scale.questions.length * 5;
+}
+
+function renderCompletedScalesCards() {
+    const container = document.getElementById('completed-scales-list');
+    if (!container) return;
+    const items = Object.values(appliedScales);
+    if (!items.length) {
+        container.innerHTML = '<div class="scale-card"><div class="scale-left"><div class="scale-icon"><span class="material-symbols-outlined">assignment</span></div><div class="scale-info"><h4>No assessments yet</h4><p>Click + New Assessment to add a clinical scale.</p></div></div></div>';
+        return;
+    }
+    container.innerHTML = '';
+    items.forEach(function(s) {
+        const max = getScaleMax(s.scale_id);
+        const dateTxt = formatAdminDate(s.administered_on);
+        const sevClass = severityClass(s.severity_label);
+        const html = '<div class="scale-card">' +
+            '<div class="scale-left">' +
+                '<div class="scale-icon"><span class="material-symbols-outlined">assignment</span></div>' +
+                '<div class="scale-info">' +
+                    '<h4>' + (s.scale_name || s.scale_id) + '</h4>' +
+                    '<p>' + (dateTxt ? ('Administered on ' + dateTxt) : 'Assessment recorded') + '</p>' +
+                '</div>' +
+            '</div>' +
+            '<div class="scale-right">' +
+                '<span class="severity-badge ' + sevClass + '">Severity: ' + (s.severity_label || '-') + '</span>' +
+                '<span class="scale-score">' + (s.total_score || 0) + ' / ' + (max || '-') + '</span>' +
+                '<button type="button" class="btn-outline" onclick="openScaleDetails(\'' + s.scale_id + '\', null)">Details</button>' +
+            '</div>' +
+        '</div>';
+        container.insertAdjacentHTML('beforeend', html);
+    });
 }
 </script>
 
@@ -5331,6 +6969,7 @@ function updateScalesBadge() {
                     rootId: 'provisional-diagnosis-picker',
                     hiddenInputId: 'provisionalDiagnosisHidden',
                     initialItems: [],
+                    inline: true,
                     placeholder: 'Type or select…'
                 },
                 differential: {
@@ -5602,19 +7241,41 @@ function updateScalesBadge() {
                 const data = collectDraft();
                 if (!data) return;
                 try {
-                    localStorage.setItem(DRAFT_KEY, JSON.stringify({
+                    const draft = {
                         timestamp: Date.now(),
                         fields: data
-                    }));
+                    };
+                    // Add inside saveDraft(), before saving to localStorage:
+                    draft.mse_structured = {
+                        consciousness: (document.querySelector('input[name="mse_consciousness"]:checked') || {}).value || '',
+                        appearance:    (document.querySelector('input[name="mse_appearance"]:checked') || {}).value || '',
+                        cooperation:   (document.querySelector('input[name="mse_cooperation"]:checked') || {}).value || '',
+                        rapport:       (document.querySelector('input[name="mse_rapport"]:checked') || {}).value || '',
+                        eye_contact:   Array.from(document.querySelectorAll('input[name="mse_eye_contact[]"]:checked')).map(el => el.value),
+                        psychomotor:   (document.querySelector('input[name="mse_psychomotor"]:checked') || {}).value || '',
+                        speech_reaction_time: (document.querySelector('input[name="mse_speech_reaction_time"]:checked') || {}).value || '',
+                        speech_relevance:     (document.querySelector('input[name="mse_speech_relevance"]:checked') || {}).value || '',
+                        speech_coherence:     (document.querySelector('input[name="mse_speech_coherence"]:checked') || {}).value || '',
+                        speech_intensity:     (document.querySelector('input[name="mse_speech_intensity"]:checked') || {}).value || '',
+                        speech_pitch:         (document.querySelector('input[name="mse_speech_pitch"]:checked') || {}).value || '',
+                        speech_ease:          (document.querySelector('input[name="mse_speech_ease"]:checked') || {}).value || '',
+                        affect_items:         [..._affectSelected],
+                        affect_reactivity:    (document.querySelector('input[name="mse_affect_reactivity"]:checked') || {}).value || '',
+                        affect_range:         (document.querySelector('input[name="mse_affect_range"]:checked') || {}).value || '',
+                        affect_congruence:    (document.querySelector('input[name="mse_affect_congruence"]:checked') || {}).value || '',
+                        affect_appropriateness: (document.querySelector('input[name="mse_affect_appropriateness"]:checked') || {}).value || '',
+                    };
+                    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
                     showSaveIndicator();
                     updateSectionDots(data);
                 } catch(e) {}
             }
 
             /* ─── Restore ─── */
-            function restoreDraft(data) {
+            function restoreDraft(payload) {
                 const form = document.getElementById('visitForm');
-                if (!form || !data) return;
+                if (!form || !payload) return;
+                const data = payload.fields || payload;
                 Object.keys(data).forEach(function(name) {
                     const els = form.querySelectorAll('[name="' + name + '"]');
                     els.forEach(function(el) {
@@ -5628,6 +7289,13 @@ function updateScalesBadge() {
                 });
                 if (typeof restoreFamilyHistoryFromHidden === 'function') restoreFamilyHistoryFromHidden();
                 if (typeof restoreDevDelayFromHidden === 'function') restoreDevDelayFromHidden();
+                // After existing restoreDraft logic, add at the end of restoreDraft():
+                if (payload.mse_structured) {
+                    restoreMSEStructured(payload.mse_structured);
+                }
+                if (typeof window.resyncProvisionalInlineFromHidden === 'function') {
+                    window.resyncProvisionalInlineFromHidden();
+                }
             }
 
             /* ─── Clear ─── */
@@ -5691,7 +7359,7 @@ function updateScalesBadge() {
                 document.body.appendChild(banner);
 
                 document.getElementById('btn-restore-draft').onclick = function() {
-                    restoreDraft(saved.fields);
+                    restoreDraft(saved);
                     updateSectionDots(saved.fields);
                     banner.remove();
                     showSaveIndicator('Draft restored');
