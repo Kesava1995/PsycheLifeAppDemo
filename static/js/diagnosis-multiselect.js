@@ -456,6 +456,15 @@
     hiddenInput.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
+  /** State label from modal checkbox: `value` or legacy `data-state` (avoids empty / "on"). */
+  function clinicalStateCheckboxValue(cb) {
+    if (!cb) return "";
+    const raw = cb.value != null ? String(cb.value).trim() : "";
+    if (raw && raw !== "on") return raw;
+    const ds = cb.getAttribute("data-state");
+    return ds ? String(ds).trim() : "";
+  }
+
   /** Keep inline pills and modal checkboxes aligned with the hidden input. */
   function syncClinicalStateVisualsFromHidden() {
     const hiddenInput = document.getElementById("clinicalStateInput");
@@ -468,8 +477,10 @@
       btn.classList.toggle("active", currentSelected.includes(val));
     });
 
-    document.querySelectorAll(".clinical-state-checkbox").forEach(cb => {
-      cb.checked = currentSelected.includes(cb.value);
+    document.querySelectorAll(".clinical-state-checkbox, .state-checkbox").forEach(cb => {
+      const val = clinicalStateCheckboxValue(cb);
+      if (!val) return;
+      cb.checked = currentSelected.includes(val);
     });
   }
 
@@ -962,23 +973,35 @@
   window.mergeDiagnosisItemsForCriteria = mergeDiagnosisItemsForCriteria;
   window.syncClinicalStateVisualsFromHidden = syncClinicalStateVisualsFromHidden;
   window.handleClinicalStateModalCheckbox = function handleClinicalStateModalCheckbox(cb) {
-    if (!cb || !cb.value) return;
+    if (!cb) return;
+    const val = clinicalStateCheckboxValue(cb);
+    if (!val) return;
     const hiddenInput = document.getElementById("clinicalStateInput");
     if (!hiddenInput) return;
     let arr = parseClinicalStateSnapshotRaw(hiddenInput.value);
     if (cb.checked) {
-      if (!arr.includes(cb.value)) arr = arr.concat([cb.value]);
+      if (!arr.includes(val)) arr = arr.concat([val]);
     } else {
-      arr = arr.filter(s => s !== cb.value);
+      arr = arr.filter(s => s !== val);
     }
     commitClinicalStateHiddenValue(arr);
   };
   window.handlePopupCheckboxClick = window.handleClinicalStateModalCheckbox;
+
+  document.addEventListener("change", e => {
+    const t = e.target;
+    if (!t || t.type !== "checkbox") return;
+    if (!t.classList.contains("clinical-state-checkbox") && !t.classList.contains("state-checkbox")) {
+      return;
+    }
+    window.handleClinicalStateModalCheckbox(t);
+  });
 
   document.addEventListener("DOMContentLoaded", () => {
     const hi = document.getElementById("clinicalStateInput");
     if (!hi) return;
     hi.addEventListener("stateSync", syncClinicalStateVisualsFromHidden);
     hi.addEventListener("change", syncClinicalStateVisualsFromHidden);
+    syncClinicalStateVisualsFromHidden();
   });
 })();

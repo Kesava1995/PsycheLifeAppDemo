@@ -4785,8 +4785,9 @@
                 let html = '<label style="display:flex; width:100%;"><input type="checkbox" class="clinical-state-checkbox" value="' + state.replace(/"/g, '&quot;') + '" onchange="handleStateCheckboxChange(this)"> <span style="flex:1;">' + state.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span> ' + remBtn + '</label>';
                 container.insertAdjacentHTML('beforeend', html);
             });
-            let activeStates = Array.from(document.querySelectorAll('#clinical-state-ranges-container div[id^="csr-input-"]')).map(div => { const s = div.querySelector('strong'); return s ? s.innerText : ''; }).filter(Boolean);
-            document.querySelectorAll('.clinical-state-checkbox').forEach(cb => { if (activeStates.includes(cb.value)) cb.checked = true; });
+            if (typeof window.syncClinicalStateVisualsFromHidden === 'function') {
+                window.syncClinicalStateVisualsFromHidden();
+            }
         }
         function addCustomState() {
             let val = document.getElementById('customStateInput').value.trim();
