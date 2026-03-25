@@ -2796,7 +2796,27 @@ def add_visit(patient_id):
     ace_data = (last_visit.ace_data or '') if last_visit and getattr(last_visit, 'ace_data', None) else ''
     adherence_data = json.dumps([{'status': a.status, 'start': a.start_date.strftime('%Y-%m-%d') if a.start_date else None, 'end': a.end_date.strftime('%Y-%m-%d') if a.end_date else None} for a in AdherenceRange.query.filter_by(patient_id=patient.id).all()])
     clinical_state_data = json.dumps([{'state': c.state, 'start': c.start_date.strftime('%Y-%m-%d') if c.start_date else None, 'end': c.end_date.strftime('%Y-%m-%d') if c.end_date else None} for c in ClinicalStateRange.query.filter_by(patient_id=patient.id).all()])
-    return render_template('add_visit.html', patient=patient, today=today, last_visit=last_visit, doctor=doctor, ace_data=ace_data, adherence_data=adherence_data, clinical_state_data=clinical_state_data)
+    scales_data = '[]'
+    if last_visit:
+        scales_data = json.dumps([{
+            'scale_id': sa.scale_id,
+            'scale_name': sa.scale_name,
+            'total_score': sa.total_score,
+            'severity_label': sa.severity_label,
+            'raw_responses': sa.raw_responses or {},
+            'administered_on': sa.created_at.isoformat() if getattr(sa, 'created_at', None) else None,
+        } for sa in getattr(last_visit, 'scale_assessments', [])])
+    return render_template(
+        'add_visit.html',
+        patient=patient,
+        today=today,
+        last_visit=last_visit,
+        doctor=doctor,
+        ace_data=ace_data,
+        adherence_data=adherence_data,
+        clinical_state_data=clinical_state_data,
+        scales_data=scales_data,
+    )
 
 
 @app.route('/visit/<int:visit_id>/edit', methods=['GET', 'POST'])
