@@ -121,6 +121,87 @@
         .note-btn { background: none; border: none; cursor: pointer; font-size: 1.2rem; color: #999; }
         .note-input { display: none; width: 100%; margin-top: 8px; padding: 8px; border: 1px dashed #ccc; background-color: #fffdf0; }
         .remove-btn { color: #ff6b6b; background: none; border: none; font-weight: bold; cursor: pointer; font-size: 14px; margin-left: 5px; }
+        /* Side Effects: Clinical Clarity card sliders */
+        .se-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 999px;
+            background: #e5eaea;
+            outline: none;
+        }
+        .se-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+        .slider-onset::-webkit-slider-thumb { background: #f59e0b; }
+        .slider-course::-webkit-slider-thumb { background: #e11d48; }
+        .slider-current::-webkit-slider-thumb { background: #10b981; }
+        .se-val-onset { color: #f59e0b; }
+        .se-val-course { color: #e11d48; }
+        .se-val-current { color: #10b981; }
+
+        .se-card {
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1.5px solid rgba(189,200,203,0.4);
+            padding: 18px 22px;
+            box-shadow: 0 4px 12px rgba(24,28,29,0.03);
+            transition: box-shadow 0.2s ease;
+            position: relative;
+        }
+        /* Side Effects: duration dropdown */
+        .se-dur-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            background: #ffffff;
+            border: 1.5px solid rgba(189,200,203,0.55);
+            border-radius: 10px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+            margin: 8px 0 0 0;
+            padding: 6px 0;
+            list-style: none;
+            max-height: 160px;
+            overflow-y: auto;
+            display: none;
+        }
+        .se-dur-option {
+            padding: 10px 12px;
+            font-size: 13px;
+            color: #3f4948;
+            cursor: pointer;
+            transition: background 0.1s ease;
+        }
+        .se-dur-option:hover {
+            background: #f4f8fb;
+            color: #006672;
+            font-weight: 700;
+        }
+        body.dark-mode .se-dur-dropdown {
+            background: #1e1e1e;
+            border-color: #333;
+        }
+        body.dark-mode .se-dur-option { color: #d7e3eb; }
+        body.dark-mode .se-dur-option:hover { background: #2b3740; color: #7fdbd4; }
+        .entry-wrapper.se-card {
+            border: none;
+            margin-bottom: 0;
+            background: transparent;
+            padding: 0;
+            box-shadow: none;
+        }
+        body.dark-mode .se-card {
+            background: #1e1e1e;
+            border-color: #333;
+        }
         .btn { padding: 15px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; color: white; font-size: 16px; margin-top: 10px; }
         
         .patient-grid { display: grid; gap: 15px; background: #f9fafb; padding: 20px; border-radius: 8px; border: 1px solid #eee; }
@@ -3381,9 +3462,29 @@
                         
                         </div>
                     </div>
+					
+					<header class="cc-section-header">
+                            <div class="cc-accent-bar"></div>
+                            <div>
+                                <h1 class="cc-section-title">Side Effects</h1>
+                                <p class="cc-section-subtitle">Medication-related adverse effects with severity and duration</p>
+                            </div>
+                    </header>
+                    <div id="side-effects-master" style="display: block; padding: 24px; background: transparent; border: none; box-shadow: none;">
+                        <div id="side-effects-container" style="display: flex; flex-direction: column; gap: 16px;"></div>
 
-                    <div class="section-header"><span class="section-title">Side Effects</span><button type="button" class="add-btn" onclick="addSideEffect()">+</button></div>
-                    <div id="side-effects-container"></div>
+                        <div id="se-empty-state" style="text-align: center; padding: 40px 20px; background: #ffffff; border-radius: 12px; border: 1.5px dashed rgba(189,200,203,0.5); margin-bottom: 16px; display: none;">
+                            <span class="material-symbols-outlined" style="font-size: 32px; color: #bec8ca;">warning</span>
+                            <p style="font-size: 13px; font-weight: 600; color: #5c6666; margin-top: 8px;">No other side effects recorded</p>
+                        </div>
+
+                        <div style="display: flex; justify-content: center; margin-top: 20px;">
+                            <button type="button" onclick="addSideEffect()" style="background: #ffffff; border: 1.5px solid #d2dcdc; color: #006672; width: auto; padding: 10px 22px; border-radius: 10px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                                <span class="material-symbols-outlined" style="font-size: 18px; vertical-align: middle;">add_circle</span>
+                                Add Side Effect
+                            </button>
+                        </div>
+                    </div>
 
                     <div style="text-align:center; margin: 30px 0;">
                         {% if is_guest %}
@@ -3405,7 +3506,7 @@
                             </div>
                         </header>
                         <div class="cc-card cc-gap-8">
-                    <div class="section-header"><span class="section-title">Diagnosis</span></div>
+                    
 
                     <div class="diagnosis-outer-wrap">
                         <div class="diagnosis-two-col-grid">
@@ -3885,6 +3986,71 @@
     </div>
 
     <datalist id="duration-options-list"></datalist>
+    <datalist id="side_effects_list">
+        <option value="Acute dystonia"></option>
+        <option value="Parkinsonism"></option>
+        <option value="Rigidity"></option>
+        <option value="Tremor"></option>
+        <option value="Bradykinesia"></option>
+        <option value="Akathisia"></option>
+        <option value="Tardive dyskinesia"></option>
+        <option value="Hyperthermia"></option>
+        <option value="Muscle rigidity"></option>
+        <option value="Autonomic instability"></option>
+        <option value="Increased CPK"></option>
+        <option value="Weight gain"></option>
+        <option value="Diabetes mellitus"></option>
+        <option value="Dyslipidemia"></option>
+        <option value="Hyperprolactinemia"></option>
+        <option value="Galactorrhea"></option>
+        <option value="Amenorrhea"></option>
+        <option value="Gynecomastia"></option>
+        <option value="Dry mouth"></option>
+        <option value="Constipation"></option>
+        <option value="Blurred vision"></option>
+        <option value="Urinary retention"></option>
+        <option value="Sedation"></option>
+        <option value="QT prolongation"></option>
+        <option value="Arrhythmias"></option>
+        <option value="Postural hypotension"></option>
+        <option value="Seizures"></option>
+        <option value="Nausea"></option>
+        <option value="Vomiting"></option>
+        <option value="Insomnia"></option>
+        <option value="Somnolence"></option>
+        <option value="Sexual dysfunction"></option>
+        <option value="Serotonin syndrome"></option>
+        <option value="Hyponatremia"></option>
+        <option value="SIADH"></option>
+        <option value="Cardiotoxicity"></option>
+        <option value="Orthostatic hypotension"></option>
+        <option value="Hypertensive crisis"></option>
+        <option value="Fine tremor"></option>
+        <option value="Hypothyroidism"></option>
+        <option value="Nephrogenic diabetes insipidus"></option>
+        <option value="Polyuria"></option>
+        <option value="Acne"></option>
+        <option value="Coarse tremor"></option>
+        <option value="Ataxia"></option>
+        <option value="Confusion"></option>
+        <option value="Hepatotoxicity"></option>
+        <option value="Pancreatitis"></option>
+        <option value="Hair loss"></option>
+        <option value="Teratogenicity"></option>
+        <option value="Diplopia"></option>
+        <option value="Agranulocytosis"></option>
+        <option value="Stevens-Johnson syndrome"></option>
+        <option value="Drowsiness"></option>
+        <option value="Cognitive impairment"></option>
+        <option value="Dependence"></option>
+        <option value="Withdrawal"></option>
+        <option value="Respiratory depression"></option>
+        <option value="Loss of appetite"></option>
+        <option value="Weight loss"></option>
+        <option value="Tachycardia"></option>
+        <option value="Anxiety"></option>
+        <option value="Abuse potential"></option>
+    </datalist>
     <datalist id="freq-options-list">
         <option value="1-0-0">Morning</option>
         <option value="1-0-1">Morning & Night</option>
@@ -5874,7 +6040,214 @@
             syncDurationRequired();
         }
         function addMedication() { document.getElementById('meds-container').insertAdjacentHTML('beforeend', createRowHTML('med')); syncDurationRequired(); }
-        function addSideEffect() { document.getElementById('side-effects-container').insertAdjacentHTML('beforeend', createRowHTML('side_effect')); syncDurationRequired(); }
+
+        // --- Side Effects: Clinical Clarity cards ---
+        let sideEffectCounter = 0;
+
+        function toggleSEEmptyState() {
+            const container = document.getElementById('side-effects-container');
+            const emptyState = document.getElementById('se-empty-state');
+            if (!container || !emptyState) return;
+            emptyState.style.display = (container.children.length === 0) ? 'block' : 'none';
+        }
+
+        // Side Effects: Smart Duration (parse number + day/week/month) and suggestions dropdown
+        function seParseDurationStr(str) {
+            const s = String(str || '').trim().toLowerCase();
+            const m = s.match(/(\d+)\s*(day|week|month)s?/i);
+            if (m) {
+                const val = parseInt(m[1], 10);
+                const unit = m[2].toLowerCase();
+                return { val: Math.max(1, (isNaN(val) ? 1 : val)), unit };
+            }
+            const n = s.match(/(\d+)/);
+            if (n) return { val: Math.max(1, parseInt(n[1], 10) || 1), unit: 'week' };
+            return { val: 1, unit: 'week' };
+        }
+
+        function seFormatDuration(val, unit) {
+            const v = Math.max(1, parseInt(val, 10) || 1);
+            const u = String(unit || 'week').toLowerCase();
+            const plural = v === 1 ? '' : 's';
+            return `${v} ${u}${plural}`;
+        }
+
+        function seHideAllDurationDropdowns() {
+            document.querySelectorAll('.se-dur-dropdown').forEach(dd => {
+                dd.style.display = 'none';
+                dd.innerHTML = '';
+            });
+        }
+
+        function seUpdateDurationCounter(id, change) {
+            const input = document.getElementById(`side_effect_duration_${id}`);
+            if (!input) return;
+            const parsed = seParseDurationStr(input.value);
+            input.value = seFormatDuration(parsed.val + change, parsed.unit);
+            seHideAllDurationDropdowns();
+        }
+
+        function seShowDurationOptions(inputEl, id) {
+            const dropdown = document.getElementById(`se_dur_dropdown_${id}`);
+            if (!dropdown) return;
+
+            const hasNumber = String(inputEl.value || '').match(/(\d+)/);
+            if (!hasNumber) {
+                dropdown.style.display = 'none';
+                dropdown.innerHTML = '';
+                return;
+            }
+
+            const parsed = seParseDurationStr(inputEl.value);
+            const n = parsed.val;
+
+            const opts = [
+                seFormatDuration(n, 'day'),
+                seFormatDuration(n, 'week'),
+                seFormatDuration(n, 'month')
+            ];
+
+            dropdown.innerHTML = opts.map(opt => {
+                const safe = String(opt).replace(/'/g, "\\'");
+                return `<li class="se-dur-option" onmousedown="seSelectDuration('${id}', '${safe}')">${opt}</li>`;
+            }).join('');
+
+            dropdown.style.display = 'block';
+        }
+
+        function seSelectDuration(id, selectedText) {
+            const input = document.getElementById(`side_effect_duration_${id}`);
+            if (!input) return;
+            input.value = selectedText;
+            seHideAllDurationDropdowns();
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        function toggleSENotes(id) {
+            const wrap = document.getElementById('note_wrap_' + id);
+            const icon = document.getElementById('icon_note_' + id);
+            const label = document.getElementById('note_label_' + id);
+            if (!wrap || !icon || !label) return;
+            const isHidden = wrap.style.display === 'none' || wrap.style.display === '';
+            wrap.style.display = isHidden ? 'block' : 'none';
+            icon.innerText = isHidden ? 'remove' : 'add';
+            label.textContent = isHidden ? 'Hide Notes' : 'Add Clinical Notes';
+        }
+
+        function addSideEffect(name = "", onset = 0, progression = 0, current = 0, duration = "1 weeks", note = "") {
+            const container = document.getElementById('side-effects-container');
+            if (!container) return;
+
+            const id = 'se_' + (sideEffectCounter++);
+
+            // Parse duration into value and unit
+            let durVal = 1;
+            let durUnit = 'weeks';
+            if (duration) {
+                const parts = String(duration).trim().split(' ');
+                if (parts.length >= 2) {
+                    const n = parseInt(parts[0], 10);
+                    durVal = isNaN(n) ? 1 : n;
+                    durUnit = parts.slice(1).join(' ').trim() || 'weeks';
+                }
+            }
+
+            let durationText = durVal + ' ' + durUnit;
+            try {
+                const parsedInit = seParseDurationStr(durationText);
+                durationText = seFormatDuration(parsedInit.val, parsedInit.unit);
+            } catch (e) {}
+
+            const card = document.createElement('div');
+            card.className = 'entry-wrapper se-card';
+            card.id = id;
+
+            card.innerHTML = `
+                <div style="display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 250px;">
+                        <label style="font-size: 13px; font-weight: 700; color: #555; display:block; margin-bottom: 6px;">Side Effect Name</label>
+                        <input type="text" name="side_effect_name[]" list="side_effects_list" value="${String(name).replace(/"/g, '&quot;')}" placeholder="Select or type..." style="flex:1.5;" class="form-control" />
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; min-width: 240px;">
+                        <label style="font-size: 13px; font-weight: 700; color: #555; display:block; margin-bottom: 6px;">Duration</label>
+                        <div class="se-dur-root" style="position: relative; display: flex; align-items: center; height: 40px; border: 1.5px solid rgba(189,200,203,0.3); border-radius: 8px; background: #fff; overflow: hidden;">
+                            <button type="button" style="border: none; border-right: 1.5px solid rgba(189,200,203,0.3); width: 38px; background: #f0f4f4; cursor: pointer; font-weight: 900;"
+                                onclick="seUpdateDurationCounter('${id}', -1)">-</button>
+
+                            <input type="text"
+                                name="side_effect_duration[]"
+                                id="side_effect_duration_${id}"
+                                value="${durationText}"
+                                placeholder="e.g. 1 week"
+                                required
+                                autocomplete="off"
+                                oninput="seShowDurationOptions(this, '${id}')"
+                                style="width: 140px; border: none; text-align: center; font-size: 14px; font-weight: 800; outline: none; padding: 0; background: transparent;"
+                            />
+
+                            <button type="button" style="border: none; border-left: 1.5px solid rgba(189,200,203,0.3); width: 38px; background: #f0f4f4; cursor: pointer; font-weight: 900;"
+                                onclick="seUpdateDurationCounter('${id}', 1)">+</button>
+
+                            <ul id="se_dur_dropdown_${id}" class="se-dur-dropdown" style="display:none;"></ul>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; justify-content: flex-end; padding-top: 22px;">
+                        <button type="button" class="remove-btn" onclick="document.getElementById('${id}').remove(); toggleSEEmptyState(); syncDurationRequired();"
+                            title="Remove Side Effect" style="font-size: 18px; padding: 6px 8px;">&#10005;</button>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 20px; margin-top: 20px; padding: 16px; background: #f9fafb; border-radius: 10px; border: 1px solid #edf1f1;">
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:10px; font-weight:800; color:#5c6666; text-transform:uppercase;">Severity at Onset</span>
+                            <span id="val_onset_${id}" class="se-val-onset" style="font-size: 13px; font-weight: 900;">${onset}</span>
+                        </div>
+                        <input type="range" name="side_effect_onset[]" class="se-slider slider-onset" min="0" max="10" value="${onset}" oninput="document.getElementById('val_onset_${id}').innerText = this.value;">
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:10px; font-weight:800; color:#5c6666; text-transform:uppercase;">Peak / Course</span>
+                            <span id="val_course_${id}" class="se-val-course" style="font-size: 13px; font-weight: 900;">${progression}</span>
+                        </div>
+                        <input type="range" name="side_effect_progression[]" class="se-slider slider-course" min="0" max="10" value="${progression}" oninput="document.getElementById('val_course_${id}').innerText = this.value;">
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:10px; font-weight:800; color:#5c6666; text-transform:uppercase;">Current State</span>
+                            <span id="val_current_${id}" class="se-val-current" style="font-size: 13px; font-weight: 900;">${current}</span>
+                        </div>
+                        <input type="range" name="side_effect_current[]" class="se-slider slider-current" min="0" max="10" value="${current}" oninput="document.getElementById('val_current_${id}').innerText = this.value;">
+                    </div>
+                </div>
+
+                <div style="margin-top: 16px;">
+                    <button type="button" onclick="toggleSENotes('${id}')"
+                        style="background: none; border: none; color: #006672; font-size: 12px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                        <span class="material-symbols-outlined" style="font-size: 16px;" id="icon_note_${id}">${note ? 'remove' : 'add'}</span>
+                        <span id="note_label_${id}">${note ? 'Hide Notes' : 'Add Clinical Notes'}</span>
+                    </button>
+                    <div id="note_wrap_${id}" style="display: ${note ? 'block' : 'none'}; margin-top: 8px;">
+                        <textarea name="side_effect_note[]" class="cc-notes-textarea" placeholder="Describe context, relationship to specific medication, whether intervention was needed..." rows="3">${String(note).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(card);
+            toggleSEEmptyState();
+            syncDurationRequired();
+        }
+        document.addEventListener("DOMContentLoaded", function() { toggleSEEmptyState(); });
+        // Close smart duration dropdowns when clicking outside the duration widget
+        document.addEventListener("click", function(e) {
+            if (e.target && e.target.closest && !e.target.closest('.se-dur-root')) {
+                if (typeof seHideAllDurationDropdowns === 'function') seHideAllDurationDropdowns();
+            }
+        });
         function addMSE(cat) {
             const containerId = 'mse-' + cat.toLowerCase() + '-container';
             const el = document.getElementById(containerId);
