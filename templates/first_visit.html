@@ -222,15 +222,12 @@
         .checklist-group label { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer; }
         .checklist-group input[type="checkbox"] { width: auto; margin: 0; }
 
-        /* Major Events modal: position + checkbox alignment */
+        /* Modals: Push below fixed top navbars */
         #majorEventsModal .modal-content,
-        #insightGradeModal .modal-content {
-            margin-top: 5% !important;
-        }
-        /* ACE modal: keep within viewport, move up */
+        #insightGradeModal .modal-content,
         #aceModal .modal-content {
-            margin-top: 3vh !important;
-            max-height: 90vh !important;
+            margin-top: 130px !important; /* Forces it below the 110px nav bars */
+            max-height: calc(100vh - 150px) !important; /* Prevents it from going off the bottom */
             overflow-y: auto !important;
         }
         #insightGradeModal .insight-grade-table { width: 100%; border-collapse: collapse; }
@@ -5713,7 +5710,12 @@
                 // --- OTHER ROWS (Symptoms, SE, MSE) ---
                 // MSE: cross-sectional — only Current Severity, no onset/progression/duration
                 let slidersHTML = isMSE ?
-                    `<div class="sliders-container"><div class="slider-group" style="grid-column: span 3;"><label>Current Severity</label><div class="slider-wrapper"><input type="range" name="${prefix}_current[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div></div>` :
+                    `<div style="display:flex; align-items:center; gap:6px; width:100%;">
+                        <span style="font-size:11px; color:#666; font-weight:800; text-transform:uppercase; white-space:nowrap; flex-shrink:0;">Current Severity</span>
+                        <input type="range" name="${prefix}_current[]" min="0" max="10" value="5" oninput="updVal(this)"
+                            style="flex:1; min-width:0; margin:0; padding:0;">
+                        <span style="font-size:13px; font-weight:700; color:#006672; width:16px; text-align:center; flex-shrink:0;" class="slider-val">5</span>
+                    </div>` :
                     `<div class="sliders-container">
                     <div class="slider-group"><label>Severity at Onset</label><div class="slider-wrapper"><input type="range" name="${prefix}_onset[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div>
                     <div class="slider-group"><label>Severity during Course</label><div class="slider-wrapper"><input type="range" name="${prefix}_progression[]" min="0" max="10" value="5" oninput="updVal(this)"><span class="slider-val">5</span></div></div>
@@ -5734,7 +5736,26 @@
                     durationHTML = `<input type="text" list="duration-options-list" name="${prefix}_duration[]" placeholder="Duration (required)" required style="flex:0.5; min-width:100px;" oninput="updateDurationOptions(this)">`;
                 }
 
-                contentHTML = `
+                if (isMSE) {
+                    // MSE: stack layout to prevent dropdown text from squeezing sliders/buttons.
+                    contentHTML = `
+                <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
+                    <div style="width:100%;">
+                        ${inputName}
+                        ${durationHTML}
+                    </div>
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%;">
+                        <div style="flex:1; min-width:0;">
+                            ${slidersHTML}
+                        </div>
+                        <div style="display:flex; gap:6px; flex-shrink:0; align-items:center;">
+                            <button type="button" class="note-btn" onclick="toggleNote(this)" style="flex-shrink:0; padding:0; margin:0;">📝</button>
+                            <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()" style="flex-shrink:0; padding:0; margin:0;">✕</button>
+                        </div>
+                    </div>
+                </div>`;
+                } else {
+                    contentHTML = `
                 <div class="row-flex" style="align-items:center;">
                     ${inputName}
                     ${slidersHTML}
@@ -5742,6 +5763,7 @@
                     <button type="button" class="note-btn" onclick="toggleNote(this)">📝</button>
                     <button type="button" class="remove-btn" onclick="this.closest('.entry-wrapper').remove()">✕</button>
                 </div>`;
+                }
             }
 
             return `<div class="entry-wrapper">${contentHTML}<input type="text" class="note-input" name="${prefix}_note[]" placeholder="History Notes (e.g. After Failure)..."></div>`;
@@ -6043,6 +6065,30 @@
 
         // --- Side Effects: Clinical Clarity cards ---
         let sideEffectCounter = 0;
+        const commonSideEffects = [
+            "Acute dystonia", "Parkinsonism", "Rigidity", "Tremor", "Bradykinesia", "Akathisia",
+            "Tardive dyskinesia", "Hyperthermia", "Muscle rigidity", "Autonomic instability",
+            "Increased CPK", "Weight gain", "Diabetes mellitus", "Dyslipidemia", "Hyperprolactinemia",
+            "Galactorrhea", "Amenorrhea", "Gynecomastia", "Dry mouth", "Constipation", "Blurred vision",
+            "Urinary retention", "Sedation", "QT prolongation", "Arrhythmias", "Postural hypotension",
+            "Seizures", "Nausea", "Vomiting", "Insomnia", "Somnolence", "Sexual dysfunction",
+            "Serotonin syndrome", "Hyponatremia", "SIADH", "Cardiotoxicity",
+            "Orthostatic hypotension", "Hypertensive crisis", "Fine tremor", "Hypothyroidism",
+            "Nephrogenic diabetes insipidus", "Polyuria", "Acne", "Coarse tremor", "Ataxia", "Confusion",
+            "Hepatotoxicity", "Pancreatitis", "Hair loss", "Teratogenicity", "Diplopia", "Agranulocytosis",
+            "Stevens-Johnson syndrome", "Drowsiness", "Cognitive impairment", "Dependence", "Withdrawal",
+            "Respiratory depression", "Loss of appetite", "Weight loss", "Tachycardia",
+            "Anxiety", "Abuse potential"
+        ];
+
+        // Close smart duration dropdown on outside click.
+        document.addEventListener('mousedown', function (e) {
+            try {
+                if (!e.target || !e.target.closest || !e.target.closest('.se-dur-root')) {
+                    seHideAllDurationDropdowns();
+                }
+            } catch (err) {}
+        });
 
         function toggleSEEmptyState() {
             const container = document.getElementById('side-effects-container');
@@ -6082,9 +6128,25 @@
         function seUpdateDurationCounter(id, change) {
             const input = document.getElementById(`side_effect_duration_${id}`);
             if (!input) return;
+
+            // If empty and user clicks '+', start gracefully at 1 week.
+            if (!String(input.value || '').trim() && change > 0) {
+                input.value = "1 week";
+                seHideAllDurationDropdowns();
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                return;
+            }
+
+            // If empty and user clicks '-', keep it empty (avoid forcing 1 week).
+            if (!String(input.value || '').trim() && change <= 0) {
+                seHideAllDurationDropdowns();
+                return;
+            }
+
             const parsed = seParseDurationStr(input.value);
             input.value = seFormatDuration(parsed.val + change, parsed.unit);
             seHideAllDurationDropdowns();
+            input.dispatchEvent(new Event('input', { bubbles: true }));
         }
 
         function seShowDurationOptions(inputEl, id) {
@@ -6134,29 +6196,30 @@
             label.textContent = isHidden ? 'Hide Notes' : 'Add Clinical Notes';
         }
 
-        function addSideEffect(name = "", onset = 0, progression = 0, current = 0, duration = "1 weeks", note = "") {
+        function addSideEffect(name = "", onset = 0, progression = 0, current = 0, duration = "", note = "") {
             const container = document.getElementById('side-effects-container');
             if (!container) return;
 
             const id = 'se_' + (sideEffectCounter++);
 
-            // Parse duration into value and unit
-            let durVal = 1;
-            let durUnit = 'weeks';
+            // Parse duration into value and unit ONLY if a duration is passed in.
+            // Otherwise leave empty so placeholder shows.
+            let durationText = "";
             if (duration) {
+                let durVal = 1;
+                let durUnit = 'weeks';
                 const parts = String(duration).trim().split(' ');
                 if (parts.length >= 2) {
                     const n = parseInt(parts[0], 10);
                     durVal = isNaN(n) ? 1 : n;
                     durUnit = parts.slice(1).join(' ').trim() || 'weeks';
                 }
+                durationText = durVal + ' ' + durUnit;
+                try {
+                    const parsedInit = seParseDurationStr(durationText);
+                    durationText = seFormatDuration(parsedInit.val, parsedInit.unit);
+                } catch (e) {}
             }
-
-            let durationText = durVal + ' ' + durUnit;
-            try {
-                const parsedInit = seParseDurationStr(durationText);
-                durationText = seFormatDuration(parsedInit.val, parsedInit.unit);
-            } catch (e) {}
 
             const card = document.createElement('div');
             card.className = 'entry-wrapper se-card';
@@ -6166,13 +6229,16 @@
                 <div style="display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap;">
                     <div style="flex: 1; min-width: 250px;">
                         <label style="font-size: 13px; font-weight: 700; color: #555; display:block; margin-bottom: 6px;">Side Effect Name</label>
-                        <input type="text" name="side_effect_name[]" list="side_effects_list" value="${String(name).replace(/"/g, '&quot;')}" placeholder="Select or type..." style="flex:1.5;" class="form-control" />
+                        <select name="side_effect_name[]" class="cc-se-select" id="se_name_${id}" style="flex:1.5; width:100%;" aria-label="Side effect name">
+                            <option value=""></option>
+                        </select>
                     </div>
 
                     <div style="display: flex; flex-direction: column; min-width: 240px;">
                         <label style="font-size: 13px; font-weight: 700; color: #555; display:block; margin-bottom: 6px;">Duration</label>
-                        <div class="se-dur-root" style="position: relative; display: flex; align-items: center; height: 40px; border: 1.5px solid rgba(189,200,203,0.3); border-radius: 8px; background: #fff; overflow: hidden;">
-                            <button type="button" style="border: none; border-right: 1.5px solid rgba(189,200,203,0.3); width: 38px; background: #f0f4f4; cursor: pointer; font-weight: 900;"
+                        <div class="se-dur-root" style="position: relative; display: flex; align-items: center; height: 40px; border: 1.5px solid rgba(189,200,203,0.3); border-radius: 8px; background: #fff;">
+                            
+                            <button type="button" style="border: none; border-right: 1.5px solid rgba(189,200,203,0.3); width: 38px; background: #f0f4f4; cursor: pointer; font-weight: 900; border-radius: 7px 0 0 7px;"
                                 onclick="seUpdateDurationCounter('${id}', -1)">-</button>
 
                             <input type="text"
@@ -6186,7 +6252,7 @@
                                 style="width: 140px; border: none; text-align: center; font-size: 14px; font-weight: 800; outline: none; padding: 0; background: transparent;"
                             />
 
-                            <button type="button" style="border: none; border-left: 1.5px solid rgba(189,200,203,0.3); width: 38px; background: #f0f4f4; cursor: pointer; font-weight: 900;"
+                            <button type="button" style="border: none; border-left: 1.5px solid rgba(189,200,203,0.3); width: 38px; background: #f0f4f4; cursor: pointer; font-weight: 900; border-radius: 0 7px 7px 0;"
                                 onclick="seUpdateDurationCounter('${id}', 1)">+</button>
 
                             <ul id="se_dur_dropdown_${id}" class="se-dur-dropdown" style="display:none;"></ul>
@@ -6239,6 +6305,33 @@
 
             container.appendChild(card);
             toggleSEEmptyState();
+            // Select2 init for side effect name (matches your Symptoms Select2 usage)
+            try {
+                if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) {
+                    var $ = window.jQuery;
+                    var selectEl = card.querySelector('select.cc-se-select');
+                    if (selectEl) {
+                        $(selectEl).select2({
+                            data: commonSideEffects.map(function (se) { return { id: se, text: se }; }),
+                            tags: true,
+                            allowClear: true,
+                            placeholder: "Select or type...",
+                            width: "100%",
+                            createTag: function (params) {
+                                var term = $.trim(params.term);
+                                if (term === '') return null;
+                                return { id: term, text: term };
+                            }
+                        });
+                        if (name) {
+                            $(selectEl).val(name).trigger('change');
+                        }
+                        $(selectEl).on('change', function () {
+                            if (typeof window.syncDurationRequired === 'function') window.syncDurationRequired();
+                        });
+                    }
+                }
+            } catch (e) {}
             syncDurationRequired();
         }
         document.addEventListener("DOMContentLoaded", function() { toggleSEEmptyState(); });

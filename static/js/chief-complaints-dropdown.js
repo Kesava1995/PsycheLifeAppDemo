@@ -20,8 +20,21 @@
             return loadPromise;
         }
         loadPromise = $.getJSON(JSON_URL)
-            .done(function (chiefComplaintsData) {
-                window.chiefComplaintsData = chiefComplaintsData;
+            .done(function (rawData) {
+                // Flatten the JSON: discard heading/group items and keep only real complaints.
+                // This prevents Select2 from rendering category headers as "grouped" UI.
+                var flatData = [];
+                $.each(rawData, function (index, group) {
+                    if (group && Array.isArray(group.children) && group.children.length > 0) {
+                        flatData = flatData.concat(group.children);
+                    } else if (group) {
+                        // If the JSON already provides flat items (or items not nested under children), keep them.
+                        if (group.id !== undefined || group.text !== undefined) {
+                            flatData.push(group);
+                        }
+                    }
+                });
+                window.chiefComplaintsData = flatData;
             })
             .fail(function () {
                 loadPromise = null;
