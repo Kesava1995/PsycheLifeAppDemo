@@ -101,6 +101,20 @@ class Visit(db.Model):
     clinical_state_ranges = db.relationship('ClinicalStateRange', backref='visit', lazy=True, foreign_keys='ClinicalStateRange.visit_id')
     substance_use_entries = db.relationship('SubstanceUseEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
     scale_assessments = db.relationship('ScaleAssessment', backref='visit', lazy=True, cascade='all, delete-orphan')
+    negative_history_entries = db.relationship('NegativeHistoryEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
+
+
+class NegativeHistoryEntry(db.Model):
+    __tablename__ = 'negative_history_entries'
+
+    id = db.Column(db.Integer, primary_key=True)
+    visit_id = db.Column(db.Integer, db.ForeignKey('visits.id'), nullable=False, index=True)
+    item_id = db.Column(db.String(100), nullable=False)
+    item_label = db.Column(db.String(255), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='Unknown')  # Yes / No / Unknown
+    severity = db.Column(db.Integer, nullable=True)
+    duration = db.Column(db.String(120), nullable=True)
+    sequelae = db.Column(db.String(255), nullable=True)
 
 
 class SymptomEntry(db.Model):

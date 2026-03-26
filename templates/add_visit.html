@@ -1024,6 +1024,45 @@
         .dm-dev-delay-card .fh-toggle-btn { font-size: 11px; padding: 9px 12px; }
         .dm-types-panel { margin-top: 12px; }
         .dm-types-panel .fh-search-wrap { max-width: 100%; }
+        .neg-history-shell { background: #f8fafa; border: 1px solid #eaefef; border-radius: 14px; padding: 14px; }
+        .neg-history-scroll { max-height: 280px; overflow-y: auto; padding-right: 4px; }
+        .neg-history-grid { display: flex; flex-direction: column; gap: 10px; }
+        .neg-row { background: #fff; border: 1px solid #e4ecec; border-radius: 12px; padding: 12px; }
+        .neg-row-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        .neg-label { font-size: 14px; font-weight: 600; color: #181c1d; }
+        .neg-toggle-group { display: inline-flex; background: #eaefef; border: 1px solid rgba(189,200,203,0.5); border-radius: 10px; padding: 3px; min-width: 210px; }
+        .neg-toggle-btn { flex: 1; border: 0; background: transparent; color: #3f484a; font-size: 12px; font-weight: 700; border-radius: 8px; padding: 7px 10px; cursor: pointer; }
+        .neg-toggle-btn.active { background: #006672; color: #fff; }
+        .neg-expand { margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e6e6; display: flex; flex-direction: column; gap: 10px; }
+        .neg-expand.hidden { display: none; }
+        .neg-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .neg-mini-label { display: block; font-size: 10px; font-weight: 700; color: #3f484a; margin-bottom: 4px; text-transform: uppercase; }
+        .neg-slider-wrap { display: flex; align-items: center; gap: 8px; }
+        .neg-severity-slider { width: 100%; }
+        .neg-severity-value { min-width: 22px; text-align: center; font-weight: 700; color: #006672; font-size: 12px; }
+        .neg-field-wrap { position: relative; }
+        .neg-duration-input, .neg-sequelae-input { width: 100%; height: 32px; border: 1px solid #cfd8d8; border-radius: 8px; padding: 0 10px; font-size: 12px; background: #fff; }
+        .neg-duration-dropdown, .neg-sequelae-dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 30; max-height: 160px; overflow-y: auto; margin: 0; padding: 4px 0; list-style: none; background: #fff; border: 1px solid #cfd8d8; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+        .neg-duration-dropdown.hidden, .neg-sequelae-dropdown.hidden { display: none; }
+        .neg-duration-dropdown li, .neg-sequelae-dropdown li { padding: 6px 10px; font-size: 12px; cursor: pointer; }
+        .neg-duration-dropdown li:hover, .neg-sequelae-dropdown li:hover { background: #f4f9f9; }
+        .neg-readonly-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 52px; height: 26px; border-radius: 999px; background: #006672; color: #fff; font-size: 12px; font-weight: 700; padding: 0 10px; }
+        .neg-readonly-grid { margin-top: 10px; border-top: 1px solid #e0e6e6; padding-top: 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+        .neg-readonly-k { display: block; font-size: 10px; color: #5d6a6b; text-transform: uppercase; font-weight: 700; margin-bottom: 3px; }
+        .neg-readonly-v { display: block; font-size: 12px; color: #1f2627; font-weight: 600; }
+        .neg-edit-inline { margin-left: 8px; border: none; background: transparent; color: #006672; cursor: pointer; font-size: 14px; }
+        body.dark-mode .neg-history-shell { background: #1a2224; border-color: #2a3a3c; }
+        body.dark-mode .neg-row { background: #1e1e1e; border-color: #333; }
+        body.dark-mode .neg-label { color: #e8e8e8; }
+        body.dark-mode .neg-toggle-group { background: #1f292b; border-color: #3a4a4d; }
+        body.dark-mode .neg-toggle-btn { color: #c5d0d1; }
+        body.dark-mode .neg-toggle-btn.active { background: #006672; color: #fff; }
+        body.dark-mode .neg-mini-label { color: #a8bcbe; }
+        body.dark-mode .neg-duration-input, body.dark-mode .neg-sequelae-input { background: #111; border-color: #3a4a4d; color: #ddd; }
+        body.dark-mode .neg-duration-dropdown, body.dark-mode .neg-sequelae-dropdown { background: #111; border-color: #3a4a4d; color: #ddd; }
+        body.dark-mode .neg-readonly-k { color: #9fb0b2; }
+        body.dark-mode .neg-readonly-v { color: #e4ecec; }
+        body.dark-mode .neg-edit-inline { color: #7bccd4; }
 
     </style>
 </head>
@@ -1076,14 +1115,23 @@
     <nav id="section-tabs" style="position: fixed; top: 60px; left: 0; width: 100%; z-index: 2500; height: 48px; background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); border-bottom: 1.5px solid rgba(189,200,203,0.2); display: flex; align-items: center; overflow: hidden;">
         <div id="tab-selector" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); height: 32px; width: 140px; background: #006672; border-radius: 999px; z-index: 0; pointer-events: none; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);"></div>
         <div id="tab-strip" style="position: absolute; left: 0; top: 0; height: 100%; display: flex; align-items: center; gap: 0; transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1); will-change: transform;">
-            <span class="cc-tab-name" data-section="1">Visit Details</span>
-            <span class="cc-tab-name" data-section="2">Background</span>
-            <span class="cc-tab-name" data-section="3">Complaints</span>
-            <span class="cc-tab-name" data-section="4">History</span>
-            <span class="cc-tab-name" data-section="5">MSE</span>
-            <span class="cc-tab-name" data-section="6">Safety</span>
-            <span class="cc-tab-name" data-section="7">Diagnosis</span>
-            <span class="cc-tab-name" data-section="8">Meds</span>
+            <span class="cc-tab-name" data-section="1" data-target="section-1">Demographics</span>
+            <span class="cc-tab-name" data-section="2" data-target="section-2">Background Factors</span>
+            <span class="cc-tab-name" data-section="3" data-target="section-3">Chief Complaints</span>
+            <span class="cc-tab-name" data-section="4" data-target="section-4">Negative History</span>
+            <span class="cc-tab-name" data-section="5" data-target="section-3">Functional Impairment</span>
+            <span class="cc-tab-name" data-section="6" data-target="section-4">Substance Use History</span>
+            <span class="cc-tab-name" data-section="7" data-target="section-4">Family History</span>
+            <span class="cc-tab-name" data-section="8" data-target="section-4">Developmental Milestone History</span>
+            <span class="cc-tab-name" data-section="9" data-target="section-5">MSE</span>
+            <span class="cc-tab-name" data-section="10" data-target="section-6">Scales</span>
+            <span class="cc-tab-name" data-section="11" data-target="section-6">Safety and Medical Profile</span>
+            <span class="cc-tab-name" data-section="12" data-target="section-6">Side Effects</span>
+            <span class="cc-tab-name" data-section="13" data-target="section-7">Diagnosis</span>
+            <span class="cc-tab-name" data-section="14" data-target="section-7">Clinical States</span>
+            <span class="cc-tab-name" data-section="15" data-target="section-8">Medication Adherence</span>
+            <span class="cc-tab-name" data-section="16" data-target="section-8">Medications</span>
+            <span class="cc-tab-name" data-section="17" data-target="section-8">Follow-up</span>
         </div>
     </nav>
 
@@ -1243,7 +1291,8 @@
                                         {{ entry.score_onset | default(5, true) | int }},
                                         {{ entry.score_progression | default(5, true) | int }},
                                         {{ entry.score_current | default(5, true) | int }},
-                                        {{ (entry.note or '') | tojson }}
+                                        {{ (entry.note or '') | tojson }},
+                                        'prefilled'
                                     );
                                 });</script>
                             {% endfor %}
@@ -1251,7 +1300,26 @@
                             <script>window.addEventListener('load', () => addSymptom());</script>
                         {% endif %}
                     </div>
-
+						
+						<header class="cc-section-header">
+                            <div class="cc-accent-bar"></div>
+                            <div>
+                                <h1 class="cc-section-title">Negative History</h1>
+                                <p class="cc-section-subtitle">For neurological events, psychiatric disturbances, and high-risk behaviors</p>
+                            </div>
+                        </header>
+                        <div class="cc-card cc-gap-8">
+                            <div style="display:flex; justify-content:flex-end;">
+                                <button type="button" id="negative-history-edit-toggle" class="neg-edit-inline" title="Edit negative history">✎</button>
+                            </div>
+                            <div class="neg-history-shell">
+                                <div class="neg-history-scroll">
+                                    <div id="negative-history-container" class="neg-history-grid"></div>
+                                </div>
+                            </div>
+                            <input type="hidden" name="negative_history_data" id="negative_history_data" value="{{ negative_history_data|default('{}')|e }}">
+                        </div>
+						
                     <div class="cc-section" id="section-4" data-section="4">
                         <header class="cc-section-header">
                             <div class="cc-accent-bar"></div>
@@ -2483,6 +2551,7 @@
         <option value="SOS">As Needed</option>
     </datalist>
 
+    <script src="{{ url_for('static', filename='js/side-effects.js') }}"></script>
     <script>
         function toggleNote(btn) {
             var step = btn.closest('.med-schedule-step');
@@ -3146,13 +3215,76 @@
         }
 
         // Live sync: if user clicks pills while modal is open, reflect in modal blocks without duplicates.
+        var _csSyncFromHiddenGuard = false;
+        var _csStateDataSyncGuard = false;
+        var _csBootSyncPending = true;
+        function _csHasAnyDateForState(state) {
+            var rows = clinicalStateRangesByState[state] || [];
+            return rows.some(function(r) {
+                return !!((r && r.start) || (r && r.end));
+            });
+        }
+        function _csSyncRangesDataFromHiddenSelection() {
+            if (_csStateDataSyncGuard) return;
+            var hi = document.getElementById('clinicalStateInput');
+            var rangesEl = document.getElementById('clinical_state_data');
+            if (!hi || !rangesEl) return;
+            var suppressConfirm = _csBootSyncPending;
+
+            var selected = _csParseSelectedFromClinicalStateInput();
+            var selectedSet = new Set(selected);
+            var flat = _csSafeParseJson(rangesEl.value || '[]', []);
+            if (!Array.isArray(flat) || !flat.length) return;
+
+            var byState = {};
+            flat.forEach(function(item) {
+                var st = item && item.state ? String(item.state).trim() : '';
+                if (!st) return;
+                if (!byState[st]) byState[st] = [];
+                byState[st].push(item);
+            });
+
+            var removedStates = Object.keys(byState).filter(function(st) { return !selectedSet.has(st); });
+            if (!removedStates.length) return;
+
+            var keepStates = [];
+            removedStates.forEach(function(st) {
+                var hasDate = (byState[st] || []).some(function(r) {
+                    return !!((r && r.start) || (r && r.end));
+                });
+                if (!hasDate) return;
+                if (suppressConfirm) {
+                    keepStates.push(st);
+                    return;
+                }
+                var ok = window.confirm('"' + st + '" has date ranges set. Delete this state and its ranges?');
+                if (!ok) keepStates.push(st);
+            });
+
+            var keepSet = new Set(keepStates);
+            var nextFlat = flat.filter(function(item) {
+                var st = item && item.state ? String(item.state).trim() : '';
+                if (!st) return false;
+                if (selectedSet.has(st)) return true;
+                return keepSet.has(st);
+            });
+            rangesEl.value = JSON.stringify(nextFlat);
+
+            if (keepStates.length) {
+                _csStateDataSyncGuard = true;
+                _csSetHiddenSnapshotFromStateKeys(_csUniq(selected.concat(keepStates)));
+                _csStateDataSyncGuard = false;
+            }
+        }
         window.addEventListener('DOMContentLoaded', function() {
             var hi = document.getElementById('clinicalStateInput');
             if (!hi) return;
 
             function syncFromHiddenIfOpen() {
+                if (_csSyncFromHiddenGuard) return;
                 if (!_csIsModalOpen()) return;
                 var selected = _csParseSelectedFromClinicalStateInput();
+                var selectedSet = new Set(selected);
 
                 // Add newly selected states with one empty range
                 selected.forEach(function(st) {
@@ -3160,17 +3292,34 @@
                     else if (clinicalStateRangesByState[st].length === 0) clinicalStateRangesByState[st].push({ start: '', end: '' });
                 });
 
-                // Remove deselected states (matches checkbox behavior)
+                // Remove deselected states. If any date exists, ask confirmation first.
+                var mustKeep = [];
                 Object.keys(clinicalStateRangesByState).forEach(function(st) {
-                    if (selected.indexOf(st) === -1) delete clinicalStateRangesByState[st];
+                    if (selectedSet.has(st)) return;
+                    if (!_csHasAnyDateForState(st)) {
+                        delete clinicalStateRangesByState[st];
+                        return;
+                    }
+                    var ok = window.confirm('"' + st + '" has date ranges set. Delete this state and its ranges?');
+                    if (ok) delete clinicalStateRangesByState[st];
+                    else mustKeep.push(st);
                 });
 
+                if (mustKeep.length) {
+                    _csSyncFromHiddenGuard = true;
+                    _csSetHiddenSnapshotFromStateKeys(_csUniq(selected.concat(mustKeep)));
+                    _csSyncFromHiddenGuard = false;
+                }
                 _csRenderAll();
             }
 
             hi.addEventListener('stateSync', syncFromHiddenIfOpen);
             hi.addEventListener('input', syncFromHiddenIfOpen);
             hi.addEventListener('change', syncFromHiddenIfOpen);
+            hi.addEventListener('stateSync', _csSyncRangesDataFromHiddenSelection);
+            hi.addEventListener('input', _csSyncRangesDataFromHiddenSelection);
+            hi.addEventListener('change', _csSyncRangesDataFromHiddenSelection);
+            setTimeout(function() { _csBootSyncPending = false; }, 0);
         });
         function deleteAllAdherenceRanges() {
             document.querySelectorAll('.adherence-checkbox').forEach(cb => { cb.checked = false; });
@@ -3343,7 +3492,8 @@
                 var nameEl = detail.querySelector('select[name="symptom_name[]"], input[name="symptom_name[]"]');
                 var durEl = detail.querySelector('input[name="symptom_duration[]"], input[name="duration_text[]"]');
                 if (!durEl) return;
-                var shouldRequire = !!(nameEl && (nameEl.value || '').trim());
+                var mode = detail.getAttribute('data-cc-mode') || 'full';
+                var shouldRequire = (mode === 'full') && !!(nameEl && (nameEl.value || '').trim());
                 durEl.required = shouldRequire;
             });
 
@@ -3426,6 +3576,35 @@
         // Symptoms (master-detail)
         // -------------------------
         var _ccSymptomCount = (document.querySelectorAll('#cc-symptom-list .cc-symptom-list-item').length || 0);
+        var _ccLastVisitSymptomNames = new Set([
+            {% if last_visit and last_visit.symptom_entries %}
+            {% for entry in last_visit.symptom_entries %}
+            {{ (entry.symptom_name or '')|tojson }}.toLowerCase().trim(),
+            {% endfor %}
+            {% endif %}
+        ].filter(Boolean));
+        var _ccPrevToLastSymptomNames = new Set(({{ last_visit_previous_symptom_names|default('[]')|safe }} || []).map(function(v){ return String(v || '').toLowerCase().trim(); }).filter(Boolean));
+        function _ccSeenInLastVisit(name) {
+            var n = String(name || '').toLowerCase().trim();
+            return !!(n && _ccLastVisitSymptomNames.has(n));
+        }
+        function _ccSeenInPrevToLast(name) {
+            var n = String(name || '').toLowerCase().trim();
+            return !!(n && _ccPrevToLastSymptomNames.has(n));
+        }
+        function _ccApplySymptomMode(detail, mode) {
+            if (!detail) return;
+            detail.setAttribute('data-cc-mode', mode || 'full');
+            var onsetGroup = detail.querySelector('.cc-group-onset');
+            var progGroup = detail.querySelector('.cc-group-progression');
+            var currGroup = detail.querySelector('.cc-group-current');
+            var durWrap = detail.querySelector('.cc-duration-visible-wrap');
+            if (onsetGroup) onsetGroup.style.display = (mode === 'full') ? '' : 'none';
+            if (progGroup) progGroup.style.display = (mode === 'full' || mode === 'progression_only') ? '' : 'none';
+            if (currGroup) currGroup.style.display = (mode === 'full' || mode === 'current_only') ? '' : 'none';
+            if (durWrap) durWrap.style.display = (mode === 'full') ? '' : 'none';
+            syncDurationRequired();
+        }
 
         function selectSymptom(idx) {
             var listItems = document.querySelectorAll('#cc-symptom-list .cc-symptom-list-item');
@@ -3503,7 +3682,7 @@
             syncDurationRequired();
         }
 
-        function addSymptom(nameVal, durationVal, onsetVal, courseVal, currentVal, noteVal) {
+        function addSymptom(nameVal, durationVal, onsetVal, courseVal, currentVal, noteVal, sourceType) {
             var nameStr = (nameVal || '').toString().trim();
             var currentNum = parseInt(currentVal, 10);
             if (isNaN(currentNum)) currentNum = 5;
@@ -3575,15 +3754,27 @@
                     '</button>' +
                 '</div>' +
                 '<div class="cc-sliders-grid" style="margin-top:8px;">' +
-                    '<div class="cc-slider-group">' +
+                    '<div class="cc-slider-group cc-group-onset">' +
+                        '<span>Onset</span>' +
+                        '<input type="range" name="symptom_onset[]" min="0" max="10" value="' + (onsetNum === '' ? 5 : onsetNum) + '" oninput="updVal(this)">' +
+                        '<span class="slider-val">' + (onsetNum === '' ? 5 : onsetNum) + '</span>' +
+                    '</div>' +
+                    '<div class="cc-slider-group cc-group-progression">' +
+                        '<span>Progression</span>' +
+                        '<input type="range" name="symptom_progression[]" min="0" max="10" value="' + (courseNum === '' ? 5 : courseNum) + '" oninput="updVal(this)">' +
+                        '<span class="slider-val">' + (courseNum === '' ? 5 : courseNum) + '</span>' +
+                    '</div>' +
+                    '<div class="cc-slider-group cc-group-current">' +
                         '<span>Current</span>' +
                         '<input type="range" name="symptom_current[]" min="0" max="10" value="' + currentNum + '" oninput="updVal(this)">' +
                         '<span class="slider-val">' + currentNum + '</span>' +
                     '</div>' +
                 '</div>' +
-                '<input type="hidden" name="symptom_onset[]" value="' + (onsetNum === '' ? '' : onsetNum) + '">' +
-                '<input type="hidden" name="symptom_progression[]" value="' + (courseNum === '' ? '' : courseNum) + '">' +
-                '<input type="hidden" name="symptom_duration[]" value="' + (durationVal || '') + '">' +
+                '<div class="cc-duration-visible-wrap" style="margin-top:10px; display:flex; align-items:center; gap:6px;">' +
+                    '<button type="button" class="cc-dur-btn" onclick="adjustDurationCC(' + idx + ', -1)">-</button>' +
+                    '<input type="text" name="symptom_duration[]" class="cc-dur-input" placeholder="e.g. 3 Weeks" list="duration-options-list" value="' + (durationVal || '') + '" onfocus="updateDurationOptions(this)" oninput="updateDurationOptions(this); updateSymptomListItem(' + idx + ', null, this.value, null); syncDurationRequired();">' +
+                    '<button type="button" class="cc-dur-btn" onclick="adjustDurationCC(' + idx + ', 1)">+</button>' +
+                '</div>' +
                 '<div class="cc-notes-wrap">' +
                     '<textarea name="symptom_note[]" class="cc-notes-textarea" placeholder="Specific details about pattern, triggers, or quality of symptom..." rows="3">' + (noteVal || '') + '</textarea>' +
                 '</div>';
@@ -3602,11 +3793,48 @@
                 sel.appendChild(opt);
                 sel.value = nameStr;
             }
+            function applyModeForName() {
+                var nm = sel ? sel.value : '';
+                if ((sourceType || '') === 'prefilled') {
+                    _ccApplySymptomMode(detail, _ccSeenInPrevToLast(nm) ? 'progression_only' : 'full');
+                } else {
+                    _ccApplySymptomMode(detail, _ccSeenInLastVisit(nm) ? 'current_only' : 'full');
+                }
+            }
+            if (sel) {
+                sel.addEventListener('change', applyModeForName);
+                sel.addEventListener('input', applyModeForName);
+            }
+            applyModeForName();
 
             updateSymptomListItem(idx, nameStr || '', '', noteVal || '');
             updateSymptomListSeverityFromCurrent(idx, currentNum);
             selectSymptom(idx);
             syncDurationRequired();
+        }
+
+        function repositionFunctionalImpairmentBlock() {
+            var target = document.getElementById('section-4');
+            var fiSection = document.getElementById('fi-section');
+            if (!target || !fiSection) return;
+
+            var fiHidden = document.getElementById('functional_impairment_data');
+            var heading = null;
+            var prev = fiHidden ? fiHidden.previousElementSibling : fiSection.previousElementSibling;
+            while (prev) {
+                var txt = (prev.textContent || '').toLowerCase();
+                if (txt.indexOf('functional impairment') !== -1) { heading = prev; break; }
+                if (prev.id === 'section-5' || prev.id === 'section-6') break;
+                prev = prev.previousElementSibling;
+            }
+
+            var alreadyBefore = !!(fiSection.compareDocumentPosition(target) & Node.DOCUMENT_POSITION_FOLLOWING);
+            if (alreadyBefore) return;
+            var parent = target.parentNode;
+            if (!parent) return;
+            if (heading) parent.insertBefore(heading, target);
+            if (fiHidden) parent.insertBefore(fiHidden, target);
+            parent.insertBefore(fiSection, target);
         }
 
         // -------------------------
@@ -3711,7 +3939,9 @@
 
         var _seCounter = (document.querySelectorAll('#side-effects-container .entry-wrapper').length || 0);
 
-        var _COMMON_SIDE_EFFECTS = [
+        var _COMMON_SIDE_EFFECTS = (Array.isArray(window.SIDE_EFFECTS_LIST) && window.SIDE_EFFECTS_LIST.length)
+            ? window.SIDE_EFFECTS_LIST
+            : [
             "Acute dystonia", "Parkinsonism", "Rigidity", "Tremor", "Bradykinesia", "Akathisia",
             "Tardive dyskinesia", "Hyperthermia", "Muscle rigidity", "Autonomic instability",
             "Increased CPK", "Weight gain", "Diabetes mellitus", "Dyslipidemia", "Hyperprolactinemia",
@@ -4652,6 +4882,7 @@
         // Initialize required/hidden JSONs (best-effort)
         // -------------------------
         window.addEventListener('load', function() {
+            try { repositionFunctionalImpairmentBlock(); } catch (e) {}
             try { syncDurationRequired(); } catch (e) {}
 
             // Restore Family History state from hidden JSON (best-effort)
@@ -4753,6 +4984,34 @@
         });
     </script>
 
+    <script>
+        function toggleSidebar() {
+            const sideMenu = document.getElementById('sideMenu');
+            const overlay = document.getElementById('overlay');
+            if (!sideMenu || !overlay) return;
+            const isActive = sideMenu.classList.toggle('active');
+            overlay.classList.toggle('active', isActive);
+        }
+
+        function toggleDarkMode(isDark) {
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.body.classList.remove('dark-mode');
+                localStorage.setItem('theme', 'light');
+            }
+        }
+    </script>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            if (localStorage.getItem('theme') === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+        });
+    </script>
+
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -4779,10 +5038,9 @@
                 const navCenter = nav.offsetWidth / 2;
 
                 let offsetLeft = 0;
+                var activeIndex = Array.prototype.indexOf.call(tabNames, activeTab);
                 tabNames.forEach((tab, i) => {
-                    if (i < n - 1) {
-                        offsetLeft += tab.offsetWidth;
-                    }
+                    if (i < activeIndex) offsetLeft += tab.offsetWidth;
                 });
                 
                 const activeTabWidth = activeTab.offsetWidth;
@@ -4795,7 +5053,7 @@
                 selector.style.width = activeTabWidth + 'px';
 
                 tabNames.forEach((t, i) => {
-                    const diff = Math.abs(i - (n - 1));
+                    const diff = Math.abs(i - activeIndex);
                     t.classList.remove('active', 'near');
                     if (diff === 0) t.classList.add('active');
                     else if (diff === 1) t.classList.add('near');
@@ -4805,8 +5063,10 @@
             tabNames.forEach(tab => {
                 tab.addEventListener('click', function() {
                     const n = parseInt(this.dataset.section);
-                    const target = document.getElementById('section-' + n);
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    updateStrip(n);
+                    const targetId = this.dataset.target || ('section-' + n);
+                    const target = document.getElementById(targetId);
+                    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 });
             });
 
@@ -4833,7 +5093,9 @@
             });
 
             window.scrollToSection = function(n) {
-                const target = document.getElementById('section-' + n);
+                const tab = strip.querySelector('.cc-tab-name[data-section="' + n + '"]');
+                const targetId = tab ? (tab.dataset.target || ('section-' + n)) : ('section-' + n);
+                const target = document.getElementById(targetId);
                 if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             };
         })();
@@ -5437,6 +5699,18 @@
 
     window.addEventListener('load', function() {
         try { renderSafetyMedicalCards(); } catch (e) {}
+    });
+</script>
+<script type="module">
+    import { initNegativeHistory } from "{{ url_for('static', filename='js/negative-history.js') }}";
+    window.addEventListener('DOMContentLoaded', function() {
+        initNegativeHistory({
+            containerId: 'negative-history-container',
+            hiddenInputId: 'negative_history_data',
+            readonlyPositive: true,
+            editToggleBtnId: 'negative-history-edit-toggle',
+            positiveData: {{ negative_history_positive_data|default('{}')|safe }}
+        });
     });
 </script>
 </body>

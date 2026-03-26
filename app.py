@@ -66,7 +66,7 @@ def get_clinic_hours(doctor):
     }
 
 
-from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry, ScaleAssessment, Appointment, DashboardNote, Notification, ScheduleTemplate, Feedback
+from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry, ScaleAssessment, Appointment, DashboardNote, Notification, ScheduleTemplate, Feedback, NegativeHistoryEntry
 from medical_utils import get_unified_dose, compute_med_chart_value, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency, process_scale_submission, duration_to_days, format_timedelta_as_duration
 from email_utils import send_dynamic_email, send_system_email
 from encryption_utils import encrypt_smtp_password, decrypt_smtp_password
@@ -1575,7 +1575,9 @@ def first_visit():
                            is_guest=is_guest,
                            doctor=doctor,
                            templates=templates,
-                           appt=appt)
+                           appt=appt,
+                           negative_history_data='{}',
+                           negative_history_positive_data='{}')
 
 
 @app.route('/api/templates', methods=['GET'])
@@ -1640,6 +1642,66 @@ def delete_template(name):
         db.session.commit()
         return jsonify({"success": True})
     return jsonify({"error": "Template not found"}), 404
+
+
+@app.route('/api/visit/<int:visit_id>/negative_history', methods=['GET', 'POST'])
+@doctor_required
+def api_visit_negative_history(visit_id):
+    visit = Visit.query.get_or_404(visit_id)
+    if not visit.patient or visit.patient.doctor_id != session.get('doctor_id'):
+        return jsonify({"error": "Forbidden"}), 403
+
+    if request.method == 'GET':
+        all_payload = build_negative_history_payload(visit)
+        return jsonify({
+            "visit_id": visit.id,
+            "all": all_payload,
+            "positive": filter_positive_negative_history(all_payload)
+        })
+
+    data = request.get_json(silent=True) or {}
+    payload = data.get('negative_history_data')
+    if not isinstance(payload, dict):
+        return jsonify({"error": "negative_history_data must be an object"}), 400
+
+    NegativeHistoryEntry.query.filter_by(visit_id=visit.id).delete()
+    for item_id, item in payload.items():
+        if not isinstance(item, dict):
+            continue
+        status = (item.get('status') or 'Unknown').strip()
+        if status not in ('Yes', 'No', 'Unknown'):
+            status = 'Unknown'
+        try:
+            severity = int(item.get('severity') if item.get('severity') is not None else 5)
+        except (TypeError, ValueError):
+            severity = 5
+        severity = min(10, max(1, severity))
+        db.session.add(NegativeHistoryEntry(
+            visit_id=visit.id,
+            item_id=str(item_id).strip(),
+            item_label=(item.get('label') or str(item_id)).strip(),
+            status=status,
+            severity=severity,
+            duration=(item.get('duration') or '').strip() or None,
+            sequelae=(item.get('sequelae') or '').strip() or None
+        ))
+    db.session.commit()
+    return jsonify({"status": "success", "visit_id": visit.id})
+
+
+@app.route('/api/patient/<int:patient_id>/negative_history/previous_positive', methods=['GET'])
+@doctor_required
+def api_previous_visit_negative_history_positive(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    if patient.doctor_id != session.get('doctor_id'):
+        return jsonify({"error": "Forbidden"}), 403
+    last_visit = Visit.query.filter_by(patient_id=patient.id).order_by(Visit.date.desc(), Visit.id.desc()).first()
+    all_payload = build_negative_history_payload(last_visit) if last_visit else {}
+    return jsonify({
+        "patient_id": patient.id,
+        "visit_id": last_visit.id if last_visit else None,
+        "positive": filter_positive_negative_history(all_payload)
+    })
 
 
 @app.route('/api/submit_scale', methods=['POST'])
@@ -1887,6 +1949,32 @@ def calc_event_date(visit_date, duration_text):
         return visit_date.strftime('%Y-%m-%d')
 
 
+def build_negative_history_payload(visit):
+    """Return dict payload keyed by item_id for template hydration."""
+    payload = {}
+    if not visit:
+        return payload
+    for entry in getattr(visit, 'negative_history_entries', []) or []:
+        item_id = (entry.item_id or '').strip()
+        if not item_id:
+            continue
+        payload[item_id] = {
+            'label': entry.item_label or item_id,
+            'status': entry.status or 'Unknown',
+            'severity': int(entry.severity or 5),
+            'duration': entry.duration or '',
+            'sequelae': entry.sequelae or ''
+        }
+    return payload
+
+
+def filter_positive_negative_history(payload):
+    """Return only Positive (Yes) findings from a negative-history payload dict."""
+    if not isinstance(payload, dict):
+        return {}
+    return {k: v for k, v in payload.items() if isinstance(v, dict) and (v.get('status') == 'Yes')}
+
+
 def process_visit_form_data(visit, form_data):
     """Helper function to process and save visit form data."""
     # State and Adherence
@@ -2014,6 +2102,37 @@ def process_visit_form_data(visit, form_data):
             visit.ace_data = None
     else:
         visit.ace_data = None
+
+    # 1e1. Negative History (stored in dedicated rows per visit)
+    negative_json = form_data.get('negative_history_data', '')
+    try:
+        for nh in NegativeHistoryEntry.query.filter_by(visit_id=visit.id).all():
+            db.session.delete(nh)
+        if negative_json:
+            parsed = json.loads(negative_json)
+            if isinstance(parsed, dict):
+                for item_id, item in parsed.items():
+                    if not isinstance(item, dict):
+                        continue
+                    status = (item.get('status') or 'Unknown').strip()
+                    if status not in ('Yes', 'No', 'Unknown'):
+                        status = 'Unknown'
+                    try:
+                        sev = int(item.get('severity') if item.get('severity') is not None else 5)
+                    except (TypeError, ValueError):
+                        sev = 5
+                    sev = min(10, max(1, sev))
+                    db.session.add(NegativeHistoryEntry(
+                        visit_id=visit.id,
+                        item_id=str(item_id).strip(),
+                        item_label=(item.get('label') or str(item_id)).strip(),
+                        status=status,
+                        severity=sev,
+                        duration=(item.get('duration') or '').strip() or None,
+                        sequelae=(item.get('sequelae') or '').strip() or None
+                    ))
+    except (json.JSONDecodeError, TypeError):
+        pass
 
     # 1e2. Family history of psychiatric illness
     # Schema: {"present": bool, "items": [{"name": str, "degree": "1st"|"2nd"|"3rd"}], "consanguinity": "Yes"|"No"|"Unknown"}
@@ -2791,9 +2910,23 @@ def add_visit(patient_id):
     
     # Fetch the most recent visit to copy data from
     last_visit = Visit.query.filter_by(patient_id=patient.id).order_by(Visit.date.desc()).first()
+    previous_to_last = None
+    if last_visit:
+        previous_to_last = Visit.query.filter(
+            Visit.patient_id == patient.id,
+            db.or_(
+                Visit.date < last_visit.date,
+                db.and_(Visit.date == last_visit.date, Visit.id < last_visit.id)
+            )
+        ).order_by(Visit.date.desc(), Visit.id.desc()).first()
+    last_visit_previous_symptom_names = []
+    if previous_to_last:
+        last_visit_previous_symptom_names = [s.symptom_name for s in previous_to_last.symptom_entries if getattr(s, 'symptom_name', None)]
     
     doctor = Doctor.query.get(session.get('doctor_id'))
     ace_data = (last_visit.ace_data or '') if last_visit and getattr(last_visit, 'ace_data', None) else ''
+    negative_history_all = build_negative_history_payload(last_visit) if last_visit else {}
+    negative_history_positive = filter_positive_negative_history(negative_history_all)
     adherence_data = json.dumps([{'status': a.status, 'start': a.start_date.strftime('%Y-%m-%d') if a.start_date else None, 'end': a.end_date.strftime('%Y-%m-%d') if a.end_date else None} for a in AdherenceRange.query.filter_by(patient_id=patient.id).all()])
     clinical_state_data = json.dumps([{'state': c.state, 'start': c.start_date.strftime('%Y-%m-%d') if c.start_date else None, 'end': c.end_date.strftime('%Y-%m-%d') if c.end_date else None} for c in ClinicalStateRange.query.filter_by(patient_id=patient.id).all()])
     scales_data = '[]'
@@ -2816,6 +2949,9 @@ def add_visit(patient_id):
         adherence_data=adherence_data,
         clinical_state_data=clinical_state_data,
         scales_data=scales_data,
+        negative_history_data=json.dumps(negative_history_all),
+        negative_history_positive_data=json.dumps(negative_history_positive),
+        last_visit_previous_symptom_names=json.dumps(last_visit_previous_symptom_names),
     )
 
 
@@ -2939,6 +3075,8 @@ def edit_visit(visit_id):
         'raw_responses': sa.raw_responses or {}
     } for sa in getattr(visit, 'scale_assessments', [])])
     ace_data = (visit.ace_data or '') if getattr(visit, 'ace_data', None) else ''
+    negative_history_all = build_negative_history_payload(visit)
+    negative_history_positive = filter_positive_negative_history(negative_history_all)
     import json as _json
     _structured = next((m for m in visit.mse_entries if m.category == 'Structured'), None)
     mse_structured = {}
@@ -2963,7 +3101,7 @@ def edit_visit(visit_id):
             'affect_congruence': _structured.affect_congruence,
             'affect_appropriateness': _structured.affect_appropriateness,
         }
-    return render_template('edit_visit.html', visit=visit, patient=patient, previous_visit=previous_visit, doctor=doctor, major_events_data=major_events_data, stressors_data=stressors_data, adherence_data=adherence_data, clinical_state_data=clinical_state_data, substances_data=substances_data, scales_data=scales_data, ace_data=ace_data, mse_structured=mse_structured)
+    return render_template('edit_visit.html', visit=visit, patient=patient, previous_visit=previous_visit, doctor=doctor, major_events_data=major_events_data, stressors_data=stressors_data, adherence_data=adherence_data, clinical_state_data=clinical_state_data, substances_data=substances_data, scales_data=scales_data, ace_data=ace_data, mse_structured=mse_structured, negative_history_data=json.dumps(negative_history_all), negative_history_positive_data=json.dumps(negative_history_positive))
 
 
 @app.route('/visit/<int:visit_id>/delete', methods=['POST'])
@@ -2981,6 +3119,7 @@ def delete_visit(visit_id):
     PersonalityEntry.query.filter_by(visit_id=visit.id).delete()
     SafetyMedicalProfile.query.filter_by(visit_id=visit.id).delete()
     MajorEvent.query.filter_by(visit_id=visit.id).delete()
+    NegativeHistoryEntry.query.filter_by(visit_id=visit.id).delete()
     # Adherence/Clinical state ranges are stored per patient — do not delete
     SubstanceUseEntry.query.filter_by(visit_id=visit.id).delete()
     ScaleAssessment.query.filter_by(visit_id=visit.id).delete()

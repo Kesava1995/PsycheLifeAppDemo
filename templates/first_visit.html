@@ -2494,6 +2494,37 @@
         .dm-types-panel .fh-search-wrap {
             max-width: 100%;
         }
+        .neg-history-shell { background: #f8fafa; border: 1px solid #eaefef; border-radius: 14px; padding: 14px; }
+        .neg-history-scroll { max-height: 280px; overflow-y: auto; padding-right: 4px; }
+        .neg-history-grid { display: flex; flex-direction: column; gap: 10px; }
+        .neg-row { background: #fff; border: 1px solid #e4ecec; border-radius: 12px; padding: 12px; }
+        .neg-row-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        .neg-label { font-size: 14px; font-weight: 600; color: #181c1d; }
+        .neg-toggle-group { display: inline-flex; background: #eaefef; border: 1px solid rgba(189,200,203,0.5); border-radius: 10px; padding: 3px; min-width: 210px; }
+        .neg-toggle-btn { flex: 1; border: 0; background: transparent; color: #3f484a; font-size: 12px; font-weight: 700; border-radius: 8px; padding: 7px 10px; cursor: pointer; }
+        .neg-toggle-btn.active { background: #006672; color: #fff; }
+        .neg-expand { margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e6e6; display: flex; flex-direction: column; gap: 10px; }
+        .neg-expand.hidden { display: none; }
+        .neg-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .neg-mini-label { display: block; font-size: 10px; font-weight: 700; color: #3f484a; margin-bottom: 4px; text-transform: uppercase; }
+        .neg-slider-wrap { display: flex; align-items: center; gap: 8px; }
+        .neg-severity-slider { width: 100%; }
+        .neg-severity-value { min-width: 22px; text-align: center; font-weight: 700; color: #006672; font-size: 12px; }
+        .neg-field-wrap { position: relative; }
+        .neg-duration-input, .neg-sequelae-input { width: 100%; height: 32px; border: 1px solid #cfd8d8; border-radius: 8px; padding: 0 10px; font-size: 12px; background: #fff; }
+        .neg-duration-dropdown, .neg-sequelae-dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 30; max-height: 160px; overflow-y: auto; margin: 0; padding: 4px 0; list-style: none; background: #fff; border: 1px solid #cfd8d8; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+        .neg-duration-dropdown.hidden, .neg-sequelae-dropdown.hidden { display: none; }
+        .neg-duration-dropdown li, .neg-sequelae-dropdown li { padding: 6px 10px; font-size: 12px; cursor: pointer; }
+        .neg-duration-dropdown li:hover, .neg-sequelae-dropdown li:hover { background: #f4f9f9; }
+        body.dark-mode .neg-history-shell { background: #1a2224; border-color: #2a3a3c; }
+        body.dark-mode .neg-row { background: #1e1e1e; border-color: #333; }
+        body.dark-mode .neg-label { color: #e8e8e8; }
+        body.dark-mode .neg-toggle-group { background: #1f292b; border-color: #3a4a4d; }
+        body.dark-mode .neg-toggle-btn { color: #c5d0d1; }
+        body.dark-mode .neg-toggle-btn.active { background: #006672; color: #fff; }
+        body.dark-mode .neg-mini-label { color: #a8bcbe; }
+        body.dark-mode .neg-duration-input, body.dark-mode .neg-sequelae-input { background: #111; border-color: #3a4a4d; color: #ddd; }
+        body.dark-mode .neg-duration-dropdown, body.dark-mode .neg-sequelae-dropdown { background: #111; border-color: #3a4a4d; color: #ddd; }
 
         /* Draft restore banner entrance */
         #draft-restore-banner > div {
@@ -2590,14 +2621,23 @@
             transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
             will-change: transform;
         ">
-            <span class="cc-tab-name" data-section="1">Demographics</span>
-            <span class="cc-tab-name" data-section="2">Background</span>
-            <span class="cc-tab-name" data-section="3">Complaints</span>
-            <span class="cc-tab-name" data-section="4">History</span>
-            <span class="cc-tab-name" data-section="5">MSE</span>
-            <span class="cc-tab-name" data-section="6">Safety</span>
-            <span class="cc-tab-name" data-section="7">Diagnosis</span>
-            <span class="cc-tab-name" data-section="8">Meds</span>
+            <span class="cc-tab-name" data-section="1" data-target="section-1">Demographics</span>
+            <span class="cc-tab-name" data-section="2" data-target="section-2">Background Factors</span>
+            <span class="cc-tab-name" data-section="3" data-target="section-3">Chief Complaints</span>
+            <span class="cc-tab-name" data-section="4" data-target="section-4">Negative History</span>
+            <span class="cc-tab-name" data-section="5" data-target="section-5">Functional Impairment</span>
+            <span class="cc-tab-name" data-section="6" data-target="section-6">Substance Use History</span>
+            <span class="cc-tab-name" data-section="7" data-target="section-7">Family History</span>
+            <span class="cc-tab-name" data-section="8" data-target="section-8">Developmental Milestone History</span>
+            <span class="cc-tab-name" data-section="9" data-target="section-9">MSE</span>
+            <span class="cc-tab-name" data-section="10" data-target="section-10">Scales</span>
+            <span class="cc-tab-name" data-section="11" data-target="section-11">Safety and Medical Profile</span>
+            <span class="cc-tab-name" data-section="12" data-target="section-12">Side Effects</span>
+            <span class="cc-tab-name" data-section="13" data-target="section-13">Diagnosis</span>
+            <span class="cc-tab-name" data-section="14" data-target="section-14">Clinical States</span>
+            <span class="cc-tab-name" data-section="15" data-target="section-15">Medication Adherence</span>
+            <span class="cc-tab-name" data-section="16" data-target="section-16">Medications</span>
+            <span class="cc-tab-name" data-section="17" data-target="section-17">Follow-up</span>
         </div>
 
     </nav>
@@ -2900,9 +2940,83 @@
                             </div>
                         </div>
                     </div>
+					
+					<div class="cc-section" id="section-4" data-section="4">
+						<header class="cc-section-header">
+                            <div class="cc-accent-bar"></div>
+                            <div>
+                                <h1 class="cc-section-title">Negative History</h1>
+                                <p class="cc-section-subtitle">For neurological events, psychiatric disturbances, and high-risk behaviors</p>
+                            </div>
+                        </header>
+                        <div class="cc-card cc-gap-8">
+                            <div class="neg-history-shell">
+                                <div class="neg-history-scroll">
+                                    <div id="negative-history-container" class="neg-history-grid"></div>
+                                </div>
+                            </div>
+                            <input type="hidden" name="negative_history_data" id="negative_history_data" value="{{ negative_history_data|default('{}')|e }}">
+                        </div>
+					</div>
 
+					<div class="cc-section" id="section-5" data-section="6">
+												<!-- Functional Impairment -->
+						<header class="cc-section-header">
+							<div class="cc-accent-bar"></div>
+							<div> <h1 class="section-title">Functional Impairment</h1>
+								<p class="cc-section-subtitle">Rate domain Impact</p>
+							</div>
+						</header>
+						
+						<input type="hidden" name="functional_impairment_data" id="functional_impairment_data"
+							value="{{ visit.functional_impairment if visit and visit.functional_impairment else (last_visit.functional_impairment if last_visit and last_visit.functional_impairment else '') }}">
+						<p style="font-size:12px; color:#888; margin: -12px 0 10px;">Rate domain impact &nbsp;(0 = Not affected &nbsp;·&nbsp; 10 = Severely affected)</p>
+						<div class="fi-section" id="fi-section">
+							<div class="fi-row">
+								<span class="fi-label">Work or academic functioning</span>
+								<div class="fi-slider-wrap">
+									<input type="range" min="0" max="10" value="0" class="fi-slider" data-key="work" oninput="updateFI(this)">
+								</div>
+								<span class="fi-val" id="fi-val-work">0</span>
+							</div>
+							<div class="fi-row">
+								<span class="fi-label">Social interactions &amp; Networking</span>
+								<div class="fi-slider-wrap">
+									<input type="range" min="0" max="10" value="0" class="fi-slider" data-key="social" oninput="updateFI(this)">
+								</div>
+								<span class="fi-val" id="fi-val-social">0</span>
+							</div>
+							<div class="fi-row">
+								<span class="fi-label">Relationships and home responsibilities</span>
+								<div class="fi-slider-wrap">
+									<input type="range" min="0" max="10" value="0" class="fi-slider" data-key="relationships" oninput="updateFI(this)">
+								</div>
+								<span class="fi-val" id="fi-val-relationships">0</span>
+							</div>
+							<div class="fi-row">
+								<span class="fi-label">Personal care and daily needs</span>
+								<div class="fi-slider-wrap">
+									<input type="range" min="0" max="10" value="0" class="fi-slider" data-key="personal_care" oninput="updateFI(this)">
+								</div>
+								<span class="fi-val" id="fi-val-personal_care">0</span>
+							</div>
+							<div class="fi-row">
+								<span class="fi-label">Leisure and enjoyable activities</span>
+								<div class="fi-slider-wrap">
+									<input type="range" min="0" max="10" value="0" class="fi-slider" data-key="leisure" oninput="updateFI(this)">
+								</div>
+								<span class="fi-val" id="fi-val-leisure">0</span>
+							</div>
+							<div class="fi-global-row">
+								<span class="fi-global-label">Global Score(AVG)</span>
+								<span class="fi-global-score" id="fi-global-score">0.0</span>
+								<span class="fi-severity-badge" id="fi-severity-badge">None</span>
+							</div>
+						</div>
+					</div>
+					
                     <!-- SECTION 4: HISTORY -->
-                    <div class="cc-section" id="section-4" data-section="4">
+                    
                         <header class="cc-section-header">
                             <div class="cc-accent-bar"></div>
                             <div>
@@ -2912,181 +3026,185 @@
                         </header>
                         <div class="cc-card cc-gap-8">
                     <!-- Substance Use History: Master-Detail -->
-                    <div class="su-section-header">
-                        <div>
-                            <span class="su-section-title">Substance Use History</span>
-                            <span class="su-section-subtitle">Document each substance used and current status</span>
-                        </div>
-                    </div>
+					<div class="cc-section" id="section-6" data-section="6">
+						<div class="su-section-header">
+							<div>
+								<span class="su-section-title">Substance Use History</span>
+								<span class="su-section-subtitle">Document each substance used and current status</span>
+							</div>
+						</div>
 
-                    <div class="su-master-detail" id="su-master-detail">
-                        <!-- LEFT: Substance List pane -->
-                        <aside class="su-list-pane">
-                            <div class="su-list-pane-header">
-                                <span class="su-list-pane-title">SUBSTANCES</span>
-                                <button type="button" class="su-list-add-btn" onclick="addSubstance()" title="Add substance">+</button>
-                            </div>
-                            <div class="su-list-items" id="su-substance-list">
-                                <!-- Items injected by JS -->
-                            </div>
-                            <button type="button" class="su-add-substance-footer-btn" onclick="addSubstance()">+ Add substance</button>
-                        </aside>
+						<div class="su-master-detail" id="su-master-detail">
+							<!-- LEFT: Substance List pane -->
+							<aside class="su-list-pane">
+								<div class="su-list-pane-header">
+									<span class="su-list-pane-title">SUBSTANCES</span>
+									<button type="button" class="su-list-add-btn" onclick="addSubstance()" title="Add substance">+</button>
+								</div>
+								<div class="su-list-items" id="su-substance-list">
+									<!-- Items injected by JS -->
+								</div>
+								<button type="button" class="su-add-substance-footer-btn" onclick="addSubstance()">+ Add substance</button>
+							</aside>
 
-                        <!-- RIGHT: Detail pane -->
-                        <div class="su-detail-pane" id="su-substance-details">
-                            <div class="su-detail-empty" id="su-detail-empty">
-                                <span class="material-symbols-outlined" style="font-size:42px;color:var(--cc-on-surface-variant);opacity:0.25;">medication</span>
-                                <p style="color:var(--cc-on-surface-variant);font-size:13px;margin-top:10px;">Add a substance to begin</p>
-                            </div>
-                            <!-- Per-substance detail panels injected by JS -->
-                        </div>
-                    </div>
+							<!-- RIGHT: Detail pane -->
+							<div class="su-detail-pane" id="su-substance-details">
+								<div class="su-detail-empty" id="su-detail-empty">
+									<span class="material-symbols-outlined" style="font-size:42px;color:var(--cc-on-surface-variant);opacity:0.25;">medication</span>
+									<p style="color:var(--cc-on-surface-variant);font-size:13px;margin-top:10px;">Add a substance to begin</p>
+								</div>
+								<!-- Per-substance detail panels injected by JS -->
+							</div>
+						</div>
 
-                    {% if visit and visit.substance_use_entries %}
-                        {% for su in visit.substance_use_entries %}
-                            <script>window.addEventListener('load', function() {
-                                addSubstance(
-                                    {{ su.substance_name | tojson }},
-                                    {{ (su.pattern or 'Occasional') | tojson }},
-                                    {{ (su.current_status or '') | tojson }},
-                                    "",
-                                    {{ (su.note or '') | tojson }},
-                                    {
-                                        age: {{ su.age_at_first_use | tojson }},
-                                        has_abstinence: {% if su.has_abstinence_history is none %}null{% elif su.has_abstinence_history %}true{% else %}false{% endif %},
-                                        abstinent_since_text: {{ (su.abstinent_since | abstinent_for_text(visit.date)) | tojson }},
-                                        last_use: {{ (su.last_use_ago or '') | tojson }},
-                                        abstinence_duration: {{ (su.abstinence_duration or '') | tojson }}
-                                    }
-                                );
-                            });</script>
-                        {% endfor %}
-                    {% endif %}
+						{% if visit and visit.substance_use_entries %}
+							{% for su in visit.substance_use_entries %}
+								<script>window.addEventListener('load', function() {
+									addSubstance(
+										{{ su.substance_name | tojson }},
+										{{ (su.pattern or 'Occasional') | tojson }},
+										{{ (su.current_status or '') | tojson }},
+										"",
+										{{ (su.note or '') | tojson }},
+										{
+											age: {{ su.age_at_first_use | tojson }},
+											has_abstinence: {% if su.has_abstinence_history is none %}null{% elif su.has_abstinence_history %}true{% else %}false{% endif %},
+											abstinent_since_text: {{ (su.abstinent_since | abstinent_for_text(visit.date)) | tojson }},
+											last_use: {{ (su.last_use_ago or '') | tojson }},
+											abstinence_duration: {{ (su.abstinence_duration or '') | tojson }}
+										}
+									);
+								});</script>
+							{% endfor %}
+						{% endif %}
 
-                    <datalist id="substance_datalist">
-                        <option value="Alcohol">
-                        <option value="Cannabis">
-                        <option value="Tobacco">
-                        <option value="Opioids">
-                        <option value="Others">
-                    </datalist>
-
+						<datalist id="substance_datalist">
+							<option value="Alcohol">
+							<option value="Cannabis">
+							<option value="Tobacco">
+							<option value="Opioids">
+							<option value="Others">
+						</datalist>
+					</div>
                     <!-- Family History: Redesigned -->
-                    <div class="fh-card">
+					<div class="cc-section" id="section-7" data-section="7">
+						<div class="fh-card">
 
-                        <!-- Row 1: Present / Absent toggle -->
-                        <div class="fh-row-spaced">
-                            <label class="fh-field-label">Family History of Psychiatric Illness</label>
-                            <div class="fh-toggle-group">
-                                <button type="button" class="fh-toggle-btn" id="fh-btn-absent"
-                                    onclick="setFamilyHistoryPresent(false)">Absent</button>
-                                <button type="button" class="fh-toggle-btn" id="fh-btn-present"
-                                    onclick="setFamilyHistoryPresent(true)">Present</button>
-                            </div>
-                        </div>
+							<!-- Row 1: Present / Absent toggle -->
+							<div class="fh-row-spaced">
+								<label class="fh-field-label">Family History of Psychiatric Illness</label>
+								<div class="fh-toggle-group">
+									<button type="button" class="fh-toggle-btn" id="fh-btn-absent"
+										onclick="setFamilyHistoryPresent(false)">Absent</button>
+									<button type="button" class="fh-toggle-btn" id="fh-btn-present"
+										onclick="setFamilyHistoryPresent(true)">Present</button>
+								</div>
+							</div>
 
-                        <!-- Hidden backing input (same name as before — route reads this) -->
-                        <input type="hidden" name="family_history_psychiatric" id="family_history_psychiatric" value="">
+							<!-- Hidden backing input (same name as before — route reads this) -->
+							<input type="hidden" name="family_history_psychiatric" id="family_history_psychiatric" value="">
 
-                        <!-- Conditional: diagnosis list (shown when Present) -->
-                        <div id="fh-present-panel" style="display:none;">
+							<!-- Conditional: diagnosis list (shown when Present) -->
+							<div id="fh-present-panel" style="display:none;">
 
-                            <!-- ADD DIAGNOSIS search -->
-                            <div class="fh-inner-card">
-                                <label class="fh-inner-label">ADD DIAGNOSIS</label>
-                                <div class="fh-search-wrap">
-                                    <input type="text" id="family_history_input"
-                                        list="family_history_datalist"
-                                        placeholder="Search and select diagnosis..."
-                                        autocomplete="off"
-                                        class="fh-search-input"
-                                        onkeydown="if(event.key==='Enter'){ event.preventDefault(); addFamilyHistoryItem(this.value); }"
-                                        onblur="if(this.value.trim()) addFamilyHistoryItem(this.value);"
-                                        oninput="tryAddFamilyHistoryOnInput(this)">
-                                    <span class="material-symbols-outlined fh-search-icon">search</span>
-                                </div>
-                                <datalist id="family_history_datalist">
-                                    <option value="Depression">
-                                    <option value="Bipolar disorder">
-                                    <option value="Schizophrenia/Psychotic disorder">
-                                    <option value="Anxiety disorder">
-                                    <option value="Substance use disorder">
-                                    <option value="Suicide">
-                                    <option value="Personality Disorder">
-                                    <option value="Neurodevelopmental disorder">
-                                    <option value="Neurological disorder">
-                                    <option value="Unknown psychiatric illness">
-                                    <option value="OTHERS">
-                                </datalist>
+								<!-- ADD DIAGNOSIS search -->
+								<div class="fh-inner-card">
+									<label class="fh-inner-label">ADD DIAGNOSIS</label>
+									<div class="fh-search-wrap">
+										<input type="text" id="family_history_input"
+											list="family_history_datalist"
+											placeholder="Search and select diagnosis..."
+											autocomplete="off"
+											class="fh-search-input"
+											onkeydown="if(event.key==='Enter'){ event.preventDefault(); addFamilyHistoryItem(this.value); }"
+											onblur="if(this.value.trim()) addFamilyHistoryItem(this.value);"
+											oninput="tryAddFamilyHistoryOnInput(this)">
+										<span class="material-symbols-outlined fh-search-icon">search</span>
+									</div>
+									<datalist id="family_history_datalist">
+										<option value="Depression">
+										<option value="Bipolar disorder">
+										<option value="Schizophrenia/Psychotic disorder">
+										<option value="Anxiety disorder">
+										<option value="Substance use disorder">
+										<option value="Suicide">
+										<option value="Personality Disorder">
+										<option value="Neurodevelopmental disorder">
+										<option value="Neurological disorder">
+										<option value="Unknown psychiatric illness">
+										<option value="OTHERS">
+									</datalist>
 
-                                <!-- Diagnosis entries rendered here -->
-                                <div id="fh-diagnosis-list" class="fh-diagnosis-list"></div>
-                            </div>
+									<!-- Diagnosis entries rendered here -->
+									<div id="fh-diagnosis-list" class="fh-diagnosis-list"></div>
+								</div>
 
-                        </div>
+							</div>
 
-                        <!-- Consanguinity row (always visible) -->
-                        <div class="fh-row-spaced fh-consanguinity-row">
-                            <label class="fh-field-label">Consanguinity</label>
-                            <div class="fh-toggle-group fh-toggle-group-3">
-                                <button type="button" class="fh-toggle-btn" id="fh-con-yes"
-                                    onclick="setConsanguinity('Yes')">Yes</button>
-                                <button type="button" class="fh-toggle-btn" id="fh-con-no"
-                                    onclick="setConsanguinity('No')">No</button>
-                                <button type="button" class="fh-toggle-btn" id="fh-con-unknown"
-                                    onclick="setConsanguinity('Unknown')">Unknown</button>
-                            </div>
-                        </div>
+							<!-- Consanguinity row (always visible) -->
+							<div class="fh-row-spaced fh-consanguinity-row">
+								<label class="fh-field-label">Consanguinity</label>
+								<div class="fh-toggle-group fh-toggle-group-3">
+									<button type="button" class="fh-toggle-btn" id="fh-con-yes"
+										onclick="setConsanguinity('Yes')">Yes</button>
+									<button type="button" class="fh-toggle-btn" id="fh-con-no"
+										onclick="setConsanguinity('No')">No</button>
+									<button type="button" class="fh-toggle-btn" id="fh-con-unknown"
+										onclick="setConsanguinity('Unknown')">Unknown</button>
+								</div>
+							</div>
 
-                    </div>
+						</div>
+					</div>
+					<div class="cc-section" id="section-8" data-section="8">
+						<div class="section-header"><span class="section-title">History of Developmental Milestone Delay</span></div>
+						<input type="hidden" name="developmental_milestone_delay" id="developmental_milestone_delay" value="">
+						<div class="fh-card dm-dev-delay-card">
+							<div class="fh-row-spaced">
+								<label class="fh-field-label">Global Developmental Milestone Delay</label>
+								<div class="fh-toggle-group fh-toggle-group-3" style="flex-shrink:0;">
+									<button type="button" class="fh-toggle-btn active" id="dm-btn-no"
+										onclick="setDevDelayStatus('No delay reported')">No delay reported</button>
+									<button type="button" class="fh-toggle-btn" id="dm-btn-delay"
+										onclick="setDevDelayStatus('Delay reported')">Delay reported</button>
+									<button type="button" class="fh-toggle-btn" id="dm-btn-unknown"
+										onclick="setDevDelayStatus('Unknown')">Unknown</button>
+								</div>
+							</div>
+							<div class="dm-notes-row">
+								<button type="button" class="note-icon-btn" id="dev_delay_note_btn" title="Notes"
+									onclick="document.getElementById('dev_delay_notes_popover').classList.toggle('visible')">📝</button>
+								<div id="dev_delay_notes_popover" class="dev-notes-popover">
+									<label style="display:block; margin-bottom:4px;">Optional: Notes</label>
+									<textarea id="dev_delay_notes" rows="2" style="width:100%; resize:vertical; padding:6px 8px; min-width: 200px;" placeholder="Notes..." oninput="updateDevDelayHidden()"></textarea>
+								</div>
+							</div>
+						</div>
 
-                    <div class="section-header"><span class="section-title">History of Developmental Milestone Delay</span></div>
-                    <input type="hidden" name="developmental_milestone_delay" id="developmental_milestone_delay" value="">
-                    <div class="fh-card dm-dev-delay-card">
-                        <div class="fh-row-spaced">
-                            <label class="fh-field-label">Global Developmental Milestone Delay</label>
-                            <div class="fh-toggle-group fh-toggle-group-3" style="flex-shrink:0;">
-                                <button type="button" class="fh-toggle-btn active" id="dm-btn-no"
-                                    onclick="setDevDelayStatus('No delay reported')">No delay reported</button>
-                                <button type="button" class="fh-toggle-btn" id="dm-btn-delay"
-                                    onclick="setDevDelayStatus('Delay reported')">Delay reported</button>
-                                <button type="button" class="fh-toggle-btn" id="dm-btn-unknown"
-                                    onclick="setDevDelayStatus('Unknown')">Unknown</button>
-                            </div>
-                        </div>
-                        <div class="dm-notes-row">
-                            <button type="button" class="note-icon-btn" id="dev_delay_note_btn" title="Notes"
-                                onclick="document.getElementById('dev_delay_notes_popover').classList.toggle('visible')">📝</button>
-                            <div id="dev_delay_notes_popover" class="dev-notes-popover">
-                                <label style="display:block; margin-bottom:4px;">Optional: Notes</label>
-                                <textarea id="dev_delay_notes" rows="2" style="width:100%; resize:vertical; padding:6px 8px; min-width: 200px;" placeholder="Notes..." oninput="updateDevDelayHidden()"></textarea>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="dev_delay_types_box" class="dm-types-panel" style="display:none;">
-                        <div class="fh-search-wrap">
-                            <input type="text" id="dev_delay_input" list="dev_delay_datalist"
-                                placeholder="Type or select type of delay..."
-                                autocomplete="off"
-                                class="fh-search-input"
-                                onkeydown="if(event.key==='Enter'){ event.preventDefault(); addDevDelayType(this.value); }"
-                                onblur="if(this.value.trim()) addDevDelayType(this.value);"
-                                oninput="tryAddDevDelayOnInput(this)">
-                        </div>
-                        <datalist id="dev_delay_datalist">
-                            <option value="Speech / language delay">
-                            <option value="Motor delay">
-                            <option value="Social developmental delay">
-                            <option value="Learning delay">
-                            <option value="Global developmental delay">
-                            <option value="Not sure">
-                        </datalist>
-                        <div id="dev_delay_tags" class="tag-list" style="margin-top:10px;"></div>
-                    </div>
-
+						<div id="dev_delay_types_box" class="dm-types-panel" style="display:none;">
+							<div class="fh-search-wrap">
+								<input type="text" id="dev_delay_input" list="dev_delay_datalist"
+									placeholder="Type or select type of delay..."
+									autocomplete="off"
+									class="fh-search-input"
+									onkeydown="if(event.key==='Enter'){ event.preventDefault(); addDevDelayType(this.value); }"
+									onblur="if(this.value.trim()) addDevDelayType(this.value);"
+									oninput="tryAddDevDelayOnInput(this)">
+							</div>
+							<datalist id="dev_delay_datalist">
+								<option value="Speech / language delay">
+								<option value="Motor delay">
+								<option value="Social developmental delay">
+								<option value="Learning delay">
+								<option value="Global developmental delay">
+								<option value="Not sure">
+							</datalist>
+							<div id="dev_delay_tags" class="tag-list" style="margin-top:10px;"></div>
+						</div>
+					</div>
+					
                     <!-- SECTION 5: MSE -->
-                    <div class="cc-section" id="section-5" data-section="5">
+					<div class="cc-section" id="section-9" data-section="9">
                         <header class="cc-section-header">
                             <div class="cc-accent-bar"></div>
                             <div>
@@ -3323,62 +3441,13 @@
 
                         </div>
                     </div>
-					<!-- Functional Impairment -->
-					<header class="cc-section-header">
-						<div class="cc-accent-bar"></div>
-						<div> <h1 class="section-title">Functional Impairment</h1>
-							<p class="cc-section-subtitle">Rate domain Impact</p>
-						</div>
-					</header>
 					
-                    <input type="hidden" name="functional_impairment_data" id="functional_impairment_data"
-                        value="{{ visit.functional_impairment if visit and visit.functional_impairment else (last_visit.functional_impairment if last_visit and last_visit.functional_impairment else '') }}">
-                    <p style="font-size:12px; color:#888; margin: -12px 0 10px;">Rate domain impact &nbsp;(0 = Not affected &nbsp;·&nbsp; 10 = Severely affected)</p>
-                    <div class="fi-section" id="fi-section">
-                        <div class="fi-row">
-                            <span class="fi-label">Work or academic functioning</span>
-                            <div class="fi-slider-wrap">
-                                <input type="range" min="0" max="10" value="0" class="fi-slider" data-key="work" oninput="updateFI(this)">
-                            </div>
-                            <span class="fi-val" id="fi-val-work">0</span>
-                        </div>
-                        <div class="fi-row">
-                            <span class="fi-label">Social interactions &amp; Networking</span>
-                            <div class="fi-slider-wrap">
-                                <input type="range" min="0" max="10" value="0" class="fi-slider" data-key="social" oninput="updateFI(this)">
-                            </div>
-                            <span class="fi-val" id="fi-val-social">0</span>
-                        </div>
-                        <div class="fi-row">
-                            <span class="fi-label">Relationships and home responsibilities</span>
-                            <div class="fi-slider-wrap">
-                                <input type="range" min="0" max="10" value="0" class="fi-slider" data-key="relationships" oninput="updateFI(this)">
-                            </div>
-                            <span class="fi-val" id="fi-val-relationships">0</span>
-                        </div>
-                        <div class="fi-row">
-                            <span class="fi-label">Personal care and daily needs</span>
-                            <div class="fi-slider-wrap">
-                                <input type="range" min="0" max="10" value="0" class="fi-slider" data-key="personal_care" oninput="updateFI(this)">
-                            </div>
-                            <span class="fi-val" id="fi-val-personal_care">0</span>
-                        </div>
-                        <div class="fi-row">
-                            <span class="fi-label">Leisure and enjoyable activities</span>
-                            <div class="fi-slider-wrap">
-                                <input type="range" min="0" max="10" value="0" class="fi-slider" data-key="leisure" oninput="updateFI(this)">
-                            </div>
-                            <span class="fi-val" id="fi-val-leisure">0</span>
-                        </div>
-                        <div class="fi-global-row">
-                            <span class="fi-global-label">Global Score(AVG)</span>
-                            <span class="fi-global-score" id="fi-global-score">0.0</span>
-                            <span class="fi-severity-badge" id="fi-severity-badge">None</span>
-                        </div>
-                    </div>
 					
-                    <!-- SECTION 6: SAFETY -->
-                    <div class="cc-section" id="section-6" data-section="6">
+					
+					
+					
+                    <!-- SECTION 6: SAFETY and Medical Profile-->
+                    
                         <header class="cc-section-header">
                             <div class="cc-accent-bar"></div>
                             <div>
@@ -3386,7 +3455,9 @@
                                 <p class="cc-section-subtitle">Psychiatric scales, safety profile and side effects</p>
                             </div>
                         </header>
-                        <div class="cc-card cc-gap-8">
+                    <div class="cc-card cc-gap-8">
+					
+					<div class="cc-section" id="section-10" data-section="10">
                     <div class="section-container" id="scales-section">
                         <header class="cc-section-header">
                             <div class="cc-accent-bar"></div>
@@ -3406,8 +3477,9 @@
                             </button>
                         </div>
                     </div>
-
+					</div>
                     
+					<div class="cc-section" id="section-11" data-section="11">
 					<header class="cc-section-header">
                             <div class="cc-accent-bar"></div>
                             <div>
@@ -3459,7 +3531,9 @@
                         
                         </div>
                     </div>
+					</div>
 					
+					<div class="cc-section" id="section-12" data-section="12">
 					<header class="cc-section-header">
                             <div class="cc-accent-bar"></div>
                             <div>
@@ -3490,11 +3564,13 @@
                             <button type="submit" name="submit_action" value="lifechart" class="btn" style="background:var(--primary-dark); width:auto; padding:10px 40px;">📈 View Life Chart</button>
                         {% endif %}
                             </div>
-                        </div>
+							
+					</div>
                     </div>
+                    
 
                     <!-- SECTION 7: DIAGNOSIS -->
-                    <div class="cc-section" id="section-7" data-section="7">
+                    
                         <header class="cc-section-header">
                             <div class="cc-accent-bar"></div>
                             <div>
@@ -3502,9 +3578,9 @@
                                 <p class="cc-section-subtitle">Provisional and differential diagnosis with clinical state</p>
                             </div>
                         </header>
-                        <div class="cc-card cc-gap-8">
+                    <div class="cc-card cc-gap-8">
                     
-
+					<div class="cc-section" id="section-13" data-section="13">
                     <div class="diagnosis-outer-wrap">
                         <div class="diagnosis-two-col-grid">
                             <div class="diagnosis-module-card">
@@ -3548,7 +3624,9 @@
                             </div>
                         </div>
                     </div>
-
+					</div>
+					
+					<div class="cc-section" id="section-14" data-section="14">
                     <div class="clinical-state-section" style="margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
                         <h4 style="margin:0 0 10px 0; color:#555;">Current Clinical State</h4>
                         <p style="margin:0 0 6px 0; font-size:13px; color:#666;">Snapshot for previous visit</p>
@@ -3557,7 +3635,7 @@
                         <button type="button" class="btn clinical-state-toggle" style="margin-top:0; padding:8px 14px; font-size:12px; background:#666; color:#fff;" onclick="openClinicalStateRangesModal()">Manage Clinical State Ranges (dates)</button>
                         <input type="hidden" name="clinical_state_data" id="clinical_state_data" value="">
                     </div>
-                        </div>
+                    </div>    
                     </div>
 
                     <!-- SECTION 8: MEDS -->
@@ -3576,6 +3654,8 @@
 					<button type="button" class="add-btn" onclick="addMedication()">+</button>
 					<button type="button" class="btn" onclick="document.getElementById('modalEqDose').style.display='block'" style="padding: 5px 15px; font-size: 12px; margin-left: 10px; background: #666; color: #fff; width: auto; line-height: 1; flex-shrink: 0; white-space: nowrap;">⚖️ Equivalent Dose</button>
 				</div>
+				
+				
                 <div class="adherence-section-block">
                     <div class="cc-accent-bar-row">
                         <div class="cc-accent-bar"></div>
@@ -4057,6 +4137,7 @@
         <option value="SOS">As Needed</option>
     </datalist>
 
+    <script src="{{ url_for('static', filename='js/side-effects.js') }}"></script>
     <script>
         function toggleNote(btn) {
             var step = btn.closest('.med-schedule-step');
@@ -4965,6 +5046,137 @@
                 container.insertAdjacentHTML('beforeend', html);
             } else { var el = document.getElementById(safeId); if (el) el.remove(); }
         }
+
+        // Keep button-group and popup rows in sync while popup is open:
+        // - No dates: deselect removes row immediately
+        // - Dates set: ask before deleting row
+        var _csSyncGuard = false;
+        var _csDataSyncGuard = false;
+        function _csParseHiddenSelected() {
+            var hi = document.getElementById('clinicalStateInput');
+            if (!hi) return [];
+            var raw = (hi.value || '').trim();
+            if (!raw) return [];
+            try {
+                var parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) return parsed.map(function(s) { return String(s || '').trim(); }).filter(Boolean);
+            } catch (e) {}
+            return [raw];
+        }
+        function _csSetHiddenSelected(states) {
+            var hi = document.getElementById('clinicalStateInput');
+            if (!hi) return;
+            var seen = new Set();
+            var clean = [];
+            (states || []).forEach(function(s) {
+                var t = String(s || '').trim();
+                if (!t || seen.has(t)) return;
+                seen.add(t);
+                clean.push(t);
+            });
+            hi.value = clean.length ? JSON.stringify(clean) : '';
+            hi.dispatchEvent(new CustomEvent('stateSync', { bubbles: true }));
+            hi.dispatchEvent(new Event('input', { bubbles: true }));
+            hi.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        function _csSyncRangesDataFromHiddenSelection() {
+            if (_csDataSyncGuard) return;
+            var hi = document.getElementById('clinicalStateInput');
+            var rangesEl = document.getElementById('clinical_state_data');
+            if (!hi || !rangesEl) return;
+            var selected = _csParseHiddenSelected();
+            var selectedSet = new Set(selected);
+            var flat = [];
+            try { flat = JSON.parse(rangesEl.value || '[]'); } catch (e) { flat = []; }
+            if (!Array.isArray(flat) || !flat.length) return;
+
+            var byState = {};
+            flat.forEach(function(item) {
+                var st = item && item.state ? String(item.state).trim() : '';
+                if (!st) return;
+                if (!byState[st]) byState[st] = [];
+                byState[st].push(item);
+            });
+            var removedStates = Object.keys(byState).filter(function(st) { return !selectedSet.has(st); });
+            if (!removedStates.length) return;
+
+            var keepStates = [];
+            removedStates.forEach(function(st) {
+                var hasDate = (byState[st] || []).some(function(r) { return !!((r && r.start) || (r && r.end)); });
+                if (!hasDate) return;
+                var ok = window.confirm('"' + st + '" has date ranges set. Delete this state and its ranges?');
+                if (!ok) keepStates.push(st);
+            });
+
+            var keepSet = new Set(keepStates);
+            var nextFlat = flat.filter(function(item) {
+                var st = item && item.state ? String(item.state).trim() : '';
+                if (!st) return false;
+                if (selectedSet.has(st)) return true;
+                return keepSet.has(st);
+            });
+            rangesEl.value = JSON.stringify(nextFlat);
+
+            if (keepStates.length) {
+                _csDataSyncGuard = true;
+                _csSetHiddenSelected(selected.concat(keepStates));
+                _csDataSyncGuard = false;
+            }
+        }
+        window.addEventListener('DOMContentLoaded', function() {
+            var hi = document.getElementById('clinicalStateInput');
+            if (!hi) return;
+            function syncFromHiddenIfOpen() {
+                if (_csSyncGuard) return;
+                var modal = document.getElementById('clinicalStateRangesModal');
+                if (!modal || modal.style.display !== 'block') return;
+                renderClinicalStates();
+                var selected = _csParseHiddenSelected();
+                var selectedSet = new Set(selected);
+                var keepStates = [];
+                var container = document.getElementById('clinical-state-ranges-container');
+                if (!container) return;
+
+                container.querySelectorAll('div[id^="csr-input-"]').forEach(function(block) {
+                    var strong = block.querySelector('strong');
+                    var state = strong ? String(strong.innerText || '').trim() : '';
+                    if (!state || selectedSet.has(state)) return;
+                    var hasDate = false;
+                    block.querySelectorAll('input[type="date"]').forEach(function(inp) {
+                        if ((inp.value || '').trim()) hasDate = true;
+                    });
+                    if (!hasDate) {
+                        block.remove();
+                        return;
+                    }
+                    var ok = window.confirm('"' + state + '" has date ranges set. Delete this state and its ranges?');
+                    if (ok) block.remove();
+                    else keepStates.push(state);
+                });
+
+                selected.forEach(function(state) {
+                    var safeId = 'csr-input-' + state.replace(/[^a-zA-Z0-9]/g, '');
+                    if (document.getElementById(safeId)) return;
+                    var cb = document.querySelector('.clinical-state-checkbox[value="' + state.replace(/"/g, '&quot;') + '"]');
+                    if (cb) {
+                        cb.checked = true;
+                        handleStateCheckboxChange(cb);
+                    }
+                });
+
+                if (keepStates.length) {
+                    _csSyncGuard = true;
+                    _csSetHiddenSelected(selected.concat(keepStates));
+                    _csSyncGuard = false;
+                }
+            }
+            hi.addEventListener('stateSync', syncFromHiddenIfOpen);
+            hi.addEventListener('input', syncFromHiddenIfOpen);
+            hi.addEventListener('change', syncFromHiddenIfOpen);
+            hi.addEventListener('stateSync', _csSyncRangesDataFromHiddenSelection);
+            hi.addEventListener('input', _csSyncRangesDataFromHiddenSelection);
+            hi.addEventListener('change', _csSyncRangesDataFromHiddenSelection);
+        });
         // ── Substance Use History: Master-Detail State ──────────────
         var _suCount = 0;
         var _suActiveIdx = -1;
@@ -6060,7 +6272,9 @@
 
         // --- Side Effects: Clinical Clarity cards ---
         let sideEffectCounter = 0;
-        const commonSideEffects = [
+        const commonSideEffects = (Array.isArray(window.SIDE_EFFECTS_LIST) && window.SIDE_EFFECTS_LIST.length)
+            ? window.SIDE_EFFECTS_LIST
+            : [
             "Acute dystonia", "Parkinsonism", "Rigidity", "Tremor", "Bradykinesia", "Akathisia",
             "Tardive dyskinesia", "Hyperthermia", "Muscle rigidity", "Autonomic instability",
             "Increased CPK", "Weight gain", "Diabetes mellitus", "Dyslipidemia", "Hyperprolactinemia",
@@ -6601,8 +6815,31 @@
             });
         }
 
+        function repositionFunctionalImpairmentBlock() {
+            const target = document.getElementById('section-4');
+            const fiSection = document.getElementById('fi-section');
+            if (!target || !fiSection) return;
+            const fiHidden = document.getElementById('functional_impairment_data');
+            let heading = null;
+            let prev = fiHidden ? fiHidden.previousElementSibling : fiSection.previousElementSibling;
+            while (prev) {
+                const txt = (prev.textContent || '').toLowerCase();
+                if (txt.indexOf('functional impairment') !== -1) { heading = prev; break; }
+                if (prev.id === 'section-5' || prev.id === 'section-6') break;
+                prev = prev.previousElementSibling;
+            }
+            const alreadyBefore = !!(fiSection.compareDocumentPosition(target) & Node.DOCUMENT_POSITION_FOLLOWING);
+            if (alreadyBefore) return;
+            const parent = target.parentNode;
+            if (!parent) return;
+            if (heading) parent.insertBefore(heading, target);
+            if (fiHidden) parent.insertBefore(fiHidden, target);
+            parent.insertBefore(fiSection, target);
+        }
+
         // On page load: restore saved values if editing an existing visit
         document.addEventListener('DOMContentLoaded', function() {
+            repositionFunctionalImpairmentBlock();
             // For edit mode — the hidden field will have existing JSON pre-filled by Jinja
             const existing = document.getElementById('functional_impairment_data');
             if (existing && existing.value) {
@@ -7424,10 +7661,9 @@ function renderCompletedScalesCards() {
                 const navCenter = nav.offsetWidth / 2;
 
                 let offsetLeft = 0;
+                var activeIndex = Array.prototype.indexOf.call(tabNames, activeTab);
                 tabNames.forEach((tab, i) => {
-                    if (i < n - 1) {
-                        offsetLeft += tab.offsetWidth;
-                    }
+                    if (i < activeIndex) offsetLeft += tab.offsetWidth;
                 });
                 
                 const activeTabWidth = activeTab.offsetWidth;
@@ -7440,7 +7676,7 @@ function renderCompletedScalesCards() {
                 selector.style.width = activeTabWidth + 'px';
 
                 tabNames.forEach((t, i) => {
-                    const diff = Math.abs(i - (n - 1));
+                    const diff = Math.abs(i - activeIndex);
                     t.classList.remove('active', 'near');
                     if (diff === 0) t.classList.add('active');
                     else if (diff === 1) t.classList.add('near');
@@ -7450,8 +7686,10 @@ function renderCompletedScalesCards() {
             tabNames.forEach(tab => {
                 tab.addEventListener('click', function() {
                     const n = parseInt(this.dataset.section);
-                    const target = document.getElementById('section-' + n);
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    updateStrip(n);
+                    const targetId = this.dataset.target || ('section-' + n);
+                    const target = document.getElementById(targetId);
+                    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 });
             });
 
@@ -7478,7 +7716,9 @@ function renderCompletedScalesCards() {
             });
 
             window.scrollToSection = function(n) {
-                const target = document.getElementById('section-' + n);
+                const tab = strip.querySelector('.cc-tab-name[data-section="' + n + '"]');
+                const targetId = tab ? (tab.dataset.target || ('section-' + n)) : ('section-' + n);
+                const target = document.getElementById(targetId);
                 if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             };
         })();
@@ -7903,6 +8143,16 @@ function renderCompletedScalesCards() {
             });
 
         })();
+    </script>
+    <script type="module">
+        import { initNegativeHistory } from "{{ url_for('static', filename='js/negative-history.js') }}";
+        window.addEventListener('DOMContentLoaded', function() {
+            initNegativeHistory({
+                containerId: 'negative-history-container',
+                hiddenInputId: 'negative_history_data',
+                readonlyPositive: false
+            });
+        });
     </script>
 </body>
 </html>

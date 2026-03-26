@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Consanguinity Component</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    /* Custom styling from your system */
+    .ghost-border-thicker {
+      border: 1.5px solid rgba(189, 200, 203, 0.5);
+    }
+
+    .btn-option {
+      transition: all 0.2s ease;
+    }
+
+    .btn-option:hover {
+      background: rgba(255,255,255,0.6);
+    }
+
+    .active {
+      background-color: #006672;
+      color: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+
+<body class="bg-[#f6fafa] flex items-center justify-center min-h-screen font-sans">
+
+  <!-- Container -->
+  <div class="mt-6 flex flex-col gap-4 w-[500px]">
+
+
+
+  <!-- SCROLL LIST BELOW -->
+  <div class="max-h-[220px] overflow-y-auto p-3 bg-[#eaefef] rounded-xl ghost-border-thicker">
+    <div id="negative-history-container" class="space-y-2"></div>
+  </div>
+
+</div>
+
+  <!-- JS for toggle behavior -->
+<script type="module">
+import { NEGATIVE_HISTORY_LIST } from './negative-history.js';
+import { SEQUELAE_LIST } from './negative-history.js';
+const container = document.getElementById('negative-history-container');
+
+NEGATIVE_HISTORY_LIST.forEach(item => {
+  const row = document.createElement('div');
+
+  row.className = `
+  flex flex-col gap-3
+  bg-white p-3 rounded-xl shadow-sm
+	`;
+
+  row.innerHTML = `
+  <!-- Top Row -->
+  <div class="flex items-center justify-between">
+
+    <span class="text-sm font-medium text-[#181c1d]">
+      ${item.label}
+    </span>
+
+    <div class="flex h-[36px] p-1 bg-[#eaefef] rounded-lg ghost-border-thicker min-w-[200px]">
+
+      <button class="flex-1 text-xs font-bold rounded-md text-[#3f484a]" onclick="selectOption(this)">
+        Yes
+      </button>
+
+      <button class="flex-1 text-xs font-bold rounded-md text-[#3f484a]" onclick="selectOption(this)">
+        No
+      </button>
+
+      <button class="flex-1 text-xs font-bold rounded-md bg-[#006672] text-white" onclick="selectOption(this)">
+        Unknown
+      </button>
+
+    </div>
+
+  </div>
+
+  <!-- EXPANDABLE SECTION -->
+  <div class="hidden flex flex-col gap-3 pt-2 border-t border-[#e0e6e6]">
+
+    <!-- a + b -->
+    <div class="flex gap-4">
+
+      <!-- Severity -->
+      <div class="flex-1 flex flex-col gap-1">
+        <label class="text-[10px] font-bold text-[#3f484a]">Severity</label>
+        <div class="flex items-center gap-2">
+		  <input type="range" min="1" max="10" value="5"
+			class="severity-slider w-full">
+
+		  <span class="severity-value text-xs font-bold text-[#006672] min-w-[20px] text-center">
+			5
+		  </span>
+		</div>
+      </div>
+
+      <!-- Duration -->
+      <div class="flex-1 flex flex-col gap-1 relative">
+		  <label class="text-[10px] font-bold text-[#3f484a]">Duration</label>
+
+		  <!-- Input -->
+		  <input type="text"
+			class="dur-input h-[30px] px-2 rounded-md border border-[#cfd8d8] text-xs"
+			placeholder="Type number..." />
+
+		  <!-- Dropdown -->
+		  <ul class="dur-dropdown hidden absolute top-full left-0 right-0 bg-white border border-[#cfd8d8] rounded-md shadow-md z-50 max-h-[150px] overflow-y-auto text-xs"></ul>
+		</div>
+
+    </div>
+
+    <!-- c Sequelae -->
+    <div class="flex flex-col gap-1">
+      <label class="text-[10px] font-bold text-[#3f484a]">Sequelae</label>
+      <div class="flex flex-col gap-1 relative">
+		  
+
+		  <!-- Input -->
+		  <input type="text"
+			class="seq-input h-[30px] px-2 rounded-md border border-[#cfd8d8] text-xs"
+			placeholder="Search sequelae..." />
+
+		  <!-- Dropdown -->
+		  <ul class="seq-dropdown hidden absolute top-full left-0 right-0 bg-white border border-[#cfd8d8] rounded-md shadow-md z-50 max-h-[150px] overflow-y-auto text-xs"></ul>
+		</div>
+    </div>
+
+  </div>
+`;
+const durationWrapper = row.querySelector('.dur-input')?.parentElement;
+  if (durationWrapper) {
+    setupDurationInput(durationWrapper);
+  }
+  const seqWrapper = row.querySelector('.seq-input')?.parentElement;
+if (seqWrapper) {
+  setupSequelaeInput(seqWrapper);
+}
+const slider = row.querySelector('.severity-slider');
+const valueDisplay = row.querySelector('.severity-value');
+
+if (slider && valueDisplay) {
+  slider.addEventListener('input', () => {
+    valueDisplay.textContent = slider.value;
+  });
+}
+  container.appendChild(row);
+});
+
+// toggle logic
+window.selectOption = function(el) {
+  const parent = el.closest('div');
+  const row = el.closest('.bg-white');
+  const buttons = parent.querySelectorAll('button');
+  const expandable = row.querySelector('.hidden, .flex.flex-col.gap-3.pt-2');
+
+  // reset buttons
+  buttons.forEach(btn => {
+    btn.classList.remove('bg-[#006672]', 'text-white');
+    btn.classList.add('text-[#3f484a]');
+  });
+
+  // activate selected
+  el.classList.add('bg-[#006672]', 'text-white');
+  el.classList.remove('text-[#3f484a]');
+
+  // show/hide expansion
+  if (el.innerText === "Yes") {
+    expandable.classList.remove('hidden');
+  } else {
+    expandable.classList.add('hidden');
+  }
+};
+function setupDurationInput(wrapper) {
+  const input = wrapper.querySelector('.dur-input');
+  const dropdown = wrapper.querySelector('.dur-dropdown');
+
+  input.addEventListener('input', () => {
+    const value = input.value.trim();
+
+    if (!value || isNaN(value)) {
+      dropdown.classList.add('hidden');
+      return;
+    }
+
+    const num = parseInt(value);
+
+    const options = [
+      `${num} day${num > 1 ? 's ago' : ' ago'}`,
+      `${num} week${num > 1 ? 's ago' : ' ago'}`,
+      `${num} month${num > 1 ? 's ago' : ' ago'}`,
+      `${num} year${num > 1 ? 's ago' : ' ago'}`
+    ];
+
+    dropdown.innerHTML = options.map(opt => `
+      <li class="px-2 py-1 hover:bg-[#f4f9f9] cursor-pointer">
+        ${opt}
+      </li>
+    `).join('');
+
+    dropdown.classList.remove('hidden');
+  });
+
+  dropdown.addEventListener('click', (e) => {
+    if (e.target.tagName === 'LI') {
+      input.value = e.target.innerText + ' ago';
+      dropdown.classList.add('hidden');
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!wrapper.contains(e.target)) {
+      dropdown.classList.add('hidden');
+    }
+  });
+}
+function setupSequelaeInput(wrapper) {
+  const input = wrapper.querySelector('.seq-input');
+  const dropdown = wrapper.querySelector('.seq-dropdown');
+
+  input.addEventListener('input', () => {
+    const value = input.value.toLowerCase();
+
+    const filtered = SEQUELAE_LIST.filter(item =>
+      item.toLowerCase().includes(value)
+    );
+
+    if (!value || filtered.length === 0) {
+      dropdown.classList.add('hidden');
+      return;
+    }
+
+    dropdown.innerHTML = filtered.map(item => `
+      <li class="px-2 py-1 hover:bg-[#f4f9f9] cursor-pointer">
+        ${item}
+      </li>
+    `).join('');
+
+    dropdown.classList.remove('hidden');
+  });
+
+  dropdown.addEventListener('click', (e) => {
+    if (e.target.tagName === 'LI') {
+      input.value = e.target.innerText;
+      dropdown.classList.add('hidden');
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!wrapper.contains(e.target)) {
+      dropdown.classList.add('hidden');
+    }
+  });
+}
+</script>
+
+</body>
+</html>
