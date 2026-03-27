@@ -36,6 +36,17 @@
         .visits-list { margin-top: 30px; }
         .visit-item { background: #fafafa; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #A5DCFE; }
         .visit-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .visit-title-row { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .quick-visit-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            background: #ED7D31;
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 700;
+            line-height: 1.1;
+        }
         .visit-actions { display: flex; align-items: center; gap: 8px; }
         .visit-delete-form { margin: 0; display: inline-block; }
         
@@ -429,7 +440,12 @@
                 {% for visit in visits %}
                 <div class="visit-item">
                     <div class="visit-header">
-                        <h3>{{ visit.date.strftime('%d-%b-%Y') }} - {{ visit.visit_type }} Visit</h3>
+                        <h3 class="visit-title-row">
+                            <span>{{ visit.date.strftime('%d-%b-%Y') }} - {{ visit.visit_type }} Visit</span>
+                            {% if visit.quick_mode %}
+                            <span class="quick-visit-badge">Quick</span>
+                            {% endif %}
+                        </h3>
                         <div class="visit-actions">
                             <form method="post" action="{{ url_for('delete_visit', visit_id=visit.id) }}" class="visit-delete-form" onsubmit="return confirm('Are you sure you want to delete this visit? This cannot be undone.');">
                                 <button type="submit" class="btn btn-danger">Delete</button>

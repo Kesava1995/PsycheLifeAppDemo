@@ -119,9 +119,30 @@
         });
     }
 
+    function initMSEInvoluntarySelects() {
+        if (typeof window.jQuery === 'undefined' || !window.jQuery.fn || !window.jQuery.fn.select2) {
+            return;
+        }
+        var $ = window.jQuery;
+        $('.mse-involuntary-select').each(function () {
+            var $el = $(this);
+            if ($el.data('select2')) {
+                $el.select2('destroy');
+            }
+            $el.select2({
+                width: '100%',
+                placeholder: 'Search involuntary movements...',
+                allowClear: true,
+                closeOnSelect: false
+            });
+        });
+    }
+
     window.initMSEDropdowns = initMSEDropdowns;
+    window.initMSEInvoluntarySelects = initMSEInvoluntarySelects;
 
     window.jQuery(function () {
         initMSEDropdowns();
+        initMSEInvoluntarySelects();
     });
 })();

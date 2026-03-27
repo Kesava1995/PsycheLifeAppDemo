@@ -11,6 +11,28 @@
         : '/static/data/chief_complaints.json';
 
     var loadPromise = null;
+    var trackedSymptomKeys = {};
+
+    function normalizeSymptomKey(v) {
+        return String(v || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    function trackSymptomSelection($, value) {
+        var key = normalizeSymptomKey(value);
+        if (!key) return;
+        // Avoid duplicate network calls for same value in same page session.
+        if (trackedSymptomKeys[key]) return;
+        trackedSymptomKeys[key] = true;
+        $.ajax({
+            url: '/api/chief_complaints/track',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ symptom: String(value || '').trim() })
+        }).fail(function () {
+            // Allow retry later if this request fails.
+            delete trackedSymptomKeys[key];
+        });
+    }
 
     function loadChiefComplaintsData($) {
         if (window.chiefComplaintsData) {
@@ -98,12 +120,47 @@
         }
         loadChiefComplaintsData($)
             .done(function () {
+                var smartSearchUrl = '/api/chief_complaints/search';
                 $el.select2({
-                    data: window.chiefComplaintsData,
                     placeholder: 'Select Chief Complaint',
                     allowClear: true,
                     width: '100%',
                     tags: true,
+                    ajax: {
+                        url: smartSearchUrl,
+                        dataType: 'json',
+                        delay: 180,
+                        data: function (params) {
+                            return {
+                                q: params && params.term ? params.term : '',
+                                limit: 120
+                            };
+                        },
+                        processResults: function (data) {
+                            var rows = (data && Array.isArray(data.results)) ? data.results : [];
+                            return { results: rows };
+                        },
+                        transport: function (params, success, failure) {
+                            return $.ajax(params).done(success).fail(function () {
+                                // Fallback to local list if API is unavailable.
+                                var term = '';
+                                if (params && params.data && typeof params.data.q === 'string') {
+                                    term = params.data.q.trim().toLowerCase();
+                                }
+                                var list = Array.isArray(window.chiefComplaintsData) ? window.chiefComplaintsData : [];
+                                var filtered = list.filter(function (item) {
+                                    var text = String((item && (item.text || item.id)) || '').trim();
+                                    if (!text) return false;
+                                    if (!term) return true;
+                                    return text.toLowerCase().indexOf(term) !== -1;
+                                }).slice(0, 120).map(function (item) {
+                                    var text = String((item && (item.text || item.id)) || '').trim();
+                                    return { id: text, text: text };
+                                });
+                                success({ results: filtered });
+                            });
+                        }
+                    },
                     createTag: function (params) {
                         var term = $.trim(params.term);
                         if (term === '') {
@@ -116,6 +173,11 @@
 
                 $el.on('change', function () {
                     syncFirstInputFromSelect($el);
+                });
+                $el.on('select2:select', function (e) {
+                    var data = e && e.params ? e.params.data : null;
+                    var picked = data && (data.text || data.id) ? String(data.text || data.id) : String($el.val() || '');
+                    if (picked) trackSymptomSelection($, picked);
                 });
 
                 var $form = $el.closest('form');
@@ -167,12 +229,46 @@
                 if (!$el.length || $el.data('ccChiefInited')) {
                     return;
                 }
+                var smartSearchUrl = '/api/chief_complaints/search';
                 $el.select2({
-                    data: window.chiefComplaintsData,
                     placeholder: 'Select Chief Complaint',
                     allowClear: true,
                     width: '100%',
                     tags: true,
+                    ajax: {
+                        url: smartSearchUrl,
+                        dataType: 'json',
+                        delay: 180,
+                        data: function (params) {
+                            return {
+                                q: params && params.term ? params.term : '',
+                                limit: 120
+                            };
+                        },
+                        processResults: function (data) {
+                            var rows = (data && Array.isArray(data.results)) ? data.results : [];
+                            return { results: rows };
+                        },
+                        transport: function (params, success, failure) {
+                            return $.ajax(params).done(success).fail(function () {
+                                var term = '';
+                                if (params && params.data && typeof params.data.q === 'string') {
+                                    term = params.data.q.trim().toLowerCase();
+                                }
+                                var list = Array.isArray(window.chiefComplaintsData) ? window.chiefComplaintsData : [];
+                                var filtered = list.filter(function (item) {
+                                    var text = String((item && (item.text || item.id)) || '').trim();
+                                    if (!text) return false;
+                                    if (!term) return true;
+                                    return text.toLowerCase().indexOf(term) !== -1;
+                                }).slice(0, 120).map(function (item) {
+                                    var text = String((item && (item.text || item.id)) || '').trim();
+                                    return { id: text, text: text };
+                                });
+                                success({ results: filtered });
+                            });
+                        }
+                    },
                     createTag: function (params) {
                         var term = $.trim(params.term);
                         if (term === '') {
@@ -203,6 +299,11 @@
                     if (typeof window.syncDurationRequired === 'function') {
                         window.syncDurationRequired();
                     }
+                });
+                $el.on('select2:select', function (e) {
+                    var data = e && e.params ? e.params.data : null;
+                    var picked = data && (data.text || data.id) ? String(data.text || data.id) : String($el.val() || '');
+                    if (picked) trackSymptomSelection($, picked);
                 });
 
                 var v0 = (initialValue != null && initialValue !== undefined) ? String(initialValue).trim() : '';

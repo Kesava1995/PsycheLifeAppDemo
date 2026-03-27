@@ -811,6 +811,111 @@
         }
         .su-footer-divider { border: none; border-top: 1.5px solid rgba(189,200,203,0.25); margin: 10px 0 2px; }
 
+        /* ── Functional Impairment (match add_visit / first_visit) ───────────────────────── */
+        .fi-section {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #e0e8ea;
+            padding: 4px 0;
+            margin-bottom: 20px;
+        }
+        body.dark-mode .fi-section {
+            background: #1e1e1e;
+            border-color: #333;
+        }
+        .fi-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 14px 24px;
+            border-bottom: 1px solid #f0f4f4;
+        }
+        .fi-row:last-child { border-bottom: none; }
+        .fi-label {
+            flex: 0 0 260px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--cc-on-surface, #1a1a1a);
+        }
+        body.dark-mode .fi-label { color: #ccc; }
+        .fi-slider-wrap {
+            flex: 1;
+            position: relative;
+        }
+        .fi-slider-wrap input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 999px;
+            background: #e5eaea;
+            outline: none;
+            cursor: pointer;
+        }
+        .fi-slider-wrap input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4caf50;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+            transition: background 0.2s;
+        }
+        .fi-slider-wrap input[type=range]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4caf50;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+            transition: background 0.2s;
+        }
+        .fi-val {
+            flex: 0 0 28px;
+            text-align: right;
+            font-size: 15px;
+            font-weight: 700;
+            color: #4caf50;
+            transition: color 0.2s;
+            min-width: 28px;
+        }
+        .fi-global-row {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 24px 10px;
+            border-top: 1px solid #e8f0f0;
+            margin-top: 4px;
+        }
+        .fi-global-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #888;
+        }
+        .fi-global-score {
+            font-size: 22px;
+            font-weight: 800;
+            color: #4caf50;
+            min-width: 40px;
+            text-align: center;
+            transition: color 0.2s;
+        }
+        .fi-severity-badge {
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 14px;
+            border-radius: 20px;
+            background: #e8f5e9;
+            color: #4caf50;
+            transition: background 0.2s, color 0.2s;
+        }
+
         /* Family history + consanguinity */
         .fh-card {
             background: #ffffff;
@@ -1040,7 +1145,71 @@
 
         /* Taper: inside drug name field on hover; row stays single line */
         .med-entry-block .drug-name-wrap { position: relative; flex: 1 1 auto; width: auto; min-width: 150px; align-self: stretch; box-sizing: border-box; }
-        .drug-name-wrap .drug-name-input { width: 100%; box-sizing: border-box; margin: 0; padding: 8px 96px 8px 8px; }
+        .drug-name-wrap::after {
+            content: "";
+            position: absolute;
+            right: 86px;
+            top: 50%;
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 6px solid #6b7280;
+            transform: translateY(-30%);
+            pointer-events: none;
+            z-index: 2;
+        }
+        .drug-name-wrap.has-select2::after { display: none; }
+        .drug-name-wrap .drug-name-input {
+            width: 100%;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 10px 112px 10px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 6px;
+            background: #fff;
+            color: #111827;
+            transition: border-color .18s ease, box-shadow .18s ease;
+        }
+        .drug-name-wrap .select2-container { width: 100% !important; }
+        .drug-name-wrap .select2-container--default .select2-selection--single {
+            height: 40px;
+            border: 1px solid #d9d9d9;
+            border-radius: 6px;
+            padding-right: 112px;
+            background: #fff;
+        }
+        .drug-name-wrap .select2-container .select2-selection__rendered {
+            line-height: 38px;
+            padding-left: 12px;
+            padding-right: 8px;
+            color: #111827;
+        }
+        .drug-name-wrap .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 38px;
+            right: 94px;
+        }
+        .drug-name-wrap .select2-container--default.select2-container--focus .select2-selection--single,
+        .drug-name-wrap .select2-container--default.select2-container--open .select2-selection--single {
+            border-color: #0f6d7a;
+            box-shadow: 0 0 0 2px rgba(15, 109, 122, 0.12);
+        }
+        .drug-name-wrap .drug-name-input:focus {
+            border-color: #0f6d7a;
+            box-shadow: 0 0 0 2px rgba(15, 109, 122, 0.12);
+            outline: none;
+        }
+        body.dark-mode .drug-name-wrap .drug-name-input {
+            background: #1e1e1e;
+            border-color: #3a3a3a;
+            color: #e5e7eb;
+        }
+        body.dark-mode .drug-name-wrap .select2-container--default .select2-selection--single {
+            background: #1e1e1e;
+            border-color: #3a3a3a;
+        }
+        body.dark-mode .drug-name-wrap .select2-container .select2-selection__rendered { color: #e5e7eb; }
+        body.dark-mode .drug-name-wrap::after { border-top-color: #aeb6be; }
         .taper-btn {
             position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
             font-size: 10px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; z-index: 2;
@@ -1272,19 +1441,19 @@
             <span class="cc-tab-name" data-section="2" data-target="section-2">Background Factors</span>
             <span class="cc-tab-name" data-section="3" data-target="section-3">Chief Complaints</span>
             <span class="cc-tab-name" data-section="4" data-target="section-4">Negative History</span>
-            <span class="cc-tab-name" data-section="5" data-target="section-3">Functional Impairment</span>
-            <span class="cc-tab-name" data-section="6" data-target="section-4">Substance Use History</span>
-            <span class="cc-tab-name" data-section="7" data-target="section-4">Family History</span>
-            <span class="cc-tab-name" data-section="8" data-target="section-4">Developmental Milestone History</span>
-            <span class="cc-tab-name" data-section="9" data-target="section-5">MSE</span>
-            <span class="cc-tab-name" data-section="10" data-target="section-6">Scales</span>
-            <span class="cc-tab-name" data-section="11" data-target="section-6">Safety and Medical Profile</span>
-            <span class="cc-tab-name" data-section="12" data-target="section-6">Side Effects</span>
-            <span class="cc-tab-name" data-section="13" data-target="section-7">Diagnosis</span>
-            <span class="cc-tab-name" data-section="14" data-target="section-7">Clinical States</span>
-            <span class="cc-tab-name" data-section="15" data-target="section-8">Medication Adherence</span>
-            <span class="cc-tab-name" data-section="16" data-target="section-8">Medications</span>
-            <span class="cc-tab-name" data-section="17" data-target="section-8">Follow-up</span>
+            <span class="cc-tab-name" data-section="5" data-target="section-5">Functional Impairment</span>
+            <span class="cc-tab-name" data-section="6" data-target="section-6">Substance Use History</span>
+            <span class="cc-tab-name" data-section="7" data-target="section-7">Family History</span>
+            <span class="cc-tab-name" data-section="8" data-target="section-8">Developmental Milestone History</span>
+            <span class="cc-tab-name" data-section="9" data-target="section-9">MSE</span>
+            <span class="cc-tab-name" data-section="10" data-target="section-10">Scales</span>
+            <span class="cc-tab-name" data-section="11" data-target="section-11">Safety and Medical Profile</span>
+            <span class="cc-tab-name" data-section="12" data-target="section-12">Side Effects</span>
+            <span class="cc-tab-name" data-section="13" data-target="section-13">Diagnosis</span>
+            <span class="cc-tab-name" data-section="14" data-target="section-14">Clinical States</span>
+            <span class="cc-tab-name" data-section="15" data-target="section-15">Medication Adherence</span>
+            <span class="cc-tab-name" data-section="16" data-target="section-16">Medications</span>
+            <span class="cc-tab-name" data-section="17" data-target="section-17">Follow-up</span>
         </div>
     </nav>
 
@@ -1340,6 +1509,60 @@
 
                     {% set current_traits = visit.personality_entries | map(attribute='trait') | list %}
                     {% set pers_note = visit.personality_entries[0].note if visit.personality_entries else '' %}
+
+                    <div class="cc-card cc-gap-8" id="psyh-wrap" style="margin-bottom:24px;">
+                        <div class="cc-section-header" style="margin-bottom:14px;">
+                            <div class="cc-accent-bar"></div>
+                            <div>
+                                <h1 class="cc-section-title">Psychiatric History Status</h1>
+                                <p class="cc-section-subtitle">Patient's psychiatric background</p>
+                            </div>
+                        </div>
+
+                        <div id="psyh-prev-card" style="background:#fff; border:1px solid rgba(189,200,203,0.25); border-radius:12px; padding:12px 14px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                                <label style="font-weight:700; margin:0;">Previously Treated</label>
+                                <div class="fh-toggle-group" style="gap:6px;">
+                                    <button type="button" class="fh-toggle-btn" id="psyh-treated-yes" onclick="setPsychHistoryPreviouslyTreated('Yes')" style="padding:4px 10px; font-size:11px; min-width:46px;">Yes</button>
+                                    <button type="button" class="fh-toggle-btn" id="psyh-treated-no" onclick="setPsychHistoryPreviouslyTreated('No')" style="padding:4px 10px; font-size:11px; min-width:46px;">No</button>
+                                </div>
+                            </div>
+                            <input type="hidden" name="psychiatric_history_previously_treated" id="psychiatric_history_previously_treated" value="No">
+                        </div>
+
+                        <div id="psyh-current-card" style="display:none; background:#fff; border:1px solid rgba(189,200,203,0.25); border-radius:12px; padding:12px 14px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                                <label style="font-weight:700; margin:0;">Currently on Treatment</label>
+                                <div class="fh-toggle-group" style="gap:6px;">
+                                    <button type="button" class="fh-toggle-btn" id="psyh-current-yes" onclick="setPsychHistoryCurrentlyOnTreatment('Yes')" style="padding:4px 10px; font-size:11px; min-width:46px;">Yes</button>
+                                    <button type="button" class="fh-toggle-btn" id="psyh-current-no" onclick="setPsychHistoryCurrentlyOnTreatment('No')" style="padding:4px 10px; font-size:11px; min-width:46px;">No</button>
+                                </div>
+                            </div>
+                            <input type="hidden" name="psychiatric_history_currently_on_treatment" id="psychiatric_history_currently_on_treatment" value="No">
+                        </div>
+
+                        <div id="psyh-detail-card" style="display:none; background:#fff; border:1px solid rgba(189,200,203,0.25); border-radius:12px; padding:14px;">
+                            <div class="patient-edit-grid" style="padding:0; background:transparent; box-shadow:none; border:none;">
+                                <div style="grid-column: span 2;">
+                                    <label style="font-weight:700;">Duration of illness</label>
+                                    <input type="text" id="psyh-duration-input" name="psychiatric_history_duration_of_illness" list="psyh-duration-options" placeholder="Type number (e.g. 5)">
+                                    <datalist id="psyh-duration-options"></datalist>
+                                </div>
+
+                                <div style="grid-column: span 2;">
+                                    <label style="font-weight:700;">Previous Diagnosis</label>
+                                    <select id="psyh-previous-diagnosis-select" multiple style="width:100%;"></select>
+                                    <input type="hidden" name="psychiatric_history_previous_diagnosis" id="psyh-previous-diagnosis-hidden" value="[]">
+                                </div>
+
+                                <div style="grid-column: span 2;">
+                                    <label style="font-weight:700;">Medication History</label>
+                                    <select id="psyh-medication-history-select" multiple style="width:100%;"></select>
+                                    <input type="hidden" name="psychiatric_history_medication_history" id="psyh-medication-history-hidden" value="[]">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <div class="section-header cc-section-anchor" id="section-2" data-section="2"><span class="section-title">Background Factors</span></div>
                     <div class="bg-card-grid">
@@ -1429,7 +1652,8 @@
                             </div>
                         </div>
                     </div>
-					
+
+                    <div class="cc-section" id="section-4" data-section="4">
 						<header class="cc-section-header">
                             <div class="cc-accent-bar"></div>
                             <div>
@@ -1448,10 +1672,57 @@
                             </div>
                             <input type="hidden" name="negative_history_data" id="negative_history_data" value="{{ negative_history_data|default('{}')|e }}">
                         </div>
-                        <div class="section-header cc-section-anchor" data-section="3"><span class="section-title">Functional Impairment</span></div>
+                    </div>
+
+                    <div class="cc-section" id="section-5" data-section="5">
+                        <header class="cc-section-header">
+                            <div class="cc-accent-bar"></div>
+                            <div>
+                                <h1 class="cc-section-title">Functional Impairment</h1>
+                                <p class="cc-section-subtitle">Rate domain Impact</p>
+                            </div>
+                        </header>
+                        <div class="cc-card cc-gap-8">
+                            <input type="hidden" name="functional_impairment_data" id="functional_impairment_data" value="{{ (visit.functional_impairment if visit and visit.functional_impairment else '')|e }}">
+                            <p style="font-size:12px; color:#888; margin: 0 0 10px;">Rate domain impact &nbsp;(0 = Not affected &nbsp;·&nbsp; 10 = Severely affected)</p>
+                            <div class="fi-section" id="fi-section">
+                                <div class="fi-row">
+                                    <span class="fi-label">Work or academic functioning</span>
+                                    <div class="fi-slider-wrap"><input type="range" min="0" max="10" value="0" class="fi-slider" data-key="work" oninput="updateFI(this)"></div>
+                                    <span class="fi-val" id="fi-val-work">0</span>
+                                </div>
+                                <div class="fi-row">
+                                    <span class="fi-label">Social interactions &amp; Networking</span>
+                                    <div class="fi-slider-wrap"><input type="range" min="0" max="10" value="0" class="fi-slider" data-key="social" oninput="updateFI(this)"></div>
+                                    <span class="fi-val" id="fi-val-social">0</span>
+                                </div>
+                                <div class="fi-row">
+                                    <span class="fi-label">Relationships and home responsibilities</span>
+                                    <div class="fi-slider-wrap"><input type="range" min="0" max="10" value="0" class="fi-slider" data-key="relationships" oninput="updateFI(this)"></div>
+                                    <span class="fi-val" id="fi-val-relationships">0</span>
+                                </div>
+                                <div class="fi-row">
+                                    <span class="fi-label">Personal care and daily needs</span>
+                                    <div class="fi-slider-wrap"><input type="range" min="0" max="10" value="0" class="fi-slider" data-key="personal_care" oninput="updateFI(this)"></div>
+                                    <span class="fi-val" id="fi-val-personal_care">0</span>
+                                </div>
+                                <div class="fi-row">
+                                    <span class="fi-label">Leisure and enjoyable activities</span>
+                                    <div class="fi-slider-wrap"><input type="range" min="0" max="10" value="0" class="fi-slider" data-key="leisure" oninput="updateFI(this)"></div>
+                                    <span class="fi-val" id="fi-val-leisure">0</span>
+                                </div>
+                                <div class="fi-global-row">
+                                    <span class="fi-global-label">Global Score(AVG)</span>
+                                    <span class="fi-global-score" id="fi-global-score">0.0</span>
+                                    <span class="fi-severity-badge" id="fi-severity-badge">None</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Substance Use History (master-detail) + Family History + Dev Milestones -->
                     <div class="cc-history-block">
+                    <div class="cc-section" id="section-6" data-section="6">
 						<header class="cc-section-header">
                             <div class="cc-accent-bar"></div>
                             <div>
@@ -1485,7 +1756,17 @@
                         </datalist>
 
                         <input type="hidden" id="substances_data" value="{{ substances_data|default('[]')|e }}">
+                    </div>
 
+                    <div class="cc-section" id="section-7" data-section="7">
+                        <header class="cc-section-header">
+                            <div class="cc-accent-bar"></div>
+                            <div>
+                                <h1 class="cc-section-title">Family History</h1>
+                                <p class="cc-section-subtitle">Psychiatric illness in family and consanguinity</p>
+                            </div>
+                        </header>
+                        <div class="cc-card cc-gap-8">
                         <div class="fh-card">
                             <div class="fh-row-spaced">
                                 <label class="fh-field-label">Family History of Psychiatric Illness</label>
@@ -1527,7 +1808,18 @@
                                 </div>
                             </div>
                         </div>
+                        </div>
+                    </div>
 
+                    <div class="cc-section" id="section-8" data-section="8">
+                        <header class="cc-section-header">
+                            <div class="cc-accent-bar"></div>
+                            <div>
+                                <h1 class="cc-section-title">Developmental Milestone History</h1>
+                                <p class="cc-section-subtitle">Global developmental delay and related details</p>
+                            </div>
+                        </header>
+                        <div class="cc-card cc-gap-8">
                         <div class="fh-card dm-dev-delay-card">
                             <input type="hidden" name="developmental_milestone_delay" id="developmental_milestone_delay" value="{{ ((visit.developmental_milestone_delay or '') if visit else '') | e }}">
                             <div class="fh-row-spaced">
@@ -1564,13 +1856,15 @@
                                 <div id="dev_delay_tags" class="tag-list"></div>
                             </div>
                         </div>
+                        </div>
+                    </div>
                     </div>
 
-                    <div class="section-header cc-section-anchor" id="section-5" data-section="5"><span class="section-title">MSE</span></div>
+                    <div class="section-header cc-section-anchor" id="section-9" data-section="9"><span class="section-title">MSE</span></div>
 
                     <!-- ===== STRUCTURED MSE (match add_visit UI) ===== -->
                     <div class="mse-outer-wrap">
-                    <div class="mse-section-card">
+                    <div class="mse-section-card" id="mse-consciousness-section">
                         <div class="mse-section-label">Consciousness</div>
                         <div class="mse-badge-group">
                             <label><input type="radio" name="mse_consciousness" value="Clear"><span class="mse-badge">Clear</span></label>
@@ -1581,7 +1875,7 @@
                         </div>
                     </div>
 
-                    <div class="mse-section-card">
+                    <div class="mse-section-card" id="mse-gab-section">
                         <div class="mse-section-label">General Appearance &amp; Behaviour</div>
                         <div class="mse-3col">
                             <div>
@@ -1599,7 +1893,7 @@
                                     <label><input type="radio" name="mse_cooperation" value="Not co-operative" onchange="handleCooperation(this)"><span class="mse-badge">Not co-operative</span></label>
                                 </div>
                             </div>
-                            <div>
+                            <div id="mse-rapport-block">
                                 <span class="mse-field-label">Rapport</span>
                                 <div class="mse-badge-group">
                                     <label><input type="radio" name="mse_rapport" value="Established" onchange="handleRapport(this)"><span class="mse-badge">Established</span></label>
@@ -1837,7 +2131,7 @@
                     </div>
 
                     <!-- Affect (tag input + properties) -->
-                    <div class="mse-section-card">
+                    <div class="mse-section-card" id="mse-affect-section">
                         <div class="mse-section-label">Affect</div>
                         <div style="position:relative;">
                             <div class="mse-affect-search-wrap" id="mse-affect-wrap" onclick="document.getElementById('mse-affect-input').focus()">
@@ -1891,7 +2185,7 @@
                     {% set insight_grade = ns_mse.insight_grade %}
                     {% set addl_mse_f_note = ns_mse.addl_mse_f_note %}
 
-                    <div class="mse-section-card">
+                    <div class="mse-section-card" id="mse-insight-section">
                         <div class="mse-section-label">Insight</div>
                         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
                             <div class="mse-badge-group">
@@ -1905,26 +2199,22 @@
                         </div>
                     </div>
 
-                    <div class="mse-section-card">
+                    <div class="mse-section-card" id="mse-additional-section">
                         <div class="mse-section-label">Additional MSE Findings</div>
                         <textarea name="addl_mse_f_note" rows="3" style="width:100%;resize:vertical;border-radius:8px;border:1px solid rgba(0,102,114,.15);padding:10px;font-size:13px;background:#fff;color:inherit;" placeholder="Enter clinical notes, specific observations, or cognitive testing results...">{{ addl_mse_f_note or '' }}</textarea>
                     </div>
                     </div>
 
-                    <div class="cc-section" id="section-6" data-section="6">
-                        <header class="cc-section-header cc-section-anchor" data-section="6">
+                    <div class="cc-section" id="section-10" data-section="10">
+                        <header class="cc-section-header">
                             <div class="cc-accent-bar"></div>
                             <div>
-                                <h1 class="cc-section-title">Safety &amp; Scales</h1>
-                                <p class="cc-section-subtitle">Psychiatric scales, safety profile and side effects</p>
+                                <h1 class="cc-section-title">Psychiatric Scales</h1>
+                                <p class="cc-section-subtitle">Standardized assessment history</p>
                             </div>
                         </header>
                         <div class="cc-card cc-gap-8">
                             <div class="section-container" id="scales-section">
-                                <header class="cc-section-header">
-                                    <div class="cc-accent-bar"></div>
-                                    <div><h1 class="cc-section-title">Psychiatric Scales</h1><p class="cc-section-subtitle">Standardized assessment history</p></div>
-                                </header>
                                 <input type="hidden" name="scales_data" id="scales_data" value="{{ scales_data|default('[]')|e }}">
                                 <div class="scales-list" id="completed-scales-list"></div>
                                 <div style="margin-top: 16px; text-align: left;">
@@ -1933,11 +2223,15 @@
                                     </button>
                                 </div>
                             </div>
+                        </div>
+                    </div>
 
-                            <header class="cc-section-header">
-                                <div class="cc-accent-bar"></div>
-                                <div><h1 class="cc-section-title">Safety and Medical Profile</h1><p class="cc-section-subtitle">Health background</p></div>
-                            </header>
+                    <div class="cc-section" id="section-11" data-section="11">
+                        <header class="cc-section-header">
+                            <div class="cc-accent-bar"></div>
+                            <div><h1 class="cc-section-title">Safety and Medical Profile</h1><p class="cc-section-subtitle">Health background</p></div>
+                        </header>
+                        <div class="cc-card cc-gap-8">
                             <div class="section-container" id="medical-profile" style="margin-bottom: 20px;">
                                 <div class="medical-profile-grid">
                                     <div class="medical-profile-card">
@@ -1967,11 +2261,15 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
 
-                            <header class="cc-section-header">
-                                <div class="cc-accent-bar"></div>
-                                <div><h1 class="cc-section-title">Side Effects</h1><p class="cc-section-subtitle">Medication-related adverse effects with severity</p></div>
-                            </header>
+                    <div class="cc-section" id="section-12" data-section="12">
+                        <header class="cc-section-header">
+                            <div class="cc-accent-bar"></div>
+                            <div><h1 class="cc-section-title">Side Effects</h1><p class="cc-section-subtitle">Medication-related adverse effects with severity</p></div>
+                        </header>
+                        <div class="cc-card cc-gap-8">
                             <div id="side-effects-master" style="display: block; padding: 24px; background: transparent; border: none; box-shadow: none;">
                                 <div id="side-effects-container" style="display: flex; flex-direction: column; gap: 16px;"></div>
                                 <div id="se-empty-state" style="text-align: center; padding: 40px 20px; background: #ffffff; border-radius: 12px; border: 1.5px dashed rgba(189,200,203,0.5); margin-bottom: 16px; display: none;">
@@ -2006,12 +2304,12 @@
                         </div>
                     </div>
 
-                    <div class="cc-section" id="section-7" data-section="7">
+                    <div class="cc-section" id="section-13" data-section="13">
                         <header class="cc-section-header">
                             <div class="cc-accent-bar"></div>
                             <div>
                                 <h1 class="cc-section-title">Diagnosis</h1>
-                                <p class="cc-section-subtitle">Provisional and differential diagnosis with clinical state</p>
+                                <p class="cc-section-subtitle">Provisional and differential diagnosis</p>
                             </div>
                         </header>
                         <div class="cc-card cc-gap-8">
@@ -2059,7 +2357,18 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
 
+                    <div class="cc-section" id="section-14" data-section="14">
+                        <header class="cc-section-header">
+                            <div class="cc-accent-bar"></div>
+                            <div>
+                                <h1 class="cc-section-title">Clinical States</h1>
+                                <p class="cc-section-subtitle">Current clinical state snapshot</p>
+                            </div>
+                        </header>
+                        <div class="cc-card cc-gap-8">
             <div class="clinical-state-section" style="margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
                 <h4 style="margin:0 0 10px 0; color:#555;">Current Clinical State</h4>
                 <p style="margin:0 0 6px 0; font-size:13px; color:#666;">Snapshot for previous visit</p>
@@ -2070,22 +2379,16 @@
             </div>
                         </div>
                     </div>
-					
-					<div class="cc-section" id="section-8" data-section="8">
+
+					<div class="cc-section" id="section-15" data-section="15">
                         <header class="cc-section-header">
                             <div class="cc-accent-bar"></div>
                             <div>
-                                <h1 class="cc-section-title">Medications & Follow-up</h1>
-                                <p class="cc-section-subtitle">Prescriptions, dosing, frequency and taper plans</p>
+                                <h1 class="cc-section-title">Medication Adherence</h1>
+                                <p class="cc-section-subtitle">Overall adherence status for this visit</p>
                             </div>
                         </header>
                         <div class="cc-card cc-gap-8">
-                            <div class="section-header" style="flex-wrap: wrap; margin-top:0;">
-                                <span class="section-title">Medications</span>
-                                <button type="button" class="add-btn" onclick="addMedication()">+</button>
-                                <button type="button" class="btn" onclick="document.getElementById('modalEqDose').style.display='block'" style="padding: 5px 15px; font-size: 12px; margin-left: 10px; background: #666; color: #fff; width: auto; line-height: 1; flex-shrink: 0; white-space: nowrap;">⚖️ Equivalent Dose</button>
-                            </div>
-
                             <div class="adherence-section-block">
                                 <div class="cc-accent-bar-row">
                                     <div class="cc-accent-bar"></div>
@@ -2102,6 +2405,23 @@
                                 <div class="cc-adherence-dates-link">
                                     <button type="button" onclick="openAdherenceRangesModal()">Manage adherence ranges (dates)</button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cc-section" id="section-16" data-section="16">
+                        <header class="cc-section-header">
+                            <div class="cc-accent-bar"></div>
+                            <div>
+                                <h1 class="cc-section-title">Medications</h1>
+                                <p class="cc-section-subtitle">Current medications / active medication list</p>
+                            </div>
+                        </header>
+                        <div class="cc-card cc-gap-8">
+                            <div class="section-header" style="flex-wrap: wrap; margin-top:0;">
+                                <span class="section-title">Medications</span>
+                                <button type="button" class="add-btn" onclick="addMedication()">+</button>
+                                <button type="button" class="btn" onclick="document.getElementById('modalEqDose').style.display='block'" style="padding: 5px 15px; font-size: 12px; margin-left: 10px; background: #666; color: #fff; width: auto; line-height: 1; flex-shrink: 0; white-space: nowrap;">⚖️ Equivalent Dose</button>
                             </div>
 
                             <div id="meds-container">
@@ -2235,8 +2555,19 @@
                             {% endif %}
                         {% endfor %}
                             </div>
+                        </div>
+                    </div>
 
-                            <div style="margin-top: 20px; background:var(--form-soft-bg); padding:15px; border-radius:8px; display:flex; gap:20px; align-items:center; flex-wrap: wrap;">
+                    <div class="cc-section" id="section-17" data-section="17">
+                        <header class="cc-section-header">
+                            <div class="cc-accent-bar"></div>
+                            <div>
+                                <h1 class="cc-section-title">Follow-up</h1>
+                                <p class="cc-section-subtitle">Next visit and visit note</p>
+                            </div>
+                        </header>
+                        <div class="cc-card cc-gap-8">
+                            <div style="margin-top: 0; background:var(--form-soft-bg); padding:15px; border-radius:8px; display:flex; gap:20px; align-items:center; flex-wrap: wrap;">
                                 <div>
                                     <label>Next Follow-up Date</label>
                                     <input type="date" name="next_visit_date" value="{{ visit.next_visit_date.strftime('%Y-%m-%d') if visit.next_visit_date else '' }}">
@@ -2575,7 +2906,127 @@
             var btn = document.querySelector(sel);
             if (btn) selectAdherence(btn, value || 'Fully Adherent');
         }
-        
+
+        function repositionFunctionalImpairmentBlock() {
+            var fiSection = document.getElementById('fi-section');
+            if (!fiSection) return;
+            if (fiSection.closest('#section-5')) return;
+            var target = document.getElementById('section-6');
+            if (!target) return;
+
+            var fiHidden = document.getElementById('functional_impairment_data');
+            var heading = null;
+            var prev = fiHidden ? fiHidden.previousElementSibling : fiSection.previousElementSibling;
+            while (prev) {
+                var txt = (prev.textContent || '').toLowerCase();
+                if (txt.indexOf('functional impairment') !== -1) { heading = prev; break; }
+                if (prev.id === 'section-5' || prev.id === 'section-6' || prev.id === 'section-7') break;
+                prev = prev.previousElementSibling;
+            }
+
+            var alreadyBefore = !!(fiSection.compareDocumentPosition(target) & Node.DOCUMENT_POSITION_FOLLOWING);
+            if (alreadyBefore) return;
+            var parent = target.parentNode;
+            if (!parent) return;
+            if (heading) parent.insertBefore(heading, target);
+            if (fiHidden) parent.insertBefore(fiHidden, target);
+            parent.insertBefore(fiSection, target);
+        }
+
+        var FI_KEYS = ['work','social','relationships','personal_care','leisure'];
+
+        function fiColor(val) {
+            if (val <= 3) return '#4caf50';
+            if (val <= 6) return '#ff9800';
+            return '#e53935';
+        }
+
+        function fiSeverity(avg) {
+            if (avg === 0)  return { label: 'None',     bg: '#f0f0f0', color: '#888' };
+            if (avg <= 3)   return { label: 'Mild',     bg: '#e8f5e9', color: '#4caf50' };
+            if (avg <= 6)   return { label: 'Moderate', bg: '#fff3e0', color: '#ff9800' };
+            return              { label: 'Severe',   bg: '#ffebee', color: '#e53935' };
+        }
+
+        function applyFIThumbColor(slider, color) {
+            var id = 'fi-thumb-style-' + slider.dataset.key;
+            var el = document.getElementById(id);
+            if (!el) {
+                el = document.createElement('style');
+                el.id = id;
+                document.head.appendChild(el);
+            }
+            var sel = '.fi-slider[data-key="' + slider.dataset.key + '"]';
+            el.textContent = sel + '::-webkit-slider-thumb { background: ' + color + ' !important; } ' +
+                sel + '::-moz-range-thumb { background: ' + color + ' !important; }';
+        }
+
+        function serializeFI() {
+            var data = {};
+            FI_KEYS.forEach(function(k) {
+                var s = document.querySelector('.fi-slider[data-key="' + k + '"]');
+                data[k] = s ? parseInt(s.value, 10) : 0;
+            });
+            var hiddenEl = document.getElementById('functional_impairment_data');
+            if (hiddenEl) hiddenEl.value = JSON.stringify(data);
+        }
+
+        function updateFI(slider) {
+            if (!slider || !slider.dataset) return;
+            var key = slider.dataset.key;
+            var val = parseInt(slider.value, 10);
+            if (isNaN(val)) val = 0;
+            var color = fiColor(val);
+
+            var valEl = document.getElementById('fi-val-' + key);
+            if (valEl) { valEl.textContent = String(val); valEl.style.color = color; }
+
+            slider.setAttribute('data-color', color);
+            applyFIThumbColor(slider, color);
+
+            var sum = 0;
+            FI_KEYS.forEach(function(k) {
+                var s = document.querySelector('.fi-slider[data-key="' + k + '"]');
+                if (s) sum += parseInt(s.value, 10);
+            });
+            var avg = (sum / FI_KEYS.length).toFixed(1);
+            var sev = fiSeverity(parseFloat(avg));
+
+            var scoreEl = document.getElementById('fi-global-score');
+            var badgeEl = document.getElementById('fi-severity-badge');
+            if (scoreEl) { scoreEl.textContent = avg; scoreEl.style.color = sev.color; }
+            if (badgeEl) { badgeEl.textContent = sev.label; badgeEl.style.background = sev.bg; badgeEl.style.color = sev.color; }
+
+            serializeFI();
+        }
+
+        function loadFIData(dataJson) {
+            if (!dataJson) return;
+            var data;
+            try { data = typeof dataJson === 'string' ? JSON.parse(dataJson) : dataJson; }
+            catch (e) { return; }
+            FI_KEYS.forEach(function(k) {
+                var s = document.querySelector('.fi-slider[data-key="' + k + '"]');
+                if (s && data[k] !== undefined && data[k] !== null) {
+                    s.value = data[k];
+                    updateFI(s);
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var existing = document.getElementById('functional_impairment_data');
+            if (existing && existing.value && String(existing.value).trim()) {
+                loadFIData(existing.value);
+            } else {
+                serializeFI();
+            }
+        });
+
+        window.addEventListener('load', function() {
+            try { repositionFunctionalImpairmentBlock(); } catch (e) {}
+        });
+
         document.addEventListener('DOMContentLoaded', function() {
             bindAdherenceCheckboxes();
             renderClinicalStates();
@@ -4488,7 +4939,7 @@
             if (!block) return;
             var t = block.querySelector('.med-ident-col select[name="drug_type[]"]');
             var f = block.querySelector('.med-ident-col select[name="med_form[]"]');
-            var n = block.querySelector('.med-ident-col input[name="drug_name[]"]');
+            var n = block.querySelector('.med-ident-col input[name="drug_name[]"], .med-ident-col select[name="drug_name[]"]');
             if (!t || !f || !n) return;
             var tv = t.value, fv = f.value, nv = n.value;
             block.querySelectorAll('.med-schedule-step--follow input[type="hidden"][name="drug_type[]"]').forEach(function(h){ h.value = tv; });
@@ -4523,11 +4974,15 @@
             }
             var remaining = entry.querySelectorAll('.med-schedule-step').length;
             if (remaining === 1) {
-                var masterName = entry.querySelector('.med-ident-col input[name="drug_name[]"]');
-                if (masterName) {
+                var masterName = entry.querySelector('.med-ident-col input[name="drug_name[]"], .med-ident-col select[name="drug_name[]"]');
+                if (masterName && masterName.tagName === 'INPUT') {
                     masterName.readOnly = false;
                     masterName.style.backgroundColor = '';
                     masterName.style.border = '';
+                }
+                if (masterName && masterName.tagName === 'SELECT') {
+                    masterName.disabled = false;
+                    if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) window.jQuery(masterName).trigger('change.select2');
                 }
                 entry.classList.remove('has-taper');
             }
@@ -4542,13 +4997,20 @@
             var inner = block.querySelector('.med-block-inner');
             var masterType = block.querySelector('.med-ident-col select[name="drug_type[]"]');
             var masterForm = block.querySelector('.med-ident-col select[name="med_form[]"]');
-            var masterName = block.querySelector('.med-ident-col input[name="drug_name[]"]');
+            var masterName = block.querySelector('.med-ident-col input[name="drug_name[]"], .med-ident-col select[name="drug_name[]"]');
             if (!scheduleCol || !inner || !masterType || !masterForm || !masterName) return;
-            masterName.readOnly = true;
+            if (masterName.tagName === 'INPUT') {
+                masterName.readOnly = true;
+            } else if (masterName.tagName === 'SELECT') {
+                masterName.disabled = true;
+                if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) window.jQuery(masterName).trigger('change.select2');
+            }
             block.classList.add('has-taper');
             const isDark = document.body.classList.contains('dark-mode');
-            masterName.style.backgroundColor = isDark ? '#333' : '#f0f8ff';
-            masterName.style.border = isDark ? '1px dashed #003366' : '1px dashed #9BD8FB';
+            if (masterName.tagName === 'INPUT') {
+                masterName.style.backgroundColor = isDark ? '#333' : '#f0f8ff';
+                masterName.style.border = isDark ? '1px dashed #003366' : '1px dashed #9BD8FB';
+            }
             var uniqueId = Date.now() + Math.random().toString().slice(2, 8);
             var dt = medEscapeAttr(masterType.value);
             var df = medEscapeAttr(masterForm.value);
@@ -4855,7 +5317,7 @@
                 var mc = document.getElementById('meds-container');
                 if (!mc) return;
                 mc.querySelectorAll('.entry-wrapper').forEach(function(wrap) {
-                    var nameEl = wrap.querySelector('.med-ident-col input[name="drug_name[]"]') || wrap.querySelector('input[name="drug_name[]"]');
+                    var nameEl = wrap.querySelector('.med-ident-col input[name="drug_name[]"], .med-ident-col select[name="drug_name[]"]') || wrap.querySelector('input[name="drug_name[]"], select[name="drug_name[]"]');
                     var shouldRequire = !!(nameEl && (nameEl.value || '').trim());
                     wrap.querySelectorAll('input[name="med_duration[]"]').forEach(function(durInp) {
                         if (durInp.type === 'text') durInp.required = shouldRequire;
@@ -5000,28 +5462,81 @@
             }
         }
 
-        // ── MSE: Cooperation → hide rest of MSE if non-cooperative ──────────
-        function handleCooperation(radio) {
-            const notCoop = radio && radio.value === 'Not co-operative';
-            const cooperativeFields = document.getElementById('mse-cooperative-fields');
-            const speechSection = document.getElementById('mse-speech-section');
-            const tpmSection = document.getElementById('mse-tpm-section');
-            if (cooperativeFields) cooperativeFields.style.display = notCoop ? 'none' : '';
-            if (speechSection) speechSection.style.display = notCoop ? 'none' : '';
-            if (tpmSection) tpmSection.style.display = notCoop ? 'none' : '';
-            if (notCoop) {
-                document.querySelectorAll('input[name="mse_rapport"]').forEach(function(r) { r.checked = false; });
-                handleRapport({ value: '' });
+        function _normMSEValue(v) {
+            return String(v || '').trim().toLowerCase();
+        }
+
+        function _setMSEVisible(id, show) {
+            const el = document.getElementById(id);
+            if (el) el.style.display = show ? '' : 'none';
+        }
+
+        function _hasExistingTPMData() {
+            const ids = ['mse-thought-container', 'mse-perception-container', 'mse-mood-container'];
+            for (let i = 0; i < ids.length; i++) {
+                const c = document.getElementById(ids[i]);
+                if (!c) continue;
+                if (c.querySelector('.entry-wrapper')) return true;
+                const findingSelects = c.querySelectorAll('select[name="mse_finding_name[]"]');
+                for (let j = 0; j < findingSelects.length; j++) {
+                    if (String(findingSelects[j].value || '').trim()) return true;
+                }
+                const scoreInputs = c.querySelectorAll('input[name="mse_current[]"]');
+                for (let j = 0; j < scoreInputs.length; j++) {
+                    if (String(scoreInputs[j].value || '').trim() && Number(scoreInputs[j].value) > 0) return true;
+                }
+                const noteInputs = c.querySelectorAll('textarea[name="mse_note[]"]');
+                for (let j = 0; j < noteInputs.length; j++) {
+                    if (String(noteInputs[j].value || '').trim()) return true;
+                }
+            }
+            return false;
+        }
+
+        function applyMSEFlow() {
+            const cooperationEl = document.querySelector('input[name="mse_cooperation"]:checked');
+            const rapportEl = document.querySelector('input[name="mse_rapport"]:checked');
+            const cooperation = _normMSEValue(cooperationEl ? cooperationEl.value : '');
+            const rapport = _normMSEValue(rapportEl ? rapportEl.value : '');
+            const isCooperative = cooperation === 'co-operative' || cooperation === 'cooperative';
+            const isRapportEstablished = (rapport === 'established' || rapport === 'established with difficulty');
+            const hasTPMData = _hasExistingTPMData();
+
+            if (hasTPMData || (isCooperative && isRapportEstablished)) {
+                // Show all
+                _setMSEVisible('mse-rapport-block', true);
+                _setMSEVisible('mse-cooperative-fields', true);
+                _setMSEVisible('mse-speech-section', true);
+                _setMSEVisible('mse-tpm-section', true);
+                _setMSEVisible('mse-insight-section', true);
+                _setMSEVisible('mse-additional-section', true);
+            } else {
+                // Limited mode
+                _setMSEVisible('mse-cooperative-fields', false);
+                _setMSEVisible('mse-speech-section', false);
+                _setMSEVisible('mse-tpm-section', false);
+                _setMSEVisible('mse-insight-section', false);
+                _setMSEVisible('mse-additional-section', false);
+                _setMSEVisible('mse-rapport-block', isCooperative);
+                _setMSEVisible('mse-consciousness-section', true);
+                _setMSEVisible('mse-gab-section', true);
+                _setMSEVisible('mse-affect-section', true);
             }
         }
 
-        // ── MSE: Rapport → hide speech/tpm if rapport not established ───────
-        function handleRapport(radio) {
-            const notEstab = radio && radio.value === 'Not established';
-            const speechSection = document.getElementById('mse-speech-section');
-            const tpmSection = document.getElementById('mse-tpm-section');
-            if (speechSection) speechSection.style.display = notEstab ? 'none' : '';
-            if (tpmSection) tpmSection.style.display = notEstab ? 'none' : '';
+        // ── MSE flow handlers ────────────────────────────────────────────────
+        function handleCooperation() {
+            const cooperationEl = document.querySelector('input[name="mse_cooperation"]:checked');
+            const cooperation = _normMSEValue(cooperationEl ? cooperationEl.value : '');
+            const isCooperative = cooperation === 'co-operative' || cooperation === 'cooperative';
+            if (!isCooperative) {
+                document.querySelectorAll('input[name="mse_rapport"]').forEach(function(r) { r.checked = false; });
+            }
+            applyMSEFlow();
+        }
+
+        function handleRapport() {
+            applyMSEFlow();
         }
 
         // ── AFFECT TAG INPUT ──────────────────────────────────────────────────
@@ -5178,11 +5693,11 @@
             }
             if (data.cooperation) {
                 const r = document.querySelector('input[name="mse_cooperation"][value="' + data.cooperation + '"]');
-                if (r) { r.checked = true; handleCooperation(r); }
+                if (r) { r.checked = true; }
             }
             if (data.rapport) {
                 const r = document.querySelector('input[name="mse_rapport"][value="' + data.rapport + '"]');
-                if (r) { r.checked = true; handleRapport(r); }
+                if (r) { r.checked = true; }
             }
             if (data.eye_contact && Array.isArray(data.eye_contact)) {
                 data.eye_contact.forEach(function(v) {
@@ -5731,10 +6246,20 @@ function applyTemplates() {
             const strip = document.getElementById('tab-strip');
             const selector = document.getElementById('tab-selector');
             const tabNames = document.querySelectorAll('.cc-tab-name');
-            const sections = document.querySelectorAll('.cc-section-anchor[data-section]');
+            var sections = [];
+            for (var si = 1; si <= 17; si++) {
+                var el = document.getElementById('section-' + si);
+                if (el) {
+                    el.setAttribute('data-section', String(si));
+                    sections.push(el);
+                }
+            }
             if (!strip || !selector || !tabNames.length || !sections.length) return;
 
+            let currentSection = 1;
+
             function updateStrip(n) {
+                currentSection = n;
                 const activeTab = strip.querySelector('.cc-tab-name[data-section="' + n + '"]');
                 if (!activeTab) return;
                 const nav = document.getElementById('section-tabs');
@@ -5766,17 +6291,48 @@ function applyTemplates() {
                 });
             });
 
-            const observer = new IntersectionObserver(function(entries) {
-                entries.forEach(function(entry) {
-                    if (entry.isIntersecting) {
-                        const n = parseInt(entry.target.dataset.section, 10);
-                        updateStrip(n);
-                    }
-                });
-            }, { root: null, rootMargin: '-40% 0px -55% 0px', threshold: 0 });
+            function getAnchorY() {
+                var nav = document.getElementById('section-tabs');
+                var navBottom = nav ? nav.getBoundingClientRect().bottom : 108;
+                return navBottom + Math.min(120, Math.max(56, window.innerHeight * 0.14));
+            }
 
-            sections.forEach(function(s) { observer.observe(s); });
-            window.addEventListener('load', function() { setTimeout(function() { updateStrip(1); }, 50); });
+            function syncStripFromScroll() {
+                if (!sections.length) return;
+                var anchorY = getAnchorY();
+                var active = null;
+                sections.forEach(function(s) {
+                    var r = s.getBoundingClientRect();
+                    if (r.top <= anchorY && r.bottom > anchorY) active = s;
+                });
+
+                if (!active) {
+                    var lastAbove = null;
+                    sections.forEach(function(s) {
+                        var r = s.getBoundingClientRect();
+                        if (r.top <= anchorY) lastAbove = s;
+                    });
+                    active = lastAbove || sections[0];
+                }
+                var n = parseInt(active.dataset.section, 10);
+                if (!isNaN(n)) updateStrip(n);
+            }
+
+            var stripSyncScheduled = false;
+            function scheduleStripSync() {
+                if (stripSyncScheduled) return;
+                stripSyncScheduled = true;
+                requestAnimationFrame(function() {
+                    stripSyncScheduled = false;
+                    syncStripFromScroll();
+                });
+            }
+
+            window.addEventListener('scroll', scheduleStripSync, { passive: true });
+            window.addEventListener('resize', scheduleStripSync);
+            window.addEventListener('load', function() {
+                setTimeout(syncStripFromScroll, 80);
+            });
         })();
     </script>
     <script>
@@ -5829,10 +6385,157 @@ function applyTemplates() {
             if (typeof restoreMSEStructured === 'function') {
                 restoreMSEStructured({{ mse_structured | tojson }});
             }
+            if (typeof applyMSEFlow === 'function') {
+                applyMSEFlow();
+            }
         });
     </script>
     <script src="{{ url_for('static', filename='js/premorbid-personality-select2.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/psychiatric-medication-list.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/medication-drugname-datalist.js') }}"></script>
     <script src="{{ url_for('static', filename='js/chief-complaints-dropdown.js') }}"></script>
+    <script>
+        (function() {
+            function setToggleButtons(activeId, yesId, noId) {
+                var yesBtn = document.getElementById(yesId);
+                var noBtn = document.getElementById(noId);
+                [yesBtn, noBtn].forEach(function(btn) {
+                    if (!btn) return;
+                    if (btn.id === activeId) btn.classList.add('active');
+                    else btn.classList.remove('active');
+                });
+            }
+            function serializeSelect2Values(selectEl, hiddenEl, isDiagnosis) {
+                if (!selectEl || !hiddenEl || !(window.jQuery && window.jQuery.fn && window.jQuery.fn.select2)) return;
+                var $ = window.jQuery;
+                var data = $(selectEl).select2('data') || [];
+                var arr = data.map(function(x) {
+                    var text = String((x && (x.text || x.id)) || '').trim();
+                    if (!text) return null;
+                    if (!isDiagnosis) return text;
+                    var m = text.match(/^([A-Z0-9]+)\s*-\s*(.+)$/);
+                    if (m) return { code: m[1], label: m[2], system: 'ICD-11' };
+                    return { code: '', label: text, system: 'ICD-11' };
+                }).filter(Boolean);
+                hiddenEl.value = JSON.stringify(arr);
+            }
+            function initPsychHistoryDurationDatalist() {
+                var input = document.getElementById('psyh-duration-input');
+                var list = document.getElementById('psyh-duration-options');
+                if (!input || !list) return;
+                function renderOptions() {
+                    var raw = String(input.value || '').trim();
+                    var m = raw.match(/^(\d+)/);
+                    if (!m) { list.innerHTML = ''; return; }
+                    var n = m[1];
+                    var num = parseInt(n, 10);
+                    var week = (num === 1 ? 'week' : 'weeks');
+                    var month = (num === 1 ? 'month' : 'months');
+                    var year = (num === 1 ? 'year' : 'years');
+                    var options = [n + ' days', n + ' ' + week, n + ' ' + month, n + ' ' + year];
+                    list.innerHTML = options.map(function(o) { return '<option value="' + o + '"></option>'; }).join('');
+                }
+                input.addEventListener('input', renderOptions);
+                input.addEventListener('focus', renderOptions);
+            }
+            function initPsychHistorySelects() {
+                if (!(window.jQuery && window.jQuery.fn && window.jQuery.fn.select2)) return;
+                var $ = window.jQuery;
+                var diagSel = document.getElementById('psyh-previous-diagnosis-select');
+                var diagHidden = document.getElementById('psyh-previous-diagnosis-hidden');
+                var medSel = document.getElementById('psyh-medication-history-select');
+                var medHidden = document.getElementById('psyh-medication-history-hidden');
+                if (!diagSel || !diagHidden || !medSel || !medHidden) return;
+                function clearSelect2Search($el) {
+                    try {
+                        var inst = $el.data('select2');
+                        if (inst && inst.dropdown && inst.dropdown.$search) inst.dropdown.$search.val('');
+                        if (inst && inst.selection && inst.selection.$search) inst.selection.$search.val('');
+                    } catch (e) {}
+                }
+                $(diagSel).select2({
+                    width: '100%', multiple: true, placeholder: 'Search ICD-11 diagnosis...', closeOnSelect: false, minimumInputLength: 2,
+                    ajax: {
+                        url: '/api/search_icd11', dataType: 'json', delay: 220,
+                        data: function(params) { return { q: params.term || '' }; },
+                        processResults: function(rows) {
+                            rows = Array.isArray(rows) ? rows : [];
+                            return { results: rows.map(function(r) { var label = ((r.code ? (r.code + ' - ') : '') + (r.name || '')).trim(); return { id: label, text: label }; }) };
+                        }
+                    }
+                }).on('change', function() {
+                    serializeSelect2Values(diagSel, diagHidden, true);
+                }).on('select2:select', function() {
+                    var $el = $(diagSel); setTimeout(function() { clearSelect2Search($el); }, 0);
+                });
+                var meds = Array.isArray(window.PSYCHIATRIC_MEDICATIONS) ? window.PSYCHIATRIC_MEDICATIONS : [];
+                $(medSel).select2({
+                    width: '100%', multiple: true, closeOnSelect: false, tags: true, placeholder: 'Select or type medications...',
+                    data: meds.map(function(m) { return { id: m, text: m }; })
+                }).on('change', function() {
+                    serializeSelect2Values(medSel, medHidden, false);
+                }).on('select2:select', function() {
+                    var $el = $(medSel); setTimeout(function() { clearSelect2Search($el); }, 0);
+                });
+            }
+            function applyPsychHistoryInitialData(source) {
+                var data = source || {};
+                window.setPsychHistoryPreviouslyTreated((data.previously_treated === 'Yes') ? 'Yes' : 'No');
+                window.setPsychHistoryCurrentlyOnTreatment((data.currently_on_treatment === 'Yes') ? 'Yes' : 'No');
+                var durInput = document.getElementById('psyh-duration-input');
+                if (durInput && data.duration_of_illness) durInput.value = String(data.duration_of_illness);
+                var diagSel = document.getElementById('psyh-previous-diagnosis-select');
+                var diagHidden = document.getElementById('psyh-previous-diagnosis-hidden');
+                var medSel = document.getElementById('psyh-medication-history-select');
+                var medHidden = document.getElementById('psyh-medication-history-hidden');
+                var $ = window.jQuery;
+                if ($ && $.fn && $.fn.select2 && diagSel && diagHidden) {
+                    var diagVals = Array.isArray(data.previous_diagnosis) ? data.previous_diagnosis.map(function(x) {
+                        if (typeof x === 'string') return x;
+                        var code = x && x.code ? String(x.code).trim() : '';
+                        var label = x && x.label ? String(x.label).trim() : '';
+                        return (code && label) ? (code + ' - ' + label) : (label || code);
+                    }).filter(Boolean) : [];
+                    diagVals.forEach(function(v) { if (!Array.from(diagSel.options).some(function(o) { return o.value === v; })) diagSel.add(new Option(v, v, true, true)); });
+                    $(diagSel).val(diagVals).trigger('change');
+                    diagHidden.value = JSON.stringify((Array.isArray(data.previous_diagnosis) ? data.previous_diagnosis : []));
+                }
+                if ($ && $.fn && $.fn.select2 && medSel && medHidden) {
+                    var medVals = Array.isArray(data.medication_history) ? data.medication_history.map(function(x){ return String(x || '').trim(); }).filter(Boolean) : [];
+                    medVals.forEach(function(v) { if (!Array.from(medSel.options).some(function(o) { return o.value === v; })) medSel.add(new Option(v, v, true, true)); });
+                    $(medSel).val(medVals).trigger('change');
+                    medHidden.value = JSON.stringify(medVals);
+                }
+            }
+            window.setPsychHistoryPreviouslyTreated = function(v) {
+                var hidden = document.getElementById('psychiatric_history_previously_treated');
+                var currentCard = document.getElementById('psyh-current-card');
+                var detailCard = document.getElementById('psyh-detail-card');
+                var val = (v === 'Yes') ? 'Yes' : 'No';
+                if (hidden) hidden.value = val;
+                if (currentCard) currentCard.style.display = val === 'Yes' ? 'block' : 'none';
+                if (detailCard) detailCard.style.display = val === 'Yes' ? 'block' : 'none';
+                setToggleButtons(val === 'Yes' ? 'psyh-treated-yes' : 'psyh-treated-no', 'psyh-treated-yes', 'psyh-treated-no');
+            };
+            window.setPsychHistoryCurrentlyOnTreatment = function(v) {
+                var hidden = document.getElementById('psychiatric_history_currently_on_treatment');
+                var val = (v === 'Yes') ? 'Yes' : 'No';
+                if (hidden) hidden.value = val;
+                setToggleButtons(val === 'Yes' ? 'psyh-current-yes' : 'psyh-current-no', 'psyh-current-yes', 'psyh-current-no');
+            };
+            window.addEventListener('DOMContentLoaded', function() {
+                initPsychHistoryDurationDatalist();
+                initPsychHistorySelects();
+                applyPsychHistoryInitialData({
+                    previously_treated: {{ (visit.psychiatric_history_previously_treated or '') | tojson }},
+                    currently_on_treatment: {{ (visit.psychiatric_history_currently_on_treatment or '') | tojson }},
+                    duration_of_illness: {{ (visit.psychiatric_history_duration_of_illness or '') | tojson }},
+                    previous_diagnosis: {{ (visit.psychiatric_history_previous_diagnosis or '[]') | diagnosis_json | tojson }},
+                    medication_history: {{ (visit.psychiatric_history_medication_history or '[]') | from_json | default([], true) | tojson }}
+                });
+            });
+        })();
+    </script>
     <script type="module">
         import { initNegativeHistory } from "{{ url_for('static', filename='js/negative-history.js') }}";
         window.addEventListener('DOMContentLoaded', function() {

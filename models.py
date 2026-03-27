@@ -74,6 +74,7 @@ class Visit(db.Model):
     patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False)
     date = db.Column(db.Date, nullable=False)
     visit_type = db.Column(db.String(20), nullable=False)  # 'First' or 'Follow-up'
+    quick_mode = db.Column(db.Boolean, nullable=False, default=False)
     provisional_diagnosis = db.Column(db.Text)
     differential_diagnosis = db.Column(db.Text)
     next_visit_date = db.Column(db.Date)
@@ -86,6 +87,11 @@ class Visit(db.Model):
     family_history_psychiatric = db.Column(db.Text, nullable=True)  # JSON: {"present": bool, "items": ["Depression", "OTHERS: ..."]}
     developmental_milestone_delay = db.Column(db.Text, nullable=True)  # JSON: {"status": "No delay reported"|"Delay reported"|"Unknown", "types": [...], "notes": ""}
     functional_impairment = db.Column(db.Text, nullable=True)  # JSON: {"work": 0, "social": 0, "relationships": 0, "personal_care": 0, "leisure": 0}
+    psychiatric_history_previously_treated = db.Column(db.String(10), nullable=True)  # Yes/No
+    psychiatric_history_currently_on_treatment = db.Column(db.String(10), nullable=True)  # Yes/No
+    psychiatric_history_previous_diagnosis = db.Column(db.Text, nullable=True)  # JSON list
+    psychiatric_history_medication_history = db.Column(db.Text, nullable=True)  # JSON list
+    psychiatric_history_duration_of_illness = db.Column(db.String(100), nullable=True)
 
     symptom_entries = db.relationship('SymptomEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
     medication_entries = db.relationship('MedicationEntry', backref='visit', lazy=True, cascade='all, delete-orphan')
@@ -128,6 +134,25 @@ class SymptomEntry(db.Model):
     score_current = db.Column(db.Float, nullable=False)
     duration_text = db.Column(db.String(100))
     note = db.Column(db.Text)
+
+
+class DoctorSymptomUsage(db.Model):
+    __tablename__ = 'doctor_symptom_usage'
+
+    id = db.Column(db.Integer, primary_key=True)
+    doctor_id = db.Column(db.Integer, db.ForeignKey('doctors.id'), nullable=False, index=True)
+    symptom_name = db.Column(db.String(200), nullable=False)
+    symptom_key = db.Column(db.String(200), nullable=False)
+
+    # JSON array of YYYY-MM-DD strings (one entry per day-of-use event)
+    usage_dates_json = db.Column(db.Text, nullable=False, default='[]')
+    last_used_at = db.Column(db.DateTime, nullable=True)
+
+    # Cached score refreshed once per day
+    score_cached = db.Column(db.Float, nullable=False, default=0.0)
+    score_updated_on = db.Column(db.Date, nullable=True)
+
+    __table_args__ = (db.UniqueConstraint('doctor_id', 'symptom_key', name='_doctor_symptom_key_uc'),)
 
 
 class MedicationEntry(db.Model):

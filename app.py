@@ -66,7 +66,7 @@ def get_clinic_hours(doctor):
     }
 
 
-from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry, ScaleAssessment, Appointment, DashboardNote, Notification, ScheduleTemplate, Feedback, NegativeHistoryEntry
+from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry, ScaleAssessment, Appointment, DashboardNote, Notification, ScheduleTemplate, Feedback, NegativeHistoryEntry, DoctorSymptomUsage
 from medical_utils import get_unified_dose, compute_med_chart_value, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency, process_scale_submission, duration_to_days, format_timedelta_as_duration
 from email_utils import send_dynamic_email, send_system_email
 from encryption_utils import encrypt_smtp_password, decrypt_smtp_password
@@ -103,6 +103,251 @@ def _symptom_name_matches(name1, name2, threshold=0.85):
         return False
     a, b = name1.lower().strip(), name2.lower().strip()
     return SequenceMatcher(None, a, b).ratio() >= threshold
+
+
+_chief_complaints_flat_cache = None
+
+
+def _normalize_symptom_name(name):
+    if not name:
+        return ''
+    return re.sub(r'\s+', ' ', str(name).strip()).lower()
+
+
+def _load_chief_complaints_flat():
+    global _chief_complaints_flat_cache
+    if _chief_complaints_flat_cache is not None:
+        return _chief_complaints_flat_cache
+
+    path = os.path.join(app.root_path, 'static', 'data', 'chief_complaints.json')
+    flat = []
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            raw = json.load(f)
+        if isinstance(raw, list):
+            for group in raw:
+                if isinstance(group, dict) and isinstance(group.get('children'), list):
+                    for child in group['children']:
+                        if isinstance(child, dict):
+                            text_val = str(child.get('text') or child.get('id') or '').strip()
+                            if text_val:
+                                flat.append(text_val)
+                elif isinstance(group, dict):
+                    text_val = str(group.get('text') or group.get('id') or '').strip()
+                    if text_val:
+                        flat.append(text_val)
+                elif isinstance(group, str):
+                    text_val = group.strip()
+                    if text_val:
+                        flat.append(text_val)
+    except Exception:
+        flat = []
+
+    # Preserve first-seen casing but de-duplicate by normalized key.
+    seen = set()
+    deduped = []
+    for item in flat:
+        key = _normalize_symptom_name(item)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+    _chief_complaints_flat_cache = deduped
+    return _chief_complaints_flat_cache
+
+
+def _compute_recent_bonus(min_days):
+    if min_days is None:
+        return 0.0
+    if min_days <= 0:
+        return 1.0
+    if min_days <= 2:
+        return 0.7
+    if min_days <= 5:
+        return 0.4
+    if min_days <= 10:
+        return 0.2
+    return 0.0
+
+
+def _compute_usage_score(date_strings, today_date):
+    valid_days = []
+    for ds in date_strings or []:
+        try:
+            d = datetime.strptime(str(ds), '%Y-%m-%d').date()
+        except (TypeError, ValueError):
+            continue
+        delta = (today_date - d).days
+        if delta < 0:
+            continue
+        valid_days.append(delta)
+
+    if not valid_days:
+        return 0.0
+
+    decayed = sum(1.0 / (1 + d) for d in valid_days)
+    bonus = _compute_recent_bonus(min(valid_days))
+    return float(decayed + bonus)
+
+
+def _refresh_doctor_symptom_scores(doctor_id, today_date=None):
+    if not doctor_id:
+        return
+    today = today_date or get_ist_now().date()
+    rows = DoctorSymptomUsage.query.filter_by(doctor_id=doctor_id).all()
+    changed = False
+    for row in rows:
+        if row.score_updated_on == today:
+            continue
+        try:
+            usage_dates = json.loads(row.usage_dates_json or '[]')
+            if not isinstance(usage_dates, list):
+                usage_dates = []
+        except (TypeError, ValueError):
+            usage_dates = []
+        row.score_cached = _compute_usage_score(usage_dates, today)
+        row.score_updated_on = today
+        changed = True
+    if changed:
+        db.session.flush()
+
+
+def _record_doctor_symptom_usage(doctor_id, symptom_names):
+    if not doctor_id:
+        return
+    today = get_ist_now().date()
+    today_str = today.isoformat()
+    now_dt = get_ist_now()
+
+    # Count each unique symptom once per submission.
+    unique_names = {}
+    for raw in symptom_names or []:
+        pretty = re.sub(r'\s+', ' ', str(raw or '').strip())
+        key = _normalize_symptom_name(pretty)
+        if not key:
+            continue
+        if key not in unique_names:
+            unique_names[key] = pretty
+
+    if not unique_names:
+        return
+
+    rows = DoctorSymptomUsage.query.filter(
+        DoctorSymptomUsage.doctor_id == doctor_id,
+        DoctorSymptomUsage.symptom_key.in_(list(unique_names.keys()))
+    ).all()
+    by_key = {r.symptom_key: r for r in rows}
+
+    for key, pretty in unique_names.items():
+        row = by_key.get(key)
+        if row is None:
+            row = DoctorSymptomUsage(
+                doctor_id=doctor_id,
+                symptom_name=pretty,
+                symptom_key=key,
+                usage_dates_json='[]'
+            )
+            db.session.add(row)
+            by_key[key] = row
+        else:
+            # Preserve latest display casing.
+            row.symptom_name = pretty
+
+        try:
+            usage_dates = json.loads(row.usage_dates_json or '[]')
+            if not isinstance(usage_dates, list):
+                usage_dates = []
+        except (TypeError, ValueError):
+            usage_dates = []
+
+        usage_dates.append(today_str)
+        row.usage_dates_json = json.dumps(usage_dates)
+        row.last_used_at = now_dt
+        row.score_cached = _compute_usage_score(usage_dates, today)
+        row.score_updated_on = today
+
+
+def _symptom_text_match_score(name, query):
+    text = str(name or '').strip()
+    q = str(query or '').strip().lower()
+    if not text:
+        return -1.0
+    if not q:
+        return 0.0
+
+    t = text.lower()
+    if t == q:
+        return 10.0
+    if t.startswith(q):
+        return 8.0
+    if q in t:
+        return 6.0
+
+    ratio = SequenceMatcher(None, q, t).ratio()
+    return ratio if ratio >= 0.35 else -1.0
+
+
+def _build_smart_symptom_results(doctor_id, query, limit=80):
+    today = get_ist_now().date()
+    base_items = _load_chief_complaints_flat()
+
+    score_by_key = {}
+    extra_names_by_key = {}
+    if doctor_id:
+        _refresh_doctor_symptom_scores(doctor_id, today_date=today)
+        usage_rows = DoctorSymptomUsage.query.filter_by(doctor_id=doctor_id).all()
+        for row in usage_rows:
+            key = row.symptom_key or _normalize_symptom_name(row.symptom_name)
+            if not key:
+                continue
+            score_by_key[key] = float(row.score_cached or 0.0)
+            if row.symptom_name:
+                extra_names_by_key[key] = row.symptom_name
+
+    # Candidate pool = base master list + doctor-specific custom terms.
+    display_by_key = {}
+    for item in base_items:
+        key = _normalize_symptom_name(item)
+        if key and key not in display_by_key:
+            display_by_key[key] = item
+    for key, name in extra_names_by_key.items():
+        if key and key not in display_by_key:
+            display_by_key[key] = name
+
+    # Filter to text-related candidates for current query.
+    rows = []
+    for key, name in display_by_key.items():
+        tscore = _symptom_text_match_score(name, query)
+        if tscore < 0:
+            continue
+        rows.append({
+            'key': key,
+            'name': name,
+            'text_score': tscore,
+            'usage_score': float(score_by_key.get(key, 0.0))
+        })
+
+    rows.sort(key=lambda r: (-r['text_score'], -r['usage_score'], r['name'].lower()))
+    if limit and len(rows) > limit:
+        rows = rows[:limit]
+
+    # Top-4 prioritized by personalized score.
+    prioritized_pool = [r for r in rows if r['usage_score'] > 0]
+    prioritized_pool.sort(key=lambda r: (-r['usage_score'], -r['text_score'], r['name'].lower()))
+    top4 = prioritized_pool[:4]
+    used_keys = set(r['key'] for r in top4)
+
+    # Next-2 by text relevance only (excluding already chosen).
+    related_pool = [r for r in rows if r['key'] not in used_keys]
+    related_pool.sort(key=lambda r: (-r['text_score'], r['name'].lower()))
+    next2 = related_pool[:2]
+    used_keys.update(r['key'] for r in next2)
+
+    # Remaining by text order (still deduped).
+    remaining = [r for r in rows if r['key'] not in used_keys]
+    ordered = top4 + next2 + remaining
+
+    return [{'id': r['name'], 'text': r['name']} for r in ordered]
 
 
 def parse_diagnosis_values(value):
@@ -296,6 +541,21 @@ def search_icd11():
         return jsonify([])
 
 
+@app.route('/api/chief_complaints/search')
+def search_chief_complaints():
+    query = (request.args.get('q') or '').strip()
+    # Select2 sends this for pagination-like behavior; keep response small.
+    try:
+        limit = int(request.args.get('limit', 80))
+    except (TypeError, ValueError):
+        limit = 80
+    limit = max(10, min(limit, 200))
+
+    doctor_id = session.get('doctor_id') if session.get('logged_in') else None
+    results = _build_smart_symptom_results(doctor_id=doctor_id, query=query, limit=limit)
+    return jsonify({'results': results})
+
+
 # Ensure tables are created (especially new Phase 2 tables)
 with app.app_context():
     db.create_all()
@@ -307,6 +567,25 @@ with app.app_context():
         db.session.rollback()
     try:
         db.session.execute(text('ALTER TABLE visits ADD COLUMN medication_adherence VARCHAR(50)'))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    # Visits: Psychiatric History Status fields
+    for col, spec in [
+        ('psychiatric_history_previously_treated', 'VARCHAR(10)'),
+        ('psychiatric_history_currently_on_treatment', 'VARCHAR(10)'),
+        ('psychiatric_history_previous_diagnosis', 'TEXT'),
+        ('psychiatric_history_medication_history', 'TEXT'),
+        ('psychiatric_history_duration_of_illness', 'VARCHAR(100)')
+    ]:
+        try:
+            db.session.execute(text(f'ALTER TABLE visits ADD COLUMN {col} {spec}'))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+    # Visits: quick registration marker
+    try:
+        db.session.execute(text('ALTER TABLE visits ADD COLUMN quick_mode BOOLEAN DEFAULT 0'))
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -533,6 +812,24 @@ def doctor_required(f):
             return redirect(url_for('landing'))
         return f(*args, **kwargs)
     return decorated_function
+
+
+@app.route('/api/chief_complaints/track', methods=['POST'])
+@doctor_required
+def track_chief_complaint_usage():
+    symptom = ''
+    if request.is_json:
+        payload = request.get_json(silent=True) or {}
+        symptom = (payload.get('symptom') or '').strip()
+    if not symptom:
+        symptom = (request.form.get('symptom') or '').strip()
+    if not symptom:
+        return jsonify({'ok': False, 'error': 'missing symptom'}), 400
+
+    doctor_id = session.get('doctor_id')
+    _record_doctor_symptom_usage(doctor_id, [symptom])
+    db.session.commit()
+    return jsonify({'ok': True})
 
 
 def init_db():
@@ -1531,6 +1828,7 @@ def first_visit():
             patient_id=patient.id,
             date=visit_date,
             visit_type='First',
+            quick_mode=True,
             provisional_diagnosis=serialize_diagnosis_values(request.form.get('provisional_diagnosis', '')),
             differential_diagnosis=serialize_diagnosis_values(request.form.get('differential_diagnosis', '')),
             next_visit_date=parse_date(request.form.get('next_visit_date'))
@@ -1539,7 +1837,7 @@ def first_visit():
         db.session.flush()
         
         # Process form data
-        process_visit_form_data(visit, request.form)
+        process_visit_form_data(visit, request.form, doctor_id=patient.doctor_id)
         
         db.session.commit()
         
@@ -1570,6 +1868,114 @@ def first_visit():
 
     # --- NEW: Added appt=appt to the render_template ---
     return render_template('first_visit.html',
+                           patients=patients,
+                           today=today,
+                           is_guest=is_guest,
+                           doctor=doctor,
+                           templates=templates,
+                           appt=appt,
+                           negative_history_data='{}',
+                           negative_history_positive_data='{}')
+
+
+@app.route('/quick_registration', methods=['GET', 'POST'])
+@login_required
+def quick_registration():
+    is_guest = session.get('role') == 'guest'
+    doc_id = session.get('doctor_id')
+    doctor = Doctor.query.get(doc_id) if doc_id is not None else None
+
+    if not doctor and not is_guest:
+        session.clear()
+        flash('Session expired. Please log in.', 'error')
+        return redirect(url_for('landing'))
+
+    if request.method == 'POST':
+        # Keep guest behavior aligned with first_visit.
+        if is_guest:
+            submit_action = request.form.get('submit_action')
+            if submit_action == 'prescription':
+                return guest_prescription()
+            elif submit_action == 'both':
+                return guest_both()
+            else:
+                return guest_lifechart()
+
+        patient_name = request.form.get('patient_name')
+        age = request.form.get('age')
+        sex = request.form.get('sex')
+        address = request.form.get('address')
+        visit_date_str = request.form.get('visit_date')
+
+        if not all([patient_name, age, sex, visit_date_str]):
+            flash('Please fill in all required fields.', 'error')
+            return redirect(url_for('quick_registration'))
+
+        visit_date = parse_date(visit_date_str) or date.today()
+
+        if not doctor:
+            flash('Error: No doctor account identified. Please log in.', 'error')
+            return redirect(url_for('logout'))
+
+        relation = request.form.get('attender_relation')
+        if relation == 'Others':
+            other_rel = request.form.get('attender_relation_other')
+            if other_rel and other_rel.strip():
+                relation = other_rel.strip()
+
+        patient = Patient(
+            name=patient_name,
+            age=int(age),
+            sex=sex,
+            address=address,
+            phone=request.form.get('phone'),
+            email=request.form.get('email', '').strip() or None,
+            attender_name=request.form.get('attender_name'),
+            attender_relation=relation,
+            attender_reliability=request.form.get('attender_reliability'),
+            personal_notes=request.form.get('personal_notes'),
+            doctor_id=doctor.id
+        )
+        db.session.add(patient)
+        db.session.flush()
+
+        visit = Visit(
+            patient_id=patient.id,
+            date=visit_date,
+            visit_type='First',
+            provisional_diagnosis=serialize_diagnosis_values(request.form.get('provisional_diagnosis', '')),
+            differential_diagnosis=serialize_diagnosis_values(request.form.get('differential_diagnosis', '')),
+            next_visit_date=parse_date(request.form.get('next_visit_date'))
+        )
+        db.session.add(visit)
+        db.session.flush()
+
+        process_visit_form_data(visit, request.form, doctor_id=patient.doctor_id)
+        db.session.commit()
+
+        submit_action = request.form.get('submit_action')
+        if submit_action == 'prescription':
+            return redirect(url_for('preview_prescription', visit_id=visit.id))
+        elif submit_action == 'lifechart':
+            return redirect(url_for('life_chart', patient_id=patient.id, visit_id=visit.id))
+        elif submit_action == 'both':
+            return redirect(url_for('preview_prescription', visit_id=visit.id, include_qr='true'))
+        else:
+            return redirect(url_for('patient_detail', patient_id=patient.id))
+
+    patients = []
+    if not is_guest and doctor:
+        patients = Patient.query.filter_by(doctor_id=doctor.id).all()
+
+    today = date.today()
+    templates = DefaultTemplate.query.all() if is_guest else []
+
+    appt = None
+    appt_id = request.args.get('appt_id')
+    if appt_id:
+        appt = Appointment.query.get(appt_id)
+
+    return render_template('quick_registration.html',
                            patients=patients,
                            today=today,
                            is_guest=is_guest,
@@ -1975,7 +2381,7 @@ def filter_positive_negative_history(payload):
     return {k: v for k, v in payload.items() if isinstance(v, dict) and (v.get('status') == 'Yes')}
 
 
-def process_visit_form_data(visit, form_data):
+def process_visit_form_data(visit, form_data, doctor_id=None):
     """Helper function to process and save visit form data."""
     # State and Adherence
     visit.clinical_state = form_data.get('clinical_state', '')
@@ -1989,6 +2395,36 @@ def process_visit_form_data(visit, form_data):
     # Type of Next Follow up
     t = (form_data.get('type_of_next_follow_up') or '').strip()
     visit.type_of_next_follow_up = t if t else None
+
+    # Psychiatric History Status
+    prev_treated = (form_data.get('psychiatric_history_previously_treated') or '').strip()
+    visit.psychiatric_history_previously_treated = prev_treated if prev_treated in ('Yes', 'No') else None
+
+    curr_treat = (form_data.get('psychiatric_history_currently_on_treatment') or '').strip()
+    visit.psychiatric_history_currently_on_treatment = curr_treat if curr_treat in ('Yes', 'No') else None
+
+    duration_ill = (form_data.get('psychiatric_history_duration_of_illness') or '').strip()
+    visit.psychiatric_history_duration_of_illness = duration_ill if duration_ill else None
+
+    prev_diag = (form_data.get('psychiatric_history_previous_diagnosis') or '').strip()
+    if prev_diag:
+        try:
+            parsed_prev_diag = json.loads(prev_diag)
+            visit.psychiatric_history_previous_diagnosis = json.dumps(parsed_prev_diag, ensure_ascii=True)
+        except (TypeError, ValueError):
+            visit.psychiatric_history_previous_diagnosis = json.dumps([], ensure_ascii=True)
+    else:
+        visit.psychiatric_history_previous_diagnosis = None
+
+    med_hist = (form_data.get('psychiatric_history_medication_history') or '').strip()
+    if med_hist:
+        try:
+            parsed_med_hist = json.loads(med_hist)
+            visit.psychiatric_history_medication_history = json.dumps(parsed_med_hist, ensure_ascii=True)
+        except (TypeError, ValueError):
+            visit.psychiatric_history_medication_history = json.dumps([], ensure_ascii=True)
+    else:
+        visit.psychiatric_history_medication_history = None
 
     # Functional Impairment (5 domains, scores 0–10)
     fi_raw = form_data.get('functional_impairment_data', '').strip()
@@ -2220,11 +2656,13 @@ def process_visit_form_data(visit, form_data):
     s_currs = form_data.getlist('symptom_current[]')
     s_notes = form_data.getlist('symptom_note[]')
     
+    used_symptom_names = []
     for i, name in enumerate(s_names):
         s_dur = get_duration(i, 'symptom')
         if not (name or '').strip() and not (s_dur or '').strip():
             continue
         if name.strip():
+            used_symptom_names.append(name)
             entry = SymptomEntry(
                 visit_id=visit.id,
                 symptom_name=name,
@@ -2235,6 +2673,11 @@ def process_visit_form_data(visit, form_data):
                 note=s_notes[i] if i < len(s_notes) else ''
             )
             db.session.add(entry)
+
+    if doctor_id is None:
+        patient = visit.patient if getattr(visit, 'patient', None) else Patient.query.get(visit.patient_id)
+        doctor_id = patient.doctor_id if patient else None
+    _record_doctor_symptom_usage(doctor_id, used_symptom_names)
     
     # 4. Medications (backed groups consecutive same-name rows into taper_plan)
     d_names = form_data.getlist('drug_name[]')
@@ -2890,7 +3333,7 @@ def add_visit(patient_id):
         db.session.flush()
         
         # Process form data
-        process_visit_form_data(visit, request.form)
+        process_visit_form_data(visit, request.form, doctor_id=patient.doctor_id)
         
         db.session.commit()
         
@@ -3024,7 +3467,7 @@ def edit_visit(visit_id):
         SafetyMedicalProfile.query.filter_by(visit_id=visit.id).delete()
         
         # Use the updated helper from Phase 1
-        process_visit_form_data(visit, request.form)
+        process_visit_form_data(visit, request.form, doctor_id=patient.doctor_id)
         
         db.session.commit()
         

@@ -2762,7 +2762,7 @@
     <div class="app-container">
         <main class="main-content">
             <div class="visit-card">
-                <form method="POST" id="visitForm" enctype="multipart/form-data" action="{{ url_for('first_visit') }}" onsubmit="return validateDurationRequired(this);">
+                <form method="POST" id="visitForm" enctype="multipart/form-data" action="{{ url_for('quick_registration') }}" onsubmit="return validateDurationRequired(this);">
                     
                     <!-- SECTION 1: DEMOGRAPHICS -->
                     <div class="cc-section" id="section-1" data-section="1">
@@ -2878,7 +2878,7 @@
                         </div>
 
                         <!-- GROUP 6: Psychiatric History Status -->
-                        <div style="background:#ffffff; padding:18px 20px; border-radius:10px; border:1.5px solid rgba(189,200,203,0.25); margin-bottom:12px;">
+                        <div id="psyh-status-legacy-group" style="background:#ffffff; padding:18px 20px; border-radius:10px; border:1.5px solid rgba(189,200,203,0.25); margin-bottom:12px; display:none;">
                             <label style="font-family:'Inter',sans-serif; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#3f484a; margin:0 0 12px 0; display:block;">Psychiatric History Status</label>
                             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
                                 <div class="cc-radio-card selected" onclick="selectHistoryStatus(this, 'No previous treatment')" style="padding:14px; border-radius:10px; cursor:pointer; border:2px solid #006672; background:#fff; display:flex; align-items:flex-start; gap:10px;">
@@ -6363,6 +6363,11 @@
             // Side effects: duration is no longer captured (life chart uses dates)
         };
         function validateDurationRequired(form) {
+            // Hidden blocks in quick mode should not block submission.
+            form.querySelectorAll('input[required], select[required], textarea[required]').forEach(function(el) {
+                if (el.type === 'hidden') return;
+                if (el.offsetParent === null) el.required = false;
+            });
             // Keep browser validation aligned with our UX rules
             syncDurationRequired();
             var missing = [];
@@ -8570,6 +8575,229 @@ function renderCompletedScalesCards() {
                 readonlyPositive: false
             });
         });
+    </script>
+    <script>
+        (function () {
+            function getSelectedQuickKeys() {
+                try {
+                    var raw = sessionStorage.getItem('quick_registration_selected_keys');
+                    if (!raw) return [];
+                    var arr = JSON.parse(raw);
+                    return Array.isArray(arr) ? arr : [];
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            function has(keys, key) {
+                return keys.indexOf(key) !== -1;
+            }
+
+            function hideEl(el) {
+                if (!el) return;
+                el.style.display = 'none';
+            }
+
+            function hideSection(sectionId) {
+                hideEl(document.getElementById(sectionId));
+                var tab = document.querySelector('.cc-tab-name[data-target="' + sectionId + '"]');
+                hideEl(tab);
+            }
+            function showEl(el) {
+                if (!el) return;
+                el.style.display = '';
+            }
+            function showSection(sectionId) {
+                showEl(document.getElementById(sectionId));
+                var tab = document.querySelector('.cc-tab-name[data-target="' + sectionId + '"]');
+                showEl(tab);
+            }
+
+            function hideCardByTitle(sectionSelector, titleText) {
+                var cards = document.querySelectorAll(sectionSelector + ' .medical-profile-card');
+                cards.forEach(function (card) {
+                    var title = card.querySelector('.medical-profile-title');
+                    if (!title) return;
+                    var t = (title.textContent || '').toLowerCase();
+                    if (t.indexOf(titleText.toLowerCase()) !== -1) {
+                        hideEl(card);
+                    }
+                });
+            }
+
+            function applyQuickSelectionFilter() {
+                var keys = getSelectedQuickKeys();
+                if (!keys.length) return;
+
+                // Always suppress legacy duplicate psychiatric-history block.
+                hideEl(document.getElementById('psyh-status-legacy-group'));
+
+                // Parent sections
+                var sectionMap = {
+                    section1: 'demographics',
+                    section2: 'backgroundfactors',
+                    section3: 'chiefcomplaints',
+                    section4: 'negativehistory',
+                    section5: 'functionalimpairment',
+                    section6: 'substanceusehistory',
+                    section7: 'familyhistory',
+                    section8: 'developmentalmilestonehistory',
+                    section9: 'mse',
+                    section10: 'scales',
+                    section11: 'safetyandmedicalprofile',
+                    section12: 'sideeffects',
+                    section13: 'diagnosis',
+                    section14: 'clinicalstates',
+                    section15: 'medicationadherence',
+                    section16: 'medications',
+                    section17: 'followup'
+                };
+
+                Object.keys(sectionMap).forEach(function (sidKey) {
+                    var parentKey = sectionMap[sidKey];
+                    if (!has(keys, parentKey)) {
+                        hideSection(sidKey.replace('section', 'section-'));
+                    }
+                });
+
+                // If any Background child is selected, Background parent section should render.
+                var backgroundSelected = has(keys, 'backgroundfactors') ||
+                    has(keys, 'premorbidpersonality') ||
+                    has(keys, 'majorevents') ||
+                    has(keys, 'stressors') ||
+                    has(keys, 'adversechildhoodexperiences');
+                if (backgroundSelected) {
+                    showSection('section-2');
+                }
+
+                // If any MSE child is selected, MSE parent section should still render.
+                var mseSelected = has(keys, 'mse') ||
+                    has(keys, 'consciousness') ||
+                    has(keys, 'generalappearanceandbehaviour') ||
+                    has(keys, 'speech') ||
+                    has(keys, 'thought') ||
+                    has(keys, 'perception') ||
+                    has(keys, 'mood') ||
+                    has(keys, 'affect') ||
+                    has(keys, 'insight');
+                if (mseSelected) {
+                    showSection('section-9');
+                }
+
+                // If any Safety child is selected, Safety parent section should render.
+                var safetySelected = has(keys, 'safetyandmedicalprofile') ||
+                    has(keys, 'drugallergies') ||
+                    has(keys, 'medicalcomorbidities') ||
+                    has(keys, 'currentnonpsychiatricmedications');
+                if (safetySelected) {
+                    showSection('section-11');
+                }
+
+                // If any Diagnosis child is selected, Diagnosis parent section should render.
+                var diagnosisSelected = has(keys, 'diagnosis') ||
+                    has(keys, 'provisionaldiagnosis') ||
+                    has(keys, 'differentialdiagnosis') ||
+                    has(keys, 'classificatorysystemsdisplay');
+                if (diagnosisSelected) {
+                    showSection('section-13');
+                }
+
+                // Psychiatric History Status lives before section-2
+                if (!has(keys, 'psychiatrichistorystatus')) {
+                    hideEl(document.getElementById('psyh-wrap'));
+                }
+
+                // Defensive hides for blocks that visually sit outside strict section wrappers.
+                if (!has(keys, 'functionalimpairment')) {
+                    hideEl(document.getElementById('fi-section'));
+                    var fiHidden = document.getElementById('functional_impairment_data');
+                    if (fiHidden) {
+                        var fiRoot = fiHidden.closest('.cc-section');
+                        if (fiRoot) hideEl(fiRoot);
+                    }
+                }
+                if (!has(keys, 'medicationadherence')) {
+                    document.querySelectorAll('.adherence-section-block').forEach(hideEl);
+                }
+
+                // Background children
+                if (backgroundSelected) {
+                    if (!has(keys, 'premorbidpersonality')) hideEl(document.getElementById('card-personality'));
+                    if (!has(keys, 'majorevents')) hideEl(document.getElementById('card-major-events'));
+                    if (!has(keys, 'stressors')) hideEl(document.getElementById('card-stressors'));
+                    if (!has(keys, 'adversechildhoodexperiences')) hideEl(document.getElementById('card-ace'));
+                }
+
+                // MSE children
+                if (mseSelected) {
+                    if (!has(keys, 'consciousness')) hideEl(document.getElementById('mse-consciousness-section'));
+                    if (!has(keys, 'generalappearanceandbehaviour')) hideEl(document.getElementById('mse-gab-section'));
+                    if (!has(keys, 'speech')) hideEl(document.getElementById('mse-speech-section'));
+                    var showTpm = has(keys, 'thought') || has(keys, 'perception') || has(keys, 'mood');
+                    if (!showTpm) hideEl(document.getElementById('mse-tpm-section'));
+                    if (!has(keys, 'affect')) hideEl(document.getElementById('mse-affect-section'));
+                    if (!has(keys, 'insight')) hideEl(document.getElementById('mse-insight-section'));
+                }
+
+                // Safety & Medical Profile children
+                if (safetySelected) {
+                    if (!has(keys, 'drugallergies')) hideCardByTitle('#section-11', 'Drug Allergies');
+                    if (!has(keys, 'medicalcomorbidities')) hideCardByTitle('#section-11', 'Medical Comorbidities');
+                    if (!has(keys, 'currentnonpsychiatricmedications')) hideCardByTitle('#section-11', 'Current Non-Psychiatric Medication');
+                }
+
+                // Diagnosis children
+                if (diagnosisSelected) {
+                    var sec13 = document.getElementById('section-13');
+                    if (sec13) {
+                        if (!has(keys, 'provisionaldiagnosis')) {
+                            var provisionalCard = sec13.querySelector('#provisional-diagnosis-picker');
+                            if (provisionalCard) hideEl(provisionalCard.closest('.diagnosis-module-card'));
+                        }
+                        if (!has(keys, 'differentialdiagnosis')) {
+                            hideEl(document.getElementById('differentialShell'));
+                        }
+                        if (!has(keys, 'classificatorysystemsdisplay')) {
+                            hideEl(document.getElementById('inlineCriteriaBlock'));
+                        }
+                    }
+                }
+            }
+
+            function enforceQuickMSESelection() {
+                var keys = getSelectedQuickKeys();
+                if (!keys.length) return;
+
+                var mseSelected = has(keys, 'mse') ||
+                    has(keys, 'consciousness') ||
+                    has(keys, 'generalappearanceandbehaviour') ||
+                    has(keys, 'speech') ||
+                    has(keys, 'thought') ||
+                    has(keys, 'perception') ||
+                    has(keys, 'mood') ||
+                    has(keys, 'affect') ||
+                    has(keys, 'insight');
+                if (!mseSelected) return;
+
+                // first_visit-style onload MSE flow may hide these after our filter runs.
+                // Re-assert visibility for selected MSE child blocks in quick mode.
+                if (has(keys, 'consciousness')) showEl(document.getElementById('mse-consciousness-section'));
+                if (has(keys, 'generalappearanceandbehaviour')) showEl(document.getElementById('mse-gab-section'));
+                if (has(keys, 'speech')) showEl(document.getElementById('mse-speech-section'));
+                if (has(keys, 'thought') || has(keys, 'perception') || has(keys, 'mood')) {
+                    showEl(document.getElementById('mse-tpm-section'));
+                }
+                if (has(keys, 'affect')) showEl(document.getElementById('mse-affect-section'));
+                if (has(keys, 'insight')) showEl(document.getElementById('mse-insight-section'));
+            }
+
+            window.addEventListener('DOMContentLoaded', function () {
+                applyQuickSelectionFilter();
+                // Run twice to beat later MSE init hooks.
+                setTimeout(enforceQuickMSESelection, 0);
+                setTimeout(enforceQuickMSESelection, 250);
+            });
+        })();
     </script>
 </body>
 </html>
