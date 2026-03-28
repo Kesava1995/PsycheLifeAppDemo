@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>External profile - Continuum Psychiatry</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    {% include 'partials/profile_ext_public_styles.html' %}
+</head>
+<body class="profile-ext-page">
+<script>
+(function () {
+    if (localStorage.getItem('theme') === 'dark') {
+        document.documentElement.classList.add('pe-dark');
+        document.body.classList.add('dark-mode');
+    }
+})();
+</script>
+{% include 'partials/app_chrome.html' %}
+
+<header class="pe-topbar" role="banner">
+    <div class="inner">
+        <div style="display:flex;align-items:center;min-width:0;">
+            <button type="button" class="pe-mock-hamburger" onclick="appChromeToggleSidebar()" aria-label="Open menu">☰</button>
+            <div class="pe-brand">
+                <span class="pe-brand-name">Continuum</span>
+            </div>
+        </div>
+        <div class="pe-clinic-center" title="{{ (doctor.clinic_name or '')|e }}">{{ doctor.clinic_name or 'Your clinic' }}</div>
+        <button type="button" class="pe-dark-toggle" id="peExtDarkToggle" aria-label="Toggle dark mode">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+        </button>
+    </div>
+</header>
+
+{% if doctor.public_profile_slug %}
+<div class="pe-public-url-banner" style="max-width:1100px;margin:0 auto;padding:10px 20px 12px;font-size:13px;line-height:1.45;background:var(--pe-chip-bg, #eef2f7);border-bottom:1px solid var(--pe-border-soft, #e2e8f0);color:var(--pe-text-secondary, #475569);">
+  <strong style="color:var(--pe-text-primary, #0f172a);margin-right:8px;">Public link</strong>
+  <a href="{{ request.url_root.rstrip('/') }}{{ url_for('profile_ext_public', slug=doctor.public_profile_slug) }}" target="_blank" rel="noopener noreferrer" style="word-break:break-all;color:var(--primary-dark, #1e40af);">{{ request.url_root.rstrip('/') }}{{ url_for('profile_ext_public', slug=doctor.public_profile_slug) }}</a>
+</div>
+{% else %}
+<div class="pe-public-url-banner" style="max-width:1100px;margin:0 auto;padding:10px 20px 12px;font-size:13px;line-height:1.45;background:var(--pe-chip-bg, #eef2f7);border-bottom:1px solid var(--pe-border-soft, #e2e8f0);color:var(--pe-text-secondary, #475569);">
+  <span>Set <strong>Public profile link</strong> under <a href="{{ url_for('profile') }}" class="pe-link-standard" style="font-weight:600;">Standard profile</a> to get a shareable URL for this page.</span>
+</div>
+{% endif %}
+
+<div class="pe-page-wrap">
+    <div class="pe-two-col">
+        {% include 'partials/profile_ext_public_left.html' %}
+        <div class="pe-col-right">
+            {% include 'partials/profile_ext_schedule_panel.html' %}
+        </div>
+    </div>
+</div>
+
+<script>
+window.__peExtApi = {{ url_for('api_profile_external')|tojson }};
+window.__peExtConditions = {{ external_conditions|tojson }};
+window.__peExtAccolades = {{ external_accolades|tojson }};
+window.__peExtHeroPills = {{ external_hero_pills|tojson }};
+window.__peExtKmcCode = {{ (doctor.kmc_code or '')|tojson }};
+window.__peExtCareModalInitial = {{ external_care_modal_initial|tojson }};
+window.__peExtDefaultCare = {{ default_external_care_steps|tojson }};
+window.__peExtClinicMapLinks = {{ external_clinic_map_links|tojson }};
+window.__peClinicLabels = {{ external_clinic_labels|tojson }};
+window.__peStandardProfileUrl = {{ url_for('profile')|tojson }};
+</script>
+{% include 'partials/profile_ext_left_modals.html' %}
+
+<script>
+(function () {
+    var t = document.getElementById('peExtDarkToggle');
+    if (t) {
+        t.addEventListener('click', function () {
+            var next = !document.body.classList.contains('dark-mode');
+            if (typeof appChromeToggleDarkMode === 'function') {
+                appChromeToggleDarkMode(next);
+            } else {
+                if (next) {
+                    document.body.classList.add('dark-mode');
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    document.body.classList.remove('dark-mode');
+                    localStorage.setItem('theme', 'light');
+                }
+            }
+            document.documentElement.classList.toggle('pe-dark', next);
+        });
+    }
+
+    document.querySelectorAll('.pe-tab-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var id = btn.getAttribute('data-pe-tab');
+            document.querySelectorAll('.pe-tab-btn').forEach(function (b) { b.classList.remove('active'); });
+            document.querySelectorAll('.pe-tab-panel').forEach(function (p) { p.classList.remove('active'); });
+            btn.classList.add('active');
+            var panel = document.getElementById('pe-tab-' + id);
+            if (panel) panel.classList.add('active');
+        });
+    });
+
+    window.peToggleFaq = function (btn) {
+        var item = btn && btn.closest('.pe-faq-item');
+        if (item) item.classList.toggle('open');
+    };
+
+    var bioToggle = document.getElementById('peBioToggle');
+    if (bioToggle) {
+        var expanded = false;
+        bioToggle.addEventListener('click', function () {
+            var bioEl = document.getElementById('extHeroBioInline');
+            var full = bioToggle.getAttribute('data-full') || '';
+            var short = bioToggle.getAttribute('data-short') || '';
+            expanded = !expanded;
+            if (bioEl) bioEl.textContent = expanded ? full : short;
+            bioToggle.textContent = expanded ? 'Read less' : 'Read more';
+        });
+    }
+})();
+
+(function () {
+    var apiUrl = {{ url_for('api_profile_external')|tojson }};
+    var sheet = document.getElementById('extProfileEdit');
+    var inpName = document.getElementById('ext_full_name');
+    var inpHead = document.getElementById('ext_headline');
+    var inpBio = document.getElementById('ext_public_bio');
+    var btnSave = document.getElementById('extProfileSaveBtn');
+    var btnCancel = document.getElementById('extProfileCancelBtn');
+    var snap = {};
+
+    function openSheet() {
+        snap = {
+            full_name: inpName ? inpName.value : '',
+            designation: inpDes ? inpDes.value : '',
+            headline: inpHead ? inpHead.value : '',
+            public_bio: inpBio ? inpBio.value : ''
+        };
+        if (sheet) sheet.classList.add('is-open');
+    }
+    function closeSheet() {
+        if (sheet) sheet.classList.remove('is-open');
+    }
+    function wireOpen(id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('click', openSheet);
+    }
+    ['peEditFromHeroName', 'peEditFromHeroRole', 'peEditFromBio', 'peEditFromBioEmpty'].forEach(wireOpen);
+
+    function truncateBioDisplay(bio) {
+        if (!bio) return { text: '—', showToggle: false, short: '', full: '' };
+        if (bio.length <= 220) return { text: bio, showToggle: false, short: bio, full: bio };
+        return {
+            text: bio.slice(0, 220) + '…',
+            showToggle: true,
+            short: bio.slice(0, 220) + '…',
+            full: bio
+        };
+    }
+
+    function applyPayload(d) {
+        var nameEl = document.getElementById('extHeroName');
+        var headEl = document.getElementById('extHeroHeadline');
+        var bioEl = document.getElementById('extHeroBioInline');
+        if (nameEl) nameEl.textContent = d.full_name || '—';
+        if (headEl) {
+            headEl.textContent = (d.hero_line != null && d.hero_line !== '')
+                ? d.hero_line
+                : (((d.designation || '').trim() || (d.headline || '').trim()) || '—');
+        }
+        if (d.kmc_code !== undefined) {
+            var regEl = document.getElementById('peHeroPillReg');
+            if (regEl) regEl.textContent = 'Reg: ' + (d.kmc_code || '—');
+            window.__peExtKmcCode = d.kmc_code || '';
+        }
+        if (typeof jQuery !== 'undefined') {
+            var $des = jQuery('#designation');
+            if ($des.length && d.designation !== undefined) {
+                var v = (d.designation || '').trim();
+                if (v && !$des.find('option').filter(function () { return this.value === v; }).length) {
+                    $des.append(new Option(v, v, true, true));
+                }
+                $des.val(v || null).trigger('change');
+            }
+        }
+
+        var bio = (d.public_bio != null ? String(d.public_bio) : '');
+        var disp = truncateBioDisplay(bio);
+        if (bioEl) bioEl.textContent = disp.text;
+
+        var bioToggle = document.getElementById('peBioToggle');
+        if (disp.showToggle) {
+            if (!bioToggle) {
+                bioToggle = document.createElement('button');
+                bioToggle.type = 'button';
+                bioToggle.className = 'pe-bio-toggle';
+                bioToggle.id = 'peBioToggle';
+                var bioBlock = document.getElementById('peBioText');
+                if (bioBlock && bioBlock.parentNode) bioBlock.parentNode.appendChild(bioToggle);
+                var expanded = false;
+                bioToggle.addEventListener('click', function () {
+                    expanded = !expanded;
+                    bioEl.textContent = expanded ? bioToggle.getAttribute('data-full') : bioToggle.getAttribute('data-short');
+                    bioToggle.textContent = expanded ? 'Read less' : 'Read more';
+                });
+            }
+            bioToggle.setAttribute('data-short', disp.short);
+            bioToggle.setAttribute('data-full', disp.full);
+            bioToggle.textContent = 'Read more';
+            bioToggle.style.display = '';
+        } else if (bioToggle) {
+            bioToggle.style.display = 'none';
+        }
+    }
+
+    if (btnCancel) btnCancel.addEventListener('click', function () {
+        if (inpName) inpName.value = snap.full_name || '';
+        if (inpDes) inpDes.value = snap.designation || '';
+        if (inpHead) inpHead.value = snap.headline || '';
+        if (inpBio) inpBio.value = snap.public_bio || '';
+        closeSheet();
+    });
+    if (btnSave) btnSave.addEventListener('click', function () {
+        var body = {
+            full_name: inpName ? inpName.value.trim() : '',
+            designation: inpDes ? inpDes.value.trim() : '',
+            headline: inpHead ? inpHead.value.trim() : '',
+            public_bio: inpBio ? inpBio.value.trim() : ''
+        };
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        }).then(function (r) { return r.json(); }).then(function (data) {
+            if (!data.ok) {
+                alert(data.error || 'Could not save.');
+                return;
+            }
+            applyPayload(data);
+            closeSheet();
+        }).catch(function () { alert('Could not save.'); });
+    });
+})();
+
+/** Schedule panel (demo UI — same behaviour as UIChanges/profile_ext.html) */
+(function () {
+    var today = new Date();
+    var viewYear = today.getFullYear();
+    var viewMonth = today.getMonth();
+    var selectedDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    var selectedSlot = null;
+    var unavail = ['9:00 AM', '2:00 PM', '6:00 PM'];
+    var monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+    function todayStart() {
+        return new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    }
+
+    function renderCalendar() {
+        var label = document.getElementById('calMonth');
+        var grid = document.getElementById('calGrid');
+        if (!label || !grid) return;
+        label.textContent = monthNames[viewMonth] + ' ' + viewYear;
+        var firstDay = new Date(viewYear, viewMonth, 1).getDay();
+        var daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+        var ts = todayStart();
+        grid.innerHTML = '';
+
+        var i;
+        for (i = 0; i < firstDay; i++) {
+            var empty = document.createElement('button');
+            empty.type = 'button';
+            empty.className = 'pe-cal-day empty';
+            empty.disabled = true;
+            grid.appendChild(empty);
+        }
+        for (var d = 1; d <= daysInMonth; d++) {
+            var el = document.createElement('button');
+            el.type = 'button';
+            el.className = 'pe-cal-day';
+            el.textContent = String(d);
+            var date = new Date(viewYear, viewMonth, d);
+            var isPast = date < ts;
+            var isTodayDay = date.getTime() === ts.getTime();
+            var isSelected = date.getTime() === new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()).getTime();
+
+            if (isPast) {
+                el.classList.add('past');
+                el.disabled = true;
+            } else if (isSelected) {
+                el.classList.add('selected');
+            } else if (isTodayDay) {
+                el.classList.add('today');
+                var dotT = document.createElement('div');
+                dotT.className = 'pe-cal-dot';
+                el.appendChild(dotT);
+            } else {
+                var dot = document.createElement('div');
+                dot.className = 'pe-cal-dot';
+                el.appendChild(dot);
+            }
+
+            if (!isPast) {
+                (function (day) {
+                    el.addEventListener('click', function () {
+                        selectedDate = new Date(viewYear, viewMonth, day);
+                        selectedSlot = null;
+                        renderCalendar();
+                        renderSlots();
+                        updateBookBtn();
+                    });
+                })(d);
+            }
+            grid.appendChild(el);
+        }
+    }
+
+    function renderSlots() {
+        var groups = {
+            morningSlots: ['8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM'],
+            afternoonSlots: ['12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM'],
+            eveningSlots: ['5:00 PM', '6:00 PM', '7:00 PM']
+        };
+        Object.keys(groups).forEach(function (id) {
+            var container = document.getElementById(id);
+            if (!container) return;
+            container.innerHTML = '';
+            groups[id].forEach(function (slot) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'pe-slot-btn';
+                btn.textContent = slot;
+                if (unavail.indexOf(slot) !== -1) {
+                    btn.classList.add('unavail');
+                    btn.disabled = true;
+                } else if (selectedSlot === slot) {
+                    btn.classList.add('selected');
+                }
+                btn.addEventListener('click', function () {
+                    if (unavail.indexOf(slot) !== -1) return;
+                    selectedSlot = (selectedSlot === slot) ? null : slot;
+                    renderSlots();
+                    updateBookBtn();
+                });
+                container.appendChild(btn);
+            });
+        });
+    }
+
+    function updateBookBtn() {
+        var btn = document.getElementById('bookBtn');
+        if (!btn) return;
+        if (selectedSlot) {
+            btn.className = 'pe-book-btn enabled';
+            btn.disabled = false;
+        } else {
+            btn.className = 'pe-book-btn disabled';
+            btn.disabled = true;
+        }
+    }
+
+    window.peProfileExtSetVisit = function (type) {
+        var a = document.getElementById('btnInPerson');
+        var b = document.getElementById('btnOnline');
+        if (a) a.classList.toggle('active', type === 'in-person');
+        if (b) b.classList.toggle('active', type === 'online');
+    };
+
+    window.peProfileExtChangeMonth = function (delta) {
+        viewMonth += delta;
+        if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+        if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+        renderCalendar();
+    };
+
+    window.peProfileExtBookClick = function () {
+        var btn = document.getElementById('bookBtn');
+        if (!btn || btn.disabled || !selectedSlot) return;
+        alert('Online booking is not enabled yet. Use the dashboard to schedule appointments.');
+    };
+
+    renderCalendar();
+    renderSlots();
+    updateBookBtn();
+})();
+</script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+(function ($) {
+    var apiUrl = window.__peExtApi;
+    var ACC_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0012 0V2z"/></svg>';
+
+    function openModal(id) {
+        var el = document.getElementById(id);
+        if (el) {
+            el.classList.add('is-open');
+            el.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+    function closeModal(id) {
+        var el = document.getElementById(id);
+        if (el) {
+            el.classList.remove('is-open');
+            el.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+    }
+
+    document.querySelectorAll('[data-pe-modal-close]').forEach(function (node) {
+        node.addEventListener('click', function () {
+            var id = node.getAttribute('data-pe-modal-close');
+            if (id) closeModal(id);
+        });
+    });
+
+    function peRefreshConditionsChips(list) {
+        var c = document.getElementById('peConditionsChips');
+        if (!c) return;
+        c.innerHTML = '';
+        if (!list || !list.length) {
+            c.innerHTML = '<p style="font-size:13px;color:var(--pe-text-hint);margin:0;">No conditions listed — use ✎ to add.</p>';
+            return;
+        }
+        list.forEach(function (x) {
+            var s = document.createElement('span');
+            s.className = 'pe-cond-chip';
+            s.textContent = x;
+            c.appendChild(s);
+        });
+    }
+
+    function peRefreshAccoladesDisplay(lines) {
+        var g = document.getElementById('peAccoladesDisplay');
+        if (!g) return;
+        g.innerHTML = '';
+        if (!lines || !lines.length) {
+            var ph = document.createElement('div');
+            ph.className = 'pe-accolade-item';
+            ph.innerHTML = ACC_SVG + '<span style="color:var(--pe-text-hint);">No entries yet — use ✎ to add.</span>';
+            g.appendChild(ph);
+            return;
+        }
+        lines.forEach(function (line) {
+            var item = document.createElement('div');
+            item.className = 'pe-accolade-item';
+            item.innerHTML = ACC_SVG + '<span></span>';
+            item.querySelector('span').textContent = line;
+            g.appendChild(item);
+        });
+    }
+
+    function peRefreshCareDisplay(steps) {
+        var grid = document.getElementById('peCareDisplay');
+        if (!grid) return;
+        grid.innerHTML = '';
+        if (!steps || !steps.length) {
+            var p = document.createElement('p');
+            p.style.cssText = 'grid-column:1/-1;font-size:14px;color:var(--pe-text-hint);margin:0;';
+            p.textContent = 'No care model steps — use ✎ to add.';
+            grid.appendChild(p);
+            return;
+        }
+        steps.forEach(function (step, i) {
+            var div = document.createElement('div');
+            div.className = 'pe-care-item';
+            div.innerHTML = '<span class="pe-care-num"></span><strong></strong><p style="margin-top:8px;font-size:13px;color:var(--pe-text-secondary);line-height:1.5;"></p>';
+            div.querySelector('.pe-care-num').textContent = String(i + 1);
+            div.querySelector('strong').textContent = step.title || '';
+            div.querySelector('p').textContent = step.body || '';
+            grid.appendChild(div);
+        });
+    }
+
+    var conditionsSelect2 = false;
+
+    function syncConditionsSelect() {
+        var $sel = $('#peConditionsSelect');
+        var vals = window.__peExtConditions || [];
+        $sel.find('option').prop('selected', false);
+        vals.forEach(function (v) {
+            var found = false;
+            $sel.find('option').each(function () {
+                if (this.value === v) { found = true; return false; }
+            });
+            if (!found) {
+                $sel.append(new Option(v, v, true, true));
+            }
+        });
+        $sel.val(vals).trigger('change');
+    }
+
+    var ec = document.getElementById('peEditConditions');
+    if (ec) {
+        ec.addEventListener('click', function (e) {
+            e.preventDefault();
+            openModal('peModalConditions');
+            var $sel = $('#peConditionsSelect');
+            var $dialog = $('#peModalConditions .pe-modal-dialog');
+            if (!conditionsSelect2) {
+                $sel.select2({
+                    tags: true,
+                    placeholder: 'Select or type and press Enter',
+                    width: '100%',
+                    dropdownParent: $dialog,
+                    tokenSeparators: []
+                });
+                conditionsSelect2 = true;
+            }
+            syncConditionsSelect();
+        });
+    }
+
+    var mCondSave = document.getElementById('peModalConditionsSave');
+    if (mCondSave) mCondSave.addEventListener('click', function () {
+        var vals = $('#peConditionsSelect').val() || [];
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ conditions_treated: vals })
+        }).then(function (r) { return r.json(); }).then(function (data) {
+            if (!data.ok) {
+                alert(data.error || 'Could not save.');
+                return;
+            }
+            window.__peExtConditions = data.conditions_treated || [];
+            peRefreshConditionsChips(window.__peExtConditions);
+            closeModal('peModalConditions');
+        }).catch(function () { alert('Could not save.'); });
+    });
+
+    function renderAccoladeRows(list) {
+        var wrap = document.getElementById('peAccoladeRows');
+        if (!wrap) return;
+        wrap.innerHTML = '';
+        var rows = (list && list.length) ? list : [''];
+        rows.forEach(function (text) {
+            var row = document.createElement('div');
+            row.className = 'pe-dyn-row';
+            var inp = document.createElement('input');
+            inp.type = 'text';
+            inp.className = 'pe-accolade-input';
+            inp.maxLength = 500;
+            inp.value = text;
+            var del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'pe-dyn-row-del';
+            del.textContent = 'Delete';
+            del.addEventListener('click', function () { row.remove(); });
+            row.appendChild(inp);
+            row.appendChild(del);
+            wrap.appendChild(row);
+        });
+    }
+
+    var ea = document.getElementById('peEditAccolades');
+    if (ea) {
+        ea.addEventListener('click', function (e) {
+            e.preventDefault();
+            renderAccoladeRows(window.__peExtAccolades || []);
+            openModal('peModalAccolades');
+        });
+    }
+    document.getElementById('peAccoladeAdd').addEventListener('click', function () {
+        var wrap = document.getElementById('peAccoladeRows');
+        if (!wrap) return;
+        var row = document.createElement('div');
+        row.className = 'pe-dyn-row';
+        var inp = document.createElement('input');
+        inp.type = 'text';
+        inp.className = 'pe-accolade-input';
+        inp.maxLength = 500;
+        var del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'pe-dyn-row-del';
+        del.textContent = 'Delete';
+        del.addEventListener('click', function () { row.remove(); });
+        row.appendChild(inp);
+        row.appendChild(del);
+        wrap.appendChild(row);
+    });
+    document.getElementById('peModalAccoladesSave').addEventListener('click', function () {
+        var lines = [];
+        document.querySelectorAll('#peAccoladeRows .pe-accolade-input').forEach(function (inp) {
+            var t = inp.value.trim();
+            if (t) lines.push(t);
+        });
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accolades: lines })
+        }).then(function (r) { return r.json(); }).then(function (data) {
+            if (!data.ok) {
+                alert(data.error || 'Could not save.');
+                return;
+            }
+            window.__peExtAccolades = data.accolades || [];
+            peRefreshAccoladesDisplay(window.__peExtAccolades);
+            closeModal('peModalAccolades');
+        }).catch(function () { alert('Could not save.'); });
+    });
+
+    function peRefreshHeroPillsDisplay(pills, kmc) {
+        var disp = document.getElementById('peHeroPillsDisplay');
+        if (!disp) return;
+        disp.innerHTML = '';
+        var reg = document.createElement('span');
+        reg.className = 'pe-pill pe-pill-reg';
+        reg.id = 'peHeroPillReg';
+        reg.textContent = 'Reg: ' + (kmc != null && kmc !== '' ? kmc : '—');
+        disp.appendChild(reg);
+        (pills || []).forEach(function (p) {
+            var s = document.createElement('span');
+            s.className = 'pe-pill pe-pill-extra';
+            s.textContent = p;
+            disp.appendChild(s);
+        });
+    }
+
+    function renderHeroPillRows(list) {
+        var wrap = document.getElementById('peHeroPillRows');
+        if (!wrap) return;
+        wrap.innerHTML = '';
+        var rows = (list && list.length) ? list : [''];
+        rows.forEach(function (text) {
+            var row = document.createElement('div');
+            row.className = 'pe-dyn-row';
+            var inp = document.createElement('input');
+            inp.type = 'text';
+            inp.className = 'pe-hero-pill-input';
+            inp.maxLength = 120;
+            inp.value = text;
+            var del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'pe-dyn-row-del';
+            del.textContent = 'Delete';
+            del.addEventListener('click', function () { row.remove(); });
+            row.appendChild(inp);
+            row.appendChild(del);
+            wrap.appendChild(row);
+        });
+    }
+
+    var ehp = document.getElementById('peEditHeroPills');
+    if (ehp) {
+        ehp.addEventListener('click', function (e) {
+            e.preventDefault();
+            renderHeroPillRows(window.__peExtHeroPills || []);
+            openModal('peModalHeroPills');
+        });
+    }
+    var hpa = document.getElementById('peHeroPillAdd');
+    if (hpa) {
+        hpa.addEventListener('click', function () {
+            var wrap = document.getElementById('peHeroPillRows');
+            if (!wrap) return;
+            var row = document.createElement('div');
+            row.className = 'pe-dyn-row';
+            var inp = document.createElement('input');
+            inp.type = 'text';
+            inp.className = 'pe-hero-pill-input';
+            inp.maxLength = 120;
+            var del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'pe-dyn-row-del';
+            del.textContent = 'Delete';
+            del.addEventListener('click', function () { row.remove(); });
+            row.appendChild(inp);
+            row.appendChild(del);
+            wrap.appendChild(row);
+        });
+    }
+    var hps = document.getElementById('peModalHeroPillsSave');
+    if (hps) {
+        hps.addEventListener('click', function () {
+            var lines = [];
+            document.querySelectorAll('#peHeroPillRows .pe-hero-pill-input').forEach(function (inp) {
+                var t = inp.value.trim();
+                if (t) lines.push(t);
+            });
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ hero_pills: lines })
+            }).then(function (r) { return r.json(); }).then(function (data) {
+                if (!data.ok) {
+                    alert(data.error || 'Could not save.');
+                    return;
+                }
+                window.__peExtHeroPills = data.hero_pills || [];
+                peRefreshHeroPillsDisplay(window.__peExtHeroPills, data.kmc_code != null ? data.kmc_code : window.__peExtKmcCode);
+                closeModal('peModalHeroPills');
+            }).catch(function () { alert('Could not save.'); });
+        });
+    }
+
+    function peRefreshClinicMapIframes(embedSrcs) {
+        (embedSrcs || []).forEach(function (src, i) {
+            var wrap = document.getElementById('pe-clinic-map-' + i);
+            if (!wrap) return;
+            wrap.innerHTML = '';
+            if (src) {
+                var ifr = document.createElement('iframe');
+                ifr.className = 'pe-map-iframe';
+                ifr.setAttribute('loading', 'lazy');
+                ifr.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
+                ifr.setAttribute('allowfullscreen', '');
+                ifr.setAttribute('title', 'Clinic map ' + (i + 1));
+                ifr.src = src;
+                wrap.appendChild(ifr);
+            } else {
+                var ph = document.createElement('div');
+                ph.className = 'pe-map-placeholder';
+                ph.textContent = 'Map view (placeholder)';
+                wrap.appendChild(ph);
+            }
+        });
+    }
+
+    function renderClinicMapRows() {
+        var wrap = document.getElementById('peClinicMapRows');
+        if (!wrap) return;
+        var labels = window.__peClinicLabels || [];
+        var links = window.__peExtClinicMapLinks || [];
+        wrap.innerHTML = '';
+        if (!labels.length) {
+            var p = document.createElement('p');
+            p.className = 'pe-modal-hint';
+            var prof = window.__peStandardProfileUrl || '/profile';
+            p.innerHTML = 'No clinics yet. Add them under <a href="' + prof + '" class="pe-link-standard">Standard profile</a> → Clinics.';
+            wrap.appendChild(p);
+            return;
+        }
+        labels.forEach(function (name, i) {
+            var row = document.createElement('div');
+            row.className = 'pe-clinic-map-edit-row';
+            var lab = document.createElement('label');
+            lab.className = 'pe-clinic-map-label';
+            lab.setAttribute('for', 'peClinicMapUrl-' + i);
+            lab.textContent = name || ('Clinic ' + (i + 1));
+            var inp = document.createElement('input');
+            inp.type = 'text';
+            inp.className = 'pe-clinic-map-url-input';
+            inp.id = 'peClinicMapUrl-' + i;
+            inp.placeholder = 'Paste Google Maps link (Share → Copy link)';
+            inp.value = links[i] != null ? String(links[i]) : '';
+            inp.setAttribute('autocomplete', 'off');
+            row.appendChild(lab);
+            row.appendChild(inp);
+            wrap.appendChild(row);
+        });
+    }
+
+    var ecm = document.getElementById('peEditClinicMaps');
+    if (ecm) {
+        ecm.addEventListener('click', function (e) {
+            e.preventDefault();
+            renderClinicMapRows();
+            openModal('peModalClinicMaps');
+        });
+    }
+    var cms = document.getElementById('peModalClinicMapsSave');
+    if (cms) {
+        cms.addEventListener('click', function () {
+            var links = [];
+            document.querySelectorAll('#peClinicMapRows .pe-clinic-map-url-input').forEach(function (inp) {
+                links.push(inp.value.trim());
+            });
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clinic_map_links: links })
+            }).then(function (r) { return r.json(); }).then(function (data) {
+                if (!data.ok) {
+                    alert(data.error || 'Could not save.');
+                    return;
+                }
+                window.__peExtClinicMapLinks = data.clinic_map_links || [];
+                peRefreshClinicMapIframes(data.clinic_map_embed_srcs);
+                closeModal('peModalClinicMaps');
+            }).catch(function () { alert('Could not save.'); });
+        });
+    }
+
+    function renderCareRows(list) {
+        var wrap = document.getElementById('peCareRows');
+        if (!wrap) return;
+        wrap.innerHTML = '';
+        var rows = (list && list.length) ? list : [{ title: '', body: '' }];
+        rows.forEach(function (step) {
+            var row = document.createElement('div');
+            row.className = 'pe-dyn-row pe-care-rows';
+            var tInp = document.createElement('input');
+            tInp.type = 'text';
+            tInp.className = 'pe-care-title';
+            tInp.placeholder = 'Phase title';
+            tInp.maxLength = 200;
+            tInp.value = step.title || '';
+            var bInp = document.createElement('textarea');
+            bInp.className = 'pe-care-body';
+            bInp.placeholder = 'Description';
+            bInp.value = step.body || '';
+            var del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'pe-dyn-row-del';
+            del.textContent = 'Delete';
+            del.addEventListener('click', function () { row.remove(); });
+            row.appendChild(tInp);
+            row.appendChild(bInp);
+            row.appendChild(del);
+            wrap.appendChild(row);
+        });
+    }
+
+    var cm = document.getElementById('peEditCareModel');
+    if (cm) {
+        cm.addEventListener('click', function (e) {
+            e.preventDefault();
+            var seed = window.__peExtCareModalInitial && window.__peExtCareModalInitial.length
+                ? window.__peExtCareModalInitial
+                : (window.__peExtDefaultCare || []);
+            renderCareRows(seed);
+            openModal('peModalCare');
+        });
+    }
+    document.getElementById('peCareAdd').addEventListener('click', function () {
+        var wrap = document.getElementById('peCareRows');
+        if (!wrap) return;
+        var row = document.createElement('div');
+        row.className = 'pe-dyn-row pe-care-rows';
+        var tInp = document.createElement('input');
+        tInp.type = 'text';
+        tInp.className = 'pe-care-title';
+        tInp.placeholder = 'Phase title';
+        tInp.maxLength = 200;
+        var bInp = document.createElement('textarea');
+        bInp.className = 'pe-care-body';
+        bInp.placeholder = 'Description';
+        var del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'pe-dyn-row-del';
+        del.textContent = 'Delete';
+        del.addEventListener('click', function () { row.remove(); });
+        row.appendChild(tInp);
+        row.appendChild(bInp);
+        row.appendChild(del);
+        wrap.appendChild(row);
+    });
+    document.getElementById('peModalCareSave').addEventListener('click', function () {
+        var steps = [];
+        document.querySelectorAll('#peCareRows .pe-dyn-row').forEach(function (row) {
+            var tEl = row.querySelector('.pe-care-title');
+            var bEl = row.querySelector('.pe-care-body');
+            if (!tEl || !bEl) return;
+            var t = tEl.value.trim();
+            var b = bEl.value.trim();
+            if (t || b) steps.push({ title: t, body: b });
+        });
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ care_model: steps })
+        }).then(function (r) { return r.json(); }).then(function (data) {
+            if (!data.ok) {
+                alert(data.error || 'Could not save.');
+                return;
+            }
+            var disp = data.care_model || [];
+            window.__peExtCareModalInitial = disp.length ? disp : (window.__peExtDefaultCare || []);
+            peRefreshCareDisplay(disp);
+            closeModal('peModalCare');
+        }).catch(function () { alert('Could not save.'); });
+    });
+})(jQuery);
+</script>
+</body>
+</html>

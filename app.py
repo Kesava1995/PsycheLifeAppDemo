@@ -23,9 +23,252 @@ def get_ist_now():
 
 # Default clinic hours (morning / evening) for dashboard badges and edit modal
 DEFAULT_CLINIC_HOURS = {
-    "morning": {"start": "09:00", "end": "17:00"},
+    "morning": {"start": "09:00", "end": "16:00"},
     "evening": {"start": "17:00", "end": "22:00"},
 }
+
+# Appointment schedule templates (ScheduleTemplate model) — slot keys must stay stable for JSON
+SCHEDULE_TEMPLATE_SLOT_KEYS_ORDERED = (
+    "New Registration",
+    "Extended Follow-up",
+    "Follow-up",
+    "Therapy Session",
+    "Review/Report Discussion",
+)
+DEFAULT_SCHEDULE_WORKING_HOURS_LIST = [
+    {"start": "09:00", "end": "16:00"},
+    {"start": "17:00", "end": "22:00"},
+]
+DEFAULT_SCHEDULE_SLOT_DURATIONS = {
+    "New Registration": 45,
+    "Extended Follow-up": 30,
+    "Follow-up": 15,
+    "Therapy Session": 45,
+    "Review/Report Discussion": 10,
+}
+
+# External profile (/profile/ext): conditions multi-select + custom tags (Select2)
+EXTERNAL_PROFILE_CONDITION_CHOICES = [
+    "Neurodevelopmental Disorders",
+    "Schizophrenia",
+    "Other Primary Psychotic Disorders",
+    "Catatonia",
+    "Bipolar Disorder",
+    "Depressive Disorder",
+    "Anxiety Disorder",
+    "Fear-Related Disorder",
+    "Obsessive-Compulsive Disorder",
+    "Stress-Related Disorder",
+    "Dissociative Disorder",
+    "Feeding Disorder",
+    "Eating Disorder",
+    "Elimination Disorder",
+    "Bodily Distress Disorder",
+    "Substance Use Disorder",
+    "Addictive Behaviour Disorder",
+    "Impulse Control Disorder",
+    "Disruptive Behaviour Disorder",
+    "Dissocial Disorder",
+    "Personality Disorder",
+    "Paraphilic Disorder",
+    "Factitious Disorder",
+    "Neurocognitive Disorder",
+    "Mental or Behavioural Disorder Associated with Pregnancy or Childbirth",
+    "Psychological or Behavioural Factors Affecting Medical Conditions",
+    "Secondary Mental or Behavioural Syndrome",
+]
+
+
+def _ext_profile_json_list(raw):
+    if not raw:
+        return []
+    try:
+        v = json.loads(raw)
+        return v if isinstance(v, list) else []
+    except (TypeError, ValueError):
+        return []
+
+
+def _ext_profile_care_steps(raw):
+    """Parse care_model_json into list of {title, body}."""
+    lst = _ext_profile_json_list(raw)
+    out = []
+    for item in lst:
+        if isinstance(item, dict):
+            t = (item.get("title") or "").strip()
+            b = (item.get("body") or "").strip()
+            if t or b:
+                out.append({"title": t, "body": b})
+        elif isinstance(item, str) and item.strip():
+            out.append({"title": item.strip(), "body": ""})
+    return out
+
+
+def _google_maps_host_allowed(netloc):
+    if not netloc:
+        return False
+    h = netloc.lower().split(":")[0]
+    if h in ("maps.app.goo.gl", "goo.gl", "g.co"):
+        return True
+    return h == "google.com" or h.endswith(".google.com")
+
+
+def _google_maps_lat_lng_from_url(u):
+    """Best-effort lat,lng from a Google Maps URL (path @, or data=!3d!4d blob)."""
+    m = re.search(r"@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)", u)
+    if m:
+        return m.group(1), m.group(2)
+    m = re.search(r"!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)", u)
+    if m:
+        return m.group(1), m.group(2)
+    m = re.search(r"!4d(-?\d+(?:\.\d+)?)!3d(-?\d+(?:\.\d+)?)", u)
+    if m:
+        return m.group(2), m.group(1)
+    return None, None
+
+
+def _google_maps_embed_legacy_q(query_text, z=16):
+    """
+    Legacy iframe embed on maps.google.com — works better than www.google.com/maps?output=embed
+    for plain q= searches and reduces broken globe / odd warnings vs stuffing a full URL into q=.
+    """
+    q = (query_text or "").strip()
+    if not q:
+        return None
+    return (
+        "https://maps.google.com/maps?"
+        f"q={quote(q, safe='')}&z={z}&hl=en&output=embed&iwloc=near"
+    )
+
+
+def google_maps_embed_src(raw_url, fallback_address=None):
+    """
+    Turn a pasted Google Maps share or place URL into an https URL suitable for iframe src.
+    fallback_address: optional clinic address if the link has no extractable coordinates/query.
+    Returns None if the link is missing, invalid, or not an allowed Google Maps host.
+    """
+    if not raw_url or not isinstance(raw_url, str):
+        return None
+    u = raw_url.strip()
+    if not u:
+        return None
+    if len(u) > 2048:
+        u = u[:2048]
+    if not re.match(r"^https?://", u, re.I):
+        u = "https://" + u
+    try:
+        parsed = urlparse(u)
+    except Exception:
+        return None
+    if parsed.scheme != "https":
+        return None
+    if not _google_maps_host_allowed(parsed.netloc):
+        return None
+
+    if any(x in parsed.netloc for x in ("goo.gl", "maps.app.goo.gl", "g.co")):
+        try:
+            r = requests.get(
+                u,
+                allow_redirects=True,
+                timeout=10,
+                headers={"User-Agent": "Mozilla/5.0 (compatible; PsycheLife/1.0)"},
+                stream=True,
+            )
+            try:
+                u = r.url
+            finally:
+                r.close()
+            parsed = urlparse(u)
+            if parsed.scheme != "https" or not _google_maps_host_allowed(parsed.netloc):
+                return None
+        except Exception:
+            return None
+
+    path = parsed.path or ""
+    query = parsed.query or ""
+
+    if "/maps/embed" in path or "output=embed" in query:
+        return u.split("#")[0]
+
+    lat, lng = _google_maps_lat_lng_from_url(u)
+    if lat and lng:
+        return _google_maps_embed_legacy_q(f"{lat},{lng}", z=16)
+
+    qs = parse_qs(query)
+    if "q" in qs and qs["q"][0].strip():
+        q = qs["q"][0].strip()
+        if not q.startswith("http"):
+            return _google_maps_embed_legacy_q(q, z=16)
+
+    if "/maps/place/" in path:
+        segment = path.split("/place/")[-1].split("/")[0]
+        segment = unquote(segment.replace("+", " ")).strip() if segment else ""
+        if segment and not segment.startswith("data=") and len(segment) < 500:
+            emb = _google_maps_embed_legacy_q(segment, z=16)
+            if emb:
+                return emb
+
+    if "/maps/search/" in path:
+        segment = path.split("/search/")[-1].split("/")[0]
+        segment = unquote(segment.replace("+", " ")).strip() if segment else ""
+        if segment and len(segment) < 500:
+            emb = _google_maps_embed_legacy_q(segment, z=16)
+            if emb:
+                return emb
+
+    fb = (fallback_address or "").strip()
+    if fb and len(fb) < 500:
+        return _google_maps_embed_legacy_q(fb, z=16)
+
+    return None
+
+
+def _ext_clinic_map_links_padded(doctor, ext):
+    """List of str, length len(doctor.clinics_list), from clinic_map_links_json."""
+    n = len(doctor.clinics_list) if doctor else 0
+    raw = _ext_profile_json_list(getattr(ext, "clinic_map_links_json", None))
+    out = []
+    for i in range(n):
+        x = raw[i] if i < len(raw) else ""
+        out.append(x if isinstance(x, str) else "")
+    return out
+
+
+def _ext_clinic_map_embed_srcs_for_doctor(doctor, ext):
+    """Parallel to clinics_list: embed URL or None per clinic."""
+    if not doctor:
+        return []
+    links = _ext_clinic_map_links_padded(doctor, ext)
+    clinics = doctor.clinics_list or []
+    out = []
+    for i, s in enumerate(links):
+        t = (s or "").strip()
+        addr = ""
+        if i < len(clinics):
+            addr = (clinics[i].get("address") or "").strip()
+        if t:
+            out.append(google_maps_embed_src(t, fallback_address=addr or None))
+        elif addr:
+            out.append(_google_maps_embed_legacy_q(addr, z=16))
+        else:
+            out.append(None)
+    return out
+
+
+def _ext_hero_line_text(doctor, ext):
+    """Line under name on profile/ext: designation first, else optional tagline (headline)."""
+    d = (doctor.designation or "").strip()
+    if d:
+        return d
+    return (ext.headline or "").strip() if ext else ""
+
+
+DEFAULT_EXTERNAL_CARE_STEPS = [
+    {"title": "Assessment", "body": "Thorough consultation and history."},
+    {"title": "Diagnosis", "body": "Evidence-based formulation."},
+    {"title": "Treatment", "body": "Personalised plan — therapy, medication, lifestyle."},
+    {"title": "Follow-up", "body": "Ongoing support and adjustments."},
+]
 
 
 def _time_to_display(s):
@@ -42,6 +285,47 @@ def _time_to_display(s):
     return str(h - 12) + ":" + m + " PM"
 
 
+def _clinic_hours_blocks_from_ranges(m_start, m_end, e_start, e_end):
+    """Two-badge fallback: morning + evening ranges with display strings."""
+    return [
+        {
+            "start": m_start,
+            "end": m_end,
+            "display": _time_to_display(m_start) + "\u2013" + _time_to_display(m_end),
+        },
+        {
+            "start": e_start,
+            "end": e_end,
+            "display": _time_to_display(e_start) + "\u2013" + _time_to_display(e_end),
+        },
+    ]
+
+
+def _norm_hhmm_clinic_json(t):
+    if not t:
+        return "09:00"
+    s = str(t).strip()
+    return s[:5] if len(s) >= 5 else (s if s else "09:00")
+
+
+def _working_hours_list_to_blocks_display(wh_list):
+    """Build blocks + display strings from stored working_hours JSON (no DB import)."""
+    blocks = []
+    if not isinstance(wh_list, list):
+        return blocks
+    for seg in wh_list:
+        if not isinstance(seg, dict):
+            continue
+        a = _norm_hhmm_clinic_json(seg.get("start"))
+        b = _norm_hhmm_clinic_json(seg.get("end"))
+        blocks.append({
+            "start": a,
+            "end": b,
+            "display": _time_to_display(a) + "\u2013" + _time_to_display(b),
+        })
+    return blocks
+
+
 def get_clinic_hours(doctor):
     """Return clinic hours dict for template: morning_start/end, evening_start/end, morning_display, evening_display."""
     raw = DEFAULT_CLINIC_HOURS.copy()
@@ -50,23 +334,47 @@ def get_clinic_hours(doctor):
             raw = json.loads(doctor.clinic_hours)
         except (TypeError, ValueError):
             pass
+    wh_list = raw.get("working_hours")
+    if isinstance(wh_list, list) and len(wh_list) > 0:
+        blocks = _working_hours_list_to_blocks_display(wh_list)
+        if blocks:
+            m_start, m_end = blocks[0]["start"], blocks[0]["end"]
+            if len(blocks) > 1:
+                e_start, e_end = blocks[1]["start"], blocks[1]["end"]
+                evening_display = blocks[1]["display"]
+            else:
+                e_start, e_end = "17:00", "22:00"
+                evening_display = _time_to_display(e_start) + "\u2013" + _time_to_display(e_end)
+            return {
+                "morning_start": m_start,
+                "morning_end": m_end,
+                "evening_start": e_start,
+                "evening_end": e_end,
+                "morning_display": blocks[0]["display"],
+                "evening_display": evening_display,
+                "working_hours_blocks": blocks,
+                "working_hours_json": [{"start": b["start"], "end": b["end"]} for b in blocks],
+            }
     m = raw.get("morning", {})
     e = raw.get("evening", {})
     m_start = m.get("start", "09:00")
-    m_end = m.get("end", "17:00")
+    m_end = m.get("end", "16:00")
     e_start = e.get("start", "17:00")
     e_end = e.get("end", "22:00")
+    blocks = _clinic_hours_blocks_from_ranges(m_start, m_end, e_start, e_end)
     return {
         "morning_start": m_start,
         "morning_end": m_end,
         "evening_start": e_start,
         "evening_end": e_end,
-        "morning_display": _time_to_display(m_start) + "\u2013" + _time_to_display(m_end),
-        "evening_display": _time_to_display(e_start) + "\u2013" + _time_to_display(e_end),
+        "morning_display": blocks[0]["display"],
+        "evening_display": blocks[1]["display"],
+        "working_hours_blocks": blocks,
+        "working_hours_json": [{"start": b["start"], "end": b["end"]} for b in blocks],
     }
 
 
-from models import db, Doctor, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry, ScaleAssessment, Appointment, DashboardNote, Notification, ScheduleTemplate, Feedback, NegativeHistoryEntry, DoctorSymptomUsage
+from models import db, Doctor, DoctorExternalProfile, Patient, Visit, SymptomEntry, MedicationEntry, SideEffectEntry, MSEEntry, GuestShare, StressorEntry, PersonalityEntry, SafetyMedicalProfile, MajorEvent, AdherenceRange, ClinicalStateRange, DefaultTemplate, CustomTemplate, SubstanceUseEntry, ScaleAssessment, Appointment, DashboardNote, Notification, ScheduleTemplate, Feedback, NegativeHistoryEntry, DoctorSymptomUsage, serialize_doctor_social_handle_json, serialize_doctor_clinics_list, parse_doctor_clinics_list, doctor_rx_clinic_header
 from medical_utils import get_unified_dose, compute_med_chart_value, calculate_start_date, parse_duration, calculate_midpoint_date, format_frequency, process_scale_submission, duration_to_days, format_timedelta_as_duration
 from email_utils import send_dynamic_email, send_system_email
 from encryption_utils import encrypt_smtp_password, decrypt_smtp_password
@@ -82,7 +390,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 import qrcode
-from urllib.parse import urljoin, unquote, quote_plus
+from urllib.parse import urljoin, unquote, quote_plus, urlparse, parse_qs, quote
 from werkzeug.utils import secure_filename
 import base64
 import uuid
@@ -91,6 +399,423 @@ import time
 import requests
 from difflib import SequenceMatcher
 from sqlalchemy import text
+
+# Keys for custom registration template checklists (must match data-reg-key in registration_template_checklist.html)
+REGISTRATION_TEMPLATE_SECTION_KEYS = frozenset({
+    'demographics', 'psychiatric_history_status', 'background_factors', 'background_premorbid_personality',
+    'background_major_events', 'background_stressors', 'background_ace', 'chief_complaints', 'negative_history',
+    'functional_impairment', 'substance_use_history', 'family_history', 'developmental_milestone_history',
+    'mse', 'mse_consciousness', 'mse_general_appearance', 'mse_speech', 'mse_thought', 'mse_perception',
+    'mse_mood', 'mse_affect', 'mse_insight', 'scales', 'safety_medical_profile', 'safety_drug_allergies',
+    'safety_medical_comorbidities', 'safety_current_non_psych_meds', 'side_effects', 'diagnosis',
+    'diagnosis_provisional', 'diagnosis_differential', 'diagnosis_classificatory', 'clinical_states',
+    'medication_adherence', 'medications', 'follow_up',
+})
+CUSTOM_REGISTRATION_TEMPLATE_NAME_MAX = 120
+
+
+def _normalize_schedule_time_hhmm(t):
+    if not t:
+        return "09:00"
+    s = str(t).strip()
+    return s[:5] if len(s) >= 5 else (s if s else "09:00")
+
+
+def _coerce_payload_working_hours(raw):
+    out = []
+    if isinstance(raw, list):
+        for seg in raw:
+            if isinstance(seg, dict):
+                a = _normalize_schedule_time_hhmm(seg.get("start"))
+                b = _normalize_schedule_time_hhmm(seg.get("end"))
+                out.append({"start": a, "end": b})
+    return out if out else list(DEFAULT_SCHEDULE_WORKING_HOURS_LIST)
+
+
+def _coerce_payload_slot_durations(raw):
+    """Standard five keys plus any custom visit-type labels from the profile form."""
+    out = {}
+    if not isinstance(raw, dict):
+        raw = {}
+    standard = set(SCHEDULE_TEMPLATE_SLOT_KEYS_ORDERED)
+    for k in SCHEDULE_TEMPLATE_SLOT_KEYS_ORDERED:
+        try:
+            v = int(raw.get(k, DEFAULT_SCHEDULE_SLOT_DURATIONS[k]))
+            out[k] = max(1, min(480, v))
+        except (TypeError, ValueError):
+            out[k] = DEFAULT_SCHEDULE_SLOT_DURATIONS[k]
+    for k, v in raw.items():
+        if k in standard:
+            continue
+        if not isinstance(k, str):
+            continue
+        kt = k.strip()[:120]
+        if not kt:
+            continue
+        try:
+            n = int(v)
+            out[kt] = max(1, min(480, n))
+        except (TypeError, ValueError):
+            pass
+    return out
+
+
+def sync_doctor_schedule_templates_from_payload(doctor, payload_list):
+    """Persist Appointment Schedule Templates from profile form JSON (one row per card)."""
+    doctor_id = doctor.id
+    if not isinstance(payload_list, list):
+        return
+    cleaned = []
+    for item in payload_list:
+        if not isinstance(item, dict):
+            continue
+        name = (item.get("name") or "").strip()[:100] or "Unnamed template"
+        wh = _coerce_payload_working_hours(item.get("working_hours"))
+        sd = _coerce_payload_slot_durations(item.get("slot_durations"))
+        row_id = item.get("id")
+        if row_id is not None and row_id != "":
+            try:
+                row_id = int(row_id)
+            except (TypeError, ValueError):
+                row_id = None
+        else:
+            row_id = None
+        cleaned.append({"id": row_id, "name": name, "working_hours": wh, "slot_durations": sd})
+    if not cleaned:
+        return
+
+    existing = {t.id: t for t in ScheduleTemplate.query.filter_by(doctor_id=doctor_id).all()}
+    kept_ids = set()
+
+    for idx, row in enumerate(cleaned):
+        is_def = idx == 0
+        if row["id"] and row["id"] in existing:
+            t = existing[row["id"]]
+            if getattr(t, "is_default", False):
+                t.is_default = is_def
+                kept_ids.add(t.id)
+                continue
+            t.name = row["name"]
+            t.working_hours = row["working_hours"]
+            t.slot_durations = row["slot_durations"]
+            t.is_default = is_def
+            kept_ids.add(t.id)
+        else:
+            nt = ScheduleTemplate(
+                doctor_id=doctor_id,
+                name=row["name"],
+                working_hours=row["working_hours"],
+                slot_durations=row["slot_durations"],
+                is_default=is_def,
+            )
+            db.session.add(nt)
+            db.session.flush()
+            kept_ids.add(nt.id)
+
+    for tid, t in list(existing.items()):
+        if tid not in kept_ids:
+            if doctor.active_template_id == tid:
+                doctor.active_template_id = None
+            db.session.delete(t)
+
+
+def _time_str_to_minutes(s):
+    if not s:
+        return None
+    s = str(s).strip()
+    if len(s) >= 5:
+        s = s[:5]
+    parts = s.split(":")
+    try:
+        return int(parts[0]) * 60 + int(parts[1])
+    except (ValueError, IndexError):
+        return None
+
+
+def _blocks_from_template_working_hours(wh_list):
+    """Build display + normalized start/end for each segment (profile / ScheduleTemplate)."""
+    blocks = []
+    if not isinstance(wh_list, list):
+        return blocks
+    for seg in wh_list:
+        if not isinstance(seg, dict):
+            continue
+        a = _normalize_schedule_time_hhmm(seg.get("start"))
+        b = _normalize_schedule_time_hhmm(seg.get("end"))
+        blocks.append({
+            "start": a,
+            "end": b,
+            "display": _time_to_display(a) + "\u2013" + _time_to_display(b),
+        })
+    return blocks
+
+
+def appointment_clinic_slot_key(start_time_str, working_blocks):
+    """Match appointment start to a working-hours block for dashboard row filter (block-0, block-1, ...)."""
+    tmin = _time_str_to_minutes(start_time_str)
+    if working_blocks:
+        for i, b in enumerate(working_blocks):
+            sm = _time_str_to_minutes(b.get("start"))
+            em = _time_str_to_minutes(b.get("end"))
+            if sm is not None and em is not None and sm <= tmin <= em:
+                return "block-%d" % i
+        return "none"
+    if tmin is None:
+        return "morning"
+    return "evening" if tmin >= 17 * 60 else "morning"
+
+
+def get_dashboard_clinic_hours(doctor):
+    """Dashboard: full working_hours_blocks from active (or default) template; morning/evening = first two segments (modal)."""
+    if not doctor:
+        return get_clinic_hours(None)
+    tpl = None
+    if doctor.active_template_id:
+        tpl = ScheduleTemplate.query.filter_by(id=doctor.active_template_id, doctor_id=doctor.id).first()
+    if tpl is None:
+        tpl = ScheduleTemplate.query.filter_by(doctor_id=doctor.id, is_default=True).first()
+    if tpl is None:
+        tpl = (
+            ScheduleTemplate.query.filter_by(doctor_id=doctor.id)
+            .order_by(ScheduleTemplate.id.asc())
+            .first()
+        )
+    if tpl and tpl.working_hours and isinstance(tpl.working_hours, list) and len(tpl.working_hours) > 0:
+        blocks = _blocks_from_template_working_hours(tpl.working_hours)
+        if not blocks:
+            return get_clinic_hours(doctor)
+        m_start, m_end = blocks[0]["start"], blocks[0]["end"]
+        if len(blocks) > 1:
+            e_start = blocks[1]["start"]
+            e_end = blocks[1]["end"]
+            evening_display = blocks[1]["display"]
+        else:
+            e_start = _normalize_schedule_time_hhmm("17:00")
+            e_end = _normalize_schedule_time_hhmm("22:00")
+            evening_display = _time_to_display(e_start) + "\u2013" + _time_to_display(e_end)
+        return {
+            "morning_start": m_start,
+            "morning_end": m_end,
+            "evening_start": e_start,
+            "evening_end": e_end,
+            "morning_display": blocks[0]["display"],
+            "evening_display": evening_display,
+            "working_hours_blocks": blocks,
+            "working_hours_json": [{"start": b["start"], "end": b["end"]} for b in blocks],
+        }
+    return get_clinic_hours(doctor)
+
+
+def get_dashboard_schedule_sidebar(doctor):
+    """Sidebar: all schedule template names (active marked) + slot duration rows for the effective active template."""
+    tpl = None
+    templates = []
+    if doctor:
+        templates = (
+            ScheduleTemplate.query.filter_by(doctor_id=doctor.id)
+            .order_by(ScheduleTemplate.is_default.desc(), ScheduleTemplate.id.asc())
+            .all()
+        )
+        if doctor.active_template_id:
+            tpl = ScheduleTemplate.query.filter_by(id=doctor.active_template_id, doctor_id=doctor.id).first()
+        if tpl is None:
+            tpl = ScheduleTemplate.query.filter_by(doctor_id=doctor.id, is_default=True).first()
+        if tpl is None and templates:
+            tpl = templates[0]
+
+    active_id = tpl.id if tpl else None
+    active_name = "\u2014"
+    if tpl:
+        active_name = (tpl.name or "").strip() or "Unnamed template"
+
+    raw_sd = tpl.slot_durations if tpl and getattr(tpl, "slot_durations", None) is not None else {}
+    if not isinstance(raw_sd, dict):
+        raw_sd = {}
+    sd = _coerce_payload_slot_durations(raw_sd)
+    slot_rows = []
+    seen = set()
+    for k in SCHEDULE_TEMPLATE_SLOT_KEYS_ORDERED:
+        if k in sd:
+            slot_rows.append({"label": k, "minutes": sd[k]})
+            seen.add(k)
+    for k in sorted(sd.keys()):
+        if k not in seen:
+            slot_rows.append({"label": k, "minutes": sd[k]})
+
+    templates_payload = [
+        {
+            "id": t.id,
+            "name": ((t.name or "").strip() or "Unnamed template"),
+            "active": active_id is not None and t.id == active_id,
+            "is_default": bool(getattr(t, "is_default", False)),
+        }
+        for t in templates
+    ]
+
+    return {
+        "templates": templates_payload,
+        "active_template_id": active_id,
+        "active_name": active_name,
+        "slot_rows": slot_rows,
+    }
+
+
+def _push_clinic_hours_to_schedule_templates(doctor, payload):
+    """Keep ScheduleTemplate.working_hours in sync when clinic hours are saved from the dashboard."""
+    tpl = None
+    if doctor.active_template_id:
+        tpl = ScheduleTemplate.query.filter_by(id=doctor.active_template_id, doctor_id=doctor.id).first()
+    if tpl is None:
+        tpl = ScheduleTemplate.query.filter_by(doctor_id=doctor.id, is_default=True).first()
+    if tpl is None:
+        tpl = (
+            ScheduleTemplate.query.filter_by(doctor_id=doctor.id)
+            .order_by(ScheduleTemplate.id.asc())
+            .first()
+        )
+    if not tpl:
+        return
+    wh_full = payload.get("working_hours")
+    if isinstance(wh_full, list) and len(wh_full) > 0:
+        tpl.working_hours = _coerce_payload_working_hours(wh_full)
+        return
+    m = payload.get("morning") or {}
+    e = payload.get("evening") or {}
+    ms, me = (m.get("start") or "09:00")[:5], (m.get("end") or "17:00")[:5]
+    es, ee = (e.get("start") or "17:00")[:5], (e.get("end") or "22:00")[:5]
+    wh_raw = tpl.working_hours
+    if not isinstance(wh_raw, list):
+        wh_raw = []
+    wh = []
+    for x in wh_raw:
+        if isinstance(x, dict):
+            wh.append({
+                "start": _normalize_schedule_time_hhmm(x.get("start")),
+                "end": _normalize_schedule_time_hhmm(x.get("end")),
+            })
+        else:
+            wh.append({"start": "09:00", "end": "17:00"})
+    while len(wh) < 2:
+        wh.append({"start": "09:00", "end": "17:00"})
+    wh[0] = {"start": ms, "end": me}
+    wh[1] = {"start": es, "end": ee}
+    tpl.working_hours = wh
+
+
+def _load_reg_templates_doc(doctor):
+    """Load raw registration-templates document from doctor.registration_templates_json."""
+    raw = getattr(doctor, 'registration_templates_json', None) or ''
+    if not str(raw).strip():
+        return {
+            'templates': [], 'default_template_id': None, 'quick_reg_onboarded': False,
+            'quick_reg_builtin_completed': False,
+        }
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        return {
+            'templates': [], 'default_template_id': None, 'quick_reg_onboarded': False,
+            'quick_reg_builtin_completed': False,
+        }
+    if isinstance(data, list):
+        return {
+            'templates': data, 'default_template_id': None, 'quick_reg_onboarded': False,
+            'quick_reg_builtin_completed': False,
+        }
+    if not isinstance(data, dict):
+        return {
+            'templates': [], 'default_template_id': None, 'quick_reg_onboarded': False,
+            'quick_reg_builtin_completed': False,
+        }
+    templates = data.get('templates')
+    if not isinstance(templates, list):
+        templates = []
+    default_id = data.get('default_template_id')
+    default_id = str(default_id).strip() if default_id else None
+    onboarded = data.get('quick_reg_onboarded')
+    if onboarded is None:
+        # Missing flag = not onboarded on the Quick Registration page. Profile-created templates
+        # alone do not skip the mandatory QR setup modal; user must confirm via Save (mark_onboarded).
+        onboarded = False
+    else:
+        onboarded = bool(onboarded)
+    builtin_completed = data.get('quick_reg_builtin_completed')
+    return {
+        'templates': templates,
+        'default_template_id': default_id,
+        'quick_reg_onboarded': onboarded,
+        'quick_reg_builtin_completed': bool(builtin_completed),
+    }
+
+
+def _save_reg_templates_doc(doctor, doc):
+    payload = {
+        'templates': doc.get('templates') or [],
+        'default_template_id': doc.get('default_template_id'),
+        'quick_reg_onboarded': bool(doc.get('quick_reg_onboarded')),
+    }
+    if doc.get('quick_reg_builtin_completed'):
+        payload['quick_reg_builtin_completed'] = True
+    doctor.registration_templates_json = json.dumps(payload, ensure_ascii=False)
+
+
+def _clean_template_sections_dict(sections_in):
+    if not isinstance(sections_in, dict):
+        sections_in = {}
+    clean = {k: bool(v) for k, v in sections_in.items() if k in REGISTRATION_TEMPLATE_SECTION_KEYS}
+    clean['demographics'] = True
+    return clean
+
+
+def get_registration_templates_state(doctor):
+    """Templates (demographics always true), default_template_id, quick_reg_onboarded.
+
+    Onboarding is effective when quick_reg_onboarded is set and either there is at least one
+    saved template or the doctor completed Quick Registration using the built-in Default preset
+    only (quick_reg_builtin_completed). Orphaned onboarded:true with an empty template list and
+    no builtin flag still means not onboarded.
+    """
+    doc = _load_reg_templates_doc(doctor)
+    out_templates = []
+    for t in doc['templates']:
+        if not isinstance(t, dict):
+            continue
+        tid = str(t.get('id') or '').strip()
+        name = (t.get('name') or '').strip()
+        if not tid or not name:
+            continue
+        sec = _clean_template_sections_dict(t.get('sections'))
+        out_templates.append({'id': tid, 'name': name, 'sections': sec})
+
+    template_ids = {t['id'] for t in out_templates}
+    default_id = doc.get('default_template_id')
+    default_id = str(default_id).strip() if default_id else None
+    if default_id not in template_ids:
+        default_id = None
+
+    stored_onboarded = bool(doc.get('quick_reg_onboarded'))
+    builtin_completed = bool(doc.get('quick_reg_builtin_completed'))
+    has_templates = len(out_templates) > 0
+    effective_onboarded = stored_onboarded and (has_templates or builtin_completed)
+
+    return {
+        'templates': out_templates,
+        'default_template_id': default_id,
+        'quick_reg_onboarded': effective_onboarded,
+        'quick_reg_builtin_completed': builtin_completed,
+    }
+
+
+def get_custom_registration_templates(doctor):
+    """Return list of dicts: id, name, sections (demographics always included)."""
+    return get_registration_templates_state(doctor)['templates']
+
+
+def set_custom_registration_templates(doctor, templates_list):
+    """Replace templates array; preserve default_template_id and quick_reg_onboarded."""
+    doc = _load_reg_templates_doc(doctor)
+    doc['templates'] = templates_list
+    _save_reg_templates_doc(doctor, doc)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
@@ -608,6 +1333,17 @@ with app.app_context():
             db.session.commit()
         except Exception:
             db.session.rollback()
+    # Doctor: custom registration templates (JSON)
+    try:
+        db.session.execute(text('ALTER TABLE doctors ADD COLUMN registration_templates_json TEXT'))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    try:
+        db.session.execute(text('ALTER TABLE doctors ADD COLUMN public_profile_slug VARCHAR(64)'))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
     # Patient: email and per-patient reminder days override
     for col, spec in [('email', 'VARCHAR(120)'), ('appointment_reminder_days', 'VARCHAR(50)')]:
         try:
@@ -618,6 +1354,12 @@ with app.app_context():
     # Appointment: patient email for reminders
     try:
         db.session.execute(text('ALTER TABLE appointments ADD COLUMN email VARCHAR(120)'))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    # Appointment: visit format (In-person / Online)
+    try:
+        db.session.execute(text('ALTER TABLE appointments ADD COLUMN format VARCHAR(20)'))
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -1291,6 +2033,64 @@ DESIGNATION_CHOICES = (
     'Medical Director / Chief Medical Officer',
 )
 
+PUBLIC_PROFILE_SLUG_RESERVED = frozenset({
+    'login', 'logout', 'api', 'static', 'profile', 'dashboard', 'admin', 'public',
+    'first_visit', 'landing', 'register', 'health', 'favicon.ico', 'robots.txt',
+    'profile-ext', 'ext', 'photo',
+})
+PUBLIC_PROFILE_SLUG_RE = re.compile(r'^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$')
+PUBLIC_PROFILE_SLUG_MIN_LEN = 3
+PUBLIC_PROFILE_SLUG_MAX_LEN = 64
+
+
+def normalize_public_profile_slug(raw):
+    if raw is None:
+        return None
+    s = (raw or '').strip().lower()
+    return s if s else None
+
+
+def validate_public_profile_slug(s):
+    """s is normalized non-empty string. Returns (ok, error_message)."""
+    if len(s) < PUBLIC_PROFILE_SLUG_MIN_LEN or len(s) > PUBLIC_PROFILE_SLUG_MAX_LEN:
+        return False, (
+            f'Public link must be {PUBLIC_PROFILE_SLUG_MIN_LEN}–{PUBLIC_PROFILE_SLUG_MAX_LEN} characters.'
+        )
+    if not PUBLIC_PROFILE_SLUG_RE.match(s):
+        return False, 'Use only lowercase letters, numbers, and hyphens (no leading or trailing hyphen).'
+    if '--' in s:
+        return False, 'Avoid consecutive hyphens in the public link.'
+    if s in PUBLIC_PROFILE_SLUG_RESERVED:
+        return False, 'That public link is reserved. Choose another.'
+    return True, None
+
+
+def _external_profile_template_context(doctor, external_profile):
+    """Shared template variables for /profile/ext and public slug view."""
+    raw_care = getattr(external_profile, 'care_model_json', None)
+    raw_care_s = (raw_care or '').strip() if isinstance(raw_care, str) else ''
+    if raw_care is None or raw_care_s == '':
+        care_display_steps = DEFAULT_EXTERNAL_CARE_STEPS
+        care_modal_initial = DEFAULT_EXTERNAL_CARE_STEPS
+    else:
+        parsed_care = _ext_profile_care_steps(external_profile.care_model_json)
+        care_display_steps = parsed_care
+        care_modal_initial = parsed_care if parsed_care else DEFAULT_EXTERNAL_CARE_STEPS
+    return {
+        'doctor': doctor,
+        'external_profile': external_profile,
+        'default_external_care_steps': DEFAULT_EXTERNAL_CARE_STEPS,
+        'external_condition_choices': EXTERNAL_PROFILE_CONDITION_CHOICES,
+        'external_conditions': _ext_profile_json_list(getattr(external_profile, 'conditions_treated_json', None)),
+        'external_accolades': _ext_profile_json_list(getattr(external_profile, 'accolades_json', None)),
+        'external_care_display': care_display_steps,
+        'external_care_modal_initial': care_modal_initial,
+        'external_hero_pills': _ext_profile_json_list(getattr(external_profile, 'hero_pills_json', None)),
+        'external_clinic_map_embed_srcs': _ext_clinic_map_embed_srcs_for_doctor(doctor, external_profile),
+        'external_clinic_map_links': _ext_clinic_map_links_padded(doctor, external_profile),
+        'external_clinic_labels': [(c.get('name') or '').strip() or 'Clinic' for c in (doctor.clinics_list or [])],
+    }
+
 
 @app.route('/profile/picture')
 @doctor_required
@@ -1306,6 +2106,22 @@ def serve_profile_picture():
     )
 
 
+@app.route('/profile/picture/public/<slug>')
+def public_profile_picture(slug):
+    """Serve profile photo for a doctor who enabled a public profile slug (no login)."""
+    s = normalize_public_profile_slug(slug)
+    if not s:
+        abort(404)
+    doc = Doctor.query.filter_by(public_profile_slug=s).first()
+    if not doc or not doc.profile_photo:
+        abort(404)
+    return send_file(
+        io.BytesIO(doc.profile_photo),
+        mimetype=doc.profile_photo_mimetype or 'image/jpeg',
+        max_age=3600,
+    )
+
+
 @app.route('/profile', methods=['GET', 'POST'])
 @doctor_required
 def profile():
@@ -1316,6 +2132,23 @@ def profile():
         return redirect(url_for('first_visit'))
     
     if request.method == 'POST':
+        slug_raw = request.form.get('public_profile_slug', '')
+        new_public_slug = normalize_public_profile_slug(slug_raw)
+        if new_public_slug is not None:
+            ok_slug, slug_err = validate_public_profile_slug(new_public_slug)
+            if not ok_slug:
+                flash(slug_err, 'error')
+                nu = request.args.get('next')
+                return redirect(url_for('profile', next=nu) if nu else url_for('profile'))
+            taken = Doctor.query.filter(
+                Doctor.public_profile_slug == new_public_slug,
+                Doctor.id != doctor.id,
+            ).first()
+            if taken:
+                flash('That public link is already in use by another account.', 'error')
+                nu = request.args.get('next')
+                return redirect(url_for('profile', next=nu) if nu else url_for('profile'))
+
         uploaded_photo = False
         if 'profile_photo' in request.files:
             pfile = request.files['profile_photo']
@@ -1340,9 +2173,23 @@ def profile():
         if len(desig) > DESIGNATION_MAX_LEN:
             desig = desig[:DESIGNATION_MAX_LEN]
         doctor.designation = desig if desig else None
-        doctor.clinic_name = request.form.get('clinic_name', '').strip()
+        names = request.form.getlist('clinic_entry_name')
+        addrs = request.form.getlist('clinic_entry_address')
+        clinic_rows = []
+        for n, a in zip(names, addrs):
+            n = (n or '').strip()
+            a = (a or '').strip()
+            if n or a:
+                clinic_rows.append({'name': n, 'address': a})
+        doctor.clinics_json = serialize_doctor_clinics_list(clinic_rows)
+        primary = parse_doctor_clinics_list(doctor.clinics_json, None, None)
+        if primary:
+            doctor.clinic_name = (primary[0]['name'] or '')[:200] or None
+            doctor.address_text = primary[0]['address'] or None
+        else:
+            doctor.clinic_name = None
+            doctor.address_text = None
         doctor.kmc_code = request.form.get('kmc_code', '').strip()
-        doctor.address_text = request.form.get('address_text', '').strip()
         
         # --- PHASE 1 UPDATES: Phone & Email ---
         doctor.phone = request.form.get('phone', '').strip()
@@ -1354,18 +2201,40 @@ def profile():
             doctor.smtp_app_password = encrypt_smtp_password(smtp_pw)
         doctor.appointment_reminder_days = request.form.get('appointment_reminder_days', '').strip() or "7,3,1"
         
-        doctor.social_handle = request.form.get('social_handle', '').strip()
+        soc_li = request.form.get('social_linkedin', '').strip()
+        soc_web = request.form.get('social_website', '').strip()
+        soc_ig = request.form.get('social_instagram', '').strip()
+        if soc_li or soc_web or soc_ig:
+            doctor.social_handle = serialize_doctor_social_handle_json(soc_li, soc_web, soc_ig)
+        else:
+            doctor.social_handle = None
 
-        # Active appointment template
+        raw_sched = request.form.get('schedule_templates_json', '').strip()
+        if raw_sched:
+            try:
+                sched_payload = json.loads(raw_sched)
+                if not isinstance(sched_payload, list):
+                    sched_payload = []
+            except json.JSONDecodeError:
+                flash('Could not update appointment schedule templates (invalid data).', 'error')
+                nu = request.args.get('next')
+                return redirect(url_for('profile', next=nu) if nu else url_for('profile'))
+            sync_doctor_schedule_templates_from_payload(doctor, sched_payload)
+
+        # Active appointment template (after schedule sync so FKs exist)
         active_template = request.form.get('active_template')
         if active_template and active_template != 'default':
             try:
-                doctor.active_template_id = int(active_template)
+                tid = int(active_template)
+                if ScheduleTemplate.query.filter_by(id=tid, doctor_id=doctor.id).first():
+                    doctor.active_template_id = tid
+                else:
+                    doctor.active_template_id = None
             except (TypeError, ValueError):
                 doctor.active_template_id = None
         else:
             doctor.active_template_id = None
-        
+
         # Handle Signature Upload
         if 'signature' in request.files:
             file = request.files['signature']
@@ -1374,19 +2243,200 @@ def profile():
                 filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 file.save(filepath)
                 doctor.signature_filename = filename
-        
+
+        doctor.public_profile_slug = new_public_slug
+
+        db.session.flush()
+        try:
+            _dch = get_dashboard_clinic_hours(doctor)
+            _doc = {
+                "morning": {"start": _dch["morning_start"], "end": _dch["morning_end"]},
+                "evening": {"start": _dch["evening_start"], "end": _dch["evening_end"]},
+            }
+            _whj = _dch.get("working_hours_json")
+            if isinstance(_whj, list) and len(_whj) > 0:
+                _doc["working_hours"] = _whj
+            doctor.clinic_hours = json.dumps(_doc)
+        except Exception:
+            pass
+
         db.session.commit()
         flash('Profile updated successfully!', 'success')
         next_url = request.args.get('next') or url_for('dashboard')
         return redirect(next_url)
 
-    schedule_templates = ScheduleTemplate.query.filter_by(doctor_id=doctor.id).all() if doctor else []
+    schedule_templates = (
+        ScheduleTemplate.query.filter_by(doctor_id=doctor.id)
+        .order_by(ScheduleTemplate.is_default.desc(), ScheduleTemplate.id.asc())
+        .all()
+        if doctor
+        else []
+    )
+    registration_templates_state = get_registration_templates_state(doctor)
     return render_template(
         'profile.html',
         doctor=doctor,
         schedule_templates=schedule_templates,
+        schedule_template_default_hours=DEFAULT_SCHEDULE_WORKING_HOURS_LIST,
+        schedule_slot_keys=SCHEDULE_TEMPLATE_SLOT_KEYS_ORDERED,
+        schedule_slot_defaults=DEFAULT_SCHEDULE_SLOT_DURATIONS,
         designation_choices=DESIGNATION_CHOICES,
+        custom_registration_templates=registration_templates_state['templates'],
+        registration_templates_state=registration_templates_state,
     )
+
+
+def _get_or_create_external_profile(doctor):
+    row = DoctorExternalProfile.query.filter_by(doctor_id=doctor.id).first()
+    if row is None:
+        row = DoctorExternalProfile(doctor_id=doctor.id)
+        db.session.add(row)
+        db.session.commit()
+    return row
+
+
+@app.route('/profile/ext', methods=['GET'])
+@doctor_required
+def profile_ext():
+    """Doctor profile with external-profile left panel; main settings form unchanged on the right."""
+    doctor = Doctor.query.get(session.get('doctor_id'))
+    if not doctor:
+        flash('Doctor not found.', 'error')
+        return redirect(url_for('first_visit'))
+    external_profile = _get_or_create_external_profile(doctor)
+    ctx = _external_profile_template_context(doctor, external_profile)
+    return render_template('profile_ext.html', **ctx)
+
+
+@app.route('/public_profile/<slug>', methods=['GET'])
+def profile_ext_public(slug):
+    """Read-only external profile for visitors (no login). URL: /public_profile/<slug>."""
+    s = normalize_public_profile_slug(slug)
+    if not s:
+        abort(404)
+    doctor = Doctor.query.filter_by(public_profile_slug=s).first()
+    if not doctor:
+        abort(404)
+    external_profile = _get_or_create_external_profile(doctor)
+    ctx = _external_profile_template_context(doctor, external_profile)
+    ctx['pe_public_view'] = True
+    ctx['public_profile_slug'] = doctor.public_profile_slug
+    return render_template('profile_ext_public.html', **ctx)
+
+
+@app.route('/profile/ext/public/<slug>')
+def profile_ext_public_legacy_redirect(slug):
+    """Old public profile path → /public_profile/<slug>."""
+    s = normalize_public_profile_slug(slug)
+    if not s:
+        abort(404)
+    return redirect(url_for('profile_ext_public', slug=s), code=301)
+
+
+@app.route('/api/profile/external', methods=['GET', 'POST'])
+@doctor_required
+def api_profile_external():
+    """Read/update external profile panel fields and doctor full_name (JSON)."""
+    doctor = Doctor.query.get(session.get('doctor_id'))
+    if not doctor:
+        return jsonify({'ok': False, 'error': 'Doctor not found.'}), 400
+    ext = _get_or_create_external_profile(doctor)
+    if request.method == 'GET':
+        return jsonify({
+            'ok': True,
+            'full_name': doctor.full_name or '',
+            'designation': doctor.designation or '',
+            'headline': ext.headline or '',
+            'public_bio': ext.public_bio or '',
+            'hero_line': _ext_hero_line_text(doctor, ext),
+            'kmc_code': doctor.kmc_code or '',
+            'hero_pills': _ext_profile_json_list(getattr(ext, 'hero_pills_json', None)),
+            'conditions_treated': _ext_profile_json_list(getattr(ext, 'conditions_treated_json', None)),
+            'accolades': _ext_profile_json_list(getattr(ext, 'accolades_json', None)),
+            'care_model': _ext_profile_care_steps(getattr(ext, 'care_model_json', None)),
+            'clinic_map_links': _ext_clinic_map_links_padded(doctor, ext),
+            'clinic_map_embed_srcs': _ext_clinic_map_embed_srcs_for_doctor(doctor, ext),
+        })
+    data = request.get_json(silent=True) or {}
+    if 'full_name' in data:
+        doctor.full_name = (data.get('full_name') or '').strip() or None
+    if 'designation' in data:
+        des = (data.get('designation') or '').strip()
+        doctor.designation = des[:255] if des else None
+    if 'headline' in data:
+        h = (data.get('headline') or '').strip()
+        ext.headline = h[:200] if h else None
+    if 'public_bio' in data:
+        ext.public_bio = (data.get('public_bio') or '').strip() or None
+    if 'conditions_treated' in data:
+        raw = data.get('conditions_treated')
+        clean = []
+        if isinstance(raw, list):
+            for x in raw[:40]:
+                if isinstance(x, str) and x.strip():
+                    clean.append(x.strip()[:200])
+        ext.conditions_treated_json = json.dumps(clean)
+    if 'accolades' in data:
+        raw = data.get('accolades')
+        clean = []
+        if isinstance(raw, list):
+            for x in raw[:20]:
+                if isinstance(x, str) and x.strip():
+                    clean.append(x.strip()[:500])
+        ext.accolades_json = json.dumps(clean)
+    if 'care_model' in data:
+        raw = data.get('care_model')
+        steps = []
+        if isinstance(raw, list):
+            for item in raw[:12]:
+                if isinstance(item, dict):
+                    t = (item.get('title') or '').strip()[:200]
+                    b = (item.get('body') or '').strip()[:4000]
+                    if t or b:
+                        steps.append({'title': t, 'body': b})
+        ext.care_model_json = json.dumps(steps)
+    if 'hero_pills' in data:
+        raw = data.get('hero_pills')
+        clean = []
+        if isinstance(raw, list):
+            for x in raw[:12]:
+                if isinstance(x, str) and x.strip():
+                    clean.append(x.strip()[:120])
+        ext.hero_pills_json = json.dumps(clean)
+    if 'clinic_map_links' in data:
+        raw = data.get('clinic_map_links')
+        clean_maps = []
+        n_clinics = len(doctor.clinics_list)
+        if isinstance(raw, list):
+            for x in raw:
+                if len(clean_maps) >= n_clinics:
+                    break
+                if isinstance(x, str):
+                    s = x.strip()
+                    if len(s) > 2048:
+                        s = s[:2048]
+                    clean_maps.append(s)
+                else:
+                    clean_maps.append("")
+        while len(clean_maps) < n_clinics:
+            clean_maps.append("")
+        ext.clinic_map_links_json = json.dumps(clean_maps) if any(clean_maps) else None
+    db.session.commit()
+    return jsonify({
+        'ok': True,
+        'full_name': doctor.full_name or '',
+        'designation': doctor.designation or '',
+        'headline': ext.headline or '',
+        'public_bio': ext.public_bio or '',
+        'hero_line': _ext_hero_line_text(doctor, ext),
+        'kmc_code': doctor.kmc_code or '',
+        'hero_pills': _ext_profile_json_list(ext.hero_pills_json),
+        'conditions_treated': _ext_profile_json_list(ext.conditions_treated_json),
+        'accolades': _ext_profile_json_list(ext.accolades_json),
+        'care_model': _ext_profile_care_steps(ext.care_model_json),
+        'clinic_map_links': _ext_clinic_map_links_padded(doctor, ext),
+        'clinic_map_embed_srcs': _ext_clinic_map_embed_srcs_for_doctor(doctor, ext),
+    })
 
 
 # Root route is now handled by landing()
@@ -1420,7 +2470,16 @@ def dashboard():
     appointments = Appointment.query.filter_by(doctor_id=doctor_id, date=target_date).order_by(Appointment.start_time).all()
 
     # JSON-serializable list for JS slot calculation (id, start_time, slot_duration, name)
-    appointments_for_day = [{"id": a.id, "start_time": a.start_time or "", "slot_duration": a.slot_duration or 15, "name": a.name or ""} for a in appointments]
+    appointments_for_day = [
+        {
+            "id": a.id,
+            "start_time": a.start_time or "",
+            "slot_duration": a.slot_duration or 15,
+            "name": a.name or "",
+            "format": (getattr(a, "appt_format", None) or "In-person"),
+        }
+        for a in appointments
+    ]
 
     # Prepare patient data for the table (including latest diagnosis, last visit, visit count)
     patient_data = []
@@ -1434,6 +2493,7 @@ def dashboard():
             'name': p.name,
             'age': p.age,
             'sex': p.sex,
+            'email': (p.email or '').strip(),
             'diagnosis': diagnosis,
             'note': p.personal_notes or "None",
             'last_visit': last_visit_date,
@@ -1441,7 +2501,13 @@ def dashboard():
         })
 
     clinic_name = (doctor.clinic_name or "") if doctor else ""
-    clinic_hours = get_clinic_hours(doctor)
+    clinic_hours = get_dashboard_clinic_hours(doctor)
+    schedule_sidebar = get_dashboard_schedule_sidebar(doctor)
+    wh_blocks = clinic_hours.get("working_hours_blocks") or []
+    appt_clinic_slots = {
+        a.id: appointment_clinic_slot_key(getattr(a, "start_time", None), wh_blocks)
+        for a in appointments
+    }
 
     return render_template('dashboard.html',
                            doctor=doctor,
@@ -1455,6 +2521,8 @@ def dashboard():
                            top_5_patients=patients[:5],
                            clinic_name=clinic_name,
                            clinic_hours=clinic_hours,
+                           schedule_sidebar=schedule_sidebar,
+                           appt_clinic_slots=appt_clinic_slots,
                            getattr=getattr)
 
 
@@ -1528,14 +2596,39 @@ def submit_feedback():
 @app.route('/api/clinic_hours', methods=['POST'])
 @doctor_required
 def save_clinic_hours():
-    """Save clinic hours for the current doctor. Expects JSON or form: morning_start, morning_end, evening_start, evening_end (HH:MM)."""
+    """Save clinic hours: JSON working_hours (all windows) or morning/evening; form fields legacy two-band."""
     doctor_id = session.get('doctor_id')
     doctor = Doctor.query.get(doctor_id)
     if not doctor:
         return jsonify({"ok": False, "error": "Doctor not found"}), 400
 
+    def norm(t):
+        if not t:
+            return "09:00"
+        s = str(t).strip()
+        if len(s) >= 5:
+            return s[:5]
+        return s
+
     if request.is_json:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
+        wh_in = data.get("working_hours")
+        if isinstance(wh_in, list) and len(wh_in) > 0:
+            wh_norm = _coerce_payload_working_hours(wh_in)
+            m = wh_norm[0]
+            if len(wh_norm) > 1:
+                e = wh_norm[1]
+            else:
+                e = {"start": "17:00", "end": "22:00"}
+            payload = {
+                "morning": {"start": m["start"], "end": m["end"]},
+                "evening": {"start": e["start"], "end": e["end"]},
+                "working_hours": wh_norm,
+            }
+            doctor.clinic_hours = json.dumps(payload)
+            _push_clinic_hours_to_schedule_templates(doctor, payload)
+            db.session.commit()
+            return jsonify({"ok": True, "clinic_hours": get_dashboard_clinic_hours(doctor)})
         morning = data.get("morning", {})
         evening = data.get("evening", {})
         m_start = morning.get("start") or data.get("morning_start", "09:00")
@@ -1548,22 +2641,132 @@ def save_clinic_hours():
         e_start = request.form.get("evening_start", "17:00")
         e_end = request.form.get("evening_end", "22:00")
 
-    # Normalize to HH:MM (strip seconds if present)
-    def norm(t):
-        if not t:
-            return "09:00"
-        s = str(t).strip()
-        if len(s) >= 5:
-            return s[:5]
-        return s
-
     payload = {
         "morning": {"start": norm(m_start), "end": norm(m_end)},
         "evening": {"start": norm(e_start), "end": norm(e_end)},
+        "working_hours": [
+            {"start": norm(m_start), "end": norm(m_end)},
+            {"start": norm(e_start), "end": norm(e_end)},
+        ],
     }
     doctor.clinic_hours = json.dumps(payload)
+    _push_clinic_hours_to_schedule_templates(doctor, payload)
     db.session.commit()
-    return jsonify({"ok": True, "clinic_hours": get_clinic_hours(doctor)})
+    return jsonify({"ok": True, "clinic_hours": get_dashboard_clinic_hours(doctor)})
+
+
+@app.route('/api/profile/registration-templates', methods=['GET'])
+@doctor_required
+def api_get_registration_templates():
+    doctor = Doctor.query.get(session.get('doctor_id'))
+    if not doctor:
+        return jsonify({"ok": False, "error": "Doctor not found"}), 400
+    st = get_registration_templates_state(doctor)
+    return jsonify({
+        "ok": True,
+        "templates": st['templates'],
+        "default_template_id": st['default_template_id'],
+        "quick_reg_onboarded": st['quick_reg_onboarded'],
+        "quick_reg_builtin_completed": st['quick_reg_builtin_completed'],
+    })
+
+
+@app.route('/api/profile/registration-templates/default', methods=['POST'])
+@doctor_required
+def api_set_default_registration_template():
+    doctor = Doctor.query.get(session.get('doctor_id'))
+    if not doctor:
+        return jsonify({"ok": False, "error": "Doctor not found"}), 400
+    data = request.get_json(silent=True) or {}
+    tid = str(data.get('id') or '').strip()
+    if not tid:
+        return jsonify({"ok": False, "error": "Template id is required."}), 400
+    doc = _load_reg_templates_doc(doctor)
+    ids = {str(t.get('id') or '').strip() for t in doc['templates'] if isinstance(t, dict)}
+    if tid not in ids:
+        return jsonify({"ok": False, "error": "Template not found."}), 404
+    doc['default_template_id'] = tid
+    _save_reg_templates_doc(doctor, doc)
+    db.session.commit()
+    st = get_registration_templates_state(doctor)
+    return jsonify({
+        "ok": True,
+        "templates": st['templates'],
+        "default_template_id": st['default_template_id'],
+        "quick_reg_onboarded": st['quick_reg_onboarded'],
+        "quick_reg_builtin_completed": st['quick_reg_builtin_completed'],
+    })
+
+
+@app.route('/api/profile/registration-templates', methods=['POST'])
+@doctor_required
+def api_save_registration_template():
+    doctor = Doctor.query.get(session.get('doctor_id'))
+    if not doctor:
+        return jsonify({"ok": False, "error": "Doctor not found"}), 400
+    data = request.get_json(silent=True) or {}
+
+    if data.get('builtin_default_only') and data.get('mark_onboarded'):
+        doc = _load_reg_templates_doc(doctor)
+        doc['quick_reg_onboarded'] = True
+        doc['quick_reg_builtin_completed'] = True
+        _save_reg_templates_doc(doctor, doc)
+        db.session.commit()
+        st = get_registration_templates_state(doctor)
+        return jsonify({
+            "ok": True,
+            "templates": st['templates'],
+            "default_template_id": st['default_template_id'],
+            "quick_reg_onboarded": st['quick_reg_onboarded'],
+            "quick_reg_builtin_completed": st['quick_reg_builtin_completed'],
+        })
+
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({"ok": False, "error": "Template name is required."}), 400
+    if len(name) > CUSTOM_REGISTRATION_TEMPLATE_NAME_MAX:
+        return jsonify({
+            "ok": False,
+            "error": f"Template name must be {CUSTOM_REGISTRATION_TEMPLATE_NAME_MAX} characters or fewer.",
+        }), 400
+    template_id = (data.get('id') or '').strip() or None
+    sections_in = data.get('sections')
+    clean_sections = _clean_template_sections_dict(sections_in)
+
+    doc = _load_reg_templates_doc(doctor)
+    templates = [t for t in doc['templates'] if isinstance(t, dict)]
+
+    if template_id:
+        found = False
+        for i, t in enumerate(templates):
+            if str(t.get('id') or '').strip() == template_id:
+                templates[i] = {'id': template_id, 'name': name, 'sections': clean_sections}
+                found = True
+                break
+        if not found:
+            return jsonify({"ok": False, "error": "Template not found."}), 404
+        saved_id = template_id
+    else:
+        saved_id = str(uuid.uuid4())
+        templates.append({'id': saved_id, 'name': name, 'sections': clean_sections})
+
+    doc['templates'] = templates
+    if data.get('set_as_default'):
+        doc['default_template_id'] = saved_id
+    if data.get('mark_onboarded'):
+        doc['quick_reg_onboarded'] = True
+    doc['quick_reg_builtin_completed'] = False
+
+    _save_reg_templates_doc(doctor, doc)
+    db.session.commit()
+    st = get_registration_templates_state(doctor)
+    return jsonify({
+        "ok": True,
+        "templates": st['templates'],
+        "default_template_id": st['default_template_id'],
+        "quick_reg_onboarded": st['quick_reg_onboarded'],
+        "quick_reg_builtin_completed": st['quick_reg_builtin_completed'],
+    })
 
 
 @app.route('/api/add_note', methods=['POST'])
@@ -1621,6 +2824,9 @@ def add_appointment():
         return redirect(url_for('dashboard'))
 
     appt_email = (request.form.get('appt_email') or request.form.get('appt_email_sent') or '').strip()
+    fmt = (request.form.get('appt_format') or '').strip()
+    if fmt not in ('In-person', 'Online'):
+        fmt = 'In-person'
     appt = Appointment(
         doctor_id=doctor_id,
         date=appt_date,
@@ -1633,6 +2839,7 @@ def add_appointment():
         status=request.form.get('appt_status', 'Confirmed'),
         view_details=request.form.get('appt_details', ''),
         email=appt_email if appt_email else None,
+        appt_format=fmt,
     )
     db.session.add(appt)
     db.session.commit()
@@ -1975,6 +3182,10 @@ def quick_registration():
     if appt_id:
         appt = Appointment.query.get(appt_id)
 
+    registration_templates_state = None
+    if doctor and not is_guest:
+        registration_templates_state = get_registration_templates_state(doctor)
+
     return render_template('quick_registration.html',
                            patients=patients,
                            today=today,
@@ -1983,7 +3194,8 @@ def quick_registration():
                            templates=templates,
                            appt=appt,
                            negative_history_data='{}',
-                           negative_history_positive_data='{}')
+                           negative_history_positive_data='{}',
+                           registration_templates_state=registration_templates_state)
 
 
 @app.route('/api/templates', methods=['GET'])
@@ -4750,6 +5962,20 @@ def preview_prescription(visit_id):
     visit = Visit.query.get_or_404(visit_id)
     patient = visit.patient
     include_qr = request.args.get('include_qr') == 'true'
+    doctor = patient.doctor
+    clinics = doctor.clinics_list if doctor else []
+    if len(clinics) > 1 and 'clinic_index' not in request.args:
+        return render_template(
+            'select_prescription_clinic.html',
+            visit=visit,
+            patient=patient,
+            clinics=clinics,
+            include_qr=include_qr,
+        )
+    ci = request.args.get('clinic_index', type=int)
+    if ci is None:
+        ci = 0
+    rx_name, rx_addr = doctor_rx_clinic_header(doctor, ci)
 
     # Chief complaints: chronological (longest duration first); follow-up: carried-over duration from previous visit
     previous_visit = Visit.query.filter(
@@ -4785,15 +6011,19 @@ def preview_prescription(visit_id):
         img_buffer.seek(0)
         qr_image_b64 = base64.b64encode(img_buffer.getvalue()).decode('utf-8')
     
-    return render_template('preview_prescription.html', 
-                         patient=patient, 
-                         visit=visit, 
-                         chief_complaints_sorted=chief_complaints_sorted,
-                         lifchart_url=lifchart_url,
-                         qr_image_b64=qr_image_b64)
+    return render_template(
+        'preview_prescription.html',
+        patient=patient,
+        visit=visit,
+        chief_complaints_sorted=chief_complaints_sorted,
+        lifchart_url=lifchart_url,
+        qr_image_b64=qr_image_b64,
+        rx_clinic_name=rx_name,
+        rx_clinic_address=rx_addr,
+    )
 
 
-def generate_prescription_pdf(visit_id, include_qr=False):
+def generate_prescription_pdf(visit_id, include_qr=False, clinic_index=None):
     """Generate PDF prescription."""
     visit = Visit.query.get_or_404(visit_id)
     patient = visit.patient
@@ -4816,8 +6046,9 @@ def generate_prescription_pdf(visit_id, include_qr=False):
         alignment=TA_CENTER,
         spaceAfter=12
     )
-    header_text = doctor.clinic_name if doctor and doctor.clinic_name else ""
-    sub_text = doctor.address_text if doctor and doctor.address_text else ""
+    rxn, rxa = doctor_rx_clinic_header(doctor, clinic_index)
+    header_text = rxn or ""
+    sub_text = rxa or ""
     story.append(Paragraph(header_text, header_style))
     story.append(Paragraph(sub_text, styles['Normal']))
     story.append(Spacer(1, 12))

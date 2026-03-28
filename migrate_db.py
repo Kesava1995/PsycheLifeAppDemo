@@ -4,6 +4,11 @@ Phase 1: Adds new columns for Patient details, Doctor contact, and Clinical slid
 Phase 2: Adds new tables for Stressors and Personality traits.
 """
 from app import app, db
+from models import (
+    migrate_doctor_external_profiles_schema,
+    migrate_doctor_social_handle_normalize,
+    migrate_doctor_clinics_normalize,
+)
 import sqlite3
 
 def column_exists(cursor, table_name, column_name):
@@ -44,6 +49,8 @@ def migrate():
                 ('profile_photo', 'BLOB'),
                 ('profile_photo_mimetype', 'TEXT'),
                 ('designation', 'TEXT'),
+                ('clinics_json', 'TEXT'),
+                ('public_profile_slug', 'TEXT'),
             ]
             for col, dtype in doctor_cols:
                 if not column_exists(cursor, 'doctors', col):
@@ -245,7 +252,34 @@ def migrate():
                 else:
                     print(f"  - {col} exists")
 
+            # Appointments: visit format (In-person / Online)
+            print("\n[Appointments Table]")
+            if not column_exists(cursor, 'appointments', 'format'):
+                try:
+                    cursor.execute("ALTER TABLE appointments ADD COLUMN format VARCHAR(20)")
+                    print("  + Added format")
+                except sqlite3.OperationalError as e:
+                    print(f"  ! Failed to add format: {e}")
+            else:
+                print("  - format exists")
+
+            # Doctor external profile (profile_ext / API)
+            migrate_doctor_external_profiles_schema(cursor, column_exists, table_exists)
+
             connection.commit()
+
+            print("\n[Doctor social_handle JSON]")
+            n_soc = migrate_doctor_social_handle_normalize(db.session)
+            if n_soc:
+                print(f"  + Normalized {n_soc} doctor row(s) to JSON")
+            else:
+                print("  - social_handle already JSON or empty")
+            print("\n[Doctor clinics_json]")
+            n_cl = migrate_doctor_clinics_normalize(db.session)
+            if n_cl:
+                print(f"  + Backfilled clinics_json for {n_cl} doctor row(s)")
+            else:
+                print("  - clinics_json already set or no legacy clinic data")
             print("\n--- Migration Completed Successfully! ---")
             
         except Exception as e:

@@ -126,8 +126,8 @@
     <div class="prescription-paper">
         <div class="rx-header">
             <div class="hospital-info">
-                <h1>{{ guest_doctor.clinic if guest else (patient.doctor.clinic_name or "") }}</h1>
-                <p>{{ guest_doctor.address if guest else (patient.doctor.address_text or "") }}</p>
+                <h1>{{ guest_doctor.clinic if guest else (rx_clinic_name if rx_clinic_name is defined else (patient.doctor.clinic_name or "")) }}</h1>
+                <p>{{ guest_doctor.address if guest else (rx_clinic_address if rx_clinic_address is defined else (patient.doctor.address_text or "")) }}</p>
                 <p>{{ guest_doctor.phone if guest else (patient.doctor.phone or "") }}</p>
             </div>
             <div class="doctor-info">

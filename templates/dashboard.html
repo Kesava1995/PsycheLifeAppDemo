@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Clinic Dashboard</title>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
 <style>
     /* Add this CSS rule for dark mode */
@@ -37,8 +38,42 @@
         color: white;
         border: 1px solid #555;
     }
+    .select2-container { z-index: 4001; }
+    .select2-container--default .select2-selection--single {
+        min-height: 38px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 28px; }
+    .select2-container--default .select2-selection--single .select2-selection__arrow { height: 36px; }
+    body.dark-mode .select2-container--default .select2-selection--single {
+        background-color: #333; color: #fff; border-color: #555;
+    }
+    body.dark-mode .select2-container--default .select2-selection--single .select2-selection__rendered { color: #fff; }
+    body.dark-mode .select2-dropdown { background-color: #2c2c2c; border-color: #555; color: #eee; }
+    body.dark-mode .select2-container--default .select2-results__option--highlighted[aria-selected] { background-color: #2c7be5; }
+    .appt-age-field-start { margin-top: 20px; }
+    .appt-patient-opt {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 10px;
+        width: 100%;
+        min-width: 0;
+    }
+    .appt-patient-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .appt-patient-id {
+        font-size: 11px;
+        color: #d4c4a8;
+        font-weight: 400;
+        flex-shrink: 0;
+        letter-spacing: 0.02em;
+    }
+    body.dark-mode .appt-patient-id { color: #e8dcc4; }
+    .select2-container--default .select2-results__option--highlighted .appt-patient-id {
+        color: rgba(255, 248, 220, 0.95);
+    }
 
     * { box-sizing: border-box; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
     body { margin: 0; font-family: Arial, sans-serif; background-color: #f5f5f5; overflow-x: hidden; transition: 0.3s; }
 
     .topbar { position: fixed; width: 100%; top: 0; left: 0; z-index: 3000; height: 60px; background: white; padding: 0 16px 0 20px; display: flex; align-items: center; gap: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -151,68 +186,12 @@
         color: #e5edf7;
     }
     body.dark-mode .registration-option.quick { color: #bac8d8; background: #24303d; }
-    .quick-checklist-modal-content {
-        max-width: 430px;
-        width: 92%;
-        padding: 18px 18px 14px;
-    }
-    .quick-checklist-title {
-        margin: 0 0 12px;
-        font-size: 16px;
-        font-weight: 700;
-        color: #111827;
-    }
-    .quick-checklist-body {
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 10px 12px;
-        max-height: 62vh;
-        overflow: auto;
-        background: #fff;
-    }
-    .quick-checklist-root,
-    .quick-checklist-sub {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-    }
-    .quick-checklist-root > li { margin: 5px 0; }
-    .quick-checklist-sub {
-        margin-top: 4px;
-        margin-left: 24px;
-    }
-    .quick-checklist-sub > li { margin: 3px 0; }
-    .quick-checklist-line {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 13px;
-        color: #111827;
-    }
-    .quick-checklist-footer {
-        margin-top: 12px;
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-    }
-    .quick-checklist-close {
-        width: auto;
-        margin: 0;
-        padding: 8px 16px;
-        background: #888;
-    }
-    .quick-checklist-proceed {
-        width: auto;
-        margin: 0;
-        padding: 8px 16px;
-        background: #0f766e;
-    }
-    .quick-checklist-proceed:hover { background: #0d9488; }
-    body.dark-mode .quick-checklist-title,
-    body.dark-mode .quick-checklist-line { color: #e5e7eb; }
-    body.dark-mode .quick-checklist-body {
-        background: #1E252E;
-        border-color: #334155;
+    a.registration-option.quick {
+        text-decoration: none;
+        display: block;
+        text-align: left;
+        width: 100%;
+        box-sizing: border-box;
     }
 
     table { width: 100%; background: white; border-collapse: collapse; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -352,6 +331,7 @@
         margin-top: 0;
         padding-top: 6px;
         border-top: 1px solid #E5E7EB;
+        min-width: 0;
     }
     .clinic-hours-title-row {
         display: flex;
@@ -381,12 +361,16 @@
     .clinic-hours-badges {
         display: flex;
         flex-direction: row;
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
         gap: 6px;
-        align-items: center;
+        align-items: flex-start;
+        max-width: 100%;
+        min-width: 0;
     }
     .clinic-hours-badges .clinic-hour-badge {
         white-space: nowrap;
+        max-width: 100%;
+        box-sizing: border-box;
     }
     .clinic-hour-badge {
         display: inline-flex;
@@ -400,6 +384,176 @@
         border: 1px solid #E5E7EB;
         cursor: pointer;
         transition: all 0.2s;
+        min-width: 0;
+    }
+
+    .sidebar .calendar-card {
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    /* Schedule template list styles (used in clinic-hours modal) */
+    .schedule-template-sidebar-title {
+        font-size: 12px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 4px;
+    }
+    .schedule-template-active-name {
+        font-size: 11px;
+        color: #0e7490;
+        font-weight: 600;
+        margin-bottom: 8px;
+        line-height: 1.35;
+        word-wrap: break-word;
+        overflow-wrap: anywhere;
+    }
+    .schedule-template-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        font-size: 11px;
+    }
+    .schedule-template-list li {
+        padding: 4px 6px;
+        border-radius: 4px;
+        margin-bottom: 2px;
+        color: #4b5563;
+        word-wrap: break-word;
+        overflow-wrap: anywhere;
+    }
+    .schedule-template-list li.is-active {
+        background: #e0f7fa;
+        color: #0e7490;
+        font-weight: 600;
+    }
+    .schedule-template-list li .tpl-default-tag {
+        font-size: 10px;
+        color: #6b7280;
+        font-weight: 400;
+    }
+    .slot-durations-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #6b7280;
+        margin-bottom: 4px;
+    }
+    .slot-duration-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 8px;
+        font-size: 11px;
+        padding: 5px 0;
+        border-bottom: 1px solid #f3f4f6;
+        color: #374151;
+    }
+    .slot-duration-row:last-child {
+        border-bottom: none;
+    }
+    .slot-duration-row .sd-label {
+        min-width: 0;
+        flex: 1;
+        word-wrap: break-word;
+        overflow-wrap: anywhere;
+    }
+    .slot-duration-row .sd-mins {
+        flex-shrink: 0;
+        color: #6b7280;
+        white-space: nowrap;
+    }
+    .clinic-hours-modal-content {
+        max-width: 520px;
+        width: 92%;
+        max-height: 90vh;
+        overflow: hidden;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    .clinic-hours-modal-content > h3 {
+        flex-shrink: 0;
+        margin-top: 0;
+    }
+    .clinic-hours-modal-hint {
+        flex-shrink: 0;
+        font-size: 12px;
+        color: #6b7280;
+        margin: 0 0 10px;
+        line-height: 1.4;
+    }
+    .clinic-hours-modal-info-scroll {
+        flex: 1 1 auto;
+        min-height: 120px;
+        max-height: min(42vh, 300px);
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 10px 12px;
+        margin: 0 0 14px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #f9fafb;
+        scrollbar-width: thin;
+        scrollbar-color: #c1c1c1 transparent;
+    }
+    .clinic-hours-modal-info-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+    .clinic-hours-modal-info-scroll::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 4px;
+    }
+    .clinic-hours-modal-form-sep {
+        flex-shrink: 0;
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+        margin: 0 0 8px;
+        padding-top: 4px;
+        border-top: 1px solid #e5e7eb;
+    }
+    .clinic-hours-modal-form-wrap {
+        flex-shrink: 0;
+    }
+    .clinic-hours-windows-scroll {
+        max-height: min(38vh, 260px);
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 10px 12px;
+        margin-bottom: 4px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #fff;
+        scrollbar-width: thin;
+        scrollbar-color: #c1c1c1 transparent;
+    }
+    .clinic-hours-windows-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+    .clinic-hours-windows-scroll::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 4px;
+    }
+    .clinic-wh-edit-row {
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    .clinic-wh-edit-row:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    .clinic-wh-edit-row label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: #374151;
+        margin-top: 6px;
+        margin-bottom: 4px;
+    }
+    .clinic-wh-edit-row label:first-child {
+        margin-top: 0;
     }
     .clinic-hour-badge:hover {
         background: #E5E7EB;
@@ -412,6 +566,66 @@
 
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 5000; }
     .modal-content { background: white; margin: 5vh auto; padding: 20px; width: 600px; max-width: 90%; max-height: 90vh; border-radius: 8px; display: flex; flex-direction: column; }
+    #appointmentModal .modal-content.appt-modal-content {
+        display: flex;
+        flex-direction: column;
+        max-height: 90vh;
+        overflow: hidden;
+        min-height: 0;
+    }
+    #appointmentModal .modal-content.appt-modal-content > h3 {
+        flex-shrink: 0;
+        margin-top: 0;
+    }
+    #appointmentModal .appt-modal-form {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+    }
+    #appointmentModal #appointment-form-wrapper.appt-modal-body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-right: 6px;
+        margin-right: -4px;
+    }
+    #appointmentModal .appt-modal-footer {
+        flex-shrink: 0;
+        padding-top: 14px;
+        margin-top: 4px;
+        border-top: 1px solid #e8e8e8;
+        background: #fff;
+    }
+    body.dark-mode #appointmentModal .appt-modal-footer {
+        border-top-color: #444;
+        background: #1E252E;
+    }
+    #appointmentModal .appt-modal-footer .error-text {
+        display: block;
+        margin-bottom: 10px;
+        margin-left: 0;
+    }
+    .appt-modal-actions {
+        display: flex;
+        flex-direction: row;
+        gap: 12px;
+        margin-top: 0;
+        align-items: stretch;
+    }
+    .appt-modal-actions .button {
+        flex: 1;
+        width: auto;
+        margin-bottom: 0;
+        margin-top: 0;
+        min-width: 0;
+    }
+    .appt-modal-actions .button.appt-modal-cancel { background: #888; }
+    .appt-modal-actions .button.appt-modal-cancel:hover { background: #666; }
+    body.dark-mode .appt-modal-actions .button.appt-modal-cancel { background: #555; color: #fff; }
+    body.dark-mode .appt-modal-actions .button.appt-modal-cancel:hover { background: #444; }
     .form-control { width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 4px; box-sizing: border-box; margin-bottom: 10px; }
     .mb-2 { margin-bottom: 10px; }
 
@@ -558,6 +772,31 @@
     body.dark-mode .clinic-hour-badge { background: #374151; border-color: #4b5563; color: #e5e7eb; }
     body.dark-mode .clinic-hour-badge:hover { background: #4b5563; }
     body.dark-mode .clinic-hour-badge.active { background: #66C2CE; color: #fff; border-color: #66C2CE; }
+    body.dark-mode #editClinicHoursModal .clinic-hours-modal-info-scroll {
+        background: #111827;
+        border-color: #374151;
+    }
+    body.dark-mode #editClinicHoursModal .clinic-hours-modal-hint { color: #9ca3af; }
+    body.dark-mode #editClinicHoursModal .clinic-hours-modal-form-sep {
+        color: #e5e7eb;
+        border-top-color: #374151;
+    }
+    body.dark-mode .schedule-template-sidebar-title { color: #e5e7eb; }
+    body.dark-mode .schedule-template-active-name { color: #5eead4; }
+    body.dark-mode .schedule-template-list li { color: #d1d5db; }
+    body.dark-mode .schedule-template-list li.is-active { background: #134e4a; color: #99f6e4; }
+    body.dark-mode .schedule-template-list li .tpl-default-tag { color: #9ca3af; }
+    body.dark-mode .slot-durations-label { color: #9ca3af; }
+    body.dark-mode .clinic-hours-windows-scroll {
+        background: #1f2937;
+        border-color: #374151;
+    }
+    body.dark-mode .clinic-wh-edit-row { border-bottom-color: #374151; }
+    body.dark-mode .clinic-wh-edit-row label { color: #e5e7eb; }
+    body.dark-mode .clinic-hours-windows-scroll::-webkit-scrollbar-thumb { background: #4b5563; }
+    body.dark-mode .slot-duration-row { color: #e5e7eb; border-bottom-color: #374151; }
+    body.dark-mode .slot-duration-row .sd-mins { color: #9ca3af; }
+    body.dark-mode #editClinicHoursModal .clinic-hours-modal-info-scroll::-webkit-scrollbar-thumb { background: #4b5563; }
 
     .delete-appt-btn { background: transparent; border: none; cursor: pointer; margin-left: 8px; padding: 4px; vertical-align: middle; }
     .delete-appt-btn:hover svg { fill: #c0392b; }
@@ -881,7 +1120,7 @@
                 <div><strong>New Patient Registration</strong><div class="small-text">Click to choose →</div></div>
                 <div class="registration-dropdown" onclick="event.stopPropagation()">
                     <a class="registration-option" href="{{ url_for('first_visit') }}">Detailed</a>
-                    <button type="button" class="registration-option quick" onclick="openQuickChecklistModal()">Quick</button>
+                    <a class="registration-option quick" href="{{ url_for('quick_registration') }}" onclick="this.closest('.registration-box') && this.closest('.registration-box').classList.remove('show-registration-menu')">Quick</a>
                 </div>
             </div>
             <div class="box highlight box-with-icon" data-view="appointments" id="box-appointments" onclick="switchView('appointments')">
@@ -917,6 +1156,7 @@
                 <tr>
                     <th>TIME</th>
                     <th>PATIENT</th>
+                    <th>FORMAT</th>
                     <th>TYPE</th>
                     <th>STATUS</th>
                     <th>DIAGNOSIS</th>
@@ -928,8 +1168,7 @@
                 <tbody>
                 {% if appointments %}
                     {% for appt in appointments %}
-                    {% set appt_hour = appt.start_time[:2] | int if appt.start_time and appt.start_time|length >= 2 else 0 %}
-                    <tr data-appt-id="{{ appt.id }}" class="appointment-row" data-clinic-slot="{{ 'evening' if appt_hour >= 17 else 'morning' }}">
+                    <tr data-appt-id="{{ appt.id }}" class="appointment-row" data-clinic-slot="{{ appt_clinic_slots.get(appt.id, 'none') if appt_clinic_slots is defined else 'none' }}">
                         <td class="col-time">
                         {{ appt.start_time[:5] if appt.start_time else '--' }} - {% if appt.start_time %}{% set h = appt.start_time[:2] | int %}{% set m = appt.start_time[3:5] | int %}{% set dur = appt.slot_duration | int %}{% set total_m = (h * 60) + m + dur %}{% set new_h = (total_m // 60) % 24 %}{% set new_m = total_m % 60 %}{{ "%02d:%02d" | format(new_h, new_m) }}{% else %}--{% endif %}
                         </td>
@@ -937,6 +1176,7 @@
                             <div>{{ appt.name }}</div>
                             <div class="appt-age-sex">{{ appt.age }}/{{ appt.sex }}</div>
                         </td>
+                        <td class="col-format">{{ appt.appt_format or 'In-person' }}</td>
                         <td class="col-type">
                             {% if appt.type and 'Follow' in (appt.type or '') or appt.type == 'Follow-up' %}
                             <span class="type-pill type-followup">Follow-up</span>
@@ -965,10 +1205,10 @@
                 </tr>
                     {% endfor %}
                 {% else %}
-                    <tr><td colspan="8">No appointments scheduled for this date.</td></tr>
+                    <tr><td colspan="9">No appointments scheduled for this date.</td></tr>
                 {% endif %}
                 <tr class="available-slot" id="available-slot-row">
-                    <td colspan="8">End of scheduled – Available Slots Remaining</td>
+                    <td colspan="9">End of scheduled – Available Slots Remaining</td>
                 </tr>
                 </tbody>
             </table>
@@ -1043,9 +1283,16 @@
                     </span>
                     <span class="clinic-hour-badge active" id="badge-all" data-slot="all" onclick="filterAppointmentsByClinicHour('all')">All</span>
                 </div>
-                <div class="clinic-hours-badges">
-                    <span class="clinic-hour-badge" id="badge-morning" data-slot="morning" onclick="filterAppointmentsByClinicHour('morning')">&#9728; {{ (clinic_hours.morning_display if clinic_hours is defined and clinic_hours else '9:00 AM – 5:00 PM') }}</span>
+                <div class="clinic-hours-badges" id="clinic-hours-badges">
+                    {% set whb = clinic_hours.working_hours_blocks if clinic_hours is defined and clinic_hours and clinic_hours.working_hours_blocks else [] %}
+                    {% if whb|length > 0 %}
+                        {% for b in whb %}
+                    <span class="clinic-hour-badge" id="badge-block-{{ loop.index0 }}" data-slot="block-{{ loop.index0 }}" onclick="filterAppointmentsByClinicHour('block-{{ loop.index0 }}')">{% if loop.first %}&#9728;{% elif loop.last %}&#9789;{% else %}&#8226;{% endif %} {{ b.display }}</span>
+                        {% endfor %}
+                    {% else %}
+                    <span class="clinic-hour-badge" id="badge-morning" data-slot="morning" onclick="filterAppointmentsByClinicHour('morning')">&#9728; {{ (clinic_hours.morning_display if clinic_hours is defined and clinic_hours else '9:00 AM – 4:00 PM') }}</span>
                     <span class="clinic-hour-badge" id="badge-evening" data-slot="evening" onclick="filterAppointmentsByClinicHour('evening')">&#9789; {{ (clinic_hours.evening_display if clinic_hours is defined and clinic_hours else '5:00 PM – 10:00 PM') }}</span>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -1095,31 +1342,74 @@
     </form>
     </div>
 
+{% set ss = schedule_sidebar if schedule_sidebar is defined else {'templates': [], 'active_name': '—', 'slot_rows': []} %}
+{% set whb_modal = clinic_hours.working_hours_blocks if clinic_hours is defined and clinic_hours and clinic_hours.working_hours_blocks else [] %}
 <div id="editClinicHoursModal" class="modal" onclick="if(event.target === this) closeModal('editClinicHoursModal')">
-    <div class="modal-content" style="max-width: 400px;">
-        <h3>Edit Clinic Hours</h3>
+    <div class="modal-content clinic-hours-modal-content" onclick="event.stopPropagation();">
+        <h3>Clinic hours &amp; schedule</h3>
+        <p class="clinic-hours-modal-hint">Active template and slot lengths below. Edit every time window in the scrollable section. To add or remove a window, add templates, or change which template is active, use <strong>Profile</strong>.</p>
+        <div class="clinic-hours-modal-info-scroll" role="region" aria-label="Appointment templates and slot durations">
+            <div class="schedule-template-sidebar-title">Appointment templates</div>
+            <div class="schedule-template-active-name" title="Used for clinic hours, filters, and slot lengths">Active: {{ ss.active_name }}</div>
+            {% if ss.templates %}
+            <ul class="schedule-template-list" style="margin-bottom: 12px;">
+                {% for t in ss.templates %}
+                <li class="{% if t.active %}is-active{% endif %}">{{ t.name }}{% if t.is_default %} <span class="tpl-default-tag">(default)</span>{% endif %}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            <div class="slot-durations-label">Slot durations (active)</div>
+            {% for row in ss.slot_rows %}
+            <div class="slot-duration-row">
+                <span class="sd-label">{{ row.label }}</span>
+                <span class="sd-mins">{{ row.minutes }} min</span>
+            </div>
+            {% else %}
+            <div class="slot-duration-row"><span class="sd-label">—</span><span class="sd-mins">—</span></div>
+            {% endfor %}
+        </div>
+        <div class="clinic-hours-modal-form-sep">Edit time windows</div>
+        <div class="clinic-hours-modal-form-wrap">
         <form id="edit-clinic-hours-form" data-api-url="{{ url_for('save_clinic_hours') }}" onsubmit="return saveClinicHours(event);">
-            <label>Morning: Start</label>
-            <input type="time" id="edit-morning-start" class="form-control" value="{{ clinic_hours.morning_start|default('09:00') if clinic_hours is defined and clinic_hours else '09:00' }}">
-            <label>Morning: End</label>
-            <input type="time" id="edit-morning-end" class="form-control" value="{{ clinic_hours.morning_end|default('17:00') if clinic_hours is defined and clinic_hours else '17:00' }}">
-            <label>Evening: Start</label>
-            <input type="time" id="edit-evening-start" class="form-control" value="{{ clinic_hours.evening_start|default('17:00') if clinic_hours is defined and clinic_hours else '17:00' }}">
-            <label>Evening: End</label>
-            <input type="time" id="edit-evening-end" class="form-control" value="{{ clinic_hours.evening_end|default('22:00') if clinic_hours is defined and clinic_hours else '22:00' }}">
+            <div id="clinic-hours-windows-edit" class="clinic-hours-windows-scroll" role="group" aria-label="Working time windows">
+                {% if whb_modal|length > 0 %}
+                    {% for b in whb_modal %}
+                    <div class="clinic-wh-edit-row">
+                        <label>Window {{ loop.index }}: Start</label>
+                        <input type="time" class="form-control clinic-wh-start" value="{{ b.start }}">
+                        <label>Window {{ loop.index }}: End</label>
+                        <input type="time" class="form-control clinic-wh-end" value="{{ b.end }}">
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="clinic-wh-edit-row">
+                        <label>Window 1: Start</label>
+                        <input type="time" class="form-control clinic-wh-start" value="{{ clinic_hours.morning_start|default('09:00') if clinic_hours is defined and clinic_hours else '09:00' }}">
+                        <label>Window 1: End</label>
+                        <input type="time" class="form-control clinic-wh-end" value="{{ clinic_hours.morning_end|default('16:00') if clinic_hours is defined and clinic_hours else '16:00' }}">
+                    </div>
+                    <div class="clinic-wh-edit-row">
+                        <label>Window 2: Start</label>
+                        <input type="time" class="form-control clinic-wh-start" value="{{ clinic_hours.evening_start|default('17:00') if clinic_hours is defined and clinic_hours else '17:00' }}">
+                        <label>Window 2: End</label>
+                        <input type="time" class="form-control clinic-wh-end" value="{{ clinic_hours.evening_end|default('22:00') if clinic_hours is defined and clinic_hours else '22:00' }}">
+                    </div>
+                {% endif %}
+            </div>
             <div style="margin-top: 16px; display: flex; gap: 8px;">
                 <button type="submit" class="button">Save</button>
                 <button type="button" class="button" style="background: #888;" onclick="closeModal('editClinicHoursModal')">Cancel</button>
             </div>
         </form>
+        </div>
     </div>
 </div>
 
 <div id="appointmentModal" class="modal" onclick="if(event.target === this) closeModal('appointmentModal')">
-    <div class="modal-content">
+    <div class="modal-content appt-modal-content">
         <h3>Add New Appointment</h3>
-        <div id="appointment-form-wrapper">
-            <form action="{{ url_for('add_appointment') }}" method="POST" id="add-appointment-form">
+        <form action="{{ url_for('add_appointment') }}" method="POST" id="add-appointment-form" class="appt-modal-form">
+            <div id="appointment-form-wrapper" class="appt-modal-body">
                 <input type="date" name="appt_date" id="appt-date-input" class="form-control" required value="{{ target_date.strftime('%Y-%m-%d') }}">
                 <div class="form-control custom-time-picker" style="display: flex; align-items: center; gap: 5px; padding: 6px 10px;">
                     <select id="add-hour-select" class="time-scroll hour-select" size="1" style="border: none; outline: none; background: transparent; cursor: pointer; font-size: 15px;">
@@ -1147,13 +1437,20 @@
                     <span id="add-ampm" style="margin-left: auto; font-size: 12px; font-weight: bold; color: #666;">AM</span>
                 </div>
                 <input type="hidden" name="appt_time" id="add-appt-time-hidden" value="09:00" required>
-                <input type="text" name="appt_name" class="form-control" placeholder="Patient Name" list="existing-patients-list" autocomplete="off" required>
-                <datalist id="existing-patients-list">
+                <label for="appt-patient-select" style="display:block;margin-top:10px;font-weight:600;font-size:14px;">Patient</label>
+                <select id="appt-patient-select" name="appt_name" class="form-control appt-select2-patient" required>
+                    <option value=""></option>
                     {% for p in patients %}
-                        <option value="{{ p.name }}" data-age="{{ p.age }}" data-sex="{{ p.sex }}" data-email="{{ p.email or '' }}"></option>
+                    <option value="{{ p.name }}" data-patient-id="{{ p.id }}" data-age="{{ p.age }}" data-sex="{{ p.sex|e }}" data-email="{{ (p.email or '')|e }}">{{ p.name }}</option>
                     {% endfor %}
-                </datalist>
-                <input type="number" name="appt_age" class="form-control" placeholder="Age" required>
+                </select>
+                <label for="appt-format-select" style="display:block;margin-top:10px;font-weight:600;font-size:14px;">Visit format</label>
+                <select id="appt-format-select" name="appt_format" class="form-control appt-select2-format" required>
+                    <option value="In-person" selected>In-person</option>
+                    <option value="Online">Online</option>
+                </select>
+                <label for="appt-age-input" class="appt-age-field-start" style="display:block;font-weight:600;font-size:14px;">Age</label>
+                <input type="number" name="appt_age" id="appt-age-input" class="form-control" placeholder="Age" required>
                 <select name="appt_sex" class="form-control">
                     <option value="M">Male</option>
                     <option value="F">Female</option>
@@ -1172,14 +1469,18 @@
                 <label for="appt-details-input" style="display: block; margin-top: 10px; font-weight: 600; font-size: 14px;">Patient Recall Cue</label>
                 <p style="font-size: 12px; color: #888; margin: 4px 0 6px;">Private note visible only to the doctor.</p>
                 <input type="text" id="appt-details-input" name="appt_details" class="form-control" autocomplete="off" placeholder="Short phrase to help you recognize the patient (e.g., Teacher with bipolar, Tall man with tremor)">
-                <button type="submit" class="button" id="add-appointment-btn">
-                    <span id="add-btn-spinner" class="hidden spinner"></span>
-                    <span id="add-btn-text">Schedule</span>
-                </button>
+            </div>
+            <div class="appt-modal-footer">
                 <span id="no-slots-msg" class="hidden error-text">No slots available for this date.</span>
-            </form>
-        </div>
-        <button type="button" class="button" style="background: #888; margin-top: 10px;" onclick="closeModal('appointmentModal')">Cancel</button>
+                <div class="appt-modal-actions">
+                    <button type="submit" class="button" id="add-appointment-btn">
+                        <span id="add-btn-spinner" class="hidden spinner"></span>
+                        <span id="add-btn-text">Schedule</span>
+                    </button>
+                    <button type="button" class="button appt-modal-cancel" onclick="closeModal('appointmentModal')">Cancel</button>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -1224,76 +1525,13 @@
     </div>
 </div>
 
-<div id="quickChecklistModal" class="modal" onclick="if(event.target === this) closeModal('quickChecklistModal')">
-    <div class="modal-content quick-checklist-modal-content">
-        <h3 class="quick-checklist-title">Template Item Checklist</h3>
-        <div class="quick-checklist-body">
-            <ul class="quick-checklist-root">
-                <li><label class="quick-checklist-line"><input type="checkbox"> Demographics</label></li>
-                <li><label class="quick-checklist-line"><input type="checkbox"> Psychiatric History Status</label></li>
-                <li>
-                    <label class="quick-checklist-line"><input type="checkbox"> Background Factors</label>
-                    <ul class="quick-checklist-sub">
-                        <li><label class="quick-checklist-line"><input type="checkbox"> Premorbid Personality</label></li>
-                        <li><label class="quick-checklist-line"><input type="checkbox"> Major Events</label></li>
-                        <li><label class="quick-checklist-line"><input type="checkbox"> Stressors</label></li>
-                        <li><label class="quick-checklist-line"><input type="checkbox"> Adverse Childhood Experiences</label></li>
-                    </ul>
-                </li>
-                <li><label class="quick-checklist-line"><input type="checkbox"> Chief Complaints</label></li>
-                <li><label class="quick-checklist-line"><input type="checkbox"> Negative History</label></li>
-                <li><label class="quick-checklist-line"><input type="checkbox"> Functional Impairment</label></li>
-                <li><label class="quick-checklist-line"><input type="checkbox"> Substance Use History</label></li>
-                <li><label class="quick-checklist-line"><input type="checkbox"> Family History</label></li>
-                <li><label class="quick-checklist-line"><input type="checkbox"> Developmental Milestone History</label></li>
-                <li>
-                    <label class="quick-checklist-line"><input type="checkbox"> MSE</label>
-                    <ul class="quick-checklist-sub">
-                        <li><label class="quick-checklist-line"><input type="checkbox"> Consciousness</label></li>
-                        <li><label class="quick-checklist-line"><input type="checkbox"> General Appearance and Behaviour</label></li>
-                        <li><label class="quick-checklist-line"><input type="checkbox"> Speech</label></li>
-                        <li><label class="quick-checklist-line"><input type="checkbox"> Thought</label></li>
-                        <li><label class="quick-checklist-line"><input type="checkbox"> Perception</label></li>
-                        <li><label class="quick-checklist-line"><input type="checkbox"> Mood</label></li>
-                        <li><label class="quick-checklist-line"><input type="checkbox"> Affect</label></li>
-                        <li><label class="quick-checklist-line"><input type="checkbox"> Insight</label></li>
-                    </ul>
-                </li>
-                <li><label class="quick-checklist-line"><input type="checkbox"> Scales</label></li>
-                <li>
-                    <label class="quick-checklist-line"><input type="checkbox"> Safety and Medical Profile</label>
-                    <ul class="quick-checklist-sub">
-                        <li><label class="quick-checklist-line"><input type="checkbox"> Drug Allergies</label></li>
-                        <li><label class="quick-checklist-line"><input type="checkbox"> Medical Comorbidities</label></li>
-                        <li><label class="quick-checklist-line"><input type="checkbox"> Current Non-psychiatric Medications</label></li>
-                    </ul>
-                </li>
-                <li><label class="quick-checklist-line"><input type="checkbox"> Side Effects</label></li>
-                <li>
-                    <label class="quick-checklist-line"><input type="checkbox"> Diagnosis</label>
-                    <ul class="quick-checklist-sub">
-                        <li><label class="quick-checklist-line"><input type="checkbox"> Provisional Diagnosis</label></li>
-                        <li><label class="quick-checklist-line"><input type="checkbox"> Differential Diagnosis</label></li>
-                        <li><label class="quick-checklist-line"><input type="checkbox"> Classificatory Systems Display</label></li>
-                    </ul>
-                </li>
-                <li><label class="quick-checklist-line"><input type="checkbox"> Clinical States</label></li>
-                <li><label class="quick-checklist-line"><input type="checkbox"> Medication Adherence</label></li>
-                <li><label class="quick-checklist-line"><input type="checkbox"> Medications</label></li>
-                <li><label class="quick-checklist-line"><input type="checkbox"> Follow-up</label></li>
-            </ul>
-        </div>
-        <div class="quick-checklist-footer">
-            <button type="button" class="button quick-checklist-proceed" onclick="proceedQuickChecklist()">Proceed</button>
-            <button type="button" class="button quick-checklist-close" onclick="cancelQuickChecklist()">Cancel</button>
-        </div>
-    </div>
-</div>
-
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js" crossorigin="anonymous"></script>
 <script>
 // Data from server for slot calculation (target date's appointments)
 var targetDateForSlots = '{{ target_date.strftime("%Y-%m-%d") }}';
 var appointmentsForDay = {{ appointments_for_day | default([]) | tojson }};
+var activeScheduleWorkingHours = {{ (clinic_hours.working_hours_json if clinic_hours is defined and clinic_hours and clinic_hours.working_hours_json is defined else []) | tojson }};
 
 // Convert server list to { startTime, endTime } for a given date string (YYYY-MM-DD)
 function parsedAppointmentsForDate(dateStr) {
@@ -1317,7 +1555,7 @@ function getAvailableSlots(appointments, workingHours, reqDuration, dateStr) {
     var y = parseInt(parts[0], 10), m = parseInt(parts[1], 10) - 1, d = parseInt(parts[2], 10);
 
     if (!workingHours || workingHours.length === 0) {
-        workingHours = [{start: "09:00", end: "17:00"}, {start: "17:00", end: "22:00"}];
+        workingHours = [{start: "09:00", end: "16:00"}, {start: "17:00", end: "22:00"}];
     }
     reqDuration = parseInt(reqDuration, 10) || 15;
 
@@ -1382,12 +1620,11 @@ function refreshSlotsForModal() {
 
     var parsed = parsedAppointmentsForDate(dateStr);
 
-    var activeWorkingHours = [
-        {start: "09:00", end: "17:00"},
-        {start: "17:00", end: "22:00"}
-    ];
+    var wh = (typeof activeScheduleWorkingHours !== 'undefined' && activeScheduleWorkingHours && activeScheduleWorkingHours.length)
+        ? activeScheduleWorkingHours
+        : [{start: "09:00", end: "16:00"}, {start: "17:00", end: "22:00"}];
 
-    var slots = getAvailableSlots(parsed, activeWorkingHours, duration, dateStr);
+    var slots = getAvailableSlots(parsed, wh, duration, dateStr);
     updateAppointmentFormState(slots);
 }
 
@@ -1532,7 +1769,10 @@ if (appointmentsTable) {
                         var dur = 15;
                         var durationHidden = document.querySelector('input[name="appt_duration"]');
                         if (durationHidden && durationHidden.value) dur = parseInt(durationHidden.value, 10);
-                        updateAppointmentFormState(getAvailableSlots(parsed, [{start: "09:00", end: "17:00"}, {start: "17:00", end: "22:00"}], dur, targetDateForSlots));
+                        var delWh = (typeof activeScheduleWorkingHours !== 'undefined' && activeScheduleWorkingHours && activeScheduleWorkingHours.length)
+                            ? activeScheduleWorkingHours
+                            : [{start: "09:00", end: "16:00"}, {start: "17:00", end: "22:00"}];
+                        updateAppointmentFormState(getAvailableSlots(parsed, delWh, dur, targetDateForSlots));
                         showToast('Appointment deleted.');
                     } else {
                         showToast('Could not delete appointment', 'error');
@@ -1586,43 +1826,73 @@ if (addHourSelect && addMinuteSelect) {
     addMinuteSelect.addEventListener('change', syncAddApptTime);
 }
 
-// Auto-fill existing patient details (type, age, sex, email) when name matches datalist
-var apptNameInput = document.querySelector('input[name="appt_name"]');
+// Patient select (Select2) + autofill age/sex/email; visit format Select2
 var apptTypeSelect = document.querySelector('select[name="appt_type"]');
-var apptAgeInput = document.querySelector('input[name="appt_age"]');
+var apptAgeInput = document.getElementById('appt-age-input') || document.querySelector('input[name="appt_age"]');
 var apptSexSelect = document.querySelector('select[name="appt_sex"]');
 var apptEmailInput = document.querySelector('input[name="appt_email"]');
 
-if (apptNameInput) {
-    apptNameInput.addEventListener('input', function() {
-        var val = this.value.trim().toLowerCase();
-        var options = document.querySelectorAll('#existing-patients-list option');
-        for (var i = 0; i < options.length; i++) {
-            var opt = options[i];
-            if (opt.value.toLowerCase() === val) {
-                if (apptTypeSelect) apptTypeSelect.value = 'Follow-up';
-                if (apptAgeInput && opt.getAttribute('data-age')) apptAgeInput.value = opt.getAttribute('data-age');
-                if (apptEmailInput && opt.getAttribute('data-email')) apptEmailInput.value = opt.getAttribute('data-email') || '';
-                if (apptSexSelect && opt.getAttribute('data-sex')) {
-                    var dbSex = (opt.getAttribute('data-sex') || '').trim();
-                    apptSexSelect.value = dbSex;
-                    if (apptSexSelect.value === '') {
-                        if (dbSex.toUpperCase() === 'M' || dbSex.toUpperCase() === 'MALE') {
-                            apptSexSelect.value = 'M';
-                            if (apptSexSelect.value === '') apptSexSelect.value = 'Male';
-                        } else if (dbSex.toUpperCase() === 'F' || dbSex.toUpperCase() === 'FEMALE') {
-                            apptSexSelect.value = 'F';
-                            if (apptSexSelect.value === '') apptSexSelect.value = 'Female';
-                        } else if (dbSex.toUpperCase() === 'OTHER') {
-                            apptSexSelect.value = 'Other';
-                        }
-                    }
-                }
-                break;
+function applyPatientOptionAutofill(opt) {
+    if (!opt || !opt.value) return;
+    if (apptTypeSelect) apptTypeSelect.value = 'Follow-up';
+    if (apptAgeInput && opt.getAttribute('data-age')) apptAgeInput.value = opt.getAttribute('data-age');
+    if (apptEmailInput && opt.getAttribute('data-email')) apptEmailInput.value = opt.getAttribute('data-email') || '';
+    if (apptSexSelect && opt.getAttribute('data-sex')) {
+        var dbSex = (opt.getAttribute('data-sex') || '').trim();
+        apptSexSelect.value = dbSex;
+        if (apptSexSelect.value === '') {
+            if (dbSex.toUpperCase() === 'M' || dbSex.toUpperCase() === 'MALE') {
+                apptSexSelect.value = 'M';
+            } else if (dbSex.toUpperCase() === 'F' || dbSex.toUpperCase() === 'FEMALE') {
+                apptSexSelect.value = 'F';
+            } else if (dbSex.toUpperCase() === 'OTHER') {
+                apptSexSelect.value = 'Other';
             }
         }
-    });
+    }
+    if (typeof refreshSlotsForModal === 'function') refreshSlotsForModal();
 }
+
+(function initAppointmentSelect2() {
+    if (typeof jQuery === 'undefined' || !jQuery.fn.select2) return;
+    var $modal = jQuery('#appointmentModal .modal-content');
+    var $pat = jQuery('#appt-patient-select');
+    var $fmt = jQuery('#appt-format-select');
+    function apptFormatPatientOption(state) {
+        if (!state.element) {
+            return jQuery('<span></span>').text(state.text || '');
+        }
+        var pid = state.element.getAttribute('data-patient-id');
+        if (!pid) {
+            return jQuery('<span></span>').text(state.text || '');
+        }
+        var $wrap = jQuery('<span class="appt-patient-opt"></span>');
+        jQuery('<span class="appt-patient-name"></span>').text(state.text || '').appendTo($wrap);
+        jQuery('<span class="appt-patient-id"></span>').text('id=' + pid).appendTo($wrap);
+        return $wrap;
+    }
+    if ($pat.length) {
+        $pat.select2({
+            placeholder: 'Select patient',
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $modal,
+            templateResult: apptFormatPatientOption,
+            templateSelection: apptFormatPatientOption
+        });
+        $pat.on('change', function () {
+            var sel = this.options[this.selectedIndex];
+            applyPatientOptionAutofill(sel);
+        });
+    }
+    if ($fmt.length) {
+        $fmt.select2({
+            minimumResultsForSearch: Infinity,
+            width: '100%',
+            dropdownParent: $modal
+        });
+    }
+})();
 
 // Open Add Appointment modal: recalc slots for current date
 var addApptBtnTop = document.querySelector('.button[onclick*="appointmentModal"]');
@@ -1658,7 +1928,7 @@ function switchView(viewName) {
     }
 }
 
-// Clinic hours filter: all | morning | evening
+// Clinic hours filter: all | block-0, block-1, ... (or legacy morning | evening)
 var currentClinicHourFilter = 'all';
 function filterAppointmentsByClinicHour(slot) {
     currentClinicHourFilter = slot;
@@ -1771,36 +2041,108 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+function collectClinicHoursWorkingWindows() {
+    var host = document.getElementById('clinic-hours-windows-edit');
+    if (!host) return [];
+    var rows = host.querySelectorAll('.clinic-wh-edit-row');
+    var out = [];
+    rows.forEach(function(row) {
+        var sEl = row.querySelector('.clinic-wh-start');
+        var eEl = row.querySelector('.clinic-wh-end');
+        var s = (sEl && sEl.value) ? String(sEl.value).trim().slice(0, 5) : '09:00';
+        var e = (eEl && eEl.value) ? String(eEl.value).trim().slice(0, 5) : '17:00';
+        out.push({ start: s, end: e });
+    });
+    return out;
+}
+
+function rebuildClinicHoursWindowsForm(whj) {
+    var host = document.getElementById('clinic-hours-windows-edit');
+    if (!host || !whj || !whj.length) return;
+    host.innerHTML = '';
+    for (var i = 0; i < whj.length; i++) {
+        var row = document.createElement('div');
+        row.className = 'clinic-wh-edit-row';
+        var ls = document.createElement('label');
+        ls.textContent = 'Window ' + (i + 1) + ': Start';
+        var inpS = document.createElement('input');
+        inpS.type = 'time';
+        inpS.className = 'form-control clinic-wh-start';
+        inpS.value = String(whj[i].start != null ? whj[i].start : '09:00').slice(0, 5);
+        var le = document.createElement('label');
+        le.textContent = 'Window ' + (i + 1) + ': End';
+        var inpE = document.createElement('input');
+        inpE.type = 'time';
+        inpE.className = 'form-control clinic-wh-end';
+        inpE.value = String(whj[i].end != null ? whj[i].end : '17:00').slice(0, 5);
+        row.appendChild(ls);
+        row.appendChild(inpS);
+        row.appendChild(le);
+        row.appendChild(inpE);
+        host.appendChild(row);
+    }
+}
+
+function renderClinicHourBadgesFromServer(ch) {
+    var wrap = document.getElementById('clinic-hours-badges');
+    if (!wrap || !ch) return;
+    var blocks = ch.working_hours_blocks;
+    if (!blocks || !blocks.length) return;
+    var slotsNow = ['all'];
+    for (var bi = 0; bi < blocks.length; bi++) slotsNow.push('block-' + bi);
+    if (slotsNow.indexOf(currentClinicHourFilter) === -1) currentClinicHourFilter = 'all';
+    wrap.innerHTML = '';
+    for (var i = 0; i < blocks.length; i++) {
+        var span = document.createElement('span');
+        span.className = 'clinic-hour-badge';
+        span.id = 'badge-block-' + i;
+        span.setAttribute('data-slot', 'block-' + i);
+        (function (idx) {
+            span.onclick = function () { filterAppointmentsByClinicHour('block-' + idx); };
+        })(i);
+        var icon = '\u2600';
+        if (blocks.length > 1 && i === blocks.length - 1) icon = '\u263E';
+        else if (i > 0 && i < blocks.length - 1) icon = '\u2022';
+        span.textContent = icon + ' ' + (blocks[i].display || '');
+        wrap.appendChild(span);
+    }
+    filterAppointmentsByClinicHour(currentClinicHourFilter);
+}
+
 function saveClinicHours(e) {
     e.preventDefault();
     e.preventDefault();
     var form = document.getElementById('edit-clinic-hours-form');
-    var mStart = document.getElementById('edit-morning-start').value;
-    var mEnd = document.getElementById('edit-morning-end').value;
-    var eStart = document.getElementById('edit-evening-start').value;
-    var eEnd = document.getElementById('edit-evening-end').value;
     var apiUrl = form && form.getAttribute('data-api-url');
     if (!apiUrl) {
         if (typeof showToast === 'function') showToast('Configuration error', 'error');
         return false;
     }
+    var workingHours = collectClinicHoursWorkingWindows();
+    if (!workingHours.length) {
+        if (typeof showToast === 'function') showToast('Add at least one time window in Profile.', 'error');
+        return false;
+    }
     fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-        body: JSON.stringify({
-            morning: { start: mStart || '09:00', end: mEnd || '17:00' },
-            evening: { start: eStart || '17:00', end: eEnd || '22:00' }
-        })
+        body: JSON.stringify({ working_hours: workingHours })
     }).then(function(r) { return r.json(); }).then(function(data) {
-        var badgeMorning = document.getElementById('badge-morning');
-        var badgeEvening = document.getElementById('badge-evening');
         if (data.clinic_hours) {
-            if (badgeMorning) badgeMorning.textContent = '\u9728 ' + (data.clinic_hours.morning_display || '');
-            if (badgeEvening) badgeEvening.textContent = '\u9789 ' + (data.clinic_hours.evening_display || '');
-        } else {
-            if (badgeMorning) badgeMorning.textContent = '\u9728 ' + (mStart || '9:00') + '\u2013' + (mEnd || '17:00');
-            if (badgeEvening) badgeEvening.textContent = '\u9789 ' + (eStart || '17:00') + '\u2013' + (eEnd || '22:00');
+            if (data.clinic_hours.working_hours_json && data.clinic_hours.working_hours_json.length) {
+                activeScheduleWorkingHours = data.clinic_hours.working_hours_json;
+                rebuildClinicHoursWindowsForm(data.clinic_hours.working_hours_json);
+            }
+            if (data.clinic_hours.working_hours_blocks && data.clinic_hours.working_hours_blocks.length) {
+                renderClinicHourBadgesFromServer(data.clinic_hours);
+            } else {
+                var badgeMorning = document.getElementById('badge-morning');
+                var badgeEvening = document.getElementById('badge-evening');
+                if (badgeMorning) badgeMorning.textContent = '\u9728 ' + (data.clinic_hours.morning_display || '');
+                if (badgeEvening) badgeEvening.textContent = '\u9789 ' + (data.clinic_hours.evening_display || '');
+            }
         }
+        if (data.ok && typeof refreshSlotsForModal === 'function') refreshSlotsForModal();
         document.getElementById('editClinicHoursModal').style.display = 'none';
         if (data.ok && typeof showToast === 'function') showToast('Clinic hours saved.', 'success');
     }).catch(function() {
@@ -2245,80 +2587,6 @@ function toggleRegistrationMenu(e) {
     if (!box) return;
     box.classList.toggle('show-registration-menu');
 }
-
-function openQuickChecklistModal() {
-    var box = document.querySelector('.registration-box');
-    if (box) box.classList.remove('show-registration-menu');
-    var modal = document.getElementById('quickChecklistModal');
-    if (modal) modal.style.display = 'block';
-}
-
-function cancelQuickChecklist() {
-    var modal = document.getElementById('quickChecklistModal');
-    if (!modal) return;
-    modal.querySelectorAll('input[type="checkbox"]').forEach(function(cb) { cb.checked = false; });
-    closeModal('quickChecklistModal');
-}
-
-function proceedQuickChecklist() {
-    var modal = document.getElementById('quickChecklistModal');
-    if (!modal) return;
-    var selectedKeys = [];
-    modal.querySelectorAll('.quick-checklist-line input[type="checkbox"]:checked').forEach(function(cb) {
-        var line = cb.closest('.quick-checklist-line');
-        if (!line) return;
-        var text = (line.textContent || '').replace(/\s+/g, ' ').trim();
-        if (!text) return;
-        var key = text.toLowerCase().replace(/[^a-z0-9]+/g, '');
-        if (!key) return;
-        if (selectedKeys.indexOf(key) === -1) selectedKeys.push(key);
-    });
-    try {
-        sessionStorage.setItem('quick_registration_selected_keys', JSON.stringify(selectedKeys));
-    } catch (e) {}
-    closeModal('quickChecklistModal');
-    window.location.href = {{ url_for('quick_registration')|tojson }};
-}
-
-function initQuickChecklistHierarchy() {
-    var modal = document.getElementById('quickChecklistModal');
-    if (!modal || modal.dataset.hierarchyInit === '1') return;
-    modal.dataset.hierarchyInit = '1';
-
-    function getDirectChildrenCheckboxes(parentLi) {
-        var sub = parentLi ? parentLi.querySelector(':scope > ul.quick-checklist-sub') : null;
-        if (!sub) return [];
-        return Array.from(sub.querySelectorAll('li > label > input[type="checkbox"]'));
-    }
-
-    modal.addEventListener('change', function(e) {
-        var target = e.target;
-        if (!target || target.type !== 'checkbox') return;
-
-        var currentLi = target.closest('li');
-        if (!currentLi) return;
-
-        // Rule 1: selecting parent selects all its children.
-        var directChildren = getDirectChildrenCheckboxes(currentLi);
-        if (directChildren.length > 0 && target.checked) {
-            directChildren.forEach(function(cb) { cb.checked = true; });
-        }
-
-        // Rule 2: deselecting a child deselects its parent.
-        if (!target.checked) {
-            var parentSub = currentLi.parentElement;
-            if (parentSub && parentSub.classList && parentSub.classList.contains('quick-checklist-sub')) {
-                var parentLi = parentSub.closest('li');
-                if (parentLi) {
-                    var parentCb = parentLi.querySelector(':scope > label > input[type="checkbox"]');
-                    if (parentCb) parentCb.checked = false;
-                }
-            }
-        }
-    });
-}
-
-document.addEventListener('DOMContentLoaded', initQuickChecklistHierarchy);
 
 document.addEventListener('click', function(e) {
     var box = document.querySelector('.registration-box');

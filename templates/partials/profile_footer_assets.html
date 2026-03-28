@@ -1,0 +1,254 @@
+    <div id="customRegTemplateModal" class="reg-template-modal" role="dialog" aria-modal="true" aria-labelledby="customRegTemplateTitle" onclick="if(event.target === this) closeCustomRegTemplateModal()">
+        <div class="reg-template-modal-inner" onclick="event.stopPropagation()">
+            <h3 id="customRegTemplateTitle">Custom Registration Template</h3>
+            <div class="reg-template-modal-name form-group">
+                <label for="custom_reg_template_name">Template name</label>
+                <input type="text" id="custom_reg_template_name" placeholder="e.g. Minimal intake" autocomplete="off">
+            </div>
+            <div class="quick-checklist-body">
+                {% include 'partials/registration_template_checklist.html' %}
+            </div>
+            <div class="reg-template-modal-footer" style="flex-direction: column; align-items: stretch; gap: 10px;">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: 500; color: #555;">
+                    <input type="checkbox" id="custom_reg_set_default"> Set as default for Quick Registration
+                </label>
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeCustomRegTemplateModal()">Cancel</button>
+                    <button type="button" class="btn" onclick="saveRegTemplateFromModal()">Save Template</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.__CUSTOM_REG_TEMPLATES__ = {{ custom_registration_templates | tojson }};
+        window.__REG_DEFAULT_TEMPLATE_ID__ = {{ registration_templates_state.default_template_id | tojson }};
+
+        function getRegTemplateModal() {
+            return document.getElementById('customRegTemplateModal');
+        }
+        function collectRegTemplateSections(modal) {
+            var sections = {};
+            modal.querySelectorAll('input[type="checkbox"][data-reg-key]').forEach(function(cb) {
+                var k = cb.getAttribute('data-reg-key');
+                if (k) sections[k] = cb.checked;
+            });
+            sections.demographics = true;
+            return sections;
+        }
+        function applyRegTemplateSections(modal, sections) {
+            sections = sections || {};
+            modal.querySelectorAll('input[type="checkbox"][data-reg-key]').forEach(function(cb) {
+                var k = cb.getAttribute('data-reg-key');
+                if (k === 'demographics') {
+                    cb.checked = true;
+                    return;
+                }
+                cb.checked = !!sections[k];
+            });
+        }
+        function resetRegTemplateModalForAdd() {
+            var modal = getRegTemplateModal();
+            if (!modal) return;
+            modal.dataset.editingTemplateId = '';
+            var nameEl = document.getElementById('custom_reg_template_name');
+            if (nameEl) nameEl.value = '';
+            applyRegTemplateSections(modal, {});
+            var titleEl = document.getElementById('customRegTemplateTitle');
+            if (titleEl) titleEl.textContent = 'Custom Registration Template';
+            var defCb = document.getElementById('custom_reg_set_default');
+            if (defCb) defCb.checked = false;
+        }
+        function openCustomRegTemplateModal() {
+            resetRegTemplateModalForAdd();
+            var m = getRegTemplateModal();
+            if (m) m.classList.add('is-open');
+        }
+        function openCustomRegTemplateModalForEdit(templateId) {
+            var list = window.__CUSTOM_REG_TEMPLATES__ || [];
+            var t = null;
+            for (var i = 0; i < list.length; i++) {
+                if (list[i].id === templateId) { t = list[i]; break; }
+            }
+            if (!t) return;
+            var modal = getRegTemplateModal();
+            if (!modal) return;
+            modal.dataset.editingTemplateId = templateId;
+            var nameEl = document.getElementById('custom_reg_template_name');
+            if (nameEl) nameEl.value = t.name || '';
+            applyRegTemplateSections(modal, t.sections || {});
+            var titleEl = document.getElementById('customRegTemplateTitle');
+            if (titleEl) titleEl.textContent = 'Edit Registration Template';
+            var defCb = document.getElementById('custom_reg_set_default');
+            if (defCb) defCb.checked = (templateId === window.__REG_DEFAULT_TEMPLATE_ID__);
+            modal.classList.add('is-open');
+        }
+        function closeCustomRegTemplateModal() {
+            var m = getRegTemplateModal();
+            if (m) m.classList.remove('is-open');
+        }
+        function saveRegTemplateFromModal() {
+            var modal = getRegTemplateModal();
+            var nameEl = document.getElementById('custom_reg_template_name');
+            var name = (nameEl && nameEl.value || '').trim();
+            if (!name) {
+                alert('Please enter a template name.');
+                return;
+            }
+            var id = (modal && modal.dataset.editingTemplateId || '').trim() || null;
+            var sections = collectRegTemplateSections(modal);
+            var setDef = document.getElementById('custom_reg_set_default');
+            fetch("{{ url_for('api_save_registration_template') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: id,
+                    name: name,
+                    sections: sections,
+                    set_as_default: !!(setDef && setDef.checked)
+                })
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                if (!data.ok) {
+                    alert(data.error || 'Could not save template.');
+                    return;
+                }
+                window.__CUSTOM_REG_TEMPLATES__ = data.templates || [];
+                if (data.default_template_id !== undefined) {
+                    window.__REG_DEFAULT_TEMPLATE_ID__ = data.default_template_id;
+                }
+                refreshEditRegTemplateDropdown();
+                closeCustomRegTemplateModal();
+            }).catch(function() {
+                alert('Could not save template.');
+            });
+        }
+        function refreshEditRegTemplateDropdown() {
+            var sel = document.getElementById('edit_reg_template_select');
+            if (!sel) return;
+            var templates = window.__CUSTOM_REG_TEMPLATES__ || [];
+            while (sel.options.length > 1) sel.remove(1);
+            templates.forEach(function(t) {
+                var opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.name;
+                sel.appendChild(opt);
+            });
+        }
+        function onEditRegTemplateSelectChanged(sel) {
+            var v = sel.value;
+            sel.selectedIndex = 0;
+            if (!v) return;
+            openCustomRegTemplateModalForEdit(v);
+        }
+        function initProfileRegTemplateChecklist() {
+            var modal = document.getElementById('customRegTemplateModal');
+            if (!modal || modal.dataset.hierarchyInit === '1') return;
+            modal.dataset.hierarchyInit = '1';
+            function getDirectChildrenCheckboxes(parentLi) {
+                var sub = parentLi ? parentLi.querySelector(':scope > ul.quick-checklist-sub') : null;
+                if (!sub) return [];
+                return Array.from(sub.querySelectorAll('li > label > input[type="checkbox"]'));
+            }
+            modal.addEventListener('change', function(e) {
+                if (modal.dataset.quickPreset === '1') return;
+                var target = e.target;
+                if (!target || target.type !== 'checkbox') return;
+                if (target.getAttribute('data-reg-key') === 'demographics') {
+                    target.checked = true;
+                    return;
+                }
+                var currentLi = target.closest('li');
+                if (!currentLi) return;
+                var directChildren = getDirectChildrenCheckboxes(currentLi);
+                if (directChildren.length > 0 && target.checked) {
+                    directChildren.forEach(function(cb) { cb.checked = true; });
+                }
+                if (!target.checked) {
+                    var parentSub = currentLi.parentElement;
+                    if (parentSub && parentSub.classList && parentSub.classList.contains('quick-checklist-sub')) {
+                        var parentLi = parentSub.closest('li');
+                        if (parentLi) {
+                            var parentCb = parentLi.querySelector(':scope > label > input[type="checkbox"]');
+                            if (parentCb && parentCb.getAttribute('data-reg-key') !== 'demographics') {
+                                parentCb.checked = false;
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        window.addEventListener('DOMContentLoaded', function() {
+            initProfileRegTemplateChecklist();
+            if(localStorage.getItem('theme') === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+            var helpBtn = document.getElementById('smtp-help-btn');
+            if (helpBtn) helpBtn.addEventListener('click', openSmtpHelp);
+            var profileInput = document.getElementById('profile_photo');
+            var profileFrame = document.getElementById('profilePhotoFrame');
+            if (profileInput && profileFrame) {
+                profileInput.addEventListener('change', function() {
+                    var f = profileInput.files && profileInput.files[0];
+                    if (!f || !f.type.match(/^image\//)) return;
+                    var url = URL.createObjectURL(f);
+                    profileFrame.innerHTML = '<img src="' + url + '" alt="Preview" width="120" height="120" style="width:100%;height:100%;object-fit:cover;display:block">';
+                });
+            }
+        });
+        var smtpHelpContent = {
+            gmail: {
+                title: 'Gmail – App Password',
+                body: '<h4>Generate a Gmail App Password</h4><ol><li>Open <a href="https://myaccount.google.com/security" target="_blank" rel="noopener">Google Account Security</a></li><li>Enable <strong>2-Step Verification</strong> (How you sign in to Google → 2-Step Verification).</li><li>Open <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">App Passwords</a></li><li>Create password: enter a name (e.g. <em>PsycheLife</em>), click <strong>Create</strong>.</li><li>Copy the <strong>16-digit password</strong> and paste it in the SMTP App Password field above.</li></ol>'
+            },
+            zoho: {
+                title: 'Zoho – App Password',
+                body: '<h4>Generate a Zoho App Password</h4><ol><li>Open <a href="https://accounts.zoho.com/home#security" target="_blank" rel="noopener">Zoho Accounts Security</a></li><li>Enable <strong>Two-Factor Authentication</strong> if not already enabled.</li><li>Go to <strong>App Passwords</strong>.</li><li>Click <strong>Generate New Password</strong>.</li><li>Enter a name (e.g. <em>SMTP Script</em>).</li><li>Copy the generated password and paste it in the SMTP App Password field above.</li></ol>'
+            },
+            outlook: {
+                title: 'Outlook / Hotmail – App Password',
+                body: '<h4>Generate a Microsoft App Password</h4><ol><li>Open <a href="https://account.microsoft.com/security" target="_blank" rel="noopener">Microsoft Security Settings</a></li><li>Enable <strong>Two-Step Verification</strong>.</li><li>Go to <strong>Advanced Security Options</strong>.</li><li>Scroll to <strong>App Passwords</strong>.</li><li>Click <strong>Create a new app password</strong>.</li><li>Copy the generated password and use it in the SMTP App Password field above.</li></ol>'
+            },
+            yahoo: {
+                title: 'Yahoo – App Password',
+                body: '<h4>Generate Yahoo App Password</h4><ol><li>Open <a href="https://login.yahoo.com/account/security" target="_blank" rel="noopener">Yahoo Account Security</a></li><li>Enable <strong>Two-Step Verification</strong>.</li><li>Click <strong>Generate App Password</strong>.</li><li>Select <strong>Other App</strong>, enter a name (e.g. <em>SMTP Script</em>).</li><li>Copy the generated password and paste it in the SMTP App Password field above.</li></ol>'
+            },
+            icloud: {
+                title: 'iCloud / Apple Mail – App Password',
+                body: '<h4>Generate Apple App-Specific Password</h4><p>Applies to <em>icloud.com</em>, <em>me.com</em>, <em>mac.com</em>.</p><ol><li>Go to <a href="https://appleid.apple.com" target="_blank" rel="noopener">Apple ID Security</a></li><li>Enable <strong>Two-Factor Authentication</strong>.</li><li>Under <strong>Security</strong>, click <strong>App-Specific Passwords</strong>.</li><li>Click <strong>Generate Password</strong>, enter a label (e.g. <em>SMTP Script</em>).</li><li>Copy the password and use it in the SMTP App Password field above.</li></ol>'
+            },
+            aol: {
+                title: 'AOL – App Password',
+                body: '<h4>Generate AOL App Password</h4><ol><li>Open <a href="https://login.aol.com/account/security" target="_blank" rel="noopener">AOL Account Security</a></li><li>Enable <strong>Two-Step Verification</strong>.</li><li>Click <strong>Generate App Password</strong> → <strong>Other App</strong>.</li><li>Enter an app name (e.g. <em>SMTP Script</em>).</li><li>Copy the password and paste it in the SMTP App Password field above.</li></ol>'
+            },
+            other: {
+                title: 'App Password / SMTP help',
+                body: '<p>Enter your <strong>Email Address</strong> above and click Help again to see instructions for your provider (Gmail, Zoho, Outlook, Yahoo, iCloud, AOL).</p><p>Or check your email provider’s security or account settings for <strong>App Passwords</strong> or <strong>SMTP authentication</strong>.</p>'
+            }
+        };
+        function getProviderKey(email) {
+            if (!email || !email.includes('@')) return 'other';
+            var d = email.split('@')[1].toLowerCase();
+            if (d === 'gmail.com') return 'gmail';
+            if (['zoho.com', 'zoho.in', 'zohomail.in', 'zohomail.com'].indexOf(d) !== -1) return 'zoho';
+            if (['outlook.com', 'hotmail.com', 'live.com'].indexOf(d) !== -1) return 'outlook';
+            if (d === 'yahoo.com') return 'yahoo';
+            if (['icloud.com', 'me.com', 'mac.com'].indexOf(d) !== -1) return 'icloud';
+            if (d === 'aol.com') return 'aol';
+            return 'other';
+        }
+        function openSmtpHelp() {
+            var emailInput = document.getElementById('email');
+            var email = emailInput ? emailInput.value : '';
+            var key = getProviderKey(email);
+            var data = smtpHelpContent[key] || smtpHelpContent.other;
+            document.getElementById('smtp-help-title').textContent = data.title;
+            document.getElementById('smtp-help-content').innerHTML = data.body;
+            document.getElementById('smtp-help-overlay').classList.add('show');
+        }
+        function closeSmtpHelp() {
+            document.getElementById('smtp-help-overlay').classList.remove('show');
+        }
+    </script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="{{ url_for('static', filename='js/profile-designation-select2.js') }}"></script>

@@ -1,0 +1,60 @@
+<div class="pe-sched-card">
+  <h2 class="pe-sched-title">Schedule Your Visit</h2>
+  <p class="pe-sched-sub">Choose your preferred date and time</p>
+
+  <label class="pe-section-label">Visit Format</label>
+  <div class="pe-visit-grid">
+    <button type="button" class="pe-visit-btn active" id="btnInPerson" onclick="peProfileExtSetVisit('in-person')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <span>In-person</span>
+    </button>
+    <button type="button" class="pe-visit-btn" id="btnOnline" onclick="peProfileExtSetVisit('online')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      <span>Online</span>
+    </button>
+  </div>
+
+  <div>
+    <div class="pe-cal-header">
+      <span class="pe-cal-month" id="calMonth"></span>
+      <div class="pe-cal-nav">
+        <button type="button" class="pe-cal-nav-btn" onclick="peProfileExtChangeMonth(-1)" aria-label="Previous month">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <button type="button" class="pe-cal-nav-btn" onclick="peProfileExtChangeMonth(1)" aria-label="Next month">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="pe-cal-weekdays">
+      <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>
+      <span>Thu</span><span>Fri</span><span>Sat</span>
+    </div>
+    <div class="pe-cal-grid" id="calGrid"></div>
+  </div>
+
+  <label class="pe-section-label">Available Time Slots</label>
+
+  <div class="pe-slot-section">
+    <p class="pe-slot-label">Morning (8 AM – 12 PM)</p>
+    <div class="pe-slot-row" id="morningSlots"></div>
+  </div>
+  <div class="pe-slot-section">
+    <p class="pe-slot-label">Afternoon (12 PM – 5 PM)</p>
+    <div class="pe-slot-row" id="afternoonSlots"></div>
+  </div>
+  <div class="pe-slot-section">
+    <p class="pe-slot-label">Evening (5 PM – 8 PM)</p>
+    <div class="pe-slot-row" id="eveningSlots"></div>
+  </div>
+
+  <button type="button" class="pe-book-btn disabled" id="bookBtn" onclick="peProfileExtBookClick()">Proceed to Book</button>
+
+  <div class="pe-footer-notes">
+    <p>Free cancellation up to 24 hours before appointment</p>
+    <div class="pe-footer-lock">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      <span>Your information is safe and secure</span>
+    </div>
+  </div>
+</div>

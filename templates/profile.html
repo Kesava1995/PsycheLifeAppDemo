@@ -78,6 +78,21 @@
         body.dark-mode .appointment-template-card h4 { color: #ddd !important; }
         body.dark-mode .appointment-template-card .working-hours-container { color: #fff; }
 
+        .appointment-template-card input[type="time"],
+        .appointment-template-card input[type="number"] {
+            padding: 8px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            min-height: 40px;
+            box-sizing: border-box;
+        }
+        .appointment-template-card .sched-time-inp { width: auto; min-width: 7.5rem; max-width: 9rem; }
+        .appointment-template-card .sched-slot-field label,
+        .appointment-template-card .sched-custom-slots-block h4 + .file-info { display: block; }
+        .appointment-template-card .sched-slot-field label { margin-bottom: 6px; }
+        .sched-card-readonly fieldset.sched-template-body[disabled] { opacity: 0.95; }
+
         .profile-header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 28px; flex-wrap: wrap; }
         .profile-header-text { flex: 1; min-width: 200px; }
         .profile-header-text h2 { margin-bottom: 10px; }
@@ -101,302 +116,166 @@
         body.dark-mode .profile-photo-frame { border-color: #555; background: #2a2a2a; }
         body.dark-mode .profile-photo-placeholder { color: #aaa; }
         body.dark-mode .profile-photo-actions label.btn-link-photo { color: #7ab8e0; }
+
+        .profile-clinics-scroll {
+            max-height: 280px;
+            overflow-y: auto;
+            padding: 12px 12px 4px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #fafbfc;
+        }
+        body.dark-mode .profile-clinics-scroll { background: #2a2a2a; border-color: #555; }
+        .profile-clinic-block {
+            margin-bottom: 14px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .profile-clinic-block:last-child { border-bottom: none; margin-bottom: 8px; padding-bottom: 8px; }
+        body.dark-mode .profile-clinic-block { border-bottom-color: #444; }
+
+        /* Custom Registration Template modal (same checklist as dashboard quick registration) */
+        .reg-template-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 6000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+        .reg-template-modal.is-open { display: flex; }
+        .reg-template-modal-inner {
+            background: #fff;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 440px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+        .reg-template-modal-inner h3 {
+            margin: 0;
+            padding: 16px 18px 0;
+            font-size: 1.05rem;
+            color: #333;
+        }
+        .reg-template-modal-name {
+            padding: 12px 18px 0;
+        }
+        .reg-template-modal-name label { margin-bottom: 6px; }
+        .quick-checklist-body {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin: 12px 18px;
+            max-height: 52vh;
+            overflow: auto;
+            background: #fff;
+        }
+        .quick-checklist-root,
+        .quick-checklist-sub {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        .registration-template-checklist .quick-checklist-line {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            cursor: pointer;
+            margin: 0;
+            padding: 5px 0;
+            font-size: 13px;
+            line-height: 1.4;
+            color: #111827;
+        }
+        .registration-template-checklist .quick-checklist-line > input[type="checkbox"] {
+            flex-shrink: 0;
+            width: 16px;
+            height: 16px;
+            min-width: 16px;
+            margin: 2px 0 0 0;
+            accent-color: #003366;
+        }
+        .registration-template-checklist .quick-checklist-label-text {
+            flex: 1;
+            min-width: 0;
+        }
+        .registration-template-checklist .reg-template-required-hint {
+            font-size: 11px;
+            font-weight: 500;
+            color: #64748b;
+        }
+        .registration-template-checklist .quick-checklist-root > li,
+        .registration-template-checklist .quick-checklist-sub > li {
+            margin: 0;
+        }
+        .registration-template-checklist .quick-checklist-sub {
+            margin-top: 2px;
+            margin-left: 0;
+            margin-bottom: 4px;
+            padding: 4px 0 4px 22px;
+            border-left: 2px solid rgba(0, 51, 102, 0.2);
+        }
+        .reg-template-modal-footer {
+            padding: 12px 18px 16px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            border-top: 1px solid #eee;
+        }
+        body.dark-mode .reg-template-modal-inner { background: #1e1e1e; }
+        body.dark-mode .reg-template-modal-inner h3 { color: #ddd; }
+        body.dark-mode .quick-checklist-body {
+            background: #1E252E;
+            border-color: #334155;
+        }
+        body.dark-mode .registration-template-checklist .quick-checklist-line { color: #e5e7eb; }
+        body.dark-mode .registration-template-checklist .reg-template-required-hint { color: #94a3b8; }
+        body.dark-mode .registration-template-checklist .quick-checklist-sub { border-left-color: rgba(148, 163, 184, 0.35); }
+        body.dark-mode .reg-template-modal-footer { border-top-color: #333; }
+
+        .reg-template-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .reg-template-toolbar .btn-primary { flex-shrink: 0; }
+        .reg-template-edit-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            min-width: 160px;
+            max-width: 320px;
+        }
+        .reg-template-edit-select {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
     </style>
 </head>
 <body>
 {% include 'partials/app_chrome.html' %}
+{% set profile_settings_form_action = url_for('profile', next=request.args.get('next') or request.referrer or url_for('dashboard')) %}
+{% set show_external_profile_link = true %}
     <div class="container">
-        <form method="POST" enctype="multipart/form-data" action="{{ request.path }}?next={{ request.args.get('next') or request.referrer or url_for('dashboard') }}">
-            <div class="profile-header-row">
-                <div class="profile-header-text">
-                    <h2>Doctor Profile & Settings</h2>
-                    <p class="subtitle">Manage your details for prescriptions and patient records.</p>
-                </div>
-                <div class="profile-photo-block">
-                    <div class="profile-photo-frame" id="profilePhotoFrame">
-                        {% if doctor.profile_photo_mimetype %}
-                        <img src="{{ url_for('serve_profile_picture') }}" alt="Your profile photo" width="120" height="120">
-                        {% else %}
-                        <div class="profile-photo-placeholder">
-                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                            <span>Profile photo</span>
-                        </div>
-                        {% endif %}
-                    </div>
-                    <div class="profile-photo-actions">
-                        <input type="file" id="profile_photo" name="profile_photo" class="sr-only" accept="image/jpeg,image/png,image/gif,image/webp">
-                        <label for="profile_photo" class="btn-link-photo">Upload photo</label>
-                        {% if doctor.profile_photo_mimetype %}
-                        <label class="profile-photo-remove"><input type="checkbox" name="remove_profile_photo" value="1"> Remove photo</label>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="full_name">Full Name (as on Prescription)</label>
-                <input type="text" id="full_name" name="full_name" value="{{ doctor.full_name or '' }}" placeholder="Dr. First Last">
-            </div>
-            
-            <div class="form-group">
-                <label for="qualification">Qualification (Optional - for future use)</label>
-                <input type="text" id="qualification" name="qualification" value="" placeholder="MBBS, MD (Psychiatry)">
-            </div>
-
-            <div class="form-group">
-                <label for="designation">Designation</label>
-                <select id="designation" name="designation" class="profile-designation-select2" data-placeholder="Select or type designation...">
-                    <option value=""></option>
-                    {% for label in designation_choices %}
-                    <option value="{{ label }}" {% if doctor.designation == label %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                    {% if doctor.designation and doctor.designation not in designation_choices %}
-                    <option value="{{ doctor.designation }}" selected>{{ doctor.designation }}</option>
-                    {% endif %}
-                </select>
-                <div class="file-info">Search the list or type your own if your designation is not listed.</div>
-            </div>
-
-            <div class="form-group">
-                <label for="kmc_code">Registration Number</label>
-                <input type="text" id="kmc_code" name="kmc_code" value="{{ doctor.kmc_code or '' }}" placeholder="KMC-12345">
-            </div>
-            
-            <div class="form-group">
-                <label for="clinic_name">Clinic / Hospital Name</label>
-                <input type="text" id="clinic_name" name="clinic_name" value="{{ doctor.clinic_name or '' }}" placeholder="Sunshine Mind Clinic">
-            </div>
-            
-            <div class="form-group">
-                <label for="address_text">Clinic Address</label>
-                <textarea id="address_text" name="address_text" placeholder="Full clinic address">{{ doctor.address_text or '' }}</textarea>
-            </div>
-
-            <div class="form-group">
-                <label for="phone">Phone Number (For Patients)</label>
-                <input type="text" id="phone" name="phone" value="{{ doctor.phone or '' }}" placeholder="+91 99999 88888">
-            </div>
-
-            <div class="form-group">
-                <label for="email">Email Address</label>
-                <input type="email" id="email" name="email" value="{{ doctor.email or '' }}" placeholder="doctor@example.com">
-            </div>
-            <div class="form-group">
-                <div class="label-with-help">
-                    <label for="smtp_app_password">SMTP App Password (for email reminders)</label>
-                    <button type="button" class="btn-help" id="smtp-help-btn" aria-label="Help">Help</button>
-                </div>
-                <input type="password" id="smtp_app_password" name="smtp_app_password" placeholder="Leave blank to keep existing" autocomplete="off">
-                <div class="file-info">Use your email provider’s app password (e.g. Gmail, Zoho, Outlook). Leave blank to keep current.</div>
-            </div>
-            <div id="smtp-help-overlay" class="smtp-help-overlay" onclick="if(event.target === this) closeSmtpHelp()">
-                <div class="smtp-help-modal" onclick="event.stopPropagation()">
-                    <div class="modal-header">
-                        <h3 id="smtp-help-title">App Password / SMTP help</h3>
-                        <button type="button" class="modal-close" onclick="closeSmtpHelp()" aria-label="Close">&times;</button>
-                    </div>
-                    <div class="modal-body" id="smtp-help-content"></div>
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="appointment_reminder_days">Appointment reminder days (comma-separated)</label>
-                <input type="text" id="appointment_reminder_days" name="appointment_reminder_days" value="{{ doctor.appointment_reminder_days or '7,3,1' }}" placeholder="7,3,1">
-                <div class="file-info">Days before appointment to send a reminder (e.g. 7, 3, 1 = one week, 3 days, 1 day before).</div>
-            </div>
-            <div class="form-group">
-                <label for="social_handle">Social Media Handle (Optional)</label>
-                <input type="text" id="social_handle" name="social_handle" value="{{ doctor.social_handle or '' }}" placeholder="@username">
-            </div>
-
-            <div class="form-group active-template-group" style="padding: 15px; background-color: #f0f8ff; border-radius: 8px; border: 1px solid var(--primary-blue);">
-                <label for="active_template" style="color: var(--primary-dark);">Active Appointment Template</label>
-                <select id="active_template" name="active_template" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; background-color: white;">
-                    <option value="default">Default Template</option>
-                    {% if schedule_templates %}
-                        {% for template in schedule_templates %}
-                            <option value="{{ template.id }}" {% if doctor.active_template_id == template.id %}selected{% endif %}>{{ template.name }}</option>
-                        {% endfor %}
-                    {% endif %}
-                </select>
-                <div class="file-info" style="margin-top: 5px;">Select which schedule template is currently active for calculating your appointment slots.</div>
-            </div>
-            
-            <div class="form-group">
-                <label for="signature">Digital Signature (Image)</label>
-                <input type="file" id="signature" name="signature" accept="image/*">
-                {% if doctor.signature_filename %}
-                <div class="file-info">Current signature uploaded</div>
-                <div class="signature-preview">
-                    <img src="{{ url_for('static', filename='signatures/' + doctor.signature_filename) }}" alt="Current Signature">
-                </div>
-                {% else %}
-                <div class="file-info">No signature uploaded yet</div>
-                {% endif %}
-            </div>
-
-            <div class="form-group" style="margin-top: 40px; border-top: 1px solid #e0e0e0; padding-top: 20px;">
-                <h3 style="margin-bottom: 5px;">Appointment Schedule Templates</h3>
-                <p class="subtitle" style="margin-bottom: 20px;">Manage your working hours and slot durations.</p>
-                
-                <div id="schedule-templates-container">
-                        <div class="card appointment-template-card" style="border: 1px solid #A5DCFE; padding: 20px; margin-bottom: 20px; border-radius: 8px; background: #fafcff;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                            <input type="text" name="template_name[]" value="Default Template" class="form-control" style="width: 50%; font-weight: bold; border: none; background: transparent; font-size: 1.1em;" readonly>
-                            <div class="template-actions">
-                                <button type="button" class="btn btn-secondary btn-sm" onclick="cloneTemplate(this)">[+] Copy</button>
-                            </div>
-                        </div>
-                        
-                        <h4 style="margin-bottom: 10px; font-size: 0.95em; color: #555;">Usual Appointment Timings</h4>
-                        <div class="working-hours-container" style="margin-bottom: 25px;">
-                            <div class="timing-row" style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
-                                <input type="time" name="time_from[]" value="09:00" class="form-control" style="width: auto;">
-                                <span style="font-weight: 500;">to</span>
-                                <input type="time" name="time_to[]" value="17:00" class="form-control" style="width: auto;">
-                                <button type="button" class="btn btn-primary" onclick="addTimingRow(this)">+</button>
-                            </div>
-                            <div class="timing-row" style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
-                                <input type="time" name="time_from[]" value="17:00" class="form-control" style="width: auto;">
-                                <span style="font-weight: 500;">to</span>
-                                <input type="time" name="time_to[]" value="22:00" class="form-control" style="width: auto;">
-                                <button type="button" class="btn btn-secondary" onclick="this.parentElement.remove()">-</button>
-                            </div>
-                        </div>
-
-                        <h4 style="margin-bottom: 10px; font-size: 0.95em; color: #555;">Default Slot Durations (Mins)</h4>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                            <div><label>New Registration</label><input type="number" name="dur_new[]" value="45" class="form-control"></div>
-                            <div><label>Extended Follow-up</label><input type="number" name="dur_ext_follow[]" value="30" class="form-control"></div>
-                            <div><label>Follow-up</label><input type="number" name="dur_follow[]" value="15" class="form-control"></div>
-                            <div><label>Therapy Session</label><input type="number" name="dur_therapy[]" value="45" class="form-control"></div>
-                            <div><label>Review/Report Discussion</label><input type="number" name="dur_review[]" value="10" class="form-control"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <button type="button" class="btn btn-primary" onclick="addNewTemplate()" style="margin-top: 10px;">[+] Add Custom Template</button>
-            </div>
-            <script>
-            function addTimingRow(btn) {
-                var container = btn.closest('.working-hours-container');
-                var row = document.createElement('div');
-                row.className = 'timing-row';
-                row.style.cssText = 'display: flex; gap: 10px; align-items: center; margin-bottom: 10px;';
-                row.innerHTML = '<input type="time" name="time_from[]" class="form-control" style="width: auto;"> <span style="font-weight: 500;">to</span> <input type="time" name="time_to[]" class="form-control" style="width: auto;"> <button type="button" class="btn btn-secondary" onclick="this.parentElement.remove()">-</button>';
-                container.appendChild(row);
-            }
-            
-            function cloneTemplate(btn) {
-                var card = btn.closest('.card');
-                var clone = card.cloneNode(true);
-                var isDark = document.body.classList.contains('dark-mode');
-                var nameInput = clone.querySelector('input[name="template_name[]"]');
-                nameInput.value = nameInput.value + " (Copy)";
-                nameInput.readOnly = false;
-                nameInput.style.border = isDark ? "1px solid #555" : "1px solid #ccc";
-                nameInput.style.background = isDark ? "#333" : "white";
-                nameInput.style.color = isDark ? "#fff" : "";
-                
-                var actionDiv = clone.querySelector('.template-actions');
-                actionDiv.innerHTML = '<button type="button" class="btn btn-secondary btn-sm" onclick="cloneTemplate(this)">[+] Copy</button> <button type="button" class="btn btn-secondary btn-sm" onclick="this.closest(\'.card\').remove()" style="background: #ff4d4d; color: white;">Delete</button>';
-                document.getElementById('schedule-templates-container').appendChild(clone);
-            }
-            
-            function addNewTemplate() {
-                var clone = document.querySelector('#schedule-templates-container .card').cloneNode(true);
-                var isDark = document.body.classList.contains('dark-mode');
-                var nameInput = clone.querySelector('input[name="template_name[]"]');
-                nameInput.value = "Custom Template";
-                nameInput.readOnly = false;
-                nameInput.style.border = isDark ? "1px solid #555" : "1px solid #ccc";
-                nameInput.style.background = isDark ? "#333" : "white";
-                nameInput.style.color = isDark ? "#fff" : "";
-                
-                var actionDiv = clone.querySelector('.template-actions');
-                actionDiv.innerHTML = '<button type="button" class="btn btn-secondary btn-sm" onclick="cloneTemplate(this)">[+] Copy</button> <button type="button" class="btn btn-secondary btn-sm" onclick="this.closest(\'.card\').remove()" style="background: #ff4d4d; color: white;">Delete</button>';
-                document.getElementById('schedule-templates-container').appendChild(clone);
-            }
-            </script>
-            
-            <div style="margin-top: 30px; display: flex; gap: 10px;">
-                <a href="{{ request.args.get('next') or request.referrer or url_for('dashboard') }}" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">Cancel</a>
-                <button type="submit" class="btn">Save Settings</button>
-            </div>
-        </form>
+{% include 'partials/profile_settings_form.html' %}
     </div>
-    <script>
-        window.addEventListener('DOMContentLoaded', function() {
-            if(localStorage.getItem('theme') === 'dark') {
-                document.body.classList.add('dark-mode');
-            }
-            var helpBtn = document.getElementById('smtp-help-btn');
-            if (helpBtn) helpBtn.addEventListener('click', openSmtpHelp);
-            var profileInput = document.getElementById('profile_photo');
-            var profileFrame = document.getElementById('profilePhotoFrame');
-            if (profileInput && profileFrame) {
-                profileInput.addEventListener('change', function() {
-                    var f = profileInput.files && profileInput.files[0];
-                    if (!f || !f.type.match(/^image\//)) return;
-                    var url = URL.createObjectURL(f);
-                    profileFrame.innerHTML = '<img src="' + url + '" alt="Preview" width="120" height="120" style="width:100%;height:100%;object-fit:cover;display:block">';
-                });
-            }
-        });
-        var smtpHelpContent = {
-            gmail: {
-                title: 'Gmail – App Password',
-                body: '<h4>Generate a Gmail App Password</h4><ol><li>Open <a href="https://myaccount.google.com/security" target="_blank" rel="noopener">Google Account Security</a></li><li>Enable <strong>2-Step Verification</strong> (How you sign in to Google → 2-Step Verification).</li><li>Open <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">App Passwords</a></li><li>Create password: enter a name (e.g. <em>PsycheLife</em>), click <strong>Create</strong>.</li><li>Copy the <strong>16-digit password</strong> and paste it in the SMTP App Password field above.</li></ol>'
-            },
-            zoho: {
-                title: 'Zoho – App Password',
-                body: '<h4>Generate a Zoho App Password</h4><ol><li>Open <a href="https://accounts.zoho.com/home#security" target="_blank" rel="noopener">Zoho Accounts Security</a></li><li>Enable <strong>Two-Factor Authentication</strong> if not already enabled.</li><li>Go to <strong>App Passwords</strong>.</li><li>Click <strong>Generate New Password</strong>.</li><li>Enter a name (e.g. <em>SMTP Script</em>).</li><li>Copy the generated password and paste it in the SMTP App Password field above.</li></ol>'
-            },
-            outlook: {
-                title: 'Outlook / Hotmail – App Password',
-                body: '<h4>Generate a Microsoft App Password</h4><ol><li>Open <a href="https://account.microsoft.com/security" target="_blank" rel="noopener">Microsoft Security Settings</a></li><li>Enable <strong>Two-Step Verification</strong>.</li><li>Go to <strong>Advanced Security Options</strong>.</li><li>Scroll to <strong>App Passwords</strong>.</li><li>Click <strong>Create a new app password</strong>.</li><li>Copy the generated password and use it in the SMTP App Password field above.</li></ol>'
-            },
-            yahoo: {
-                title: 'Yahoo – App Password',
-                body: '<h4>Generate Yahoo App Password</h4><ol><li>Open <a href="https://login.yahoo.com/account/security" target="_blank" rel="noopener">Yahoo Account Security</a></li><li>Enable <strong>Two-Step Verification</strong>.</li><li>Click <strong>Generate App Password</strong>.</li><li>Select <strong>Other App</strong>, enter a name (e.g. <em>SMTP Script</em>).</li><li>Copy the generated password and paste it in the SMTP App Password field above.</li></ol>'
-            },
-            icloud: {
-                title: 'iCloud / Apple Mail – App Password',
-                body: '<h4>Generate Apple App-Specific Password</h4><p>Applies to <em>icloud.com</em>, <em>me.com</em>, <em>mac.com</em>.</p><ol><li>Go to <a href="https://appleid.apple.com" target="_blank" rel="noopener">Apple ID Security</a></li><li>Enable <strong>Two-Factor Authentication</strong>.</li><li>Under <strong>Security</strong>, click <strong>App-Specific Passwords</strong>.</li><li>Click <strong>Generate Password</strong>, enter a label (e.g. <em>SMTP Script</em>).</li><li>Copy the password and use it in the SMTP App Password field above.</li></ol>'
-            },
-            aol: {
-                title: 'AOL – App Password',
-                body: '<h4>Generate AOL App Password</h4><ol><li>Open <a href="https://login.aol.com/account/security" target="_blank" rel="noopener">AOL Account Security</a></li><li>Enable <strong>Two-Step Verification</strong>.</li><li>Click <strong>Generate App Password</strong> → <strong>Other App</strong>.</li><li>Enter an app name (e.g. <em>SMTP Script</em>).</li><li>Copy the password and paste it in the SMTP App Password field above.</li></ol>'
-            },
-            other: {
-                title: 'App Password / SMTP help',
-                body: '<p>Enter your <strong>Email Address</strong> above and click Help again to see instructions for your provider (Gmail, Zoho, Outlook, Yahoo, iCloud, AOL).</p><p>Or check your email provider’s security or account settings for <strong>App Passwords</strong> or <strong>SMTP authentication</strong>.</p>'
-            }
-        };
-        function getProviderKey(email) {
-            if (!email || !email.includes('@')) return 'other';
-            var d = email.split('@')[1].toLowerCase();
-            if (d === 'gmail.com') return 'gmail';
-            if (['zoho.com', 'zoho.in', 'zohomail.in', 'zohomail.com'].indexOf(d) !== -1) return 'zoho';
-            if (['outlook.com', 'hotmail.com', 'live.com'].indexOf(d) !== -1) return 'outlook';
-            if (d === 'yahoo.com') return 'yahoo';
-            if (['icloud.com', 'me.com', 'mac.com'].indexOf(d) !== -1) return 'icloud';
-            if (d === 'aol.com') return 'aol';
-            return 'other';
-        }
-        function openSmtpHelp() {
-            var emailInput = document.getElementById('email');
-            var email = emailInput ? emailInput.value : '';
-            var key = getProviderKey(email);
-            var data = smtpHelpContent[key] || smtpHelpContent.other;
-            document.getElementById('smtp-help-title').textContent = data.title;
-            document.getElementById('smtp-help-content').innerHTML = data.body;
-            document.getElementById('smtp-help-overlay').classList.add('show');
-        }
-        function closeSmtpHelp() {
-            document.getElementById('smtp-help-overlay').classList.remove('show');
-        }
-    </script>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="{{ url_for('static', filename='js/profile-designation-select2.js') }}"></script>
+
+{% include 'partials/profile_footer_assets.html' %}
 </body>
 </html>

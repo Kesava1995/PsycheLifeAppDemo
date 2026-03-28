@@ -17,6 +17,7 @@
             --accent-soft-bg: rgba(155,216,251,0.18);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
         body { background-color: var(--bg-color); overflow-y: auto; display: flex; flex-direction: column; min-height: 100vh; }
         .app-container { display: flex; width: 100%; flex: 1; } 
         .sidebar { width: var(--sidebar-width); background: #fff; border-right: 1px solid #eaecf0; padding: 32px 24px; display: flex; flex-direction: column; flex-shrink: 0; }
@@ -2651,9 +2652,315 @@
             from { transform: translateX(-50%) translateY(-12px); opacity: 0; }
             to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
         }
+
+        /* Quick registration template UI (moved from dashboard) */
+        .qr-hidden-until-onboarded { display: none !important; visibility: hidden !important; }
+        .qr-onboarding-curtain {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 4100;
+            background: var(--primary-blue);
+            pointer-events: auto;
+        }
+        body.dark-mode .qr-onboarding-curtain {
+            background: #121212;
+        }
+
+        /* Registration template checklist — flex rows so checkboxes stay with wrapped labels */
+        .registration-template-checklist .quick-checklist-line {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            cursor: pointer;
+            margin: 0;
+            padding: 5px 0;
+            font-size: 13px;
+            line-height: 1.4;
+            color: #111827;
+        }
+        .registration-template-checklist .quick-checklist-line > input[type="checkbox"] {
+            flex-shrink: 0;
+            width: 16px;
+            height: 16px;
+            min-width: 16px;
+            margin: 2px 0 0 0;
+            accent-color: #006672;
+        }
+        .registration-template-checklist .quick-checklist-label-text {
+            flex: 1;
+            min-width: 0;
+        }
+        .registration-template-checklist .reg-template-required-hint {
+            font-size: 11px;
+            font-weight: 500;
+            color: #64748b;
+        }
+        .registration-template-checklist .quick-checklist-root > li,
+        .registration-template-checklist .quick-checklist-sub > li {
+            margin: 0;
+        }
+        .registration-template-checklist .quick-checklist-sub {
+            margin-top: 2px;
+            margin-left: 0;
+            margin-bottom: 4px;
+            padding: 4px 0 4px 22px;
+            border-left: 2px solid rgba(0, 102, 114, 0.2);
+        }
+        body.dark-mode .registration-template-checklist .quick-checklist-line { color: #e5e7eb; }
+        body.dark-mode .registration-template-checklist .reg-template-required-hint { color: #94a3b8; }
+        body.dark-mode .registration-template-checklist .quick-checklist-sub { border-left-color: rgba(148, 163, 184, 0.35); }
+        .qr-template-toolbar {
+            max-width: 1400px;
+            width: 95%;
+            margin: 0 auto 12px auto;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 10px;
+            border: 1px solid rgba(0,102,114,0.2);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .qr-template-toolbar label { font-size: 12px; font-weight: 700; color: #374151; margin: 0; }
+        .qr-template-toolbar select {
+            min-width: 200px;
+            max-width: 280px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            font-size: 13px;
+        }
+        .qr-template-toolbar .qr-active-template-wrap {
+            min-width: 220px;
+            max-width: 320px;
+            flex: 0 1 320px;
+        }
+        .qr-template-toolbar .qr-active-template-wrap .select2-container {
+            width: 100% !important;
+        }
+        .qr-toolbar-btn {
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: none;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            background: #006672;
+            color: #fff;
+        }
+        .qr-toolbar-btn.secondary { background: #64748b; }
+        .qr-toolbar-btn.outline { background: transparent; color: #006672; border: 1px solid #006672; }
+        .qr-toolbar-btn:hover { filter: brightness(1.05); }
+        .qr-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 5000;
+            background: rgba(0,0,0,0.45);
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .qr-modal.is-open { display: flex; }
+        /* Modal shell matches Profile → Custom Registration Template (reg-template-modal-inner) */
+        .qr-modal-inner {
+            background: #fff;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 440px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+        .qr-checklist-modal-header {
+            padding: 16px 18px 0;
+            margin-bottom: 4px;
+        }
+        .qr-modal .quick-checklist-title {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #333;
+        }
+        .qr-modal-help { margin: 8px 18px 0; font-size: 13px; color: #64748b; line-height: 1.45; }
+        .qr-modal .qr-template-pick-wrap { padding: 12px 18px 0; }
+        .qr-modal .qr-template-pick-wrap label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 6px; }
+        .qr-modal .qr-template-pick-wrap .select2-container { width: 100% !important; }
+        .qr-modal .qr-new-template-name-wrap { padding: 8px 18px 0; display: none; }
+        .qr-modal .qr-new-template-name-wrap.is-visible { display: block; }
+        .qr-modal .qr-new-template-name-wrap label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 6px; }
+        .qr-modal .qr-new-template-name-wrap input {
+            width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 14px;
+        }
+        /* Checklist panel: match Profile .quick-checklist-body + .registration-template-checklist exactly */
+        .qr-modal .quick-checklist-body {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin: 12px 18px;
+            max-height: 52vh;
+            overflow: auto;
+            background: #fff;
+        }
+        .qr-modal .quick-checklist-root,
+        .qr-modal .quick-checklist-sub {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        .qr-modal .registration-template-checklist .quick-checklist-line {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            cursor: pointer;
+            margin: 0;
+            padding: 5px 0;
+            font-size: 13px;
+            line-height: 1.4;
+            color: #111827;
+        }
+        .qr-modal .registration-template-checklist .quick-checklist-line > input[type="checkbox"] {
+            flex-shrink: 0;
+            width: 16px;
+            height: 16px;
+            min-width: 16px;
+            margin: 2px 0 0 0;
+            accent-color: #003366;
+        }
+        .qr-modal .registration-template-checklist .quick-checklist-label-text {
+            flex: 1;
+            min-width: 0;
+        }
+        .qr-modal .registration-template-checklist .reg-template-required-hint {
+            font-size: 11px;
+            font-weight: 500;
+            color: #64748b;
+        }
+        .qr-modal .registration-template-checklist .quick-checklist-root > li,
+        .qr-modal .registration-template-checklist .quick-checklist-sub > li {
+            margin: 0;
+        }
+        .qr-modal .registration-template-checklist .quick-checklist-sub {
+            margin-top: 2px;
+            margin-left: 0;
+            margin-bottom: 4px;
+            padding: 4px 0 4px 22px;
+            border-left: 2px solid rgba(0, 51, 102, 0.2);
+        }
+        .qr-modal-default-row { padding: 0 18px 8px; font-size: 13px; }
+        .qr-modal-footer { padding: 12px 18px 16px; display: flex; justify-content: space-between; align-items: center; gap: 10px; border-top: 1px solid #eee; flex-wrap: wrap; }
+        .qr-modal .qr-btn-proceed {
+            padding: 8px 18px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            background: #0f766e;
+            color: #fff;
+        }
+        .qr-modal .qr-btn-proceed:hover { background: #0d9488; }
+        .qr-modal .qr-btn-cancel {
+            padding: 8px 18px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            background: #888;
+            color: #fff;
+        }
+        .qr-modal .qr-btn-cancel:hover { background: #737373; }
+        .qr-modal.qr-modal--blocking { pointer-events: auto; }
+        body.dark-mode .qr-template-toolbar { background: #1e252e; border-color: #334155; }
+        body.dark-mode .qr-template-toolbar label { color: #e5e7eb; }
+        body.dark-mode .qr-template-toolbar select { background: #111827; color: #e5e7eb; border-color: #475569; }
+        body.dark-mode .qr-template-toolbar .select2-container--default .select2-selection--single {
+            background: #111827;
+            border-color: #475569;
+        }
+        body.dark-mode .qr-template-toolbar .select2-container .select2-selection__rendered { color: #e5e7eb; }
+        body.dark-mode .qr-modal-inner { background: #1e252e; }
+        body.dark-mode .qr-modal-inner h3 { color: #e5e7eb; }
+        body.dark-mode .qr-modal-help { color: #94a3b8; }
+        body.dark-mode .qr-modal .quick-checklist-body { background: #1E252E; border-color: #334155; }
+        body.dark-mode .qr-modal-footer { border-top-color: #334155; }
+        body.dark-mode .qr-modal .quick-checklist-title { color: #ddd; }
+        body.dark-mode .qr-modal .registration-template-checklist .quick-checklist-line { color: #e5e7eb; }
+        body.dark-mode .qr-modal .registration-template-checklist .reg-template-required-hint { color: #94a3b8; }
+        body.dark-mode .qr-modal .registration-template-checklist .quick-checklist-sub {
+            border-left-color: rgba(148, 163, 184, 0.35);
+        }
+        body.dark-mode .qr-modal .qr-template-pick-wrap .select2-container--default .select2-selection--single,
+        body.dark-mode .qr-modal .qr-new-template-name-wrap input {
+            background: #111827;
+            border-color: #475569;
+            color: #e5e7eb;
+        }
+        body.dark-mode .qr-modal .qr-btn-proceed { background: #0d9488; }
+        body.dark-mode .qr-modal .qr-btn-cancel { background: #6b7280; }
+        body.dark-mode .qr-modal-default-row label { color: #cbd5e1 !important; }
     </style>
 </head>
 <body>
+{% set qr_needs_setup = doctor and registration_templates_state is not none and not registration_templates_state.get('quick_reg_onboarded') %}
+{% if doctor and registration_templates_state is not none %}
+<script>
+window.__QR_REGISTRATION_STATE__ = {{ registration_templates_state | tojson }};
+window.__QR_API_SAVE__ = {{ url_for('api_save_registration_template')|tojson }};
+window.__QR_API_DEFAULT__ = {{ url_for('api_set_default_registration_template')|tojson }};
+window.__QR_PROFILE_SETTINGS_HASH__ = '#quick-registration-settings';
+</script>
+<div id="qrTemplateModal" class="qr-modal qr-modal--blocking{% if qr_needs_setup %} is-open{% endif %}" role="dialog" aria-labelledby="qrTemplateModalTitle" aria-modal="true" onclick="if(event.target===this && window.qrTemplateModalBackdropClose) window.qrTemplateModalBackdropClose(event)">
+    <div class="qr-modal-inner" onclick="event.stopPropagation()">
+        <div class="qr-checklist-modal-header">
+            <h3 id="qrTemplateModalTitle" class="quick-checklist-title">Template Item Checklist</h3>
+        </div>
+        <p id="qrTemplateModalHelp" class="qr-modal-help" style="display:none;"></p>
+        <div class="qr-template-pick-wrap" id="qrTemplatePickWrap">
+            <label for="qr_template_pick">Template</label>
+            <select id="qr_template_pick" class="qr-template-pick-select" data-placeholder="Select template" aria-label="Registration template">
+                <option value="__qr_default__" {% if not registration_templates_state.templates %}selected{% endif %}>Default</option>
+                {% for t in registration_templates_state.templates %}
+                <option value="{{ t.id }}" {% if registration_templates_state.templates and (registration_templates_state.default_template_id == t.id or (not registration_templates_state.default_template_id and loop.first)) %}selected{% endif %}>{{ t.name }}</option>
+                {% endfor %}
+                <option value="__qr_new__">+ New custom template…</option>
+            </select>
+        </div>
+        <div class="qr-new-template-name-wrap" id="qrNewTemplateNameWrap">
+            <label for="qr_new_template_name">New template name</label>
+            <input type="text" id="qr_new_template_name" placeholder="e.g. Minimal intake" maxlength="120" autocomplete="off">
+        </div>
+        <div class="quick-checklist-body" id="qrChecklistBody">
+            {% include 'partials/registration_template_checklist.html' %}
+        </div>
+        <div class="qr-modal-default-row" id="qrSetDefaultWrap">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#374151;">
+                <input type="checkbox" id="qr_set_default_cb" checked> Set as default template for new visits
+            </label>
+        </div>
+        <div class="qr-modal-footer">
+            <button type="button" class="qr-btn-proceed" id="qrModalProceedBtn">Proceed</button>
+            <button type="button" class="qr-btn-cancel" id="qrModalCancelBtn" style="{% if qr_needs_setup %}display:none{% endif %}">Cancel</button>
+        </div>
+    </div>
+</div>
+{% endif %}
     <div id="sideMenu" class="side-menu">
         <div class="menu-item" onclick='window.location.href={{ url_for('dashboard')|tojson }}'>Dashboard</div>
         <div class="menu-item" onclick='window.location.href={{ url_for('dashboard')|tojson }}'>My Patients</div>
@@ -2662,7 +2969,7 @@
 
         <div class="menu-bottom">
             <div class="menu-item" onclick='window.location.href={{ url_for('profile')|tojson }}'>My Profile</div>
-            <div class="menu-item" onclick="alert('Settings are available in My Profile.');">Settings</div>
+            <div class="menu-item" onclick="window.location.href={{ (url_for('profile') + '#quick-registration-settings')|tojson }}">Settings</div>
             <div class="menu-item" onclick="alert('Help page not available yet.');">Help</div>
             <div class="menu-item logout" onclick='window.location.href={{ url_for('logout')|tojson }}'>Logout</div>
         </div>
@@ -2699,7 +3006,11 @@
         </div>
     </div>
 
-    <nav id="section-tabs" style="
+    {% if qr_needs_setup %}
+    <div id="qrOnboardingCurtain" class="qr-onboarding-curtain" aria-hidden="true"></div>
+    {% endif %}
+
+    <nav id="section-tabs" class="{% if qr_needs_setup %}qr-hidden-until-onboarded{% endif %}" style="
         position: fixed;
         top: 60px; left: 0; width: 100%; z-index: 2500;
         height: 48px;
@@ -2761,7 +3072,24 @@
 
     <div class="app-container">
         <main class="main-content">
-            <div class="visit-card">
+            {% if doctor and registration_templates_state is not none %}
+            <div id="qrTemplateToolbar" class="qr-template-toolbar{% if qr_needs_setup %} qr-hidden-until-onboarded{% endif %}">
+                <label for="qr_active_template_select">Active template</label>
+                <div class="qr-active-template-wrap">
+                <select id="qr_active_template_select" aria-label="Switch quick registration template" data-placeholder="Select template">
+                    <option value="__qr_default__" {% if not registration_templates_state.templates %}selected{% endif %}>Default</option>
+                    {% for t in registration_templates_state.templates %}
+                    <option value="{{ t.id }}" {% if registration_templates_state.templates and (registration_templates_state.default_template_id == t.id or (not registration_templates_state.default_template_id and loop.first)) %}selected{% endif %}>{{ t.name }}</option>
+                    {% endfor %}
+                </select>
+                </div>
+                <button type="button" class="qr-toolbar-btn outline" id="qrBtnApplyTemplate" title="Apply selection to this page">Apply to page</button>
+                <button type="button" class="qr-toolbar-btn secondary" id="qrBtnMakeDefault" title="Use as default when opening Quick Registration">Make default</button>
+                <button type="button" class="qr-toolbar-btn secondary" id="qrBtnOpenConfig">Configure template…</button>
+                <a class="qr-toolbar-btn outline" style="text-decoration:none;display:inline-flex;align-items:center;" href="{{ url_for('profile') }}#quick-registration-settings">Profile settings</a>
+            </div>
+            {% endif %}
+            <div class="visit-card{% if qr_needs_setup %} qr-hidden-until-onboarded{% endif %}" id="qrVisitCardShell">
                 <form method="POST" id="visitForm" enctype="multipart/form-data" action="{{ url_for('quick_registration') }}" onsubmit="return validateDurationRequired(this);">
                     
                     <!-- SECTION 1: DEMOGRAPHICS -->
@@ -8575,6 +8903,605 @@ function renderCompletedScalesCards() {
                 readonlyPositive: false
             });
         });
+    </script>
+    <script>
+    (function () {
+        if (typeof window.__QR_REGISTRATION_STATE__ === 'undefined') return;
+
+        window.__QR_NEEDS_SETUP__ = {{ qr_needs_setup | tojson }};
+        window.QR_DEFAULT_VALUE = '__qr_default__';
+        window.QR_NEW_VALUE = '__qr_new__';
+
+        var QR_REG_TO_QUICK = {
+            demographics: ['demographics'],
+            psychiatric_history_status: ['psychiatrichistorystatus'],
+            background_factors: ['backgroundfactors'],
+            background_premorbid_personality: ['premorbidpersonality'],
+            background_major_events: ['majorevents'],
+            background_stressors: ['stressors'],
+            background_ace: ['adversechildhoodexperiences'],
+            chief_complaints: ['chiefcomplaints'],
+            negative_history: ['negativehistory'],
+            functional_impairment: ['functionalimpairment'],
+            substance_use_history: ['substanceusehistory'],
+            family_history: ['familyhistory'],
+            developmental_milestone_history: ['developmentalmilestonehistory'],
+            mse: ['mse'],
+            mse_consciousness: ['consciousness'],
+            mse_general_appearance: ['generalappearanceandbehaviour'],
+            mse_speech: ['speech'],
+            mse_thought: ['thought'],
+            mse_perception: ['perception'],
+            mse_mood: ['mood'],
+            mse_affect: ['affect'],
+            mse_insight: ['insight'],
+            scales: ['scales'],
+            safety_medical_profile: ['safetyandmedicalprofile'],
+            safety_drug_allergies: ['drugallergies'],
+            safety_medical_comorbidities: ['medicalcomorbidities'],
+            safety_current_non_psych_meds: ['currentnonpsychiatricmedications'],
+            side_effects: ['sideeffects'],
+            diagnosis: ['diagnosis'],
+            diagnosis_provisional: ['provisionaldiagnosis'],
+            diagnosis_differential: ['differentialdiagnosis'],
+            diagnosis_classificatory: ['classificatorysystemsdisplay'],
+            clinical_states: ['clinicalstates'],
+            medication_adherence: ['medicationadherence'],
+            medications: ['medications'],
+            follow_up: ['followup']
+        };
+
+        window.qrSectionsToQuickKeys = function (sections) {
+            var keys = [];
+            if (!sections) return keys;
+            Object.keys(QR_REG_TO_QUICK).forEach(function (reg) {
+                if (sections[reg]) {
+                    var qs = QR_REG_TO_QUICK[reg];
+                    (Array.isArray(qs) ? qs : [qs]).forEach(function (k) {
+                        if (keys.indexOf(k) === -1) keys.push(k);
+                    });
+                }
+            });
+            return keys;
+        };
+
+        window.qrPrimeSessionFromServer = function () {
+            var st = window.__QR_REGISTRATION_STATE__;
+            if (!st || !st.quick_reg_onboarded) return;
+            try {
+                if (sessionStorage.getItem('quick_registration_selected_keys')) return;
+                if (!st.templates || st.templates.length === 0) {
+                    var sec0 = window.qrBuiltinDefaultSections();
+                    sessionStorage.setItem('quick_registration_selected_keys', JSON.stringify(window.qrSectionsToQuickKeys(sec0)));
+                    sessionStorage.setItem('quick_reg_active_template_id', window.QR_DEFAULT_VALUE);
+                    return;
+                }
+                var tid = st.default_template_id;
+                var tpl = null;
+                (st.templates || []).forEach(function (t) {
+                    if (t.id === tid) tpl = t;
+                });
+                if (!tpl && (st.templates || []).length) tpl = st.templates[0];
+                if (tpl && tpl.sections) {
+                    var keys = window.qrSectionsToQuickKeys(tpl.sections);
+                    sessionStorage.setItem('quick_registration_selected_keys', JSON.stringify(keys));
+                    sessionStorage.setItem('quick_reg_active_template_id', tpl.id);
+                }
+            } catch (e) {}
+        };
+
+        function qrSyncParentsFromChildren(body) {
+            if (!body) return;
+            function depth(li) {
+                var d = 0;
+                var n = li;
+                while (n && n !== body) {
+                    d++;
+                    n = n.parentElement;
+                }
+                return d;
+            }
+            var lis = Array.from(body.querySelectorAll('li'));
+            lis.sort(function (a, b) { return depth(b) - depth(a); });
+            lis.forEach(function (li) {
+                var sub = li.querySelector(':scope > ul.quick-checklist-sub');
+                if (!sub) return;
+                var pCb = li.querySelector(':scope > label > input[type="checkbox"]');
+                if (!pCb) return;
+                var any = false;
+                sub.querySelectorAll('input[type="checkbox"]').forEach(function (c) {
+                    if (c.checked) any = true;
+                });
+                if (any) pCb.checked = true;
+            });
+        }
+
+        function qrCollectSections(body) {
+            var sections = {};
+            body.querySelectorAll('input[type="checkbox"][data-reg-key]').forEach(function (cb) {
+                var k = cb.getAttribute('data-reg-key');
+                if (k) sections[k] = cb.checked;
+            });
+            sections.demographics = true;
+            return sections;
+        }
+
+        function qrApplySectionsToChecklist(body, sections) {
+            sections = sections || {};
+            var modal = document.getElementById('qrTemplateModal');
+            if (modal) modal.dataset.quickPreset = '1';
+            body.querySelectorAll('input[type="checkbox"][data-reg-key]').forEach(function (cb) {
+                var k = cb.getAttribute('data-reg-key');
+                if (k === 'demographics') {
+                    cb.checked = true;
+                    return;
+                }
+                cb.checked = !!sections[k];
+            });
+            qrSyncParentsFromChildren(body);
+            if (modal) delete modal.dataset.quickPreset;
+        }
+
+        /* Same preset as legacy dashboard Quick Registration "Default" button */
+        var QR_DEFAULT_PRESET_KEYS = [
+            'demographics', 'psychiatric_history_status', 'chief_complaints', 'side_effects', 'medications', 'follow_up',
+            'mse', 'mse_consciousness', 'mse_general_appearance', 'mse_speech', 'mse_thought', 'mse_perception', 'mse_mood', 'mse_affect', 'mse_insight',
+            'safety_medical_profile', 'safety_drug_allergies', 'safety_medical_comorbidities', 'safety_current_non_psych_meds',
+            'diagnosis', 'diagnosis_provisional', 'diagnosis_differential', 'diagnosis_classificatory'
+        ];
+
+        window.qrBuiltinDefaultSections = function () {
+            var sec = { demographics: true };
+            QR_DEFAULT_PRESET_KEYS.forEach(function (k) { sec[k] = true; });
+            return sec;
+        };
+
+        function applyQrDefaultPreset() {
+            var body = document.getElementById('qrChecklistBody');
+            var modal = document.getElementById('qrTemplateModal');
+            if (!body || !modal) return;
+            modal.dataset.quickPreset = '1';
+            body.querySelectorAll('input[type="checkbox"][data-reg-key]').forEach(function (cb) {
+                var k = cb.getAttribute('data-reg-key');
+                if (k === 'demographics') {
+                    cb.checked = true;
+                    return;
+                }
+                cb.checked = QR_DEFAULT_PRESET_KEYS.indexOf(k) !== -1;
+            });
+            qrSyncParentsFromChildren(body);
+            delete modal.dataset.quickPreset;
+        }
+
+        function qrRebuildNativeTemplateOptions(selEl, includeNewOption) {
+            if (!selEl || !window.__QR_REGISTRATION_STATE__) return;
+            var st = window.__QR_REGISTRATION_STATE__;
+            var def = st.default_template_id;
+            var templates = st.templates || [];
+            selEl.innerHTML = '';
+            var oDef = document.createElement('option');
+            oDef.value = window.QR_DEFAULT_VALUE;
+            oDef.textContent = 'Default';
+            selEl.appendChild(oDef);
+            templates.forEach(function (t) {
+                var o = document.createElement('option');
+                o.value = t.id;
+                o.textContent = t.name;
+                selEl.appendChild(o);
+            });
+            if (includeNewOption) {
+                var oNew = document.createElement('option');
+                oNew.value = window.QR_NEW_VALUE;
+                oNew.textContent = '+ New custom template…';
+                selEl.appendChild(oNew);
+            }
+            if (templates.length === 0) {
+                selEl.value = window.QR_DEFAULT_VALUE;
+            } else if (def && Array.prototype.some.call(selEl.options, function (opt) { return opt.value === def; })) {
+                selEl.value = def;
+            } else {
+                selEl.value = templates[0].id;
+            }
+        }
+
+        function qrInitOrReinitSelect2(selEl, dropdownParentEl) {
+            var $ = window.jQuery;
+            if (!selEl || !$ || !$.fn.select2) return;
+            var $el = $(selEl);
+            if ($el.data('select2')) $el.select2('destroy');
+            var opts = { width: '100%' };
+            if (dropdownParentEl) opts.dropdownParent = $(dropdownParentEl);
+            $el.select2(opts);
+        }
+
+        function qrSyncToolbarSelectToSession() {
+            var sel = document.getElementById('qr_active_template_select');
+            if (!sel) return;
+            var $ = window.jQuery;
+            var tid = null;
+            try { tid = sessionStorage.getItem('quick_reg_active_template_id'); } catch (e) {}
+            if (tid == null || tid === '') return;
+            if (tid === '__default__') tid = window.QR_DEFAULT_VALUE;
+            if (tid === window.QR_DEFAULT_VALUE) {
+                if (Array.prototype.some.call(sel.options, function (o) { return o.value === window.QR_DEFAULT_VALUE; })) {
+                    sel.value = window.QR_DEFAULT_VALUE;
+                }
+            } else if (Array.prototype.some.call(sel.options, function (o) { return o.value === tid; })) {
+                sel.value = tid;
+            }
+            if ($ && $(sel).data('select2')) $(sel).trigger('change.select2');
+        }
+
+        function qrRebuildAndInitAllTemplateSelects() {
+            var act = document.getElementById('qr_active_template_select');
+            var pick = document.getElementById('qr_template_pick');
+            var inner = document.querySelector('#qrTemplateModal .qr-modal-inner');
+            qrRebuildNativeTemplateOptions(act, false);
+            qrRebuildNativeTemplateOptions(pick, true);
+            qrInitOrReinitSelect2(act, null);
+            qrInitOrReinitSelect2(pick, inner || null);
+            qrSyncToolbarSelectToSession();
+        }
+
+        function qrUpdateLocalState(data) {
+            if (!window.__QR_REGISTRATION_STATE__) return;
+            if (data.templates) window.__QR_REGISTRATION_STATE__.templates = data.templates;
+            if (data.default_template_id !== undefined) window.__QR_REGISTRATION_STATE__.default_template_id = data.default_template_id;
+            if (data.quick_reg_onboarded !== undefined) window.__QR_REGISTRATION_STATE__.quick_reg_onboarded = data.quick_reg_onboarded;
+            if (data.quick_reg_builtin_completed !== undefined) {
+                window.__QR_REGISTRATION_STATE__.quick_reg_builtin_completed = data.quick_reg_builtin_completed;
+            }
+            if (window.jQuery && window.jQuery.fn.select2) {
+                qrRebuildAndInitAllTemplateSelects();
+            }
+        }
+
+        function qrRevealMainUi() {
+            var curtain = document.getElementById('qrOnboardingCurtain');
+            if (curtain && curtain.parentNode) curtain.parentNode.removeChild(curtain);
+            document.querySelectorAll('.qr-hidden-until-onboarded').forEach(function (el) {
+                el.classList.remove('qr-hidden-until-onboarded');
+            });
+        }
+
+        window.qrTemplateModalBackdropClose = function (ev) {
+            var modal = document.getElementById('qrTemplateModal');
+            if (!modal || !modal.classList.contains('is-open')) return;
+            if (window.__QR_NEEDS_SETUP__) return;
+            modal.classList.remove('is-open');
+        };
+
+        function initQrTemplateModal() {
+            if (typeof window.qrPrimeSessionFromServer === 'function') {
+                window.qrPrimeSessionFromServer();
+            }
+            var modal = document.getElementById('qrTemplateModal');
+            if (!modal) return;
+
+            if (window.__QR_NEEDS_SETUP__ === true) {
+                var help = document.getElementById('qrTemplateModalHelp');
+                if (help) {
+                    help.style.display = 'block';
+                    help.textContent = 'Choose Default (built-in section set, nothing saved to your library) or a custom template. Use + New custom template… to save a new checklist. Demographics is always included. Proceed applies your choice. Manage more templates under Profile → Settings.';
+                }
+            }
+
+            var body = document.getElementById('qrChecklistBody');
+            var st0 = window.__QR_REGISTRATION_STATE__;
+
+            function onModalTemplatePickChange() {
+                var pickEl = document.getElementById('qr_template_pick');
+                if (!pickEl) return;
+                var val = pickEl.value;
+                var newWrap = document.getElementById('qrNewTemplateNameWrap');
+                var newInput = document.getElementById('qr_new_template_name');
+                if (val === window.QR_DEFAULT_VALUE) {
+                    if (newWrap) {
+                        newWrap.classList.remove('is-visible');
+                        if (newInput) newInput.value = '';
+                    }
+                    applyQrDefaultPreset();
+                    return;
+                }
+                if (val === window.QR_NEW_VALUE) {
+                    if (newWrap) newWrap.classList.add('is-visible');
+                    if (newInput) newInput.focus();
+                    applyQrDefaultPreset();
+                    return;
+                }
+                if (newWrap) {
+                    newWrap.classList.remove('is-visible');
+                    if (newInput) newInput.value = '';
+                }
+                var tpl = null;
+                (window.__QR_REGISTRATION_STATE__.templates || []).forEach(function (t) {
+                    if (t.id === val) tpl = t;
+                });
+                if (tpl && body) {
+                    qrApplySectionsToChecklist(body, tpl.sections || {});
+                }
+            }
+
+            if (modal.dataset.qrPickListener !== '1') {
+                modal.dataset.qrPickListener = '1';
+                var pickListen = document.getElementById('qr_template_pick');
+                if (pickListen) pickListen.addEventListener('change', onModalTemplatePickChange);
+            }
+
+            if (window.jQuery && window.jQuery.fn.select2) {
+                qrRebuildAndInitAllTemplateSelects();
+            }
+
+            function qrSetModalPickAndNotify(val) {
+                var pe = document.getElementById('qr_template_pick');
+                if (!pe) return;
+                pe.value = val;
+                var $ = window.jQuery;
+                if ($ && $(pe).data('select2')) $(pe).trigger('change');
+                else pe.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+
+            if (window.__QR_NEEDS_SETUP__ === true && st0 && st0.templates && st0.templates.length > 0 && body) {
+                var pick = null;
+                var defId = st0.default_template_id;
+                if (defId) {
+                    st0.templates.forEach(function (t) { if (t.id === defId) pick = t; });
+                }
+                if (!pick) pick = st0.templates[0];
+                if (pick) qrSetModalPickAndNotify(pick.id);
+            } else if (window.__QR_NEEDS_SETUP__ === true && body) {
+                qrSetModalPickAndNotify(window.QR_DEFAULT_VALUE);
+            }
+
+            if (modal.dataset.hierarchyInit !== '1') {
+                modal.dataset.hierarchyInit = '1';
+                function getDirectChildrenCheckboxes(parentLi) {
+                    var sub = parentLi ? parentLi.querySelector(':scope > ul.quick-checklist-sub') : null;
+                    if (!sub) return [];
+                    return Array.from(sub.querySelectorAll('li > label > input[type="checkbox"]'));
+                }
+                modal.addEventListener('change', function (e) {
+                    if (modal.dataset.quickPreset === '1') return;
+                    var target = e.target;
+                    if (!target || target.type !== 'checkbox') return;
+                    if (target.getAttribute('data-reg-key') === 'demographics') {
+                        target.checked = true;
+                        return;
+                    }
+                    var currentLi = target.closest('li');
+                    if (!currentLi) return;
+                    var directChildren = getDirectChildrenCheckboxes(currentLi);
+                    if (directChildren.length > 0 && target.checked) {
+                        directChildren.forEach(function (cb) { cb.checked = true; });
+                    }
+                    if (!target.checked) {
+                        var parentSub = currentLi.parentElement;
+                        if (parentSub && parentSub.classList && parentSub.classList.contains('quick-checklist-sub')) {
+                            var parentLi = parentSub.closest('li');
+                            if (parentLi) {
+                                var parentCb = parentLi.querySelector(':scope > label > input[type="checkbox"]');
+                                if (parentCb && parentCb.getAttribute('data-reg-key') !== 'demographics') {
+                                    parentCb.checked = false;
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            var proceedBtn = document.getElementById('qrModalProceedBtn');
+            var cancelBtn = document.getElementById('qrModalCancelBtn');
+
+            function qrFinishModalAndReload(keysJson, activeId) {
+                try {
+                    sessionStorage.setItem('quick_registration_selected_keys', keysJson);
+                    sessionStorage.setItem('quick_reg_active_template_id', activeId);
+                } catch (e) {}
+                modal.classList.remove('is-open');
+                qrRevealMainUi();
+                window.location.reload();
+            }
+
+            if (proceedBtn) {
+                proceedBtn.addEventListener('click', function () {
+                    var pickEl = document.getElementById('qr_template_pick');
+                    var pickVal = '';
+                    if (pickEl) {
+                        if (window.jQuery && window.jQuery(pickEl).data('select2')) {
+                            pickVal = window.jQuery(pickEl).val() || '';
+                        } else {
+                            pickVal = pickEl.value || '';
+                        }
+                    }
+                    if (!pickVal) {
+                        alert('Please select a template.');
+                        return;
+                    }
+                    var sections = body ? qrCollectSections(body) : {};
+                    var keysJson = JSON.stringify(window.qrSectionsToQuickKeys(sections));
+
+                    if (pickVal === window.QR_DEFAULT_VALUE) {
+                        var builtinKeys = JSON.stringify(window.qrSectionsToQuickKeys(window.qrBuiltinDefaultSections()));
+                        if (window.__QR_NEEDS_SETUP__ === true) {
+                            fetch(window.__QR_API_SAVE__, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ mark_onboarded: true, builtin_default_only: true })
+                            }).then(function (r) { return r.json(); }).then(function (data) {
+                                if (!data.ok) {
+                                    alert(data.error || 'Could not complete setup.');
+                                    return;
+                                }
+                                qrUpdateLocalState(data);
+                                window.__QR_NEEDS_SETUP__ = false;
+                                qrFinishModalAndReload(builtinKeys, window.QR_DEFAULT_VALUE);
+                            }).catch(function () {
+                                alert('Could not complete setup.');
+                            });
+                        } else {
+                            qrFinishModalAndReload(builtinKeys, window.QR_DEFAULT_VALUE);
+                        }
+                        return;
+                    }
+
+                    var st = window.__QR_REGISTRATION_STATE__;
+                    var payloadName = '';
+                    var payloadId = null;
+
+                    if (pickVal === window.QR_NEW_VALUE) {
+                        payloadName = (document.getElementById('qr_new_template_name').value || '').trim();
+                        if (!payloadName) {
+                            alert('Please enter a name for the new template.');
+                            return;
+                        }
+                        var collision = null;
+                        (st.templates || []).forEach(function (t) {
+                            if (t.name === payloadName) collision = t;
+                        });
+                        if (collision) {
+                            if (!window.confirm('A template named "' + payloadName + '" already exists (comparison is case-sensitive). Replace that template with this checklist?')) {
+                                return;
+                            }
+                            payloadId = collision.id;
+                        }
+                    } else {
+                        var tplSel = null;
+                        (st.templates || []).forEach(function (t) {
+                            if (t.id === pickVal) tplSel = t;
+                        });
+                        if (!tplSel) {
+                            alert('Template not found.');
+                            return;
+                        }
+                        payloadName = tplSel.name;
+                        payloadId = tplSel.id;
+                    }
+
+                    var payload = {
+                        name: payloadName,
+                        sections: sections,
+                        id: payloadId
+                    };
+                    if (window.__QR_NEEDS_SETUP__ === true) {
+                        payload.mark_onboarded = true;
+                    }
+                    if (document.getElementById('qr_set_default_cb') && document.getElementById('qr_set_default_cb').checked) {
+                        payload.set_as_default = true;
+                    }
+                    fetch(window.__QR_API_SAVE__, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    }).then(function (r) { return r.json(); }).then(function (data) {
+                        if (!data.ok) {
+                            alert(data.error || 'Could not save.');
+                            return;
+                        }
+                        qrUpdateLocalState(data);
+                        window.__QR_NEEDS_SETUP__ = false;
+                        var activeTid = payloadId;
+                        if (!activeTid && data.templates) {
+                            for (var ti = 0; ti < data.templates.length; ti++) {
+                                if (data.templates[ti].name === payloadName) {
+                                    activeTid = data.templates[ti].id;
+                                    break;
+                                }
+                            }
+                        }
+                        qrFinishModalAndReload(keysJson, activeTid || '');
+                    }).catch(function () {
+                        alert('Could not save.');
+                    });
+                });
+            }
+
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', function () {
+                    if (!window.__QR_NEEDS_SETUP__ && body) {
+                        qrApplySectionsToChecklist(body, { demographics: true });
+                    }
+                    modal.classList.remove('is-open');
+                });
+            }
+
+            var openCfg = document.getElementById('qrBtnOpenConfig');
+            if (openCfg) {
+                openCfg.addEventListener('click', function () {
+                    var act = document.getElementById('qr_active_template_select');
+                    var v = act && act.value;
+                    if (v === window.QR_DEFAULT_VALUE) qrSetModalPickAndNotify(window.QR_DEFAULT_VALUE);
+                    else if (v) qrSetModalPickAndNotify(v);
+                    else qrSetModalPickAndNotify(window.QR_DEFAULT_VALUE);
+                    var help = document.getElementById('qrTemplateModalHelp');
+                    if (help) help.style.display = 'none';
+                    document.getElementById('qrTemplateModalTitle').textContent = 'Template Item Checklist';
+                    if (cancelBtn) cancelBtn.style.display = '';
+                    var sd = document.getElementById('qrSetDefaultWrap');
+                    if (sd) sd.style.display = '';
+                    modal.classList.add('is-open');
+                });
+            }
+
+            var applyBtn = document.getElementById('qrBtnApplyTemplate');
+            if (applyBtn) {
+                applyBtn.addEventListener('click', function () {
+                    var sel = document.getElementById('qr_active_template_select');
+                    var id = sel && sel.value;
+                    if (!id) {
+                        alert('Select a template first.');
+                        return;
+                    }
+                    if (id === window.QR_DEFAULT_VALUE) {
+                        try {
+                            var bk = JSON.stringify(window.qrSectionsToQuickKeys(window.qrBuiltinDefaultSections()));
+                            sessionStorage.setItem('quick_registration_selected_keys', bk);
+                            sessionStorage.setItem('quick_reg_active_template_id', window.QR_DEFAULT_VALUE);
+                        } catch (e) {}
+                        window.location.reload();
+                        return;
+                    }
+                    var tpl = null;
+                    (window.__QR_REGISTRATION_STATE__.templates || []).forEach(function (t) {
+                        if (t.id === id) tpl = t;
+                    });
+                    if (!tpl) return;
+                    try {
+                        sessionStorage.setItem('quick_registration_selected_keys', JSON.stringify(window.qrSectionsToQuickKeys(tpl.sections)));
+                        sessionStorage.setItem('quick_reg_active_template_id', tpl.id);
+                    } catch (e) {}
+                    window.location.reload();
+                });
+            }
+
+            var makeDef = document.getElementById('qrBtnMakeDefault');
+            if (makeDef) {
+                makeDef.addEventListener('click', function () {
+                    var sel = document.getElementById('qr_active_template_select');
+                    var id = sel && sel.value;
+                    if (!id || id === window.QR_DEFAULT_VALUE) {
+                        alert('Select a saved custom template to set as default. The built-in Default cannot be saved to your library.');
+                        return;
+                    }
+                    fetch(window.__QR_API_DEFAULT__, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: id })
+                    }).then(function (r) { return r.json(); }).then(function (data) {
+                        if (!data.ok) {
+                            alert(data.error || 'Could not update default.');
+                            return;
+                        }
+                        qrUpdateLocalState(data);
+                        window.location.reload();
+                    }).catch(function () {
+                        alert('Could not update default.');
+                    });
+                });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initQrTemplateModal);
+    })();
     </script>
     <script>
         (function () {

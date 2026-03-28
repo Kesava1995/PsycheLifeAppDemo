@@ -1,7 +1,99 @@
+import json
+
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timezone, timedelta
 
 db = SQLAlchemy()
+
+
+def parse_doctor_social_handle_json(raw):
+    """
+    Parse doctors.social_handle: JSON object {linkedin, website, instagram}
+    or legacy plain text (treated as Instagram).
+    """
+    empty = {"linkedin": "", "website": "", "instagram": ""}
+    if raw is None:
+        return dict(empty)
+    if not isinstance(raw, str):
+        return dict(empty)
+    s = raw.strip()
+    if not s:
+        return dict(empty)
+    try:
+        data = json.loads(s)
+        if isinstance(data, dict):
+            return {
+                "linkedin": str(data.get("linkedin") or "")[:800],
+                "website": str(data.get("website") or "")[:800],
+                "instagram": str(data.get("instagram") or "")[:300],
+            }
+    except (json.JSONDecodeError, TypeError, ValueError):
+        pass
+    return {**empty, "instagram": s[:300]}
+
+
+def serialize_doctor_social_handle_json(linkedin="", website="", instagram=""):
+    """Build JSON string for doctors.social_handle."""
+    d = {
+        "linkedin": (linkedin or "").strip()[:800],
+        "website": (website or "").strip()[:800],
+        "instagram": (instagram or "").strip()[:300],
+    }
+    return json.dumps(d, ensure_ascii=False)
+
+
+def parse_doctor_clinics_list(clinics_json_raw, legacy_name, legacy_address):
+    """
+    List of {"name", "address"} from doctors.clinics_json, or legacy clinic_name + address_text.
+    """
+    if clinics_json_raw and isinstance(clinics_json_raw, str) and clinics_json_raw.strip():
+        try:
+            data = json.loads(clinics_json_raw)
+            if isinstance(data, list):
+                out = []
+                for item in data:
+                    if isinstance(item, dict):
+                        n = (item.get("name") or "").strip()[:300]
+                        a = (item.get("address") or "").strip()[:4000]
+                        if n or a:
+                            out.append({"name": n, "address": a})
+                return out
+        except (json.JSONDecodeError, TypeError, ValueError):
+            pass
+    ln = (legacy_name or "").strip()
+    la = (legacy_address or "").strip()
+    if ln or la:
+        return [{"name": ln[:300], "address": la[:4000]}]
+    return []
+
+
+def serialize_doctor_clinics_list(clinics_list):
+    """JSON array for doctors.clinics_json."""
+    clean = []
+    for c in clinics_list or []:
+        if not isinstance(c, dict):
+            continue
+        n = (c.get("name") or "").strip()[:300]
+        a = (c.get("address") or "").strip()[:4000]
+        if n or a:
+            clean.append({"name": n, "address": a})
+    return json.dumps(clean, ensure_ascii=False) if clean else None
+
+
+def doctor_rx_clinic_header(doctor, clinic_index=None):
+    """(name, address) for prescription header; clinic_index selects row when multiple."""
+    if not doctor:
+        return "", ""
+    lst = doctor.clinics_list
+    if not lst:
+        return (doctor.clinic_name or "").strip(), (doctor.address_text or "").strip()
+    try:
+        idx = int(clinic_index) if clinic_index is not None else 0
+    except (TypeError, ValueError):
+        idx = 0
+    idx = max(0, min(idx, len(lst) - 1))
+    c = lst[idx]
+    return (c.get("name") or "").strip(), (c.get("address") or "").strip()
 
 
 class Doctor(db.Model):
@@ -10,13 +102,18 @@ class Doctor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(120), nullable=False)
+    # Shareable public profile URL slug: /public_profile/<slug> (lowercase, unique)
+    public_profile_slug = db.Column(db.String(64), unique=True, nullable=True)
     
     # New Fields for Prescription Personalization
     full_name = db.Column(db.String(100)) # e.g. "Dr. John Doe"
     clinic_name = db.Column(db.String(200))
     kmc_code = db.Column(db.String(50))
     address_text = db.Column(db.Text)
-    social_handle = db.Column(db.String(100)) # e.g. "@drjohnpsych"
+    # JSON array [{"name","address"}, ...]; legacy clinic_name/address_text kept in sync with first entry
+    clinics_json = db.Column(db.Text, nullable=True)
+    # JSON: {"linkedin","website","instagram"} — see parse_doctor_social_handle_json
+    social_handle = db.Column(db.Text, nullable=True)
     signature_filename = db.Column(db.String(200)) # Path to uploaded image
     profile_photo = db.Column(db.LargeBinary, nullable=True)
     profile_photo_mimetype = db.Column(db.String(80), nullable=True)
@@ -37,8 +134,38 @@ class Doctor(db.Model):
 
     # Clinic hours for dashboard: JSON text e.g. {"morning": {"start": "09:00", "end": "17:00"}, "evening": {"start": "17:00", "end": "22:00"}}
     clinic_hours = db.Column(db.Text, nullable=True)
+
+    # Saved custom quick-registration templates: JSON {"templates": [{"id", "name", "sections": {key: bool}}]}
+    registration_templates_json = db.Column(db.Text, nullable=True)
     
     patients = db.relationship('Patient', backref='doctor', lazy=True)
+
+    @property
+    def social_handles(self):
+        return parse_doctor_social_handle_json(self.social_handle)
+
+    @property
+    def clinics_list(self):
+        return parse_doctor_clinics_list(self.clinics_json, self.clinic_name, self.address_text)
+
+
+class DoctorExternalProfile(db.Model):
+    """Optional public / external-facing copy (left panel on profile_ext). Name is stored on Doctor.full_name."""
+    __tablename__ = 'doctor_external_profiles'
+
+    id = db.Column(db.Integer, primary_key=True)
+    doctor_id = db.Column(db.Integer, db.ForeignKey('doctors.id'), unique=True, nullable=False)
+    headline = db.Column(db.String(200), nullable=True)
+    public_bio = db.Column(db.Text, nullable=True)
+    # JSON arrays for public profile_ext left panel (see migrate_doctor_external_profiles_schema)
+    conditions_treated_json = db.Column(db.Text, nullable=True)  # list[str]
+    accolades_json = db.Column(db.Text, nullable=True)  # list[str]
+    care_model_json = db.Column(db.Text, nullable=True)  # list[{"title","body"}]
+    hero_pills_json = db.Column(db.Text, nullable=True)  # extra hero pills (Reg: always from Doctor.kmc_code)
+    # JSON list[str] — Google Maps share URLs per clinic, same order as Doctor.clinics_list
+    clinic_map_links_json = db.Column(db.Text, nullable=True)
+
+    doctor = db.relationship('Doctor', backref=db.backref('external_profile', uselist=False))
 
 
 class Patient(db.Model):
@@ -397,6 +524,8 @@ class Appointment(db.Model):
     status = db.Column(db.String(50), default='Confirmed')  # 'Confirmed', 'Pending', 'Postponed'
     view_details = db.Column(db.Text)
     email = db.Column(db.String(120), nullable=True)  # Patient email for appointment reminders
+    # Visit format: In-person | Online (DB column name "format" — Python attr appt_format)
+    appt_format = db.Column("format", db.String(20), nullable=True, default="In-person")
 
 
 class DashboardNote(db.Model):
@@ -451,3 +580,96 @@ class Feedback(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     doctor = db.relationship('Doctor', backref=db.backref('feedbacks', lazy=True))
+
+
+def migrate_doctor_external_profiles_schema(cursor, column_exists_fn, table_exists_fn):
+    """
+    SQLite: ensure doctor_external_profiles exists and has headline + public_bio.
+    Used by migrate_db.py (create_all does not add columns to existing tables).
+
+    Args:
+        cursor: sqlite3 cursor from db.engine.raw_connection()
+        column_exists_fn: (cursor, table_name, column_name) -> bool
+        table_exists_fn: (cursor, table_name) -> bool
+    """
+    print("\n[Doctor External Profiles]")
+    if not table_exists_fn(cursor, 'doctor_external_profiles'):
+        cursor.execute(
+            """
+            CREATE TABLE doctor_external_profiles (
+                id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                doctor_id INTEGER NOT NULL UNIQUE,
+                headline VARCHAR(200),
+                public_bio TEXT,
+                conditions_treated_json TEXT,
+                accolades_json TEXT,
+                care_model_json TEXT,
+                hero_pills_json TEXT,
+                clinic_map_links_json TEXT,
+                FOREIGN KEY (doctor_id) REFERENCES doctors (id)
+            )
+            """
+        )
+        print("  + Created doctor_external_profiles table")
+        return
+    print("  - doctor_external_profiles table exists")
+    for col, spec in (
+        ('headline', 'VARCHAR(200)'),
+        ('public_bio', 'TEXT'),
+        ('conditions_treated_json', 'TEXT'),
+        ('accolades_json', 'TEXT'),
+        ('care_model_json', 'TEXT'),
+        ('hero_pills_json', 'TEXT'),
+        ('clinic_map_links_json', 'TEXT'),
+    ):
+        if not column_exists_fn(cursor, 'doctor_external_profiles', col):
+            cursor.execute(f'ALTER TABLE doctor_external_profiles ADD COLUMN {col} {spec}')
+            print(f"  + Added {col}")
+        else:
+            print(f"  - {col} exists")
+
+
+def migrate_doctor_social_handle_normalize(session):
+    """
+    One-time style: rewrite each doctor.social_handle to canonical JSON.
+    Legacy plain text becomes instagram-only JSON.
+    """
+    changed = 0
+    for d in Doctor.query.all():
+        raw = d.social_handle
+        if raw is None:
+            continue
+        if isinstance(raw, str) and not raw.strip():
+            continue
+        parsed = parse_doctor_social_handle_json(raw)
+        new_s = serialize_doctor_social_handle_json(
+            parsed["linkedin"], parsed["website"], parsed["instagram"]
+        )
+        if new_s != raw:
+            d.social_handle = new_s
+            changed += 1
+    if changed:
+        session.commit()
+    return changed
+
+
+def migrate_doctor_clinics_normalize(session):
+    """
+    Backfill doctors.clinics_json from legacy clinic_name + address_text when JSON is empty.
+    """
+    changed = 0
+    for d in Doctor.query.all():
+        raw = d.clinics_json
+        if raw and str(raw).strip():
+            continue
+        ln = (d.clinic_name or "").strip()
+        la = (d.address_text or "").strip()
+        if not ln and not la:
+            continue
+        d.clinics_json = json.dumps(
+            [{"name": ln[:300], "address": la[:4000]}], ensure_ascii=False
+        )
+        changed += 1
+    if changed:
+        session.commit()
+    return changed

@@ -85,6 +85,7 @@
 
     <div class="app-chrome-menu-bottom">
         <div class="app-chrome-menu-item" onclick='window.location.href={{ url_for('profile')|tojson }}'>My Profile</div>
+        <div class="app-chrome-menu-item" onclick='window.location.href={{ url_for('profile_ext')|tojson }}'>External profile</div>
         <div class="app-chrome-menu-item" onclick="alert('Settings are available in My Profile.');">Settings</div>
         <div class="app-chrome-menu-item" onclick="alert('Help page not available yet.');">Help</div>
         <div class="app-chrome-menu-item logout" onclick='window.location.href={{ url_for('logout')|tojson }}'>Logout</div>

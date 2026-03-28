@@ -1,0 +1,95 @@
+{# Modals for conditions (Select2), accolades, care model — scripts in profile_ext.html #}
+<div id="peModalConditions" class="pe-modal-root" aria-hidden="true">
+  <div class="pe-modal-backdrop" data-pe-modal-close="peModalConditions"></div>
+  <div class="pe-modal-dialog" role="dialog" aria-labelledby="peModalConditionsTitle">
+    <div class="pe-modal-header">
+      <h3 id="peModalConditionsTitle">Edit conditions treated</h3>
+      <button type="button" class="pe-modal-close" data-pe-modal-close="peModalConditions" aria-label="Close">&times;</button>
+    </div>
+    <div class="pe-modal-body">
+      <p class="pe-modal-hint">Choose from the list or type a new condition and press Enter.</p>
+      <select id="peConditionsSelect" name="conditions[]" multiple="multiple">
+        {% for c in external_condition_choices %}
+        <option value="{{ c|e }}">{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="pe-modal-footer">
+      <button type="button" class="pe-modal-btn pe-modal-btn-secondary" data-pe-modal-close="peModalConditions">Cancel</button>
+      <button type="button" class="pe-modal-btn pe-modal-btn-primary" id="peModalConditionsSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="peModalAccolades" class="pe-modal-root" aria-hidden="true">
+  <div class="pe-modal-backdrop" data-pe-modal-close="peModalAccolades"></div>
+  <div class="pe-modal-dialog" role="dialog" aria-labelledby="peModalAccoladesTitle">
+    <div class="pe-modal-header">
+      <h3 id="peModalAccoladesTitle">Edit Accolades &amp; recognition</h3>
+      <button type="button" class="pe-modal-close" data-pe-modal-close="peModalAccolades" aria-label="Close">&times;</button>
+    </div>
+    <div class="pe-modal-body">
+      <button type="button" class="pe-modal-add-row" id="peAccoladeAdd">Add</button>
+      <div id="peAccoladeRows" class="pe-dynamic-rows"></div>
+    </div>
+    <div class="pe-modal-footer">
+      <button type="button" class="pe-modal-btn pe-modal-btn-secondary" data-pe-modal-close="peModalAccolades">Cancel</button>
+      <button type="button" class="pe-modal-btn pe-modal-btn-primary" id="peModalAccoladesSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="peModalCare" class="pe-modal-root" aria-hidden="true">
+  <div class="pe-modal-backdrop" data-pe-modal-close="peModalCare"></div>
+  <div class="pe-modal-dialog" role="dialog" aria-labelledby="peModalCareTitle">
+    <div class="pe-modal-header">
+      <h3 id="peModalCareTitle">Edit our care model</h3>
+      <button type="button" class="pe-modal-close" data-pe-modal-close="peModalCare" aria-label="Close">&times;</button>
+    </div>
+    <div class="pe-modal-body">
+      <button type="button" class="pe-modal-add-row" id="peCareAdd">Add</button>
+      <div id="peCareRows" class="pe-dynamic-rows pe-care-rows"></div>
+    </div>
+    <div class="pe-modal-footer">
+      <button type="button" class="pe-modal-btn pe-modal-btn-secondary" data-pe-modal-close="peModalCare">Cancel</button>
+      <button type="button" class="pe-modal-btn pe-modal-btn-primary" id="peModalCareSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="peModalClinicMaps" class="pe-modal-root" aria-hidden="true">
+  <div class="pe-modal-backdrop" data-pe-modal-close="peModalClinicMaps"></div>
+  <div class="pe-modal-dialog" role="dialog" aria-labelledby="peModalClinicMapsTitle">
+    <div class="pe-modal-header">
+      <h3 id="peModalClinicMapsTitle">Clinic maps</h3>
+      <button type="button" class="pe-modal-close" data-pe-modal-close="peModalClinicMaps" aria-label="Close">&times;</button>
+    </div>
+    <div class="pe-modal-body">
+      <p class="pe-modal-hint">Paste a <strong>Google Maps</strong> link for each clinic (Share → Copy link). The map appears on your public profile after you save.</p>
+      <div id="peClinicMapRows" class="pe-clinic-map-rows"></div>
+    </div>
+    <div class="pe-modal-footer">
+      <button type="button" class="pe-modal-btn pe-modal-btn-secondary" data-pe-modal-close="peModalClinicMaps">Cancel</button>
+      <button type="button" class="pe-modal-btn pe-modal-btn-primary" id="peModalClinicMapsSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="peModalHeroPills" class="pe-modal-root" aria-hidden="true">
+  <div class="pe-modal-backdrop" data-pe-modal-close="peModalHeroPills"></div>
+  <div class="pe-modal-dialog" role="dialog" aria-labelledby="peModalHeroPillsTitle">
+    <div class="pe-modal-header">
+      <h3 id="peModalHeroPillsTitle">Edit profile pills</h3>
+      <button type="button" class="pe-modal-close" data-pe-modal-close="peModalHeroPills" aria-label="Close">&times;</button>
+    </div>
+    <div class="pe-modal-body">
+      <p class="pe-modal-hint">Registration number (Reg:) is edited under <a href="{{ url_for('profile') }}" class="pe-link-standard" style="display:inline;margin:0;">Standard profile</a>. Add other short labels here.</p>
+      <button type="button" class="pe-modal-add-row" id="peHeroPillAdd">Add</button>
+      <div id="peHeroPillRows" class="pe-dynamic-rows"></div>
+    </div>
+    <div class="pe-modal-footer">
+      <button type="button" class="pe-modal-btn pe-modal-btn-secondary" data-pe-modal-close="peModalHeroPills">Cancel</button>
+      <button type="button" class="pe-modal-btn pe-modal-btn-primary" id="peModalHeroPillsSave">Save</button>
+    </div>
+  </div>
+</div>

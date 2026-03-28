@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Doctor Profile - Dr. Aditya Mehta</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --accent:        #008896;
+    --accent-dark:   #006672;
+    --bg:            #fafafa;
+    --card:          #ffffff;
+    --text-primary:  #1a2224;
+    --text-secondary:#4a6668;
+    --text-hint:     #8aacae;
+    --border:        #e8f0f0;
+    --chip-bg:       #e8f0f0;
+    --inner-bg:      #fafafa;
+    --inner-border:  #e8f0f0;
+    --unavail-bg:    #f5f5f5;
+    --unavail-text:  #c8d8da;
+  }
+
+  html.dark {
+    --bg:            #0d1315;
+    --card:          #1a2224;
+    --text-primary:  #ffffff;
+    --text-secondary:#8aacae;
+    --text-hint:     #4a6668;
+    --border:        #2a3234;
+    --chip-bg:       #2a3234;
+    --inner-bg:      #0d1315;
+    --inner-border:  #2a3234;
+    --unavail-bg:    #0d1315;
+    --unavail-text:  #2a3234;
+  }
+
+  html, body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+
+  /* ── Navbar ── */
+  nav.topbar {
+    position: sticky; top: 0; z-index: 50;
+    background: var(--card);
+    height: 56px;
+    border-bottom: 1px solid var(--border);
+  }
+  nav.topbar .inner {
+    max-width: 1200px; margin: 0 auto; padding: 0 32px;
+    height: 100%; display: flex; align-items: center; justify-content: space-between;
+    position: relative;
+  }
+  .brand { display: flex; align-items: center; gap: 8px; }
+  .brand-name {
+    font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 20px;
+    color: var(--accent);
+  }
+  .brand svg { color: var(--accent); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  .clinic-center {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    font-family: 'Manrope', sans-serif; font-weight: 600; font-size: 16px;
+    color: var(--text-primary);
+  }
+
+  #darkToggle {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 1px solid var(--border);
+    background: transparent; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .2s;
+  }
+  #darkToggle:hover { background: var(--chip-bg); }
+  #darkToggle svg { color: var(--text-secondary); }
+
+  /* ── Page layout ── */
+  .page-wrap {
+    max-width: 1200px; margin: 0 auto; padding: 24px 32px 32px;
+  }
+  .two-col {
+    display: flex; gap: 32px;
+    height: calc(100vh - 56px - 56px);
+  }
+  .col-left  { flex: 2; overflow-y: auto; padding-right: 8px; }
+  .col-right { flex: 1; overflow-y: auto; padding-left: 8px; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .card h2 {
+    font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 20px;
+    color: var(--text-primary); margin-bottom: 16px;
+  }
+  .card h3 {
+    font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 18px;
+    color: var(--text-primary); margin-bottom: 16px;
+  }
+
+  /* ── Hero ── */
+  .hero-row { display: flex; gap: 24px; }
+  .avatar {
+    width: 120px; height: 120px; flex-shrink: 0;
+    background: #008896; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 40px;
+    color: #fff;
+  }
+  .edit-icon {
+    text-decoration: none;
+    font-size: 18px;
+    margin-right: 8px;
+    color: #0a8ea0;
+    cursor: pointer;
+  }
+  .hero-info { flex: 1; }
+  .hero-name {
+    font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 26px;
+    color: var(--text-primary); margin-bottom: 4px;
+  }
+  .hero-role {
+    color: var(--accent); font-weight: 500; font-size: 15px; margin-bottom: 12px;
+  }
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .pill {
+    padding: 6px 16px; background: var(--chip-bg);
+    color: var(--text-secondary); border-radius: 999px; font-size: 13px;
+  }
+  .bio-text { color: var(--text-secondary); line-height: 1.7; font-size: 14px; }
+  .bio-toggle {
+    background: none; border: none; cursor: pointer;
+    color: var(--accent); font-weight: 500; font-size: 14px;
+    margin-top: 4px; padding: 0;
+  }
+  .bio-toggle:hover { text-decoration: underline; }
+
+  /* ── Accolades grid ── */
+  .accolades-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .accolade-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px; background: var(--inner-bg);
+    border: 1px solid var(--inner-border); border-radius: 8px;
+  }
+  .accolade-item svg { color: var(--accent); flex-shrink: 0; }
+  .accolade-item span { font-size: 13px; color: var(--text-primary); }
+
+  /* ── Condition chips ── */
+  .conditions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .cond-chip {
+    padding: 6px 16px; background: var(--accent-dark);
+    color: #fff; border-radius: 999px; font-size: 13px;
+  }
+  html.dark .cond-chip { background: #005561; }
+
+  /* ── Sticky tabs ── */
+  .tabs-bar {
+    position: sticky; top: 0;
+    background: var(--bg); padding: 12px 0 8px; z-index: 10;
+    margin-bottom: 0;
+  }
+  .tabs-row { display: flex; gap: 8px; overflow-x: auto; }
+  .tab-btn {
+    padding: 8px 20px; border-radius: 999px; white-space: nowrap;
+    cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 500;
+    font-size: 14px; border: 1px solid var(--border);
+    background: var(--card); color: var(--text-secondary);
+    transition: border-color .2s, background .2s, color .2s;
+  }
+  .tab-btn:hover { border-color: var(--accent); }
+  .tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* ── Tab panels ── */
+  .tab-panel { display: none; padding-bottom: 32px; }
+  .tab-panel.active { display: block; }
+
+  /* Contact */
+  .contact-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .contact-row svg { color: var(--accent); flex-shrink: 0; }
+  .contact-row span, .contact-row a {
+    color: var(--text-primary); font-size: 15px;
+  }
+  .contact-row a { color: var(--accent); text-decoration: none; }
+  .contact-row a:hover { text-decoration: underline; }
+
+  /* Clinics */
+  .clinic-card { margin-bottom: 16px; }
+  .clinic-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+  .clinic-row svg { color: var(--accent); flex-shrink: 0; margin-top: 2px; }
+  .clinic-row span { color: var(--text-secondary); font-size: 14px; }
+  .timing-badge {
+    padding: 4px 12px; background: var(--chip-bg);
+    color: var(--accent-dark); border-radius: 999px; font-size: 13px;
+  }
+  html.dark .timing-badge { color: #00a8bb; }
+  .map-placeholder {
+    width: 100%; height: 160px; background: var(--chip-bg);
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    color: var(--text-hint); font-size: 14px; margin-top: 12px;
+  }
+
+  /* Reviews */
+  .rating-summary { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .rating-score {
+    font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 32px;
+    color: var(--text-primary);
+  }
+  .stars { display: flex; gap: 4px; margin-bottom: 4px; }
+  .stars svg { color: var(--accent); }
+  .stars svg.empty { color: var(--border); }
+  .review-count { font-size: 13px; color: var(--text-hint); }
+  .review-item {
+    padding: 16px; background: var(--inner-bg);
+    border: 1px solid var(--inner-border); border-radius: 8px; margin-bottom: 12px;
+  }
+  .review-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
+  .reviewer-name { font-weight: 600; color: var(--text-primary); font-size: 14px; }
+  .review-date { font-size: 12px; color: var(--text-hint); margin-top: 2px; }
+  .review-text { color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
+
+  /* Care Model */
+  .care-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .care-item {
+    padding: 20px; background: var(--inner-bg);
+    border: 1px solid var(--inner-border); border-radius: 12px;
+  }
+  .care-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .care-num {
+    width: 32px; height: 32px; background: var(--accent); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-family: 'Manrope', sans-serif; font-weight: 700; flex-shrink: 0;
+  }
+  .care-phase {
+    font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 18px;
+    color: var(--text-primary);
+  }
+  .care-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+  /* FAQs */
+  .faq-item {
+    border: 1px solid var(--border); border-radius: 8px;
+    overflow: hidden; margin-bottom: 12px;
+  }
+  .faq-question {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    padding: 16px; text-align: left; cursor: pointer;
+    background: transparent; border: none; color: var(--text-primary);
+    font-family: 'Inter', sans-serif; font-weight: 600; font-size: 14px;
+    transition: background .15s;
+  }
+  .faq-question:hover { background: var(--inner-bg); }
+  .faq-question svg { flex-shrink: 0; color: var(--text-hint); transition: transform .3s; }
+  .faq-item.open .faq-question svg { color: var(--accent); transform: rotate(180deg); }
+  .faq-answer {
+    max-height: 0; overflow: hidden;
+    transition: max-height .3s ease, opacity .3s ease; opacity: 0;
+  }
+  .faq-item.open .faq-answer { max-height: 200px; opacity: 1; }
+  .faq-answer p {
+    padding: 0 16px 16px; color: var(--text-secondary);
+    font-size: 14px; line-height: 1.6;
+  }
+
+  /* ── Scheduling Panel ── */
+  .sched-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 24px;
+    position: sticky; top: 24px;
+  }
+  .sched-title {
+    font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 22px;
+    color: var(--text-primary); margin-bottom: 4px;
+  }
+  .sched-sub { font-size: 13px; color: var(--text-hint); margin-bottom: 24px; }
+
+  .section-label {
+    font-weight: 600; font-size: 14px; color: var(--text-primary);
+    margin-bottom: 12px; display: block;
+  }
+
+  /* Visit type */
+  .visit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .visit-btn {
+    padding: 16px; border-radius: 8px; border: 2px solid var(--border);
+    background: transparent; cursor: pointer; text-align: center;
+    transition: border-color .2s, background .2s;
+  }
+  .visit-btn:hover { border-color: rgba(0,136,150,.3); }
+  .visit-btn.active { border-color: var(--accent); background: rgba(0,136,150,.05); }
+  html.dark .visit-btn.active { background: rgba(0,136,150,.1); }
+  .visit-btn svg { display: block; margin: 0 auto 8px; color: var(--text-hint); }
+  .visit-btn.active svg { color: var(--accent); }
+  .visit-btn span {
+    font-size: 13px; font-weight: 500; color: var(--text-secondary);
+  }
+  .visit-btn.active span { color: var(--accent); }
+
+  /* Calendar */
+  .cal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .cal-month {
+    font-weight: 600; font-size: 14px; color: var(--text-primary);
+  }
+  .cal-nav { display: flex; gap: 8px; }
+  .cal-nav-btn {
+    width: 32px; height: 32px; border-radius: 50%; border: none;
+    background: transparent; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+  }
+  .cal-nav-btn:hover { background: var(--chip-bg); }
+  .cal-nav-btn svg { color: var(--text-secondary); }
+  .cal-weekdays {
+    display: grid; grid-template-columns: repeat(7,1fr); gap: 4px;
+    margin-bottom: 8px;
+  }
+  .cal-weekdays span {
+    text-align: center; font-size: 11px; font-weight: 500;
+    color: var(--text-hint); padding: 4px 0;
+  }
+  .cal-grid {
+    display: grid; grid-template-columns: repeat(7,1fr); gap: 4px;
+    margin-bottom: 24px;
+  }
+  .cal-day {
+    aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+    border-radius: 8px; font-size: 13px; font-weight: 500;
+    color: var(--text-primary); cursor: pointer; position: relative;
+    border: 2px solid transparent; background: transparent;
+    transition: background .15s;
+  }
+  .cal-day:hover:not(.past):not(.empty) { background: var(--chip-bg); }
+  .cal-day.empty { visibility: hidden; cursor: default; }
+  .cal-day.past { color: var(--border); cursor: not-allowed; }
+  html.dark .cal-day.past { color: var(--chip-bg); }
+  .cal-day.today:not(.selected) { border-color: var(--accent); color: var(--accent); }
+  .cal-day.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .cal-dot {
+    position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
+    width: 4px; height: 4px; background: var(--accent); border-radius: 50%;
+  }
+  .cal-day.selected .cal-dot, .cal-day.today .cal-dot { display: none; }
+
+  /* Time slots */
+  .slot-section { margin-bottom: 16px; }
+  .slot-label { font-size: 11px; font-weight: 500; color: var(--text-hint); margin-bottom: 8px; }
+  .slot-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .slot-btn {
+    padding: 8px 16px; border-radius: 999px; font-size: 13px;
+    font-weight: 500; cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--card); color: var(--text-secondary);
+    transition: border-color .15s, background .15s, color .15s;
+  }
+  .slot-btn:hover:not(.unavail) { border-color: var(--accent); }
+  .slot-btn.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .slot-btn.unavail {
+    background: var(--unavail-bg); color: var(--unavail-text);
+    cursor: not-allowed; border-color: var(--border);
+  }
+
+  /* CTA */
+  .book-btn {
+    width: 100%; padding: 12px; border-radius: 8px; border: none;
+    font-family: 'Inter', sans-serif; font-weight: 600; font-size: 15px;
+    cursor: pointer; margin-top: 24px; margin-bottom: 16px;
+    transition: background .2s;
+  }
+  .book-btn.enabled { background: var(--accent); color: #fff; }
+  .book-btn.enabled:hover { background: var(--accent-dark); }
+  .book-btn.disabled {
+    background: var(--chip-bg); color: var(--text-hint); cursor: not-allowed;
+  }
+
+  .footer-notes { text-align: center; }
+  .footer-notes p { font-size: 12px; color: var(--text-hint); margin-bottom: 6px; }
+  .footer-lock { display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .footer-lock svg { color: var(--text-hint); }
+</style>
+</head>
+<body>
+
+<!-- ═══ Navbar ═══ -->
+<nav class="topbar">
+  <div class="inner">
+    <div class="brand">
+      <!-- Activity icon -->
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:#008896">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      <span class="brand-name">Continuum</span>
+    </div>
+    <span class="clinic-center">Mind Wellness Clinic</span>
+    <button id="darkToggle" aria-label="Toggle dark mode">
+      <svg id="moonIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#4a6668">
+        <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+      </svg>
+      <svg id="sunIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#008896; display:none">
+        <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+      </svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ═══ Page ═══ -->
+<div class="page-wrap">
+  <div class="two-col">
+
+    <!-- ── Left: Doctor Details ── -->
+    <div class="col-left">
+
+      <!-- Hero -->
+      <div class="card">
+        <div class="hero-row">
+          <div class="avatar">AM</div>
+          <div class="hero-info">
+            <h1 class="hero-name">Dr. <a href="#" class="edit-icon" title="Edit">✎</a>Aditya Mehta</h1>
+            <p class="hero-role"><a href="#" class="edit-icon" title="Edit">✎</a>Consultant Psychiatrist</p>
+            <div class="pills">
+              <span class="pill"><a href="#" class="edit-icon" title="Edit">✎</a>15+ Years Experience</span>
+              <span class="pill"><a href="#" class="edit-icon" title="Edit">✎</a>Reg No: MCI-123456</span>
+              <span class="pill"><a href="#" class="edit-icon" title="Edit">✎</a>English, Hindi, Kannada</span>
+            </div>
+            <div>
+              <p class="bio-text" id="bioText">
+                <a href="#" class="edit-icon" title="Edit">✎</a> Dr. Aditya Mehta is a highly experienced psychiatrist specializing in mood disorders, anxiety, and psychotic disorders. With over 15 years of clinical experience, he combines evidence-based treatment with compassionate care...
+              </p>
+              <button class="bio-toggle" id="bioToggle" onclick="toggleBio()">Read more</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Accolades -->
+      <div class="card">
+        <h2><a href="#" class="edit-icon" title="Edit">✎</a>Accolades &amp; Recognition</h2>
+        <div class="accolades-grid">
+          <div class="accolade-item">
+            <!-- Trophy icon -->
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0012 0V2z"/></svg>
+            <span>Best Psychiatrist Award 2022</span>
+          </div>
+          <div class="accolade-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0012 0V2z"/></svg>
+            <span>Fellow of Indian Psychiatric Society</span>
+          </div>
+          <div class="accolade-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0012 0V2z"/></svg>
+            <span>12+ Research Publications</span>
+          </div>
+          <div class="accolade-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0012 0V2z"/></svg>
+            <span>Gold Medalist - MD Psychiatry</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Conditions Treated -->
+      <div class="card">
+        <h2><a href="#" class="edit-icon" title="Edit">✎</a>Conditions Treated</h2>
+        <div class="conditions">
+          <span class="cond-chip">Depression</span>
+          <span class="cond-chip">Anxiety</span>
+          <span class="cond-chip">Bipolar Disorder</span>
+          <span class="cond-chip">Schizophrenia</span>
+          <span class="cond-chip">OCD</span>
+          <span class="cond-chip">PTSD</span>
+          <span class="cond-chip">Substance Use</span>
+          <span class="cond-chip">Sleep Disorders</span>
+          <span class="cond-chip">Relationship Issues</span>
+          <span class="cond-chip">Work Stress</span>
+          <span class="cond-chip">Grief &amp; Loss</span>
+          <span class="cond-chip">Personality Disorders</span>
+          <span class="cond-chip">ADHD</span>
+          <span class="cond-chip">Dementia</span>
+        </div>
+      </div>
+
+      <!-- Sticky Tabs -->
+      <div class="tabs-bar">
+        <div class="tabs-row">
+          <button class="tab-btn active" data-tab="contact">Contact</button>
+          <button class="tab-btn" data-tab="clinics">Clinics</button>
+          <button class="tab-btn" data-tab="reviews">Reviews</button>
+          <button class="tab-btn" data-tab="care-model">Care Model</button>
+          <button class="tab-btn" data-tab="faqs">FAQs</button>
+		  <a href="#" class="edit-icon" title="Edit">✎ Clinics</a>
+        </div>
+      </div>
+
+      <!-- ── Tab: Contact ── -->
+      <div class="tab-panel active" id="tab-contact">
+        <div class="card">
+          <h2><a href="#" class="edit-icon" title="Edit">✎</a>Contact Information</h2>
+          <div class="contact-row">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .84h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+            <span>+91 98765 43210</span>
+          </div>
+          <div class="contact-row">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <span>dr.aditya.mehta@email.com</span>
+          </div>
+          <div class="contact-row">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+            <a href="#">www.dradityamehta.com</a>
+          </div>
+          <div class="contact-row">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+            <a href="#">@dradityamehta</a>
+          </div>
+          <div class="contact-row">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+            <a href="#">Dr. Aditya Mehta</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Tab: Clinics ── -->
+      <div class="tab-panel" id="tab-clinics">
+        <div class="card clinic-card">
+          <h3>Mind Wellness Clinic</h3>
+          <div class="clinic-row">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span>123 Residency Road, Bangalore - 560025</span>
+          </div>
+          <div class="clinic-row">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .84h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+            <span>+91 98765 43210</span>
+          </div>
+          <div class="clinic-row">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span class="timing-badge">Mon–Sat: 9 AM – 6 PM</span>
+          </div>
+          <div class="map-placeholder">Map View</div>
+        </div>
+        <div class="card clinic-card">
+          <h3>Serenity Mental Health Center</h3>
+          <div class="clinic-row">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span>45 MG Road, Indiranagar, Bangalore - 560038</span>
+          </div>
+          <div class="clinic-row">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .84h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+            <span>+91 98765 43211</span>
+          </div>
+          <div class="clinic-row">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span class="timing-badge">Mon–Fri: 2 PM – 8 PM</span>
+          </div>
+          <div class="map-placeholder">Map View</div>
+        </div>
+      </div>
+
+      <!-- ── Tab: Reviews ── -->
+      <div class="tab-panel" id="tab-reviews">
+        <div class="card">
+          <div class="rating-summary">
+            <span class="rating-score">4.8</span>
+            <div>
+              <div class="stars">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </div>
+              <span class="review-count">Based on 124 reviews</span>
+            </div>
+          </div>
+
+          <div class="review-item">
+            <div class="review-header">
+              <div><p class="reviewer-name">Priya Sharma</p><p class="review-date">March 15, 2026</p></div>
+              <div class="stars" style="gap:2px">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </div>
+            </div>
+            <p class="review-text">Dr. Mehta is incredibly empathetic and professional. The treatment plan was thorough and I felt heard throughout the process. Highly recommended!</p>
+          </div>
+
+          <div class="review-item">
+            <div class="review-header">
+              <div><p class="reviewer-name">Rahul Kumar</p><p class="review-date">March 10, 2026</p></div>
+              <div class="stars" style="gap:2px">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </div>
+            </div>
+            <p class="review-text">Excellent doctor with great listening skills. Took time to understand my concerns and provided practical solutions. Very satisfied with the care.</p>
+          </div>
+
+          <div class="review-item">
+            <div class="review-header">
+              <div><p class="reviewer-name">Anjali Desai</p><p class="review-date">March 5, 2026</p></div>
+              <div class="stars" style="gap:2px">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg class="empty" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </div>
+            </div>
+            <p class="review-text">Very knowledgeable and approachable. The clinic environment is comfortable and the staff is supportive. Would definitely recommend.</p>
+          </div>
+
+          <div class="review-item">
+            <div class="review-header">
+              <div><p class="reviewer-name">Vikram Singh</p><p class="review-date">February 28, 2026</p></div>
+              <div class="stars" style="gap:2px">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </div>
+            </div>
+            <p class="review-text">One of the best psychiatrists I have consulted. Dr. Mehta combines expertise with genuine care. The follow-up support is excellent.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Tab: Care Model ── -->
+      <div class="tab-panel" id="tab-care-model">
+        <div class="card">
+          <h2><a href="#" class="edit-icon" title="Edit">✎</a>Our Care Model</h2>
+          <div class="care-grid">
+            <div class="care-item">
+              <div class="care-header">
+                <div class="care-num">1</div>
+                <span class="care-phase">Assessment</span>
+              </div>
+              <p class="care-desc">Comprehensive evaluation of mental health through detailed consultation and psychological assessments</p>
+            </div>
+            <div class="care-item">
+              <div class="care-header">
+                <div class="care-num">2</div>
+                <span class="care-phase">Diagnosis</span>
+              </div>
+              <p class="care-desc">Evidence-based diagnosis using DSM-5 criteria and clinical expertise to understand your condition</p>
+            </div>
+            <div class="care-item">
+              <div class="care-header">
+                <div class="care-num">3</div>
+                <span class="care-phase">Treatment</span>
+              </div>
+              <p class="care-desc">Personalized treatment plan combining therapy, medication management, and lifestyle modifications</p>
+            </div>
+            <div class="care-item">
+              <div class="care-header">
+                <div class="care-num">4</div>
+                <span class="care-phase">Maintenance</span>
+              </div>
+              <p class="care-desc">Regular follow-ups and adjustments to ensure sustained progress and prevent relapse</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Tab: FAQs ── -->
+      <div class="tab-panel" id="tab-faqs">
+        <div class="card">
+          <h2><a href="#" class="edit-icon" title="Edit">✎</a>Frequently Asked Questions</h2>
+
+          <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+              <span>What should I bring to my first appointment?</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer"><p>Please bring any previous medical records, list of current medications, insurance information, and a brief note about your concerns. This helps us provide better care from the first session.</p></div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+              <span>How long does a typical consultation last?</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer"><p>Initial consultations usually last 45–60 minutes. Follow-up sessions are typically 30 minutes, though this can vary based on your needs.</p></div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+              <span>Do you accept insurance?</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer"><p>Yes, we accept most major insurance plans. Please contact our clinic with your insurance details to verify coverage before your appointment.</p></div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+              <span>Is medication always necessary?</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer"><p>Not always. Treatment plans are personalized based on your specific condition. We explore all options including therapy, lifestyle changes, and when appropriate, medication.</p></div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+              <span>How soon can I expect to see improvement?</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer"><p>This varies by individual and condition. Some patients notice improvements within 2–4 weeks, while others may take longer. We monitor progress closely and adjust treatment as needed.</p></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /col-left -->
+
+    <!-- ── Right: Scheduling Panel ── -->
+    <div class="col-right">
+      <div class="sched-card">
+        <h2 class="sched-title">Schedule Your Visit</h2>
+        <p class="sched-sub">Choose your preferred date and time</p>
+
+        <!-- Visit Type -->
+        <label class="section-label">Visit Type</label>
+        <div class="visit-grid">
+          <button class="visit-btn active" id="btnInPerson" onclick="setVisit('in-person')">
+            <!-- MapPin -->
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span>In-person</span>
+          </button>
+          <button class="visit-btn" id="btnOnline" onclick="setVisit('online')">
+            <!-- Video -->
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+            <span>Online</span>
+          </button>
+        </div>
+
+        <!-- Calendar -->
+        <div>
+          <div class="cal-header">
+            <span class="cal-month" id="calMonth"></span>
+            <div class="cal-nav">
+              <button class="cal-nav-btn" onclick="changeMonth(-1)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <button class="cal-nav-btn" onclick="changeMonth(1)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="cal-weekdays">
+            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>
+            <span>Thu</span><span>Fri</span><span>Sat</span>
+          </div>
+          <div class="cal-grid" id="calGrid"></div>
+        </div>
+
+        <!-- Time Slots -->
+        <label class="section-label">Available Time Slots</label>
+
+        <div class="slot-section">
+          <p class="slot-label">Morning (8 AM – 12 PM)</p>
+          <div class="slot-row" id="morningSlots"></div>
+        </div>
+        <div class="slot-section">
+          <p class="slot-label">Afternoon (12 PM – 5 PM)</p>
+          <div class="slot-row" id="afternoonSlots"></div>
+        </div>
+        <div class="slot-section">
+          <p class="slot-label">Evening (5 PM – 8 PM)</p>
+          <div class="slot-row" id="eveningSlots"></div>
+        </div>
+
+        <!-- Book Button -->
+        <button class="book-btn disabled" id="bookBtn">Proceed to Book</button>
+
+        <!-- Footer -->
+        <div class="footer-notes">
+          <p>Free cancellation up to 24 hours before appointment</p>
+          <div class="footer-lock">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            <p>Your information is safe and secure</p>
+          </div>
+        </div>
+      </div>
+    </div><!-- /col-right -->
+
+  </div>
+</div>
+
+<script>
+// ── Dark mode ──
+const darkToggle = document.getElementById('darkToggle');
+const moonIcon   = document.getElementById('moonIcon');
+const sunIcon    = document.getElementById('sunIcon');
+let isDark = false;
+darkToggle.addEventListener('click', () => {
+  isDark = !isDark;
+  document.documentElement.classList.toggle('dark', isDark);
+  moonIcon.style.display = isDark ? 'none' : 'block';
+  sunIcon.style.display  = isDark ? 'block' : 'none';
+});
+
+// ── Bio expand ──
+const bioShort = ' <a href="#" class="edit-icon" title="Edit">✎</a> Dr. Aditya Mehta is a highly experienced psychiatrist specializing in mood disorders, anxiety, and psychotic disorders. With over 15 years of clinical experience, he combines evidence-based treatment with compassionate care...';
+const bioFull  = ' <a href="#" class="edit-icon" title="Edit">✎</a> Dr. Aditya Mehta is a highly experienced psychiatrist specializing in mood disorders, anxiety, and psychotic disorders. With over 15 years of clinical experience, he combines evidence-based treatment with compassionate care. Dr. Mehta believes in a holistic approach to mental health, integrating therapy, medication management, and lifestyle modifications to help patients achieve lasting wellness.';
+let bioExpanded = false;
+function toggleBio() {
+  bioExpanded = !bioExpanded;
+  document.getElementById('bioText').innerHTML = bioExpanded ? bioFull : bioShort;
+  document.getElementById('bioToggle').textContent = bioExpanded ? 'Read less' : 'Read more';
+}
+
+// ── Tabs ──
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ── FAQ accordion ──
+function toggleFaq(btn) {
+  const item = btn.closest('.faq-item');
+  const isOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+  if (!isOpen) item.classList.add('open');
+}
+
+// ── Visit type ──
+function setVisit(type) {
+  document.getElementById('btnInPerson').classList.toggle('active', type === 'in-person');
+  document.getElementById('btnOnline').classList.toggle('active', type === 'online');
+}
+
+// ── Calendar & time slots ──
+const today = new Date();
+let viewYear  = today.getFullYear();
+let viewMonth = today.getMonth();
+let selectedDate = new Date(today);
+let selectedSlot = null;
+
+const unavail = ['9:00 AM', '2:00 PM', '6:00 PM'];
+const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function renderCalendar() {
+  document.getElementById('calMonth').textContent = monthNames[viewMonth] + ' ' + viewYear;
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+
+  for (let i = 0; i < firstDay; i++) {
+    const el = document.createElement('button');
+    el.className = 'cal-day empty'; el.disabled = true; grid.appendChild(el);
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const el = document.createElement('button');
+    el.className = 'cal-day';
+    el.textContent = d;
+    const date = new Date(viewYear, viewMonth, d);
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const isPast = date < todayStart;
+    const isTodayDay = date.toDateString() === todayStart.toDateString();
+    const isSelected = date.toDateString() === selectedDate.toDateString();
+
+    if (isPast) { el.classList.add('past'); el.disabled = true; }
+    else if (isSelected) { el.classList.add('selected'); }
+    else if (isTodayDay) {
+      el.classList.add('today');
+      const dot = document.createElement('div'); dot.className = 'cal-dot'; el.appendChild(dot);
+    } else {
+      const dot = document.createElement('div'); dot.className = 'cal-dot'; el.appendChild(dot);
+    }
+
+    if (!isPast) {
+      el.addEventListener('click', () => {
+        selectedDate = new Date(viewYear, viewMonth, d);
+        selectedSlot = null;
+        renderCalendar();
+        renderSlots();
+        updateBookBtn();
+      });
+    }
+    grid.appendChild(el);
+  }
+}
+
+function changeMonth(delta) {
+  viewMonth += delta;
+  if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+  if (viewMonth < 0)  { viewMonth = 11; viewYear--; }
+  renderCalendar();
+}
+
+function renderSlots() {
+  const groups = {
+    morningSlots:   ['8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM'],
+    afternoonSlots: ['12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM'],
+    eveningSlots:   ['5:00 PM', '6:00 PM', '7:00 PM'],
+  };
+  Object.entries(groups).forEach(([id, slots]) => {
+    const container = document.getElementById(id);
+    container.innerHTML = '';
+    slots.forEach(slot => {
+      const btn = document.createElement('button');
+      btn.className = 'slot-btn';
+      btn.textContent = slot;
+      if (unavail.includes(slot)) {
+        btn.classList.add('unavail'); btn.disabled = true;
+      } else if (selectedSlot === slot) {
+        btn.classList.add('selected');
+      }
+      btn.addEventListener('click', () => {
+        if (unavail.includes(slot)) return;
+        selectedSlot = (selectedSlot === slot) ? null : slot;
+        renderSlots();
+        updateBookBtn();
+      });
+      container.appendChild(btn);
+    });
+  });
+}
+
+function updateBookBtn() {
+  const btn = document.getElementById('bookBtn');
+  if (selectedSlot) {
+    btn.className = 'book-btn enabled'; btn.disabled = false;
+  } else {
+    btn.className = 'book-btn disabled'; btn.disabled = true;
+  }
+}
+
+renderCalendar();
+renderSlots();
+</script>
+</body>
+</html>

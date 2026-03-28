@@ -1,0 +1,444 @@
+{% macro schedule_template_card(st_id, st_name, name_readonly, wh_rows, slot_dur_map, show_delete, std_slot_keys, slot_defaults, readonly_values) %}
+        <div class="card appointment-template-card{% if readonly_values %} sched-card-readonly{% endif %}" style="border: 1px solid #A5DCFE; padding: 20px; margin-bottom: 20px; border-radius: 8px; background: #fafcff;">
+            <input type="hidden" class="sched-template-id" value="{{ st_id }}" autocomplete="off">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <input type="text" class="form-control sched-template-name" value="{{ st_name }}" {% if name_readonly or readonly_values %}readonly{% endif %} style="width: 50%; font-weight: bold; {% if name_readonly or readonly_values %}border: none; background: transparent;{% else %}border: 1px solid #ccc; background: white;{% endif %} font-size: 1.1em;">
+                <div class="template-actions">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="cloneTemplate(this)">[+] Copy</button>
+                    {% if show_delete and not readonly_values %}
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="this.closest('.card').remove()" style="background: #ff4d4d; color: white;">Delete</button>
+                    {% endif %}
+                </div>
+            </div>
+            <fieldset class="sched-template-body" {% if readonly_values %}disabled{% endif %} style="border: none; margin: 0; padding: 0; min-width: 0;">
+            <h4 style="margin-bottom: 10px; font-size: 0.95em; color: #555;">Usual Appointment Timings</h4>
+            {% if readonly_values %}
+            <p class="file-info" style="margin:0 0 10px;">Standard windows (read-only). Copy this template to customize.</p>
+            {% else %}
+            <p class="file-info" style="margin:0 0 10px;">Add one or more windows (e.g. morning and evening). Use + to add another row.</p>
+            {% endif %}
+            <div class="working-hours-container" style="margin-bottom: 25px;">
+                {% for seg in wh_rows %}
+                <div class="timing-row" style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
+                    <input type="time" class="form-control sched-time-inp" value="{{ seg.start }}">
+                    <span style="font-weight: 500;">to</span>
+                    <input type="time" class="form-control sched-time-inp" value="{{ seg.end }}">
+                    {% if loop.first %}
+                    <button type="button" class="btn btn-primary" onclick="addTimingRow(this)">+</button>
+                    {% else %}
+                    <button type="button" class="btn btn-secondary" onclick="this.parentElement.remove()">-</button>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <h4 style="margin-bottom: 10px; font-size: 0.95em; color: #555;">Default Slot Durations (minutes)</h4>
+            {% if readonly_values %}
+            <p class="file-info" style="margin:0 0 10px;">Preset lengths (read-only).</p>
+            {% else %}
+            <p class="file-info" style="margin:0 0 10px;">Minimum 1 minute per type. Add extra visit types below if needed.</p>
+            {% endif %}
+            <div class="sched-standard-slots-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                {% for key in std_slot_keys %}
+                <div class="sched-slot-field"><label>{{ key }}</label><input type="number" class="form-control sched-slot-inp" data-slot-key="{{ key }}" value="{{ slot_dur_map.get(key, slot_defaults.get(key, 45)) }}" min="1" max="480"></div>
+                {% endfor %}
+            </div>
+            <div class="sched-custom-slots-block" style="margin-top: 16px;">
+                <h4 style="margin-bottom: 8px; font-size: 0.95em; color: #555;">Custom visit lengths</h4>
+                <div class="sched-custom-slots-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px;">
+                    {% for key, minutes in slot_dur_map.items() %}
+                    {% if key not in std_slot_keys %}
+                    <div class="sched-custom-dur-row" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <input type="text" class="form-control sched-custom-slot-label" value="{{ key }}" maxlength="120" placeholder="Visit type name" style="min-width: 160px; flex: 1;">
+                        <input type="number" class="form-control sched-custom-slot-mins" min="1" max="480" value="{{ minutes }}" style="width: 100px;">
+                        <span class="file-info" style="margin:0;">minutes</span>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="this.closest('.sched-custom-dur-row').remove()">Remove</button>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="addCustomSlotRow(this)">+ Add visit type length</button>
+            </div>
+            </fieldset>
+            {% if readonly_values %}
+            <div class="sched-readonly-hint">
+            <p class="file-info" style="margin-top:12px;margin-bottom:0;">Use <strong>Copy</strong> to duplicate as an editable template. Choose the active template above for dashboard clinic hours.</p>
+            </div>
+            {% endif %}
+        </div>
+{% endmacro %}
+        <form id="profile-settings-form" method="POST" enctype="multipart/form-data" action="{{ profile_settings_form_action }}" onsubmit="return profileScheduleBeforeSubmit(this);">
+            <div class="profile-header-row">
+                <div class="profile-header-text">
+                    <h2 style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;">Doctor Profile & Settings{% if show_external_profile_link %}<a href="{{ url_for('profile_ext') }}" style="font-size:0.82rem;font-weight:600;color:var(--primary-dark);text-decoration:underline;">View External Profile</a>{% endif %}</h2>
+                    <p class="subtitle">Manage your details for prescriptions and patient records.</p>
+                </div>
+                <div class="profile-photo-block">
+                    <div class="profile-photo-frame" id="profilePhotoFrame">
+                        {% if doctor.profile_photo_mimetype %}
+                        <img src="{{ url_for('serve_profile_picture') }}" alt="Your profile photo" width="120" height="120">
+                        {% else %}
+                        <div class="profile-photo-placeholder">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            <span>Profile photo</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="profile-photo-actions">
+                        <input type="file" id="profile_photo" name="profile_photo" class="sr-only" accept="image/jpeg,image/png,image/gif,image/webp">
+                        <label for="profile_photo" class="btn-link-photo">Upload photo</label>
+                        {% if doctor.profile_photo_mimetype %}
+                        <label class="profile-photo-remove"><input type="checkbox" name="remove_profile_photo" value="1"> Remove photo</label>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="full_name">Full Name (as on Prescription)</label>
+                <input type="text" id="full_name" name="full_name" value="{{ doctor.full_name or '' }}" placeholder="Dr. First Last">
+            </div>
+            
+            <div class="form-group">
+                <label for="qualification">Qualification (Optional - for future use)</label>
+                <input type="text" id="qualification" name="qualification" value="" placeholder="MBBS, MD (Psychiatry)">
+            </div>
+
+            <div class="form-group">
+                <label for="designation">Designation</label>
+                <select id="designation" name="designation" class="profile-designation-select2" data-placeholder="Select or type designation...">
+                    <option value=""></option>
+                    {% for label in designation_choices %}
+                    <option value="{{ label }}" {% if doctor.designation == label %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                    {% if doctor.designation and doctor.designation not in designation_choices %}
+                    <option value="{{ doctor.designation }}" selected>{{ doctor.designation }}</option>
+                    {% endif %}
+                </select>
+                <div class="file-info">Search the list or type your own if your designation is not listed.</div>
+            </div>
+
+            <div class="form-group">
+                <label for="kmc_code">Registration Number</label>
+                <input type="text" id="kmc_code" name="kmc_code" value="{{ doctor.kmc_code or '' }}" placeholder="KMC-12345">
+            </div>
+
+            <div class="form-group">
+                <label for="public_profile_slug">Public profile link (optional)</label>
+                <input type="text" id="public_profile_slug" name="public_profile_slug" value="{{ doctor.public_profile_slug or '' }}" maxlength="64" autocomplete="off" placeholder="e.g. dr-anita-rao" pattern="[a-z0-9-]*" title="Lowercase letters, numbers, and hyphens only">
+                <div class="file-info">Anyone with the link can view your external profile (read-only) at <code>/public_profile/your-slug</code>. Use 3–64 characters: lowercase letters, numbers, and hyphens only. Leave blank to turn off the public page.</div>
+            </div>
+            
+            <div class="form-group">
+                <label>Clinics / practices</label>
+                <div class="file-info">First clinic is used where the app shows a single name (dashboard header, reminders). Add more for prescriptions and your public profile.</div>
+                <div class="profile-clinics-scroll">
+                    <div id="profileClinicRows">
+                        {% set clist = doctor.clinics_list %}
+                        {% if clist %}
+                            {% for c in clist %}
+                            <div class="profile-clinic-block" data-clinic-row>
+                                <label for="clinic_name_{{ loop.index0 }}">Clinic / hospital name</label>
+                                <input type="text" id="clinic_name_{{ loop.index0 }}" name="clinic_entry_name" value="{{ c.name }}" maxlength="300" placeholder="Sunshine Mind Clinic">
+                                <label for="clinic_addr_{{ loop.index0 }}" style="margin-top:10px;display:block;">Address</label>
+                                <textarea id="clinic_addr_{{ loop.index0 }}" name="clinic_entry_address" rows="2" maxlength="4000" placeholder="Full clinic address">{{ c.address }}</textarea>
+                                <button type="button" class="btn-secondary btn-sm profile-clinic-remove" style="margin-top:8px;">Remove</button>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="profile-clinic-block" data-clinic-row>
+                                <label for="clinic_name_0">Clinic / hospital name</label>
+                                <input type="text" id="clinic_name_0" name="clinic_entry_name" value="" maxlength="300" placeholder="Sunshine Mind Clinic">
+                                <label for="clinic_addr_0" style="margin-top:10px;display:block;">Address</label>
+                                <textarea id="clinic_addr_0" name="clinic_entry_address" rows="2" maxlength="4000" placeholder="Full clinic address"></textarea>
+                                <button type="button" class="btn-secondary btn-sm profile-clinic-remove" style="margin-top:8px;">Remove</button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <button type="button" class="btn btn-secondary" id="profileAddClinic" style="margin-top:10px;">Add clinic</button>
+            </div>
+            <script>
+            (function () {
+                var container = document.getElementById('profileClinicRows');
+                var addBtn = document.getElementById('profileAddClinic');
+                if (!container || !addBtn) return;
+                function appendRow() {
+                    var wrap = document.createElement('div');
+                    wrap.className = 'profile-clinic-block';
+                    wrap.setAttribute('data-clinic-row', '');
+                    wrap.innerHTML = '<label>Clinic / hospital name</label>' +
+                        '<input type="text" name="clinic_entry_name" value="" maxlength="300" placeholder="Sunshine Mind Clinic">' +
+                        '<label style="margin-top:10px;display:block;">Address</label>' +
+                        '<textarea name="clinic_entry_address" rows="2" maxlength="4000" placeholder="Full clinic address"></textarea>' +
+                        '<button type="button" class="btn-secondary btn-sm profile-clinic-remove" style="margin-top:8px;">Remove</button>';
+                    container.appendChild(wrap);
+                }
+                addBtn.addEventListener('click', appendRow);
+                container.addEventListener('click', function (e) {
+                    if (!e.target.classList.contains('profile-clinic-remove')) return;
+                    var row = e.target.closest('[data-clinic-row]');
+                    if (!row) return;
+                    var all = container.querySelectorAll('[data-clinic-row]');
+                    if (all.length <= 1) {
+                        var inp = row.querySelector('input[name="clinic_entry_name"]');
+                        var ta = row.querySelector('textarea[name="clinic_entry_address"]');
+                        if (inp) inp.value = '';
+                        if (ta) ta.value = '';
+                        return;
+                    }
+                    row.remove();
+                });
+            })();
+            </script>
+
+            <div class="form-group">
+                <label for="phone">Phone Number (For Patients)</label>
+                <input type="text" id="phone" name="phone" value="{{ doctor.phone or '' }}" placeholder="+91 99999 88888">
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" value="{{ doctor.email or '' }}" placeholder="doctor@example.com">
+            </div>
+            <div class="form-group">
+                <div class="label-with-help">
+                    <label for="smtp_app_password">SMTP App Password (for email reminders)</label>
+                    <button type="button" class="btn-help" id="smtp-help-btn" aria-label="Help">Help</button>
+                </div>
+                <input type="password" id="smtp_app_password" name="smtp_app_password" placeholder="Leave blank to keep existing" autocomplete="off">
+                <div class="file-info">Use your email provider’s app password (e.g. Gmail, Zoho, Outlook). Leave blank to keep current.</div>
+            </div>
+            <div id="smtp-help-overlay" class="smtp-help-overlay" onclick="if(event.target === this) closeSmtpHelp()">
+                <div class="smtp-help-modal" onclick="event.stopPropagation()">
+                    <div class="modal-header">
+                        <h3 id="smtp-help-title">App Password / SMTP help</h3>
+                        <button type="button" class="modal-close" onclick="closeSmtpHelp()" aria-label="Close">&times;</button>
+                    </div>
+                    <div class="modal-body" id="smtp-help-content"></div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="appointment_reminder_days">Appointment reminder days (comma-separated)</label>
+                <input type="text" id="appointment_reminder_days" name="appointment_reminder_days" value="{{ doctor.appointment_reminder_days or '7,3,1' }}" placeholder="7,3,1">
+                <div class="file-info">Days before appointment to send a reminder (e.g. 7, 3, 1 = one week, 3 days, 1 day before).</div>
+            </div>
+            {% set soc = doctor.social_handles %}
+            <div class="form-group">
+                <label for="social_linkedin">LinkedIn</label>
+                <input type="text" id="social_linkedin" name="social_linkedin" value="{{ soc.linkedin }}" maxlength="800" placeholder="Profile URL or linkedin.com/in/…">
+            </div>
+            <div class="form-group">
+                <label for="social_website">Website</label>
+                <input type="text" id="social_website" name="social_website" value="{{ soc.website }}" maxlength="800" placeholder="https://…">
+            </div>
+            <div class="form-group">
+                <label for="social_instagram">Social media handle (Instagram)</label>
+                <input type="text" id="social_instagram" name="social_instagram" value="{{ soc.instagram }}" maxlength="300" placeholder="@username">
+            </div>
+
+            <div id="quick-registration-settings" class="form-group" style="padding: 15px; background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <label style="color: var(--primary-dark);">Quick registration</label>
+                <div class="reg-template-toolbar">
+                    <button type="button" class="btn btn-primary" onclick="openCustomRegTemplateModal()">Add Custom Registration Template</button>
+                    <div class="reg-template-edit-wrap">
+                        <label for="edit_reg_template_select" class="sr-only">Edit template</label>
+                        <select id="edit_reg_template_select" class="reg-template-edit-select" aria-label="Edit saved registration template" onchange="onEditRegTemplateSelectChanged(this)">
+                            <option value="">Edit template…</option>
+                            {% for t in custom_registration_templates %}
+                            <option value="{{ t.id }}">{{ t.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="file-info" style="margin-top: 8px;">Demographics is always included. Save templates here or on the Quick Registration page. Use Edit template to change a saved template.</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="signature">Digital Signature (Image)</label>
+                <input type="file" id="signature" name="signature" accept="image/*">
+                {% if doctor.signature_filename %}
+                <div class="file-info">Current signature uploaded</div>
+                <div class="signature-preview">
+                    <img src="{{ url_for('static', filename='signatures/' + doctor.signature_filename) }}" alt="Current Signature">
+                </div>
+                {% else %}
+                <div class="file-info">No signature uploaded yet</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group active-template-group" style="padding: 15px; background-color: #f0f8ff; border-radius: 8px; border: 1px solid var(--primary-blue);">
+                <label for="active_template" style="color: var(--primary-dark);">Active Appointment Template</label>
+                <select id="active_template" name="active_template" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; background-color: white;">
+                    <option value="default">Default Template</option>
+                    {% if schedule_templates %}
+                        {% for template in schedule_templates %}
+                            <option value="{{ template.id }}" {% if doctor.active_template_id == template.id %}selected{% endif %}>{{ template.name }}</option>
+                        {% endfor %}
+                    {% endif %}
+                </select>
+                <div class="file-info" style="margin-top: 5px;">The dashboard uses this template for clinic-hour badges, available slots, and filters. Choose &ldquo;Default Template&rdquo; to use your default template row; pick a named template (e.g. a custom one) to use that template&rsquo;s full working-hour windows.</div>
+            </div>
+
+            <input type="hidden" name="schedule_templates_json" id="schedule_templates_json" value="">
+
+            <div class="form-group" style="margin-top: 40px; border-top: 1px solid #e0e0e0; padding-top: 20px;">
+                <h3 style="margin-bottom: 5px;">Appointment Schedule Templates</h3>
+                <p class="subtitle" style="margin-bottom: 20px;">Manage your working hours and slot durations.</p>
+
+                <div id="schedule-templates-container">
+                    {% if schedule_templates and schedule_templates|length > 0 %}
+                        {% for t in schedule_templates %}
+                            {% set wh = t.working_hours %}
+                            {% if wh is none or wh is string or wh|length == 0 %}
+                                {% set wh = schedule_template_default_hours %}
+                            {% endif %}
+                            {{ schedule_template_card(t.id, t.name, t.is_default, wh, t.slot_durations or {}, not t.is_default, schedule_slot_keys, schedule_slot_defaults, t.is_default) }}
+                        {% endfor %}
+                    {% else %}
+                            {{ schedule_template_card('', 'Default Template', true, schedule_template_default_hours, schedule_slot_defaults, false, schedule_slot_keys, schedule_slot_defaults, true) }}
+                    {% endif %}
+                </div>
+
+                <button type="button" class="btn btn-primary" onclick="addNewTemplate()" style="margin-top: 10px;">[+] Add Custom Template</button>
+            </div>
+            <script>
+            function scheduleStyleNameInput(inp) {
+                var isDark = document.body.classList.contains('dark-mode');
+                if (!inp.readOnly) {
+                    inp.style.border = isDark ? '1px solid #555' : '1px solid #ccc';
+                    inp.style.background = isDark ? '#333' : 'white';
+                    inp.style.color = isDark ? '#fff' : '';
+                }
+            }
+            function addTimingRow(btn) {
+                var container = btn.closest('.working-hours-container');
+                var row = document.createElement('div');
+                row.className = 'timing-row';
+                row.style.cssText = 'display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;';
+                row.innerHTML = '<input type="time" class="form-control sched-time-inp"> <span style="font-weight: 500;">to</span> <input type="time" class="form-control sched-time-inp"> <button type="button" class="btn btn-secondary" onclick="this.parentElement.remove()">-</button>';
+                container.appendChild(row);
+            }
+            function addCustomSlotRow(btn) {
+                var card = btn.closest('.appointment-template-card');
+                if (!card) return;
+                var list = card.querySelector('.sched-custom-slots-list');
+                if (!list) return;
+                var row = document.createElement('div');
+                row.className = 'sched-custom-dur-row';
+                row.style.cssText = 'display: flex; gap: 10px; align-items: center; flex-wrap: wrap;';
+                row.innerHTML = '<input type="text" class="form-control sched-custom-slot-label" placeholder="Visit type name" maxlength="120" style="min-width: 160px; flex: 1;">' +
+                    '<input type="number" class="form-control sched-custom-slot-mins" min="1" max="480" value="15" style="width: 100px;">' +
+                    '<span class="file-info" style="margin:0;">minutes</span>' +
+                    '<button type="button" class="btn btn-secondary btn-sm" onclick="this.closest(\'.sched-custom-dur-row\').remove()">Remove</button>';
+                list.appendChild(row);
+            }
+            function scrubScheduleCardForNewClone(card) {
+                var hid = card.querySelector('.sched-template-id');
+                if (hid) hid.value = '';
+            }
+            function enableScheduleCardEditing(card) {
+                card.classList.remove('sched-card-readonly');
+                var fs = card.querySelector('fieldset.sched-template-body');
+                if (fs) fs.removeAttribute('disabled');
+            }
+            function cloneTemplate(btn) {
+                var card = btn.closest('.card');
+                var clone = card.cloneNode(true);
+                scrubScheduleCardForNewClone(clone);
+                enableScheduleCardEditing(clone);
+                var nameInput = clone.querySelector('.sched-template-name');
+                if (nameInput) {
+                    nameInput.value = (nameInput.value || '') + ' (Copy)';
+                    nameInput.readOnly = false;
+                    scheduleStyleNameInput(nameInput);
+                }
+                var actionDiv = clone.querySelector('.template-actions');
+                if (actionDiv) {
+                    actionDiv.innerHTML = '<button type="button" class="btn btn-secondary btn-sm" onclick="cloneTemplate(this)">[+] Copy</button> <button type="button" class="btn btn-secondary btn-sm" onclick="this.closest(\'.card\').remove()" style="background: #ff4d4d; color: white;">Delete</button>';
+                }
+                var hint = clone.querySelector('.sched-readonly-hint');
+                if (hint) hint.remove();
+                document.getElementById('schedule-templates-container').appendChild(clone);
+            }
+            function addNewTemplate() {
+                var first = document.querySelector('#schedule-templates-container .appointment-template-card');
+                if (!first) return;
+                var clone = first.cloneNode(true);
+                scrubScheduleCardForNewClone(clone);
+                enableScheduleCardEditing(clone);
+                var nameInput = clone.querySelector('.sched-template-name');
+                if (nameInput) {
+                    nameInput.value = 'Custom Template';
+                    nameInput.readOnly = false;
+                    scheduleStyleNameInput(nameInput);
+                }
+                var actionDiv = clone.querySelector('.template-actions');
+                if (actionDiv) {
+                    actionDiv.innerHTML = '<button type="button" class="btn btn-secondary btn-sm" onclick="cloneTemplate(this)">[+] Copy</button> <button type="button" class="btn btn-secondary btn-sm" onclick="this.closest(\'.card\').remove()" style="background: #ff4d4d; color: white;">Delete</button>';
+                }
+                var hint = clone.querySelector('.sched-readonly-hint');
+                if (hint) hint.remove();
+                document.getElementById('schedule-templates-container').appendChild(clone);
+            }
+            function serializeScheduleTemplates() {
+                var cards = document.querySelectorAll('#schedule-templates-container .appointment-template-card');
+                var out = [];
+                cards.forEach(function (card) {
+                    var hid = card.querySelector('.sched-template-id');
+                    var idRaw = hid && hid.value ? String(hid.value).trim() : '';
+                    var idVal = idRaw === '' ? null : parseInt(idRaw, 10);
+                    if (idVal !== null && isNaN(idVal)) idVal = null;
+                    var nameInp = card.querySelector('.sched-template-name');
+                    var name = nameInp ? nameInp.value.trim() : '';
+                    var working_hours = [];
+                    card.querySelectorAll('.working-hours-container .timing-row').forEach(function (row) {
+                        var times = row.querySelectorAll('input[type="time"]');
+                        if (times.length >= 2) {
+                            var a = times[0].value || '';
+                            var b = times[1].value || '';
+                            if (a && b) working_hours.push({ start: a, end: b });
+                        }
+                    });
+                    var slot_durations = {};
+                    card.querySelectorAll('.sched-slot-inp').forEach(function (inp) {
+                        var k = inp.getAttribute('data-slot-key');
+                        if (!k) return;
+                        var n = parseInt(inp.value, 10);
+                        slot_durations[k] = isNaN(n) ? 15 : Math.max(1, Math.min(480, n));
+                    });
+                    card.querySelectorAll('.sched-custom-dur-row').forEach(function (row) {
+                        var lab = row.querySelector('.sched-custom-slot-label');
+                        var num = row.querySelector('.sched-custom-slot-mins');
+                        if (!lab || !num) return;
+                        var label = (lab.value || '').trim();
+                        if (!label) return;
+                        var n = parseInt(num.value, 10);
+                        if (isNaN(n) || n < 1) return;
+                        slot_durations[label] = Math.min(480, n);
+                    });
+                    out.push({ id: idVal, name: name, working_hours: working_hours, slot_durations: slot_durations });
+                });
+                return out;
+            }
+            function profileScheduleBeforeSubmit(form) {
+                var hidden = document.getElementById('schedule_templates_json');
+                if (!hidden) return true;
+                var cards = document.querySelectorAll('#schedule-templates-container .appointment-template-card');
+                if (!cards.length) {
+                    alert('Keep at least one appointment schedule template.');
+                    return false;
+                }
+                try {
+                    hidden.value = JSON.stringify(serializeScheduleTemplates());
+                } catch (e) {
+                    alert('Could not prepare schedule templates to save.');
+                    return false;
+                }
+                return true;
+            }
+            </script>
+            
+            <div style="margin-top: 30px; display: flex; gap: 10px;">
+                <a href="{{ request.args.get('next') or request.referrer or url_for('dashboard') }}" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">Cancel</a>
+                <button type="submit" class="btn">Save Settings</button>
+            </div>
+        </form>

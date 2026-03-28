@@ -1,0 +1,13 @@
+<div class="pe-sched-card">
+  <h2 class="pe-sched-title">Get in touch</h2>
+  <p class="pe-sched-sub">Use the details below to reach the clinic and book a visit.</p>
+  {% if doctor.phone %}
+  <a href="tel:{{ doctor.phone | replace(' ', '') | replace('-', '') }}" class="pe-book-btn enabled" style="display:block;text-align:center;text-decoration:none;margin-bottom:10px;">Call {{ doctor.phone }}</a>
+  {% endif %}
+  {% if doctor.email %}
+  <a href="mailto:{{ doctor.email }}" class="pe-book-btn enabled" style="display:block;text-align:center;text-decoration:none;background:var(--pe-chip-bg);color:var(--pe-text-primary);">Email {{ doctor.email }}</a>
+  {% endif %}
+  {% if not doctor.phone and not doctor.email %}
+  <p class="pe-sched-sub" style="margin-top:0;">Contact details are not listed on this profile.</p>
+  {% endif %}
+</div>

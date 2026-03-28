@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choose clinic for prescription</title>
+    <style>
+        :root { --primary-dark: #003366; --border: #e0e0e0; --bg: #f4f8fb; --text: #333; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--bg); color: var(--text); padding: 90px 20px 40px; }
+        .rx-clinic-wrap { max-width: 520px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); padding: 28px 24px; }
+        h1 { font-size: 1.25rem; margin: 0 0 8px; color: var(--primary-dark); }
+        p.sub { margin: 0 0 20px; font-size: 0.95rem; color: #666; line-height: 1.45; }
+        ul { list-style: none; margin: 0; padding: 0; }
+        li { margin-bottom: 10px; }
+        li a {
+            display: block; padding: 14px 16px; border: 1px solid var(--border); border-radius: 8px;
+            text-decoration: none; color: var(--text); background: #fafbfc; transition: border-color 0.15s, background 0.15s;
+        }
+        li a:hover { border-color: var(--primary-dark); background: #f0f6fa; }
+        .rx-clinic-name { font-weight: 600; margin-bottom: 4px; }
+        .rx-clinic-addr { font-size: 0.88rem; color: #555; white-space: pre-wrap; line-height: 1.4; }
+        .back { margin-top: 20px; }
+        .back a { color: var(--primary-dark); font-size: 0.9rem; }
+        body.dark-mode { background: #121212; color: #ddd; }
+        body.dark-mode .rx-clinic-wrap { background: #1e1e1e; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+        body.dark-mode h1 { color: #7ab8e0; }
+        body.dark-mode p.sub { color: #aaa; }
+        body.dark-mode li a { background: #2a2a2a; border-color: #444; color: #e8e8e8; }
+        body.dark-mode li a:hover { border-color: #7ab8e0; background: #333; }
+        body.dark-mode .rx-clinic-addr { color: #bbb; }
+        body.dark-mode .back a { color: #7ab8e0; }
+    </style>
+</head>
+<body>
+{% include 'partials/app_chrome.html' %}
+<div class="rx-clinic-wrap">
+    <h1>Which clinic should appear on this prescription?</h1>
+    <p class="sub">Patient: {{ patient.name }} · Visit #{{ visit.id }}</p>
+    <ul>
+        {% for c in clinics %}
+        <li>
+            <a href="{% if include_qr %}{{ url_for('preview_prescription', visit_id=visit.id, clinic_index=loop.index0, include_qr='true') }}{% else %}{{ url_for('preview_prescription', visit_id=visit.id, clinic_index=loop.index0) }}{% endif %}">
+                <div class="rx-clinic-name">{{ c.name or 'Clinic' }}</div>
+                {% if c.address %}<div class="rx-clinic-addr">{{ c.address }}</div>{% endif %}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    <div class="back"><a href="{{ url_for('edit_visit', visit_id=visit.id) }}">← Back to visit</a></div>
+</div>
+</body>
+</html>
