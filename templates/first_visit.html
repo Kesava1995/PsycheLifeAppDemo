@@ -7844,6 +7844,7 @@ function renderCompletedScalesCards() {
             }
         });
     </script>
+    <script src="{{ url_for('static', filename='js/icd11-chapter6-mms.js') }}"></script>
     <script src="{{ url_for('static', filename='js/diagnosis-multiselect.js') }}"></script>
     <script>
         document.addEventListener('diagnosis-picker:changed', function(ev) {
@@ -7966,10 +7967,17 @@ function renderCompletedScalesCards() {
                     closeOnSelect: false,
                     minimumInputLength: 2,
                     ajax: {
-                        url: '/api/search_icd11',
-                        dataType: 'json',
                         delay: 220,
                         data: function(params) { return { q: params.term || '' }; },
+                        transport: function(params, success, failure) {
+                            try {
+                                var q = (params.data && params.data.q) ? params.data.q : '';
+                                var rows = (typeof window.searchIcd11Chapter6Rows === 'function') ? window.searchIcd11Chapter6Rows(q) : [];
+                                success(rows);
+                            } catch (e) {
+                                failure(e);
+                            }
+                        },
                         processResults: function(rows) {
                             rows = Array.isArray(rows) ? rows : [];
                             return {

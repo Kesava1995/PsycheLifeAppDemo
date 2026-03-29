@@ -60,6 +60,11 @@
     return t;
   }
 
+  /** Strip WHO simple-tabulation hierarchy prefixes (`- `, `- - `, …) from titles. */
+  function stripIcd11TabulationHyphens(s) {
+    return String(s || "").replace(/^(?:[\s\u00a0]*-)+[\s\u00a0]*/g, "").trim();
+  }
+
   function normalizeItem(item) {
     if (!item) return null;
     if (typeof item === "string") {
@@ -138,6 +143,134 @@
     return s;
   }
 
+  function getChapter6MmsList() {
+    return typeof window !== "undefined" && Array.isArray(window.ICD11_CHAPTER6_MMS)
+      ? window.ICD11_CHAPTER6_MMS
+      : [];
+  }
+
+  /**
+   * Local Chapter 6 MMS search (same row shape as /api/search_icd11 for Select2 / pickers).
+   * Depends on static/js/icd11-chapter6-mms.js (window.ICD11_CHAPTER6_MMS).
+   */
+  function searchIcd11Chapter6ApiRows(query, limit) {
+    const lim = limit == null ? 25 : Math.max(1, Math.min(Number(limit) || 25, 100));
+    const q = String(query || "").trim().toLowerCase();
+    if (q.length < 2) return [];
+
+    const list = getChapter6MmsList();
+    if (!list.length) return [];
+
+    const scored = [];
+    for (let i = 0; i < list.length; i += 1) {
+      const row = list[i];
+      const code = String(row.code || "").trim();
+      const title = stripIcd11TabulationHyphens(String(row.title || "").trim());
+      const name = stripLeadingCodes(title, code);
+      const codeL = code.toLowerCase();
+      const nameL = name.toLowerCase();
+      const titleL = title.toLowerCase();
+      if (!code && !name) continue;
+
+      let rank = 100;
+      if (codeL === q) rank = 0;
+      else if (codeL.startsWith(q)) rank = 1;
+      else if (nameL.startsWith(q)) rank = 2;
+      else if (codeL.includes(q)) rank = 3;
+      else if (nameL.includes(q)) rank = 4;
+      else if (titleL.includes(q)) rank = 5;
+      else continue;
+
+      scored.push({ rank, code, name, i });
+    }
+
+    scored.sort((a, b) => {
+      if (a.rank !== b.rank) return a.rank - b.rank;
+      if (a.code.length !== b.code.length) return a.code.length - b.code.length;
+      return a.i - b.i;
+    });
+
+    const out = [];
+    const seen = new Set();
+    for (let j = 0; j < scored.length && out.length < lim; j += 1) {
+      const s = scored[j];
+      const key = `${s.code}|${s.name}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ code: s.code, name: s.name, system: "ICD-11" });
+    }
+    return out;
+  }
+
+  /** { theCode, title }[] for ICD-11 criteria panels (mirrors WHO entity fields, title plain text). */
+  function searchIcd11Chapter6EntitiesForCriteria(label, limit) {
+    const lim = limit == null ? 10 : Math.max(1, Math.min(Number(limit) || 10, 25));
+    const rawLabel = String(label || "").trim();
+    const qNorm = stripLeadingCodes(rawLabel, "").toLowerCase().trim();
+    const qRaw = rawLabel.toLowerCase();
+    if (!qNorm && !qRaw) return [];
+
+    const list = getChapter6MmsList();
+    const scored = [];
+    for (let i = 0; i < list.length; i += 1) {
+      const row = list[i];
+      const code = String(row.code || "").trim();
+      const title = stripIcd11TabulationHyphens(String(row.title || "").trim());
+      const name = stripLeadingCodes(title, code);
+      const nameL = name.toLowerCase();
+      const codeL = code.toLowerCase();
+      const titleL = title.toLowerCase();
+
+      let rank = 100;
+      if (qNorm && nameL === qNorm) rank = 0;
+      else if (qNorm && nameL.startsWith(qNorm)) rank = 1;
+      else if (qNorm && nameL.includes(qNorm)) rank = 2;
+      else if (qRaw && codeL === qRaw.replace(/\s+/g, "")) rank = 3;
+      else if (qRaw && codeL.includes(qRaw)) rank = 4;
+      else if (qRaw && titleL.includes(qRaw)) rank = 5;
+      else continue;
+
+      scored.push({ rank, code, title, i });
+    }
+
+    scored.sort((a, b) => {
+      if (a.rank !== b.rank) return a.rank - b.rank;
+      if (a.code.length !== b.code.length) return a.code.length - b.code.length;
+      return a.i - b.i;
+    });
+
+    const out = [];
+    const seen = new Set();
+    for (const s of scored) {
+      if (out.length >= lim) break;
+      if (!s.code || seen.has(s.code)) continue;
+      seen.add(s.code);
+      out.push({ theCode: s.code, title: s.title });
+    }
+    return out;
+  }
+
+  function buildIcd11CriteriaHtmlForLabel(label) {
+    const list = getChapter6MmsList();
+    if (!list.length) {
+      return '<p style="margin:0;color:#666;">ICD-11 Chapter 6 list is not loaded (include icd11-chapter6-mms.js before this script).</p>';
+    }
+    const entities = searchIcd11Chapter6EntitiesForCriteria(label, 10);
+    if (!entities.length) {
+      return '<p style="margin:0;color:#666;">No ICD-11 search results for this term.</p>';
+    }
+    return (
+      `<div class="diagnosis-icd11-results">
+          ${entities.map(entity => `
+                <div class="diagnosis-icd11-result">
+                  <div class="diagnosis-icd11-code">${escapeHtml(entity.theCode || "No code")}</div>
+                  <div class="diagnosis-icd11-title">${icd11TitleToSafeHtml(entity.title || "")}</div>
+                </div>
+              `).join("")}
+        </div>`
+    );
+  }
+
   function serializeItems(items) {
     return JSON.stringify(items.map(item => ({
       label: item.label,
@@ -190,47 +323,42 @@
     picker.dropdown.style.display = "block";
     picker.dropdown.innerHTML = `<div class="diagnosis-option diagnosis-option-empty">Searching ICD-11…</div>`;
 
-    fetch(`/api/search_icd11?q=${encodeURIComponent(trimmed)}`)
-      .then(response => response.json())
-      .then(data => {
-        const results = Array.isArray(data) ? data : [];
-        if (seq !== picker._searchSeq) return;
-        if (!results.length) {
-          picker.visibleOptions = [];
-          picker.dropdown.innerHTML = `<div class="diagnosis-option diagnosis-option-empty">No matching diagnosis found. Press Enter to add "${escapeHtml(trimmed)}"</div>`;
-          picker.dropdown.style.display = "block";
-          return;
-        }
+    const run = () => {
+      const results = searchIcd11Chapter6ApiRows(trimmed, 25);
+      if (seq !== picker._searchSeq) return;
+      if (!results.length) {
+        picker.visibleOptions = [];
+        picker.dropdown.innerHTML = `<div class="diagnosis-option diagnosis-option-empty">No matching diagnosis found. Press Enter to add "${escapeHtml(trimmed)}"</div>`;
+        picker.dropdown.style.display = "block";
+        return;
+      }
 
-        const matches = results
-          .map(r => ({
-            label: String(r.name || "").trim(),
-            code: String(r.code || "").trim(),
-            system: String(r.system || "ICD-11").trim() || "ICD-11"
-          }))
-          .filter(m => m.label);
+      const matches = results
+        .map(r => ({
+          label: String(r.name || "").trim(),
+          code: String(r.code || "").trim(),
+          system: String(r.system || "ICD-11").trim() || "ICD-11"
+        }))
+        .filter(m => m.label);
 
-        picker.visibleOptions = matches;
-        picker.dropdown.innerHTML = matches.map((item, index) => {
-          const codeHtml = item.code
-            ? `<span class="diagnosis-option-code">${escapeHtml(item.code)}</span>`
-            : "";
-          return (
-            `<button type="button" class="diagnosis-option" data-index="${index}">
+      picker.visibleOptions = matches;
+      picker.dropdown.innerHTML = matches.map((item, index) => {
+        const codeHtml = item.code
+          ? `<span class="diagnosis-option-code">${escapeHtml(item.code)}</span>`
+          : "";
+        return (
+          `<button type="button" class="diagnosis-option" data-index="${index}">
         ${codeHtml}
         <span class="diagnosis-option-label">${escapeHtml(item.label)}</span>
         <span class="diagnosis-option-system">${escapeHtml(item.system || "ICD-11")}</span>
       </button>`
-          );
-        }).join("");
-        picker.dropdown.style.display = "block";
-      })
-      .catch(() => {
-        if (seq !== picker._searchSeq) return;
-        picker.visibleOptions = [];
-        picker.dropdown.innerHTML = `<div class="diagnosis-option diagnosis-option-empty">No matching diagnosis found. Press Enter to add "${escapeHtml(trimmed)}"</div>`;
-        picker.dropdown.style.display = "block";
-      });
+        );
+      }).join("");
+      picker.dropdown.style.display = "block";
+    };
+
+    if (typeof requestAnimationFrame === "function") requestAnimationFrame(run);
+    else setTimeout(run, 0);
   }
 
   function scheduleSuggestions(picker, query) {
@@ -347,56 +475,6 @@
     document.addEventListener("click", event => {
       if (!root.contains(event.target)) hideSuggestions(picker);
     });
-  }
-
-  /**
-   * ICD-11 MMS search results as HTML (for inline criteria / modals).
-   */
-  async function fetchIcd11CriteriaHtmlForLabel(label, preloadedToken) {
-    let token = preloadedToken || null;
-    if (!token) {
-      try {
-        const tokenResponse = await fetch("/icd11token");
-        const tokenPayload = await tokenResponse.json();
-        if (tokenPayload.error) {
-          return `<p style="margin:0;color:#c33;">${escapeHtml(tokenPayload.error)}</p>`;
-        }
-        token = tokenPayload.access_token;
-      } catch (error) {
-        return '<p style="margin:0;color:#c33;">Unable to get the ICD-11 access token.</p>';
-      }
-    }
-
-    try {
-      const response = await fetch(
-        `https://id.who.int/icd/release/11/2024-01/mms/search?q=${encodeURIComponent(label)}&flatResults=true`,
-        {
-          headers: {
-            Authorization: "Bearer " + token,
-            Accept: "application/json",
-            "Accept-Language": "en",
-            "API-Version": "v2"
-          }
-        }
-      );
-      const data = await response.json();
-      const entities = Array.isArray(data.destinationEntities) ? data.destinationEntities.slice(0, 10) : [];
-      if (!entities.length) {
-        return '<p style="margin:0;color:#666;">No ICD-11 search results for this term.</p>';
-      }
-      return (
-        `<div class="diagnosis-icd11-results">
-          ${entities.map(entity => `
-                <div class="diagnosis-icd11-result">
-                  <div class="diagnosis-icd11-code">${escapeHtml(entity.theCode || "No code")}</div>
-                  <div class="diagnosis-icd11-title">${icd11TitleToSafeHtml(entity.title || "")}</div>
-                </div>
-              `).join("")}
-        </div>`
-      );
-    } catch (error) {
-      return '<p style="margin:0;color:#c33;">Error fetching ICD-11 results for this diagnosis.</p>';
-    }
   }
 
   function getStatesForClinicalSnapshotLabel(label) {
@@ -563,47 +641,42 @@
       dropdown.style.display = "block";
       dropdown.innerHTML = `<div class="diagnosis-option diagnosis-option-empty">Searching ICD-11…</div>`;
 
-      fetch(`/api/search_icd11?q=${encodeURIComponent(trimmed)}`)
-        .then(response => response.json())
-        .then(data => {
-          const results = Array.isArray(data) ? data : [];
-          if (seq !== _searchSeq) return;
-          if (!results.length) {
-            visibleOptions = [];
-            dropdown.innerHTML = `<div class="diagnosis-option diagnosis-option-empty">No matching diagnosis found. Press Enter to add "${escapeHtml(trimmed)}"</div>`;
-            dropdown.style.display = "block";
-            return;
-          }
+      const run = () => {
+        const results = searchIcd11Chapter6ApiRows(trimmed, 25);
+        if (seq !== _searchSeq) return;
+        if (!results.length) {
+          visibleOptions = [];
+          dropdown.innerHTML = `<div class="diagnosis-option diagnosis-option-empty">No matching diagnosis found. Press Enter to add "${escapeHtml(trimmed)}"</div>`;
+          dropdown.style.display = "block";
+          return;
+        }
 
-          const matches = results
-            .map(r => ({
-              label: String(r.name || "").trim(),
-              code: String(r.code || "").trim(),
-              system: String(r.system || "ICD-11").trim() || "ICD-11"
-            }))
-            .filter(m => m.label);
+        const matches = results
+          .map(r => ({
+            label: String(r.name || "").trim(),
+            code: String(r.code || "").trim(),
+            system: String(r.system || "ICD-11").trim() || "ICD-11"
+          }))
+          .filter(m => m.label);
 
-          visibleOptions = matches;
-          dropdown.innerHTML = matches.map((item, index) => {
-            const codeHtml = item.code
-              ? `<span class="diagnosis-option-code">${escapeHtml(item.code)}</span>`
-              : "";
-            return (
-              `<button type="button" class="diagnosis-option" data-index="${index}">
+        visibleOptions = matches;
+        dropdown.innerHTML = matches.map((item, index) => {
+          const codeHtml = item.code
+            ? `<span class="diagnosis-option-code">${escapeHtml(item.code)}</span>`
+            : "";
+          return (
+            `<button type="button" class="diagnosis-option" data-index="${index}">
         ${codeHtml}
         <span class="diagnosis-option-label">${escapeHtml(item.label)}</span>
         <span class="diagnosis-option-system">${escapeHtml(item.system || "ICD-11")}</span>
       </button>`
-            );
-          }).join("");
-          dropdown.style.display = "block";
-        })
-        .catch(() => {
-          if (seq !== _searchSeq) return;
-          visibleOptions = [];
-          dropdown.innerHTML = `<div class="diagnosis-option diagnosis-option-empty">No matching diagnosis found. Press Enter to add "${escapeHtml(trimmed)}"</div>`;
-          dropdown.style.display = "block";
-        });
+          );
+        }).join("");
+        dropdown.style.display = "block";
+      };
+
+      if (typeof requestAnimationFrame === "function") requestAnimationFrame(run);
+      else setTimeout(run, 0);
     }
 
     let _suggestTimer = null;
@@ -646,7 +719,7 @@
       }));
     }
 
-    async function refreshCriteriaPanel() {
+    function refreshCriteriaPanel() {
       _criteriaSeq += 1;
       const seq = _criteriaSeq;
 
@@ -661,17 +734,7 @@
 
       if (activeSystem === "ICD-11") {
         criteriaContent.innerHTML = '<p style="margin:0;color:#666;font-style:italic;">Loading ICD-11 reference…</p>';
-        let token = null;
-        try {
-          const tokenResponse = await fetch("/icd11token");
-          const tokenPayload = await tokenResponse.json();
-          if (!tokenPayload.error && tokenPayload.access_token) {
-            token = tokenPayload.access_token;
-          }
-        } catch (e) {
-          token = null;
-        }
-        const html = await fetchIcd11CriteriaHtmlForLabel(item.label, token);
+        const html = buildIcd11CriteriaHtmlForLabel(item.label);
         if (seq !== _criteriaSeq) return;
         criteriaContent.innerHTML = html;
         return;
@@ -911,7 +974,7 @@
     if (panel) panel.innerHTML = html;
   }
 
-  async function openIcd11Criteria() {
+  function openIcd11Criteria() {
     const selected = mergeDiagnosisItemsForCriteria();
     if (!selected.length) {
       renderTabs("icd11CriteriaModal", "ICD-11 Diagnostic View", []);
@@ -924,31 +987,17 @@
     }));
     renderTabs("icd11CriteriaModal", "ICD-11 Diagnostic View", loadingTabs);
 
-    let token = null;
-    try {
-      const tokenResponse = await fetch("/icd11token");
-      const tokenPayload = await tokenResponse.json();
-      if (tokenPayload.error) {
-        selected.forEach((_, i) => {
-          setIcd11PanelHtml("icd11CriteriaModal", i, `<p style="margin:0; color:#c33;">${escapeHtml(tokenPayload.error)}</p>`);
-        });
-        return;
-      }
-      token = tokenPayload.access_token;
-    } catch (error) {
-      selected.forEach((_, i) => {
-        setIcd11PanelHtml("icd11CriteriaModal", i, '<p style="margin:0; color:#c33;">Unable to get the ICD-11 access token.</p>');
-      });
-      return;
-    }
-
     for (let i = 0; i < selected.length; i += 1) {
       const item = selected[i];
       setIcd11PanelHtml("icd11CriteriaModal", i, '<p class="icd11-seq-status" style="margin:0; color:#666;">Searching ICD-11…</p>');
-      const html = await fetchIcd11CriteriaHtmlForLabel(item.label, token);
+      const html = buildIcd11CriteriaHtmlForLabel(item.label);
       setIcd11PanelHtml("icd11CriteriaModal", i, html);
     }
   }
+
+  window.searchIcd11Chapter6Rows = function searchIcd11Chapter6Rows(q) {
+    return searchIcd11Chapter6ApiRows(q, 25);
+  };
 
   window.initializeDiagnosisPickers = function initializeDiagnosisPickers(config) {
     if (config.provisional) {
